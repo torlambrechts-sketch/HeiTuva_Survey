@@ -40,6 +40,16 @@ npm run verify:browser      # captures every route/state in the manifest
 `seed:mfa` writes `.mfa-secrets.json` (gitignored). Without it the browser
 harness cannot get past `/sikkerhet` and every administrator route fails.
 
+Expect `verify:browser` to take about twenty minutes. Supabase refuses a TOTP
+code it has already accepted, and each capture signs in for itself, so every
+administrator state waits out a 30-second code window. Reusing one signed-in
+session per persona was tried and reverted — see the note in
+`scripts/verify/capture.ts`.
+
+Run `seed:demo` before a run you intend to compare screenshots from: the
+captures drive the real UI, so states like the privacy toggles and the DSR list
+leave the demo data changed for the next run.
+
 ## Two traps the harness now guards against
 
 Both of these produced *green* verification runs that were not verifying the
