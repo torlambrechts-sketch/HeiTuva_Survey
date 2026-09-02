@@ -9,7 +9,7 @@
  *   npx tsx scripts/verify/probe-firma.mts
  */
 import { chromium } from '@playwright/test'
-import { signIn } from '../../tests/helpers/session'
+import { gotoRoute, signIn } from '../../tests/helpers/session'
 
 const BASE = process.env.HEITUVA_BASE_URL ?? 'http://127.0.0.1:3100'
 
@@ -23,8 +23,9 @@ page.on('response', (r) => {
 
 try {
   await signIn(page, 'administrator', BASE)
-  await page.goto(`${BASE}/administrasjon`, { waitUntil: 'domcontentloaded' })
-  await page.waitForLoadState('load')
+  // gotoRoute, not goto: the MFA redirect is issued on the next request, so a
+  // plain navigation can land on /sikkerhet instead of the page under test.
+  await gotoRoute(page, '/administrasjon', 'administrator', BASE)
 
   const marker = `Storgata ${Math.floor(Math.random() * 900) + 100}, 0155 Oslo`
   await page.fill('input[name="address"]', marker)
