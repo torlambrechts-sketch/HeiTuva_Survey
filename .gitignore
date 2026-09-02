@@ -29,3 +29,11 @@ supabase/.branches/
 /.next/
 next-env.d.ts
 *.tsbuildinfo
+
+# verification artifacts — captures are regenerated per run.
+# artifacts/reference/ IS committed: it is the design baseline.
+artifacts/*
+!artifacts/reference/
+artifacts/.cdn-cache/
+test-results/
+playwright-report/

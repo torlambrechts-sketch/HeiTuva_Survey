@@ -11,7 +11,13 @@
     "test": "vitest run",
     "test:invariants": "vitest run tests/invariants",
     "seed:i18n": "tsx scripts/seed-i18n.ts",
-    "gen:i18n": "tsx scripts/gen-i18n-types.ts"
+    "gen:i18n": "tsx scripts/gen-i18n-types.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts --local",
+    "verify:db": "vitest run tests/invariants tests/db",
+    "verify:browser": "tsx scripts/verify/capture.ts --local",
+    "verify:reference": "tsx scripts/verify/reference.ts",
+    "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
+    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:browser"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -24,6 +30,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.9.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
