@@ -24,7 +24,10 @@
     "reports": "Rapporter",
     "newSurvey": "Ny undersøkelse",
     "blankSurvey": "Tom undersøkelse",
-    "userMenu": "Brukermeny"
+    "userMenu": "Brukermeny",
+    "myProfile": "Min profil",
+    "administration": "Administrasjon",
+    "privacyGdpr": "Personvern og GDPR"
   },
   "dash": {
     "overline": "Oversikt",
@@ -152,13 +155,37 @@
     "anonExplainerTitle": "Slik beskyttes anonymiteten",
     "anonExplainer": "Anonyme svar lagres uten kobling til bruker. Resultater vises først ved fem svar, og frisvar vises aldri sammen med gruppe når gruppen er mindre enn fem. Ingen — heller ikke administrator — kan slå opp hvem som svarte hva.",
     "controllerNote": "{company} er behandlingsansvarlig for personopplysningene. HeiTuva er databehandler og behandler data kun etter instruks.",
-    "defaultRespondentLang": "Standardspråk for respondenter"
+    "defaultRespondentLang": "Standardspråk for respondenter",
+    "tabFirma": "Firmaopplysninger",
+    "tabBrukere": "Brukere",
+    "tabGrupper": "Grupper",
+    "tabPersonvern": "Personvern og GDPR",
+    "tabValg": "Alternativer"
   },
   "profile": {
     "aboutMe": "Om meg",
     "notifications": "Varsler",
     "sessions": "Pålogging og enheter",
-    "langNote": "Velg språket du vil bruke i HeiTuva. Undersøkelser du sender kan ha sitt eget språk per mottaker."
+    "langNote": "Velg språket du vil bruke i HeiTuva. Undersøkelser du sender kan ha sitt eget språk per mottaker.",
+    "language": "Språk",
+    "saveChanges": "Lagre endringer",
+    "saved": "Lagret ✓",
+    "roleNote": "Rollen din settes av en administrator under Administrasjon. Mobilnummeret brukes bare til varsler du selv har slått på.",
+    "fName": "Navn",
+    "fEmail": "Jobb-e-post",
+    "fTitle": "Stilling",
+    "fPhone": "Mobil (for SMS-varsler)",
+    "nDigest": "Ukentlig sammendrag",
+    "nDigestDesc": "Mandag morgen, med det som krever handling",
+    "nLowResp": "Varsle ved lav svarprosent",
+    "nLowRespDesc": "Når en aktiv undersøkelse ligger under 50 % etter tre dager",
+    "nNewText": "Varsle ved nye frisvar",
+    "nNewTextDesc": "Samlet én gang per dag",
+    "nShared": "Når noen deler med meg",
+    "nSharedDesc": "Rapporter og undersøkelser andre gir meg tilgang til",
+    "thisDevice": "Denne enheten",
+    "signOutEverywhere": "Logg ut overalt",
+    "comingSoon": "kommer"
   },
   "library": {
     "title": "Bibliotek",
@@ -168,5 +195,31 @@
     "standardTemplates": "Standardmaler",
     "searchBank": "Søk i spørsmålsbanken…",
     "add": "Legg til"
+  },
+  "auth": {
+    "signInTitle": "Logg inn",
+    "signInSub": "Bruk jobb-e-posten din. Vi sender deg en lenke.",
+    "email": "Jobb-e-post",
+    "password": "Passord",
+    "signIn": "Logg inn",
+    "sendLink": "Send innloggingslenke",
+    "linkSent": "Sjekk innboksen din — vi har sendt deg en lenke.",
+    "invalid": "Feil e-post eller passord.",
+    "mfaTitle": "Tofaktor",
+    "mfaSub": "Skriv inn koden fra autentiseringsappen din.",
+    "mfaCode": "Kode",
+    "mfaVerify": "Bekreft",
+    "mfaRequired": "Administratorer må bruke tofaktor. Sett det opp for å fortsette.",
+    "signOutEverywhere": "Logg ut overalt"
+  },
+  "lang": {
+    "no": "Norsk",
+    "sv": "Svenska",
+    "da": "Dansk",
+    "en": "English",
+    "noFull": "Norsk (bokmål)",
+    "svFull": "Svenska",
+    "daFull": "Dansk",
+    "enFull": "English"
   }
 }

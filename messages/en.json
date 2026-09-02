@@ -24,7 +24,10 @@
     "reports": "Reports",
     "newSurvey": "New survey",
     "blankSurvey": "Blank survey",
-    "userMenu": "User menu"
+    "userMenu": "User menu",
+    "myProfile": "My profile",
+    "administration": "Administration",
+    "privacyGdpr": "Privacy and GDPR"
   },
   "dash": {
     "overline": "Overview",
@@ -152,13 +155,37 @@
     "anonExplainerTitle": "How anonymity is protected",
     "anonExplainer": "Anonymous answers are stored with no link to a user. Results only appear at five answers, and free text is never shown with a group when the group is smaller than five. Nobody — not even an administrator — can look up who answered what.",
     "controllerNote": "{company} is the data controller for the personal data. HeiTuva is the data processor and only processes data on instruction.",
-    "defaultRespondentLang": "Default language for respondents"
+    "defaultRespondentLang": "Default language for respondents",
+    "tabFirma": "Company details",
+    "tabBrukere": "Users",
+    "tabGrupper": "Groups",
+    "tabPersonvern": "Privacy and GDPR",
+    "tabValg": "Options"
   },
   "profile": {
     "aboutMe": "About me",
     "notifications": "Notifications",
     "sessions": "Sign-in and devices",
-    "langNote": "Choose the language you want to use in HeiTuva. Surveys you send can have their own language per recipient."
+    "langNote": "Choose the language you want to use in HeiTuva. Surveys you send can have their own language per recipient.",
+    "language": "Language",
+    "saveChanges": "Save changes",
+    "saved": "Saved ✓",
+    "roleNote": "Your role is set by an administrator under Administration. Your mobile number is only used for notifications you have turned on yourself.",
+    "fName": "Name",
+    "fEmail": "Work email",
+    "fTitle": "Job title",
+    "fPhone": "Mobile (for SMS notifications)",
+    "nDigest": "Weekly summary",
+    "nDigestDesc": "Monday morning, with what needs action",
+    "nLowResp": "Notify on low response rate",
+    "nLowRespDesc": "When an active survey is below 50% after three days",
+    "nNewText": "Notify on new free text",
+    "nNewTextDesc": "Batched once per day",
+    "nShared": "When someone shares with me",
+    "nSharedDesc": "Reports and surveys others give me access to",
+    "thisDevice": "This device",
+    "signOutEverywhere": "Sign out everywhere",
+    "comingSoon": "coming"
   },
   "library": {
     "title": "Library",
@@ -168,5 +195,31 @@
     "standardTemplates": "Standard templates",
     "searchBank": "Search the question bank…",
     "add": "Add"
+  },
+  "auth": {
+    "signInTitle": "Sign in",
+    "signInSub": "Use your work email. We will send you a link.",
+    "email": "Work email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "sendLink": "Send sign-in link",
+    "linkSent": "Check your inbox — we have sent you a link.",
+    "invalid": "Wrong email or password.",
+    "mfaTitle": "Two-factor",
+    "mfaSub": "Enter the code from your authenticator app.",
+    "mfaCode": "Code",
+    "mfaVerify": "Verify",
+    "mfaRequired": "Administrators must use two-factor. Set it up to continue.",
+    "signOutEverywhere": "Sign out everywhere"
+  },
+  "lang": {
+    "no": "Norsk",
+    "sv": "Svenska",
+    "da": "Dansk",
+    "en": "English",
+    "noFull": "Norwegian (bokmål)",
+    "svFull": "Swedish",
+    "daFull": "Danish",
+    "enFull": "English"
   }
 }

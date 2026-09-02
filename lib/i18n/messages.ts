@@ -2,20 +2,10 @@ import 'server-only'
 
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SOURCE_LOCALE, i18nCacheTag, type Locale } from './locales'
 
-export const LOCALES = ['no', 'en', 'sv', 'da'] as const
-export type Locale = (typeof LOCALES)[number]
-
-/** `no` is the source language: every key exists here, so it is the fallback. */
-export const SOURCE_LOCALE: Locale = 'no'
-
-export function isLocale(value: string | null | undefined): value is Locale {
-  return !!value && (LOCALES as readonly string[]).includes(value)
-}
-
-export function i18nCacheTag(locale: Locale) {
-  return `i18n:${locale}`
-}
+export { LOCALES, SOURCE_LOCALE, ACTIVE_LOCALES, isLocale, i18nCacheTag } from './locales'
+export type { Locale } from './locales'
 
 type Messages = Record<string, Record<string, string>>
 
