@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { saveCompany } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
@@ -29,9 +29,20 @@ const field =
  */
 export function CompanyForm({ company }: { company: Company }) {
   const t = useTranslations('admin')
-  const [state, action, pending] = useActionState<AdminResult | null, FormData>(saveCompany, null)
   const form = useRef<HTMLFormElement>(null)
   const dirty = useRef(false)
+  const [state, setState] = useState<AdminResult | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  // The action is called directly rather than through a form submission.
+  // requestSubmit() from inside a focusout handler did not reach the action —
+  // the capture harness caught it: the field saved nothing and no chip
+  // appeared. Calling it with the form's own FormData has no such dependency.
+  const save = () => {
+    if (!form.current) return
+    const data = new FormData(form.current)
+    startTransition(async () => setState(await saveCompany(null, data)))
+  }
 
   const fields: { name: keyof Company; label: string; type?: string }[] = [
     { name: 'name', label: t('fName') },
@@ -58,7 +69,12 @@ export function CompanyForm({ company }: { company: Company }) {
 
       <form
         ref={form}
-        action={action}
+        onSubmit={(e) => {
+          // Enter in a field, and the visually hidden submit below.
+          e.preventDefault()
+          dirty.current = false
+          save()
+        }}
         onChange={() => {
           dirty.current = true
         }}
@@ -68,7 +84,7 @@ export function CompanyForm({ company }: { company: Company }) {
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
           if (!dirty.current) return
           dirty.current = false
-          form.current?.requestSubmit()
+          save()
         }}
       >
         <div className="mt-[18px] grid grid-cols-2 gap-3.5">
