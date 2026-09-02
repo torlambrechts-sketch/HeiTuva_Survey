@@ -185,7 +185,15 @@
     "nSharedDesc": "Reports and surveys others give me access to",
     "thisDevice": "This device",
     "signOutEverywhere": "Sign out everywhere",
-    "comingSoon": "coming"
+    "comingSoon": "coming",
+    "title": "My profile",
+    "fTitleField": "Job title",
+    "emailReadOnly": "Your work email is your sign-in address and is changed by an administrator.",
+    "saveFailed": "Could not save. Please try again.",
+    "thisSession": "This session · last active now",
+    "signOutOne": "Sign out",
+    "sessionsNote": "We show the session you are signed in with now. Full device list is coming.",
+    "comingSoonBadge": "coming"
   },
   "library": {
     "title": "Library",

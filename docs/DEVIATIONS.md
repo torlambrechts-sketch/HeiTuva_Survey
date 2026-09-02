@@ -153,3 +153,28 @@ the app surface to pixel-perfect at >=1280px and only the respondent flow at
 `/s/[token]` to mobile-first, so this is in line with the stated scope — but
 the app shell has no mobile treatment at all, and nothing in the design bundle
 specifies one. Needs a decision before any phase ships a mobile app surface.
+
+### D13 — Profil "Pålogging og enheter" shows one session, not three
+The design lists three devices with last-active times (HeiTuva.dc.html:3347).
+Supabase exposes no per-user device or session list to a client — `auth.getUser`
+describes only the current session, and the admin API's session listing is not
+reachable from the browser and would need the service role. The card therefore
+shows the current session and says so ("Vi viser den økten du er innlogget med
+nå. Full enhetsoversikt kommer."), with "Logg ut overalt" wired to a global
+sign-out, which does work. A real device list needs a server-side session
+inventory; it is not something the design's data can be faked into.
+
+### D14 — Om meg "Jobb-e-post" is read-only
+The design renders it as an editable input. Changing a sign-in address is an
+authentication flow with its own confirmation email, not a profile text field —
+writing it here would either desynchronise `org_members.email` from
+`auth.users.email` or silently do nothing. Rendered disabled with an
+explanation.
+
+### D15 — `profiles.notify` keys re-shaped
+0002 seeded `notify` with new_responses / low_score / deadline / digest. The
+design's four toggles are a different set: weekly digest, low RESPONSE RATE,
+new FREE TEXT, and "when someone shares with me" — while `deadline` has no
+toggle at all. 0015 re-shapes the default and migrates existing rows, mapping
+low_score -> low_response and new_responses -> new_text where a value already
+existed. Without this the screen would have written keys nothing reads.

@@ -66,6 +66,37 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    route: '/profil',
+    label: 'profil',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        name: 'saved',
+        setup: async (page) => {
+          await page.fill('input[name="job_title"]', 'HR-direktør')
+          await page.getByRole('button', { name: /Lagre endringer|Save changes/ }).click()
+          await page.getByRole('status').first().waitFor({ state: 'visible', timeout: 15_000 })
+        },
+      },
+      {
+        name: 'notify-toggled',
+        setup: async (page) => {
+          await page.getByRole('switch').first().click()
+          await page.waitForTimeout(1200)
+        },
+      },
+    ],
+  },
+  {
+    route: '/profil',
+    label: 'profil-leser',
+    as: 'leser',
+    phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
+  {
     route: '/',
     label: 'oversikt-leser',
     as: 'leser',
@@ -77,7 +108,6 @@ export const ROUTES: RouteSpec[] = [
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
-  { route: '/profil', phase: 'phase-1', note: 'Profil — next slice' },
   { route: '/administrasjon', phase: 'phase-1', note: 'Administrasjon, five tabs — next slice' },
   { route: '/undersokelser', phase: 'phase-2', note: 'Undersøkelser list' },
   { route: '/undersokelser/ny', phase: 'phase-2', note: 'New-survey wizard entry' },

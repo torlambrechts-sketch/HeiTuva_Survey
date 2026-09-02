@@ -185,7 +185,15 @@
     "nSharedDesc": "Rapporter og undersøkelser andre gir meg tilgang til",
     "thisDevice": "Denne enheten",
     "signOutEverywhere": "Logg ut overalt",
-    "comingSoon": "kommer"
+    "comingSoon": "kommer",
+    "title": "Min profil",
+    "fTitleField": "Stilling",
+    "emailReadOnly": "Jobb-e-posten er innloggingsadressen din og endres av en administrator.",
+    "saveFailed": "Kunne ikke lagre. Prøv igjen.",
+    "thisSession": "Denne økten · sist aktiv nå",
+    "signOutOne": "Logg ut",
+    "sessionsNote": "Vi viser den økten du er innlogget med nå. Full enhetsoversikt kommer.",
+    "comingSoonBadge": "kommer"
   },
   "library": {
     "title": "Bibliotek",

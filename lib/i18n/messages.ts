@@ -41,6 +41,13 @@ async function fetchMessages(locale: Locale): Promise<Messages> {
 export function getMessages(locale: Locale) {
   return unstable_cache(() => fetchMessages(locale), ['ui_messages', locale], {
     tags: [i18nCacheTag(locale)],
+    // Without an expiry this cache never lets go: after seeding new keys the
+    // running server kept serving the old set and the UI rendered raw
+    // `namespace.key` strings indefinitely. The tag still allows an immediate
+    // revalidate from the Phase 6 translation editor; this is the safety net
+    // for every other path that changes ui_messages out of band (seeds,
+    // migrations, a direct edit in Studio).
+    revalidate: 300,
   })()
 }
 

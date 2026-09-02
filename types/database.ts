@@ -796,6 +796,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          job_title: string | null
           lang: string
           notify: Json
           phone: string | null
@@ -805,6 +806,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          job_title?: string | null
           lang?: string
           notify?: Json
           phone?: string | null
@@ -814,6 +816,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          job_title?: string | null
           lang?: string
           notify?: Json
           phone?: string | null
