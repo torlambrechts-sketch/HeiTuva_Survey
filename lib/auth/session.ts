@@ -68,12 +68,25 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   }
 })
 
-/** Use in any page or action under (app). Redirects rather than throwing so a
- *  signed-out visitor lands on the login screen. */
+/**
+ * Use in any page or action under (app). Redirects rather than throwing so a
+ * signed-out visitor lands on the login screen.
+ *
+ * The two failure modes are different and must not be collapsed: signed out
+ * goes to /logg-inn, but signed in with no membership goes to onboarding.
+ * Sending the second case to /logg-inn produced a redirect loop — middleware
+ * bounces an authenticated request off /logg-inn back to /, which lands here
+ * again.
+ */
 export async function requireViewer(): Promise<Viewer> {
   const viewer = await getViewer()
-  if (!viewer) redirect('/logg-inn')
-  return viewer
+  if (viewer) return viewer
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  redirect(user ? '/kom-i-gang' : '/logg-inn')
 }
 
 

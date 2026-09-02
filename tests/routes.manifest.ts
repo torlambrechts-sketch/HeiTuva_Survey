@@ -103,12 +103,91 @@ export const ROUTES: RouteSpec[] = [
     phase: 'phase-1',
     states: [{ name: 'default' }],
   },
+  {
+    route: '/administrasjon',
+    label: 'admin-firma',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        name: 'saved',
+        setup: async (page) => {
+          await page.fill('input[name="address"]', 'Storgata 1, 0155 Oslo')
+          await page.getByRole('button', { name: /Lagre endringer|Save changes/ }).click()
+          await page.getByRole('status').first().waitFor({ state: 'visible', timeout: 15_000 })
+        },
+      },
+    ],
+  },
+  {
+    route: '/administrasjon/brukere',
+    label: 'admin-brukere',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        name: 'invite-duplicate',
+        setup: async (page) => {
+          // The seeded administrator is already a member, so inviting that
+          // address must surface the duplicate refusal rather than "sent".
+          await page.fill('input[name="email"]', 'admin@nordiskstudio.test')
+          await page.getByRole('button', { name: /^(Inviter|Invite)$/ }).click()
+          await page.getByRole('alert').first().waitFor({ state: 'visible', timeout: 15_000 })
+        },
+      },
+    ],
+  },
+  {
+    route: '/administrasjon/grupper',
+    label: 'admin-grupper',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
+  {
+    route: '/administrasjon/personvern',
+    label: 'admin-personvern',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        name: 'dsr-form-open',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /^(Behandle|Handle)$/ }).first().click()
+          await page.locator('input[name="subject_email"]').first().waitFor({ state: 'visible' })
+        },
+      },
+      {
+        name: 'privacy-toggled',
+        setup: async (page) => {
+          await page.getByRole('switch', { name: /EU\/EØS|EU\/EEA/ }).click()
+          await page.waitForTimeout(1500)
+        },
+      },
+    ],
+  },
+  {
+    route: '/administrasjon/valg',
+    label: 'admin-valg',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
+  {
+    route: '/administrasjon',
+    label: 'admin-forbidden-redaktor',
+    as: 'redaktor',
+    phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
 ]
 
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
-  { route: '/administrasjon', phase: 'phase-1', note: 'Administrasjon, five tabs — next slice' },
   { route: '/undersokelser', phase: 'phase-2', note: 'Undersøkelser list' },
   { route: '/undersokelser/ny', phase: 'phase-2', note: 'New-survey wizard entry' },
   { route: '/bibliotek', phase: 'phase-2', note: 'Bibliotek' },

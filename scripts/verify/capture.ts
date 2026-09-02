@@ -15,6 +15,7 @@ import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
 import { ROUTES, PENDING_ROUTES, isPendingRoute, type RouteSpec } from '../../tests/routes.manifest'
 import { DEMO_PASSWORD, PERSONAS } from '../../tests/db/personas'
+import { MFA_SECRETS_FILE, freshTotpCode, readMfaSecrets } from '../../tests/db/mfa'
 
 if (!process.argv.includes('--local')) config({ path: '.env.local' })
 
@@ -37,6 +38,45 @@ type LogEntry = {
   pendingRoutePrefetches: string[]
 }
 
+/**
+ * Completes the TOTP gate if the browser is sitting on it.
+ *
+ * DECISIONS Q14: an administrator is held at /sikkerhet until the session
+ * reaches aal2. Driving the real form is the point — a harness that skipped the
+ * gate would be verifying a surface no administrator can actually reach.
+ *
+ * Called after sign-in AND after each navigation: the redirect to /sikkerhet is
+ * issued by the app layout on the *next* request, so right after the login POST
+ * the browser can still be sitting on `/` with the redirect in flight.
+ */
+async function satisfyMfa(page: Page, persona: Exclude<RouteSpec['as'], 'anon'>) {
+  if (!new URL(page.url()).pathname.startsWith('/sikkerhet')) return false
+
+  const secret = (await readMfaSecrets())[persona]
+  if (!secret) {
+    throw new Error(
+      `${persona} was asked for TOTP but no secret is stored. Run "npm run seed:mfa" ` +
+        `after seeding the demo data — expected it in ${MFA_SECRETS_FILE}.`,
+    )
+  }
+
+  await page.fill('input[name="code"]', await freshTotpCode(secret))
+  await page.getByRole('button', { name: /^(Bekreft|Confirm)$/ }).click()
+  await page
+    .waitForURL((u) => !u.pathname.startsWith('/sikkerhet'), { timeout: 20_000 })
+    .catch(async () => {
+      // Say what actually went wrong instead of reporting a bare navigation
+      // timeout: the form is still on screen and it says why.
+      const alert = await page
+        .getByRole('alert')
+        .first()
+        .textContent()
+        .catch(() => null)
+      throw new Error(`${persona}: TOTP was not accepted${alert ? ` — "${alert.trim()}"` : ''}`)
+    })
+  return true
+}
+
 async function signIn(page: Page, persona: Exclude<RouteSpec['as'], 'anon'>) {
   await page.goto(`${BASE_URL}/logg-inn`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('input[name="email"]')
@@ -46,6 +86,30 @@ async function signIn(page: Page, persona: Exclude<RouteSpec['as'], 'anon'>) {
     page.waitForURL((u) => !u.pathname.startsWith('/logg-inn'), { timeout: 20_000 }),
     page.getByRole('button', { name: /^Logg inn$/ }).click(),
   ])
+  await page.waitForLoadState('load')
+  await satisfyMfa(page, persona)
+}
+
+/**
+ * Navigates to the route and confirms the browser actually stayed there.
+ *
+ * A redirect the harness did not expect used to pass silently: the capture had
+ * no console errors, so it was reported "ok" while the PNG showed a completely
+ * different screen. A screenshot of the wrong page is worse than a failure.
+ */
+async function gotoRoute(page: Page, route: string, persona: RouteSpec['as']) {
+  await page.goto(`${BASE_URL}${route}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('load')
+
+  if (persona !== 'anon' && (await satisfyMfa(page, persona))) {
+    await page.goto(`${BASE_URL}${route}`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('load')
+  }
+
+  const landed = new URL(page.url()).pathname
+  if (landed !== route) {
+    throw new Error(`asked for ${route} as ${persona} but the browser ended up on ${landed}`)
+  }
 }
 
 async function main() {
@@ -127,8 +191,7 @@ async function main() {
             if (spec.as !== 'anon') await signIn(page, spec.as)
             // Not networkidle: Next prefetches every <Link> in the nav, so the
             // network never goes idle and every app route would time out.
-            await page.goto(`${BASE_URL}${spec.route}`, { waitUntil: 'domcontentloaded' })
-            await page.waitForLoadState('load')
+            await gotoRoute(page, spec.route, spec.as)
             if (state.setup) await state.setup(page)
 
             // Let fonts settle so text metrics are stable between runs.
@@ -162,6 +225,19 @@ async function main() {
           } catch (e) {
             failures++
             console.log(`  ERROR ${spec.label}/${state.name}/${project.name}: ${e instanceof Error ? e.message : e}`)
+            // A failure with no artifact cannot be diagnosed after the fact —
+            // capture whatever the browser was actually looking at.
+            try {
+              const base = join(OUT, spec.phase, `${spec.label}.${state.name}.${project.name}.ERROR`)
+              await mkdir(dirname(base), { recursive: true })
+              await page.screenshot({ path: `${base}.png`, fullPage: true })
+              await writeFile(
+                `${base}.log.json`,
+                JSON.stringify({ ...log, url: page.url(), error: String(e) }, null, 2),
+              )
+            } catch {
+              /* the page may already be gone; the console line above still stands */
+            }
           } finally {
             await ctx.close()
           }

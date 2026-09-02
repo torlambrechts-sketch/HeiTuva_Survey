@@ -299,8 +299,11 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+# DECISIONS Q14: TOTP MFA is required for role=administrator, so the local
+# stack must be able to enrol and verify factors or the admin surface is
+# unreachable in dev and in the verification harness.
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
