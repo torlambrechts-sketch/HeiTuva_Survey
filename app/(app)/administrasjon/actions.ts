@@ -1,12 +1,15 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
 import { adminMfaSatisfied } from '@/lib/auth/mfa'
 import { audit } from '@/lib/auth/audit'
 import type { AdminResult } from './types'
+import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
 
 /**
  * Every write here is administrator-only. That is enforced by RLS in the
@@ -92,7 +95,10 @@ export async function setPrivacy(key: string, value: boolean): Promise<AdminResu
 
   const privacy = { ...((org?.privacy as Record<string, boolean> | null) ?? {}) }
   const previous = privacy[parsed.data]
-  privacy[parsed.data] = value
+  // `value` is the switch position, which is not always the stored value —
+  // "Ikke lagre IP-adresse" is on when ip_logging is off. See keys.ts.
+  const stored = privacyToStored(parsed.data as PrivacyKeyName, value)
+  privacy[parsed.data] = stored
 
   const { error } = await supabase.from('organizations').update({ privacy }).eq('id', admin.orgId)
   if (error) {
@@ -100,7 +106,7 @@ export async function setPrivacy(key: string, value: boolean): Promise<AdminResu
     return { ok: false, error: 'save_failed' }
   }
 
-  await audit(admin.orgId, 'privacy.toggle', parsed.data, { from: previous, to: value })
+  await audit(admin.orgId, 'privacy.toggle', parsed.data, { from: previous, to: stored })
   revalidatePath('/administrasjon')
   return { ok: true }
 }
@@ -268,10 +274,18 @@ export async function setMemberStatus(memberId: string, active: boolean): Promis
 const InviteInput = z.object({ email: z.string().trim().email().max(200) })
 
 /**
- * Creates the membership row in `invited` status. It does NOT send an email —
- * the mail adapter is a console transport until Phase 3 (DECISIONS Q6), so
- * claiming an invitation was sent would be a lie. The row is real and the user
- * becomes active on first sign-in.
+ * Creates the membership row in `invited` status and sends Supabase's own
+ * invitation email.
+ *
+ * The email goes through the auth service, not the `lib/mail` adapter — that
+ * one is still a console transport until SES lands in Phase 3 (DECISIONS Q6),
+ * and an invitation nobody receives is worse than none. The membership row is
+ * written first: if the mail fails the invite still exists and the colleague
+ * can sign in by magic link, whereas an email pointing at a membership that was
+ * never created would be a dead end.
+ *
+ * `claim_membership` (migration 0016) attaches the row to the auth user on
+ * their first sign-in.
  */
 export async function inviteMember(_prev: AdminResult | null, formData: FormData): Promise<AdminResult> {
   const admin = await requireAdmin()
@@ -280,10 +294,11 @@ export async function inviteMember(_prev: AdminResult | null, formData: FormData
   const parsed = InviteInput.safeParse({ email: formData.get('email') })
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
+  const email = parsed.data.email.toLowerCase()
   const supabase = await createClient()
   const { error } = await supabase.from('org_members').insert({
     org_id: admin.orgId,
-    email: parsed.data.email.toLowerCase(),
+    email,
     role: 'leser',
     status: 'invited',
     invited_by: admin.memberId,
@@ -294,7 +309,17 @@ export async function inviteMember(_prev: AdminResult | null, formData: FormData
     return { ok: false, error: error.code === '23505' ? 'duplicate' : 'save_failed' }
   }
 
-  await audit(admin.orgId, 'member.invite', parsed.data.email, { role: 'leser' })
+  const origin = (await headers()).get('origin') ?? ''
+  const { error: mailError } = await createAdminClient().auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${origin}/auth/callback`,
+  })
+  // Already having an auth account is the common case for a colleague who was
+  // invited to another org first; that is not a failure of this invitation.
+  if (mailError && mailError.status !== 422) {
+    console.error(`inviteMember: invitation email failed for a member of ${admin.orgId}`)
+  }
+
+  await audit(admin.orgId, 'member.invite', email, { role: 'leser' })
   revalidatePath('/administrasjon')
   return { ok: true }
 }

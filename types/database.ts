@@ -1820,6 +1820,10 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      claim_membership: {
+        Args: Record<string, never>
+        Returns: string | null
+      }
       get_quotes: {
         Args: {
           p_group?: string

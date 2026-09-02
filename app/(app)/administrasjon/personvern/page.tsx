@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { PrivacyPanel } from '../PrivacyPanel'
 import { DsrPanel } from '../DsrPanel'
-import { PRIVACY_KEYS, type DsrRequest, type PrivacyKey } from '../keys'
+import { PRIVACY_KEYS, privacyToDisplay, type DsrRequest, type PrivacyKey } from '../keys'
 
 /** Personvern tab — HeiTuva.dc.html:1474-1541. Two columns: privacy + DSR on
  *  the left, documentation (on --sbg) and the anonymity explainer on the right. */
@@ -27,10 +27,9 @@ export default async function PrivacyTab() {
   ])
 
   const raw = (org?.privacy as Record<string, boolean> | null) ?? {}
-  const privacy = Object.fromEntries(PRIVACY_KEYS.map((k) => [k, raw[k] === true])) as Record<
-    PrivacyKey,
-    boolean
-  >
+  const privacy = Object.fromEntries(
+    PRIVACY_KEYS.map((k) => [k, privacyToDisplay(k, raw[k] === true)]),
+  ) as Record<PrivacyKey, boolean>
 
   // The design's four documentation rows have no upload path until the duty
   // engine and Storage land in Phase 5 — they render with a "not uploaded yet"

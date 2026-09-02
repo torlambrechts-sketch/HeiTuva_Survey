@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, rm, stat } from 'node:fs/promises'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { LOCAL_SUPABASE } from './local-env'
@@ -121,6 +121,13 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
   }
 
   if (LOCAL && (!(await buildTargetsLocal()) || (await buildIsStale()))) await buildLocal()
+
+  // UI copy is read from `ui_messages` through `unstable_cache`, whose entries
+  // are written to disk and therefore outlive the server. A run that started
+  // after a reseed kept rendering the old message set for up to the revalidate
+  // window, and untranslated keys showed up in captures of code that was
+  // actually fine. Verification must not inherit a previous run's cache.
+  await rm('.next/cache/fetch-cache', { recursive: true, force: true })
 
   console.log(`  server: starting on ${BASE_URL}${LOCAL ? ' (local Supabase)' : ''}`)
   const port = new URL(BASE_URL).port || '3100'

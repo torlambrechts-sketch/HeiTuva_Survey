@@ -113,8 +113,10 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'saved',
         setup: async (page) => {
-          await page.fill('input[name="address"]', 'Storgata 1, 0155 Oslo')
-          await page.getByRole('button', { name: /Lagre endringer|Save changes/ }).click()
+          // The card has no save button by design — it saves when a changed
+          // field loses focus, so the blur is the interaction under test.
+          await page.fill('input[name="address"]', 'Storgata 12, 0155 Oslo')
+          await page.locator('input[name="address"]').blur()
           await page.getByRole('status').first().waitFor({ state: 'visible', timeout: 15_000 })
         },
       },

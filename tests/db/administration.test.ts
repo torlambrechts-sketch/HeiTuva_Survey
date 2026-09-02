@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   adminClient,
   anonClient,
@@ -9,6 +9,20 @@ import {
   type Client,
 } from './clients'
 import { ORG_OTHER, ORG_PRIMARY } from './personas'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { ANON_KEY, SUPABASE_URL } from './clients'
+import type { Database } from '@/types/database'
+
+/** A real session for an arbitrary address — the persona helpers only cover the
+ *  four seeded ones, and the invitation flow needs a user nobody has seen. */
+async function signInAs(email: string, password: string): Promise<Client> {
+  const client = createSupabaseClient<Database>(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false },
+  })
+  const { error } = await client.auth.signInWithPassword({ email, password })
+  if (error) throw new Error(`signInAs(${email}) failed: ${error.message}`)
+  return client
+}
 
 /**
  * The Administrasjon surface, asserted through real persona sessions.
@@ -285,5 +299,89 @@ describe('audit trail', () => {
     const del = await svc.from('audit_events').delete().eq('id', row!.id)
     expect(upd.error?.message).toMatch(/append-only/)
     expect(del.error?.message).toMatch(/append-only/)
+  })
+})
+
+describe('claiming an invitation (migration 0016)', () => {
+  const invitee = `invitee-${Date.now()}@example.test`
+  const password = 'heituva-dev-password-1!'
+  let inviteeUserId: string
+  let memberRowId: string
+
+  beforeAll(async () => {
+    const svc = serviceClient()
+    const { data: created, error } = await svc.auth.admin.createUser({
+      email: invitee,
+      password,
+      email_confirm: true,
+    })
+    if (error) throw new Error(`could not create invitee: ${error.message}`)
+    inviteeUserId = created.user.id
+
+    // Exactly what inviteMember writes: the email, no user_id, status invited.
+    const { data: row } = await svc
+      .from('org_members')
+      .insert({ org_id: orgId, email: invitee, role: 'leser', status: 'invited' })
+      .select('id')
+      .single()
+    memberRowId = row!.id
+  })
+
+  afterAll(async () => {
+    const svc = serviceClient()
+    await svc.from('org_members').delete().eq('id', memberRowId)
+    await svc.auth.admin.deleteUser(inviteeUserId)
+  })
+
+  it('an invited user claims the row that names their own address', async () => {
+    const client = await signInAs(invitee, password)
+    const { data: claimed, error } = await client.rpc('claim_membership')
+    expect(error).toBeNull()
+    expect(claimed).toBe(memberRowId)
+
+    const { data: after } = await serviceClient()
+      .from('org_members')
+      .select('user_id, status')
+      .eq('id', memberRowId)
+      .single()
+    expect(after?.user_id).toBe(inviteeUserId)
+    expect(after?.status).toBe('active')
+  })
+
+  it('claiming again does nothing — the row is no longer unclaimed', async () => {
+    const client = await signInAs(invitee, password)
+    const { data: claimed } = await client.rpc('claim_membership')
+    expect(claimed).toBeNull()
+  })
+
+  it('nobody can claim an invitation addressed to someone else', async () => {
+    const svc = serviceClient()
+    const other = `someone-else-${Date.now()}@example.test`
+    const { data: row } = await svc
+      .from('org_members')
+      .insert({ org_id: orgId, email: other, role: 'leser', status: 'invited' })
+      .select('id')
+      .single()
+
+    // The function keys off auth.email(), which the auth server puts in the JWT
+    // only for a confirmed address — so this is the whole attack surface.
+    const client = await signInAs(invitee, password)
+    const { data: claimed } = await client.rpc('claim_membership')
+    expect(claimed).toBeNull()
+
+    const { data: after } = await svc
+      .from('org_members')
+      .select('user_id, status')
+      .eq('id', row!.id)
+      .single()
+    expect(after?.user_id).toBeNull()
+    expect(after?.status).toBe('invited')
+
+    await svc.from('org_members').delete().eq('id', row!.id)
+  })
+
+  it('an anonymous caller cannot execute it at all', async () => {
+    const { error } = await anonClient().rpc('claim_membership')
+    expect(error).not.toBeNull()
   })
 })

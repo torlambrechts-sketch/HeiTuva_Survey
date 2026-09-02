@@ -239,3 +239,22 @@ states: enrol (QR plus the shared secret) when the account has no verified
 factor, and challenge (six-digit code) when it has one but the session is still
 aal1. Enrolment is behind an explicit button rather than started on page load,
 so a GET never mutates the account's factors.
+
+### D23 — Firmaopplysninger saves on blur, with a status chip
+The design's Firma card has no save button (HeiTuva.dc.html:1386-1397): the
+prototype writes each keystroke into local state, which is not persistence. The
+card body is kept pixel-identical — no button is added — and it saves when a
+changed field loses focus. The one addition is the "Lagret ✓" chip in the card
+header, which is the treatment the design already uses on Profil's Om meg card,
+because a save with no acknowledgement is indistinguishable from a save that
+silently failed. A visually hidden submit button remains so pressing Enter in a
+field still works.
+
+### D24 — "Skjul resultater under 5 svar" carries an extra line
+The design renders it as an ordinary toggle (HeiTuva.dc.html:3261). It cannot be
+one: k=5 is enforced in the database and is not org-configurable (DECISIONS Q3),
+so the action refuses the key and nothing an administrator did to that switch
+would change anything. It renders on, non-interactive, with
+"Alltid på — håndheves i databasen" appended to the design's own description.
+Leaving the description verbatim would have meant shipping a switch that looks
+live and silently ignores every click.

@@ -30,7 +30,15 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return null
+  return readViewer(supabase, user)
+})
 
+/** The uncached read. Split out so requireViewer can re-read after claiming an
+ *  invitation — `cache` would otherwise hand back the null it just resolved. */
+async function readViewer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; email?: string },
+): Promise<Viewer | null> {
   const { data: member } = await supabase
     .from('org_members')
     .select('id, org_id, role, name, group_id, organizations(name, default_lang)')
@@ -66,7 +74,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     locale,
     groupId: member.group_id,
   }
-})
+}
 
 /**
  * Use in any page or action under (app). Redirects rather than throwing so a
@@ -86,7 +94,18 @@ export async function requireViewer(): Promise<Viewer> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  redirect(user ? '/kom-i-gang' : '/logg-inn')
+  if (!user) redirect('/logg-inn')
+
+  // An invited colleague's org_members row carries their email but no user_id
+  // until they first sign in. Without this they would look like they belong to
+  // no organization and onboarding would offer to create them a second one.
+  const { data: claimed } = await supabase.rpc('claim_membership')
+  if (claimed) {
+    const fresh = await readViewer(supabase, user)
+    if (fresh) return fresh
+  }
+
+  redirect('/kom-i-gang')
 }
 
 

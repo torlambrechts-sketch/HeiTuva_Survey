@@ -17,8 +17,9 @@
     "verify:browser": "tsx scripts/verify/capture.ts --local",
     "verify:reference": "tsx scripts/verify/reference.ts",
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
-    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:browser",
-    "seed:mfa": "tsx scripts/seed-mfa.ts --local"
+    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:browser && npm run verify:visual",
+    "seed:mfa": "tsx scripts/seed-mfa.ts --local",
+    "verify:visual": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
