@@ -1,0 +1,146 @@
+-- HeiTuva seed — registries and standard content (idempotent-ish: run on fresh DB)
+-- Standard template packs (org_id NULL) — verbatim from the design bundle PACKS.
+
+insert into public.template_packs (org_id, key, category, legal_ref, title, audience, questions) values
+(null,'ukentlig-puls','Ansatte',null,'Ukespuls — Produkt','Produktteamet',
+ '[{"text":"Hvordan har uken på jobb vært?","type":"scale"},{"text":"Jeg har det jeg trenger for å gjøre jobben min godt","type":"scale"},{"text":"Hvor gikk mest tid tapt denne uken?","type":"choice","options":["Møter","Uklare prioriteringer","Venting på andre","Verktøy","Ingenting spesielt"]},{"text":"Hva ville gjort neste uke bedre?","type":"text"}]'),
+(null,'oppstartssjekk','Ansatte',null,'Oppstartssjekk — 30 dager','Nyansatte',
+ '[{"text":"Den første måneden svarte til forventningene","type":"scale"},{"text":"Hadde du en fadder den første uken?","type":"yesno"},{"text":"Hva hjalp deg mest i oppstarten?","type":"choice","options":["Fadderordningen","Dokumentasjon","Teamets rutiner","1:1 med leder"]},{"text":"Hva var forvirrende de første ukene?","type":"text"}]'),
+(null,'arrangement','Ansatte',null,'Samling','Deltakere',
+ '[{"text":"Hvordan vil du vurdere samlingen totalt?","type":"scale"},{"text":"Hva var best av de to dagene?","type":"choice","options":["Workshopene","Strategiøkten","Sosial kveld","Fritid"]},{"text":"Bør vi gjenta det neste år?","type":"yesno"},{"text":"Er det noe vi bør endre?","type":"text"}]'),
+(null,'arbeidsmiljo-manedlig','Lovpålagt','Arbeidsmiljøloven § 4-3','Arbeidsmiljø — månedlig','Hele selskapet',
+ '[{"text":"Jeg får energi av arbeidet mitt om dagen","type":"scale"},{"text":"Jeg kan si det jeg mener i teamet mitt","type":"scale"},{"text":"Hvordan er arbeidsmengden din?","type":"choice","options":["For lav","Passe","Litt høy","For høy"]},{"text":"Hva opptar deg denne måneden?","type":"text"}]'),
+(null,'psykososial-kartlegging','Lovpålagt','Arbeidsmiljøloven § 4-3 (fra 1.1.2026)','Psykososial kartlegging','Alle ansatte · årlig',
+ '[{"text":"Jeg vet hva som forventes av meg i jobben min","type":"likert"},{"text":"Arbeidsmengden min er til å håndtere over tid","type":"likert"},{"text":"Jeg får støtte fra lederen min når jobben blir krevende","type":"likert"},{"text":"Jeg har innflytelse over hvordan jeg utfører arbeidet","type":"likert"},{"text":"Hvor ofte opplever du følelsesmessig belastende situasjoner på jobb?","type":"choice","options":["Aldri","Sjelden","Månedlig","Ukentlig","Daglig"]},{"text":"Har du opplevd eller sett trakassering eller utilbørlig opptreden siste 12 måneder?","type":"yesno"},{"text":"Hva bør vi gjøre noe med først?","type":"text"}]'),
+(null,'trakassering-ytringsklima','Lovpålagt','Likestillingsloven ARP · aml. kap. 2A','Trakassering og ytringsklima','Alle ansatte · årlig',
+ '[{"text":"Jeg kan si fra om kritikkverdige forhold uten å frykte konsekvenser","type":"likert"},{"text":"Jeg vet hvordan jeg varsler hos oss","type":"yesno"},{"text":"Har du opplevd uønsket seksuell oppmerksomhet på jobb?","type":"yesno"},{"text":"Har du opplevd forskjellsbehandling på grunn av kjønn, etnisitet, alder, funksjonsevne eller livssyn?","type":"yesno"},{"text":"Hva ville gjort det tryggere å si fra?","type":"text"}]'),
+(null,'likestilling-deltid','Lovpålagt','ARP — kartlegges annethvert år','Likestilling og ufrivillig deltid','Alle ansatte · annethvert år',
+ '[{"text":"Jobber du heltid eller deltid?","type":"choice","options":["Heltid","Deltid — frivillig","Deltid — ønsker å jobbe mer"]},{"text":"Er du tilgjengelig for å jobbe mer enn du gjør i dag?","type":"yesno"},{"text":"Hva ville gjort det mulig for deg å jobbe mer?","type":"choice","multi":true,"options":["Annen arbeidstid","Tilrettelagte oppgaver","Barnehage/SFO","Tilrettelegging for helse","Ikke aktuelt"]},{"text":"Jeg har samme mulighet til utvikling og forfremmelse som andre","type":"likert"},{"text":"Jeg opplever at lønn settes rettferdig hos oss","type":"likert"},{"text":"Er det noe vi bør endre for å bli mer likestilte?","type":"text"}]'),
+(null,'leverandor-apenhetsloven','Lovpålagt','Åpenhetsloven §§ 4–5 · frist 30. juni','Aktsomhetsvurdering leverandør','Leverandører og forretningspartnere',
+ '[{"text":"Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?","type":"yesno"},{"text":"Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?","type":"yesno"},{"text":"Hvor mange ledd bakover i kjeden har dere oversikt over?","type":"choice","options":["Ingen","Ett ledd","To ledd","Tre eller flere"]},{"text":"Har dere avdekket brudd eller risiko siste 12 måneder?","type":"yesno"},{"text":"Har dere en varslingskanal som er åpen for arbeidere i kjeden?","type":"yesno"},{"text":"Beskriv tiltakene dere har iverksatt","type":"text"}]'),
+(null,'klima-miljo','Lovpålagt','Bærekraftsrapportering · ESG','Klima- og miljøkartlegging','Ansatte og leverandører',
+ '[{"text":"Hvordan kommer du deg oftest på jobb?","type":"choice","options":["Til fots eller sykkel","Kollektivt","Elbil","Fossilbil","Hjemmekontor"]},{"text":"Hvor mange flyreiser i jobb hadde du siste år?","type":"choice","options":["Ingen","1–2","3–5","6 eller flere"]},{"text":"Vi har rutiner som gjør det enkelt å velge miljøvennlig","type":"likert"},{"text":"Hva hindrer deg i å ta det grønne valget på jobb?","type":"text"}]'),
+(null,'nps-kunde','Kunder',null,'Hvor sannsynlig er det at du anbefaler oss?','Kunder · løpende',
+ '[{"text":"Hvor sannsynlig er det at du vil anbefale oss til en kollega eller venn?","type":"enps"},{"text":"Hva er hovedgrunnen til at du ga den scoren?","type":"text"},{"text":"Hva skal til for at vi får ett poeng høyere?","type":"text"}]'),
+(null,'csat','Kunder',null,'Hvordan var opplevelsen?','Kunder etter kjøp eller sak',
+ '[{"text":"Hvor fornøyd er du med opplevelsen totalt sett?","type":"smiley"},{"text":"Vi løste det du tok kontakt om","type":"likert"},{"text":"Hvor lett var det å få hjelp?","type":"scale"},{"text":"Hva kunne gjort opplevelsen bedre?","type":"text"},{"text":"Ønsker du at vi tar kontakt om svaret ditt?","type":"yesno"}]'),
+(null,'vunnet-tapt','Kunder',null,'Hvorfor valgte du som du gjorde?','Kunder og prospekter',
+ '[{"text":"Hvor godt traff tilbudet vårt behovet ditt?","type":"scale"},{"text":"Hva var viktigst i beslutningen?","type":"ranking","options":["Pris","Funksjonalitet","Personvern og sikkerhet","Support","Leveringstid"]},{"text":"Valgte du oss?","type":"choice","options":["Ja","Nei — valgte en annen","Utsatt beslutning"]},{"text":"Hva burde vi gjort annerledes?","type":"text"}]'),
+(null,'produkttilbakemelding','Kunder',null,'Hva synes du om det nye?','Brukere av produktet',
+ '[{"text":"Hvor nyttig er den nye funksjonen for deg?","type":"scale"},{"text":"Hvor lett var den å ta i bruk?","type":"scale"},{"text":"Hva mangler før dette blir en del av hverdagen din?","type":"text"}]'),
+(null,'medlem-innbygger','Annet',null,'Medlemsundersøkelse','Medlemmer, innbyggere, foreldre',
+ '[{"text":"Hvor fornøyd er du med tilbudet vårt?","type":"smiley"},{"text":"Hvilke tilbud bruker du?","type":"choice","multi":true,"options":["Arrangementer","Kurs","Rådgivning","Digitale tjenester","Ingen"]},{"text":"Hva bør vi prioritere neste år?","type":"ranking","options":["Flere arrangementer","Lavere pris","Bedre digitale tjenester","Mer lokal tilstedeværelse"]},{"text":"Er det noe du savner?","type":"text"}]'),
+(null,'kurs-opplaering','Annet',null,'Evaluering av kurs','Deltakere etter kurs',
+ '[{"text":"Hvor godt svarte kurset til forventningene?","type":"scale"},{"text":"Jeg kan bruke det jeg lærte i jobben min","type":"likert"},{"text":"Hva var mest nyttig?","type":"text"}]'),
+(null,'sluttsamtale','Ansatte',null,'Sluttsamtale','Ansatte som slutter',
+ '[{"text":"Hva var den viktigste grunnen til at du sluttet?","type":"choice","options":["Lønn og betingelser","Utviklingsmuligheter","Lederen min","Arbeidsmengde","Flyttet eller livssituasjon","Fikk et bedre tilbud"]},{"text":"Hvor lenge har du vurdert å slutte?","type":"choice","options":["Under en måned","1–3 måneder","6 måneder","Over et år"]},{"text":"Kunne vi gjort noe for å beholde deg?","type":"yesno"},{"text":"Jeg vil anbefale andre å søke jobb hos oss","type":"likert"},{"text":"Hva bør vi endre for de som blir igjen?","type":"text"}]'),
+(null,'360-tilbakemelding','Ansatte',null,'360 tilbakemelding','Leder · kolleger og medarbeidere',
+ '[{"text":"Din relasjon til personen","type":"choice","options":["Medarbeider","Kollega på samme nivå","Leder","Samarbeidspartner"]},{"text":"Vurder følgende utsagn om personen","type":"matrix","statements":["Er tydelig på hva som forventes","Gir tilbakemelding jeg kan bruke","Lytter før beslutninger tas","Følger opp det som avtales","Skaper trygghet i gruppen"]},{"text":"Hva bør personen fortsette med?","type":"text"},{"text":"Hva bør personen gjøre annerledes?","type":"text"}]');
+
+-- Standard question bank ------------------------------------------------------
+insert into public.question_bank (org_id, text, type, category, config) values
+(null,'Jeg vil anbefale denne arbeidsplassen til en venn','scale','Engasjement','{}'),
+(null,'Jeg vet hva som forventes av meg på jobb','scale','Tydelighet','{}'),
+(null,'Lederen min gir meg nyttige tilbakemeldinger','scale','Ledelse','{}'),
+(null,'Jeg har verktøyene jeg trenger for å gjøre jobben','scale','Verktøy','{}'),
+(null,'Hvordan er arbeidsmengden din nå?','choice','Arbeidsmiljø','{"options":["For lav","Passe","Litt høy","For høy"]}'),
+(null,'Føler du deg trygg på å si fra?','yesno','Kultur','{}'),
+(null,'Hva bør vi begynne med?','text','Åpne','{}'),
+(null,'Hva bør vi slutte med?','text','Åpne','{}'),
+(null,'Hvilket gode betyr mest for deg?','choice','Goder','{"options":["Fleksitid","Hjemmekontor","Kompetansebudsjett","Pensjon","Ekstra fridager"]}'),
+(null,'Hvor sannsynlig er det at du er her om ett år?','scale','Turnover','{}'),
+(null,'Forberedte oppstarten deg på rollen din?','yesno','Oppstart','{}'),
+(null,'Hvordan var det siste allmøtet?','scale','Arrangement','{}');
+
+-- Statutory duty registry -----------------------------------------------------
+insert into public.duty_definitions (key, title, law, basis, default_interval_months, publish, pack_key, checks, signer_roles) values
+('apenhet','Aktsomhetsvurdering leverandører','Åpenhetsloven §§ 4–5',
+ 'Redegjørelsen skal signeres av styret og publiseres offentlig.',12,true,'leverandor-apenhetsloven',
+ '[{"key":"k1","label":"Kartlegging gjennomført"},{"key":"k2","label":"Funn og risiko dokumentert"},{"key":"k3","label":"Tiltak registrert med ansvarlig"},{"key":"k4","label":"Styrebehandlet og signert"}]',
+ '[{"key":"styre","label":"Styreleder","role":"Signerer redegjørelsen"},{"key":"dl","label":"Daglig leder","role":"Bekrefter tiltak"}]'),
+('arbeidsmiljo','Psykososial kartlegging','Arbeidsmiljøloven § 4-3 · internkontroll',
+ 'Skal dokumenteres skriftlig og gjennomgås med verneombud.',12,false,'psykososial-kartlegging',
+ '[{"key":"k1","label":"Kartlegging gjennomført"},{"key":"k2","label":"Risikoområder vurdert"},{"key":"k3","label":"Tiltaksplan med frister"},{"key":"k4","label":"Verneombud involvert"}]',
+ '[{"key":"vo","label":"Verneombud","role":"Har gjennomgått kartleggingen"},{"key":"hr","label":"HR-ansvarlig","role":"Eier tiltaksplanen"}]'),
+('likestilling','Likestilling og ARP','Likestillings- og diskrimineringsloven § 26',
+ 'Lønnskartlegging annethvert år. Redegjøres for i årsberetningen.',24,true,'likestilling-deltid',
+ '[{"key":"k1","label":"Kjønnsdelt lønnskartlegging"},{"key":"k2","label":"Ufrivillig deltid kartlagt"},{"key":"k3","label":"Årsaker analysert"},{"key":"k4","label":"Tiltak i årsberetningen"}]',
+ '[{"key":"styre","label":"Styret","role":"Inn i årsberetningen"}]'),
+('trakassering','Trakassering og ytringsklima','Aml. kap. 2A · ARP',
+ 'Varslingsrutinen skal være kjent og testet blant de ansatte.',12,false,'trakassering-ytringsklima',
+ '[{"key":"k1","label":"Undersøkelse gjennomført"},{"key":"k2","label":"Varslingsrutine kjent"},{"key":"k3","label":"Funn håndtert"},{"key":"k4","label":"Ansvarlig oppnevnt"}]',
+ '[{"key":"hr","label":"HR-ansvarlig","role":"Eier varslingsrutinen"}]');
+
+-- Report section registry -----------------------------------------------------
+insert into public.report_section_types (key, label, description, supports_group_filter) values
+('summary','Sammendrag','Tre hovedfunn i klartekst',false),
+('trend','Utvikling over tid','Snitt per runde som stolper',false),
+('heatmap','Heatmap team × spørsmål','Farget rutenett, terskel på fem svar',true),
+('drivers','Høyest og lavest','Tre høyeste og tre laveste spørsmål',true),
+('teams','Resultat per team','Snitt per gruppe, aldri under fem svar',false),
+('themes','Temaer i frisvarene','Automatisk gruppering av frisvar',true),
+('quotes','Utvalgte sitater','Anonymiserte sitater',false),
+('actions','Tiltak og ansvarlig','Hva dere gjør, hvem som eier det, frist',false),
+('participation','Deltakelse og svarprosent','Hvem ble spurt, hvor mange svarte',false),
+('method','Metode og spørsmål','Undersøkelser og spørsmål i utvalget',false);
+
+-- Question quality rules (design heuristics) ------------------------------------
+insert into public.quality_rules (key, lang, pattern, rule, message) values
+('double_barreled','no','\m(og|eller)\M','{"kind":"regex_min_words","min_words":7}','Ser ut som to spørsmål i ett — del det opp'),
+('leading_words','no',null,'{"kind":"leading_words","words":["fornøyd","enig i at","selvsagt","åpenbart","endelig","flott","utmerket","dårlige"]}','Ledende ordvalg — prøv en nøytral formulering'),
+('too_long','no',null,'{"kind":"max_words","max":20}','Over 20 ord — kort det ned'),
+('negation','no','\m(ikke|aldri)\M','{"kind":"regex"}','Negasjon gjør spørsmålet vanskelig å svare på');
+
+-- Benchmarks (static reference seed — DECISIONS Q8; replace with sourced values) --
+insert into public.benchmarks (industry, metric_key, value, source) values
+('Teknologi og IT','engagement_avg',3.9,'Seed — erstatt med kildeført referanse'),
+('Teknologi og IT','enps',12,'Seed — erstatt med kildeført referanse'),
+('Teknologi og IT','response_rate',0.72,'Seed — erstatt med kildeført referanse'),
+('Alle bransjer','engagement_avg',3.7,'Seed — erstatt med kildeført referanse'),
+('Alle bransjer','enps',8,'Seed — erstatt med kildeført referanse'),
+('Alle bransjer','response_rate',0.66,'Seed — erstatt med kildeført referanse');
+
+-- Feature flags: global defaults ------------------------------------------------
+insert into public.feature_flags (key, org_id, enabled) values
+('sms_channel', null, false), ('entra_sync', null, false), ('google_sync', null, false),
+('hr_sync', null, false), ('ai_insights', null, false), ('ai_translate', null, false),
+('pptx_export', null, false), ('stripe_billing', null, false);
+
+-- Respondent-chrome UI messages (verbatim from the design's RS object).
+-- Fuller namespaces are seeded from /messages/*.json by scripts/seed-i18n.ts.
+insert into public.ui_messages (namespace, key, lang, value) values
+('respondent','asks','no','spør deg'),('respondent','time','no','Tar ca. 90 sekunder'),
+('respondent','anon','no','Svarene er anonyme — arbeidsgiver ser bare summerte tall'),
+('respondent','named','no','Svarene vises med navnet ditt'),
+('respondent','choose','no','Du velger selv om du vil være anonym'),
+('respondent','back','no','Tilbake'),('respondent','next','no','Neste'),
+('respondent','submit','no','Send inn svar'),('respondent','of','no','av'),
+('respondent','question','no','Spørsmål'),('respondent','thanks','no','Takk!'),
+('respondent','thanksSub','no','Svaret ditt er registrert.'),
+('respondent','required','no','Dette spørsmålet må besvares'),
+('respondent','pickMany','no','Velg alle som passer'),
+('respondent','write','no','Skriv så mye eller lite du vil'),
+('respondent','again','no','Legg til et svar til'),('respondent','results','no','Se resultater'),
+('respondent','asks','en','asks you'),('respondent','time','en','Takes about 90 seconds'),
+('respondent','anon','en','Answers are anonymous — your employer only sees totals'),
+('respondent','named','en','Answers are shown with your name'),
+('respondent','choose','en','You choose whether to stay anonymous'),
+('respondent','back','en','Back'),('respondent','next','en','Next'),
+('respondent','submit','en','Submit answers'),('respondent','of','en','of'),
+('respondent','question','en','Question'),('respondent','thanks','en','Thank you!'),
+('respondent','thanksSub','en','Your answer is in.'),
+('respondent','required','en','This question is required'),
+('respondent','pickMany','en','Pick all that apply'),
+('respondent','write','en','Write as much or as little as you like'),
+('respondent','again','en','Add another response'),('respondent','results','en','See results'),
+-- sv/da seeded but inactive (organizations.active_langs governs exposure) — from the design:
+('respondent','asks','sv','frågar dig'),('respondent','time','sv','Tar cirka 90 sekunder'),
+('respondent','anon','sv','Svaren är anonyma — arbetsgivaren ser bara sammanlagda tal'),
+('respondent','back','sv','Tillbaka'),('respondent','next','sv','Nästa'),
+('respondent','submit','sv','Skicka in svar'),('respondent','thanks','sv','Tack!'),
+('respondent','required','sv','Den här frågan måste besvaras'),
+('respondent','asks','da','spørger dig'),('respondent','time','da','Tager cirka 90 sekunder'),
+('respondent','anon','da','Svarene er anonyme — arbejdsgiveren ser kun samlede tal'),
+('respondent','back','da','Tilbage'),('respondent','next','da','Næste'),
+('respondent','submit','da','Send svar'),('respondent','thanks','da','Tak!'),
+('respondent','required','da','Dette spørgsmål skal besvares');
