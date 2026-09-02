@@ -115,8 +115,16 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           // The card has no save button by design — it saves when a changed
           // field loses focus, so the blur is the interaction under test.
-          await page.fill('input[name="address"]', 'Storgata 12, 0155 Oslo')
-          await page.locator('input[name="address"]').blur()
+          //
+          // The value must differ from what is stored. React's value tracker
+          // suppresses onChange when a field is refilled with the value it
+          // already has, so a fixed string silently stopped marking the form
+          // dirty as soon as a previous run had saved it — and the state failed
+          // against an implementation that was working.
+          const address = page.locator('input[name="address"]')
+          const current = await address.inputValue()
+          await address.fill(current === 'Storgata 12, 0155 Oslo' ? 'Storgata 14, 0155 Oslo' : 'Storgata 12, 0155 Oslo')
+          await address.blur()
           await page.getByRole('status').first().waitFor({ state: 'visible', timeout: 15_000 })
         },
       },
