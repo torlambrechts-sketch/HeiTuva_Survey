@@ -35,3 +35,33 @@ setup rather than schema. They are in `0010_ops_extensions.sql` so the setup
 is reproducible on a fresh branch database instead of depending on someone
 clicking dashboard toggles. `cron.schedule` is guarded by a `cron.job`
 lookup so re-running alters the existing job rather than duplicating it.
+
+### D4 — Security-advisor baseline for `heituva-prod`
+The first remote apply raised findings. Two were real and are fixed forward in
+`0011_advisor_hardening.sql` (0001/0009 were already applied, so they are not
+edited — CLAUDE.md rule 8):
+
+1. **`anon` could execute `aggregate_results` and `get_quotes`.** 0009 revokes
+   from `PUBLIC` and grants to `authenticated`, but Supabase's default
+   privileges grant EXECUTE to the `anon` role at CREATE time, and revoking the
+   `PUBLIC` pseudo-role does not drop a grant held explicitly by `anon`. Both
+   RPCs already refused anon at runtime (`app.is_org_member()` is false when
+   `auth.uid()` is null), so this was defence in depth rather than an open door.
+   Now revoked explicitly.
+2. **Mutable `search_path` on four `app.*` helpers.** Pinned to `''`.
+   `app.hash_token` mattered most: it resolves `digest()` from pgcrypto, which
+   Supabase installs into `extensions`, so it previously inherited the caller's
+   session `search_path`. Now schema-qualified as `extensions.digest`. Output is
+   byte-identical — verified against the known SHA-256 of `hello` on both the
+   local and remote databases — so stored token hashes stay valid.
+
+The remaining advisor output is **accepted by design**. Treat this as the
+allowlist when the CI gate requires advisors to be clean:
+
+| Finding | Objects | Why accepted |
+|---|---|---|
+| `rls_enabled_no_policy` (INFO) | `responses`, `answers` | This *is* security invariant #1. RLS on with no policy = default deny for every client role. Adding a policy here would be the bug. |
+| `anon_security_definer_function_executable` (WARN) | `get_survey_for_token`, `submit_response` | The respondent flow at `/s/[token]` is unauthenticated by design. Both are token-validated. |
+| `authenticated_security_definer_function_executable` (WARN) | all four RPCs | SECURITY DEFINER RPCs are the *only* read path to `responses`/`answers`; that is the k-anonymity architecture, not an accident. |
+
+Anything outside this table appearing in a future advisor run is a regression.
