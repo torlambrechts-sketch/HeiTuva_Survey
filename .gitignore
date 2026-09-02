@@ -17,6 +17,10 @@ out/
 supabase/.temp/
 supabase/.branches/
 
+# claude code local settings — records approved commands verbatim,
+# which can include tokens. never commit.
+.claude/settings.local.json
+
 # misc
 .DS_Store
 *.log
