@@ -24,3 +24,8 @@ supabase/.branches/
 # misc
 .DS_Store
 *.log
+
+# next.js build output
+/.next/
+next-env.d.ts
+*.tsbuildinfo

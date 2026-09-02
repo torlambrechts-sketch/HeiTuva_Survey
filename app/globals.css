@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens — verbatim from CLAUDE.md. The design bundle is the source of
+   truth for these values; never adjust them to "improve" a screen. */
+:root {
+  --bg: #FCF6E9;
+  --sf: #FFFDF6;
+  --sf2: rgba(25, 21, 16, 0.05);
+  --ink: #191510;
+  --mut: #5F5849;
+  --line: #E8DFC9;
+  --ac: #F5C64A;
+  --acf: #191510;
+  --ac2: #A8D5D2;
+  --ac3: #FBD5C4;
+  --sbg: #FBEBBE;
+  --sbg2: #F6EEDD;
+}
+
+@layer base {
+  html {
+    font-size: 14px;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+  /* The design specifies this focus ring explicitly — keyboard users must see it. */
+  :focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .animate-enter {
+    animation: enter 0.25s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter {
+    animation: none;
+  }
+}

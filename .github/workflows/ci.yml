@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: types, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - name: Build
+        run: npx next build
+        env:
+          # Build-time only: the page is static and reads no real data.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.CI_SUPABASE_ANON_KEY || 'placeholder' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ vars.CI_SUPABASE_SERVICE_KEY || 'placeholder' }}
+
+  invariants:
+    name: security invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,mailpit
+
+      # Proves every migration applies from scratch and the seed lands.
+      - name: Apply migrations and seed
+        run: supabase db reset
+
+      - name: Check seed row counts
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -c "
+            do \$\$
+            declare packs int; duties int; bank int; sections int;
+            begin
+              select count(*) into packs    from public.template_packs;
+              select count(*) into duties   from public.duty_definitions;
+              select count(*) into bank     from public.question_bank;
+              select count(*) into sections from public.report_section_types;
+              if packs <> 17 or duties <> 4 or bank <> 12 or sections <> 10 then
+                raise exception 'seed drift: packs=% duties=% bank=% sections=%', packs, duties, bank, sections;
+              end if;
+            end \$\$;"
+
+      - run: npm ci
+      - run: npx tsx scripts/seed-i18n.ts --local
+
+      - name: Invariant suite
+        run: npx vitest run tests/invariants
+
+      - name: supabase db lint
+        run: supabase db lint --level warning

@@ -1,0 +1,13 @@
+-- HeiTuva 0013 — correct get_quotes volatility
+--
+-- `supabase db lint` flags: "routine is marked as STABLE, but expression is
+-- VOLATILE". 0009 declares public.get_quotes STABLE, but its body orders by
+-- random() — which is VOLATILE, and deliberately so: the comment there notes
+-- the ordering must never be chronological, because a stable order would let a
+-- reader line quotes up against submission times and re-identify respondents.
+--
+-- A STABLE marking tells the planner it may evaluate the call once per scan and
+-- reuse the result, which both misdeclares the function and risks undermining
+-- that shuffle. VOLATILE is the honest declaration. Only the marking changes;
+-- the body, arguments and grants are untouched.
+alter function public.get_quotes(uuid, uuid, uuid, int) volatile;
