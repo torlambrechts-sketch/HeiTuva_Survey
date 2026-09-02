@@ -109,3 +109,47 @@ the function and risks undermining the shuffle. Corrected with `alter function
 therefore generically typed, so a wrong column name is a runtime error rather
 than a compile error. Regenerate against the linked project before building
 Phase 1 screens.
+
+## Phase 1 (verification pass)
+
+### D8 — `/logg-inn` is invented; the design has no login screen
+The design bundle contains no authentication screen. Its only logged-out
+affordance is a "Logg inn" button in the header (`HeiTuva.dc.html:155`), whose
+`onLogin` handler simply flips `loggedOut` back to false
+(`HeiTuva.dc.html:3476`). The login page was therefore designed by me from the
+bundle's own primitives — card on `--sf` with `--line` border, 18px radius,
+Playfair heading, uppercase 11px/.09em field labels, `--ac` primary button.
+It needs a design decision from the product owner; it is not verifiable
+against any reference.
+
+### D9 — logged-out header state not implemented
+The design shows a dark "Logg inn" button in the header when `loggedOut` is
+true. The app redirects unauthenticated visitors to `/logg-inn` instead, so
+that header state never renders. Deliberate, but it is a design element that
+does not exist in the app.
+
+### D10 — root font-size moved off 14px
+CLAUDE.md fixes "base 14px". That had been applied as `html { font-size: 14px }`,
+which silently scaled Tailwind's rem-based spacing scale to 87.5% — the header
+rendered 14px padding where the design specifies 16px, and the user-menu
+dropdown 7px where the design specifies 8px. 14px is now set on `body` as the
+text size, leaving the root at the browser default so spacing utilities match
+the design. Verified with getComputedStyle: header padding 16px, dropdown
+padding 8px.
+
+### D11 — focus ring is `!important` and unlayered
+CLAUDE.md requires a 3px `#191510` focus outline. The design's inputs carry
+`outline:none` at rest, expressed here as Tailwind's `outline-none` utility.
+Utilities are emitted after `@layer base` and have equal specificity, so a
+layered rule lost the cascade and the browser default (1px auto) rendered
+instead. The rule is now unlayered with `!important`, which is the narrowest
+mechanism that reliably wins. Verified: `outlineWidth 3px, style solid,
+color rgb(25,21,16), offset 2px`.
+
+### D12 — app shell is not usable at 390px
+At a 390px viewport the header's content is 867px wide, so the browser expands
+the layout viewport to ~886px and the page renders zoomed out. CLAUDE.md scopes
+the app surface to pixel-perfect at >=1280px and only the respondent flow at
+`/s/[token]` to mobile-first, so this is in line with the stated scope — but
+the app shell has no mobile treatment at all, and nothing in the design bundle
+specifies one. Needs a decision before any phase ships a mobile app surface.

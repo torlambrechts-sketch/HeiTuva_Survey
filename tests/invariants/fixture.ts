@@ -51,12 +51,19 @@ export async function buildFixture() {
   const textQ = await insert(a, 'survey_questions', {
     survey_id: surveyA.id, position: 2, type: 'text', text: 'Hva bør vi endre?',
   })
+  // Answered by only two respondents, so the k gate — not an empty table — is
+  // what makes get_quotes refuse. Asserting the refusal on textQ alone passed
+  // trivially because nothing ever wrote free text.
+  const sparseTextQ = await insert(a, 'survey_questions', {
+    survey_id: surveyA.id, position: 3, type: 'text', text: 'Noe annet?',
+  })
 
   const round = await insert(a, 'survey_rounds', {
     survey_id: surveyA.id, round_no: 1, status: 'open',
     question_snapshot: [
       { id: scaleQ.id, type: 'scale', text: 'Hvordan har uken vært?' },
       { id: textQ.id, type: 'text', text: 'Hva bør vi endre?' },
+      { id: sparseTextQ.id, type: 'text', text: 'Noe annet?' },
     ],
   })
 
@@ -72,7 +79,7 @@ export async function buildFixture() {
   }
 
   return {
-    orgA, orgB, groupA, surveyA, surveyB, scaleQ, textQ, round, tokens,
+    orgA, orgB, groupA, surveyA, surveyB, scaleQ, textQ, sparseTextQ, round, tokens,
     adminA, leserA, adminB, leserMemberId: leserMember.id as string,
   }
 }

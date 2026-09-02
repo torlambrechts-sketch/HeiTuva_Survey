@@ -20,18 +20,15 @@
 }
 
 @layer base {
-  html {
-    font-size: 14px;
-  }
+  /* Root stays at the browser default so Tailwind's rem-based spacing scale is
+     true to the design (p-4 = 16px). CLAUDE.md's "base 14px" is the body text
+     size, set below — putting it on <html> silently scaled every gap and
+     padding in the app to 87.5%. */
   body {
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-body), system-ui, sans-serif;
-  }
-  /* The design specifies this focus ring explicitly — keyboard users must see it. */
-  :focus-visible {
-    outline: 3px solid var(--ink);
-    outline-offset: 2px;
+    font-size: 14px;
   }
 }
 
@@ -45,4 +42,13 @@
   .animate-enter {
     animation: none;
   }
+}
+
+/* Unlayered on purpose: inputs carry Tailwind's `outline-none` (the design's
+   inputs have outline:none at rest), and a rule inside @layer base loses to a
+   utility of equal specificity. Unlayered CSS wins over every @layer, so the
+   3px focus ring CLAUDE.md requires survives. Verified with getComputedStyle. */
+:focus-visible {
+  outline: 3px solid var(--ink) !important;
+  outline-offset: 2px !important;
 }

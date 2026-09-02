@@ -65,8 +65,12 @@ export function SignInForm({ labels }: { labels: Labels }) {
         {labels.signIn}
       </button>
 
+      {/* formNoValidate: this path needs only the email, so the shared form's
+          password constraints must not block it. The action re-validates with
+          Zod server-side, which is the boundary that actually matters. */}
       <button
         formAction={linkAction}
+        formNoValidate
         disabled={linkPending}
         className="cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-3 text-[13px] font-semibold text-ink disabled:opacity-60"
       >

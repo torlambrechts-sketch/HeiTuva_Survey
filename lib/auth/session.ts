@@ -76,11 +76,6 @@ export async function requireViewer(): Promise<Viewer> {
   return viewer
 }
 
-export async function requireRole(...allowed: MemberRole[]): Promise<Viewer> {
-  const viewer = await requireViewer()
-  if (!allowed.includes(viewer.role)) redirect('/')
-  return viewer
-}
 
 /** Initials for the avatar chip, matching the design's two-letter treatment. */
 export function initialsOf(name: string): string {

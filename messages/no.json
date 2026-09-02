@@ -221,5 +221,10 @@
     "svFull": "Svenska",
     "daFull": "Dansk",
     "enFull": "English"
+  },
+  "role": {
+    "administrator": "Administrator",
+    "redaktor": "Redaktør",
+    "leser": "Leser"
   }
 }

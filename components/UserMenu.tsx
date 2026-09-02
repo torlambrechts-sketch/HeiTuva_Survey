@@ -7,12 +7,6 @@ import { signOut } from '@/app/(auth)/logg-inn/actions'
 
 type Labels = { menu: string; profile: string; administration: string; privacy: string }
 
-const ROLE_LABEL: Record<string, string> = {
-  administrator: 'Administrator',
-  redaktor: 'Redaktør',
-  leser: 'Leser',
-}
-
 export function UserMenu({
   name,
   initials,
@@ -25,6 +19,7 @@ export function UserMenu({
   labels: Labels
 }) {
   const t = useTranslations('common')
+  const tRole = useTranslations('role')
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
 
@@ -71,7 +66,7 @@ export function UserMenu({
         >
           <div className="px-3 pb-3 pt-2.5">
             <div className="text-[14px] font-semibold">{name}</div>
-            <div className="mt-0.5 text-[12.5px] text-mut">{ROLE_LABEL[role] ?? role}</div>
+            <div className="mt-0.5 text-[12.5px] text-mut">{tRole(role)}</div>
           </div>
 
           <Link href="/profil" className={item} role="menuitem" onClick={() => setOpen(false)}>

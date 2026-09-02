@@ -98,7 +98,7 @@ describe('(c) anonymity is structural', () => {
 describe('(d) aggregate_results enforces k = 5', () => {
   it('returns insufficient_data at n = 4 and real data at n = 5', async () => {
     // Four submissions through the only write path.
-    for (let i = 0; i < 4; i++) await submit(f.tokens[i]!, f, 3 + (i % 3))
+    for (let i = 0; i < 4; i++) await submit(f.tokens[i]!, f, 3 + (i % 3), i)
 
     const four = await f.adminA.client.rpc('aggregate_results', { p_survey: f.surveyA.id })
     expect(four.error).toBeNull()
@@ -107,7 +107,7 @@ describe('(d) aggregate_results enforces k = 5', () => {
     expect(q4.n).toBeNull()
 
     // The fifth crosses the threshold.
-    await submit(f.tokens[4]!, f, 4)
+    await submit(f.tokens[4]!, f, 4, 4)
 
     const five = await f.adminA.client.rpc('aggregate_results', { p_survey: f.surveyA.id })
     const q5 = questionOf(five.data, f.scaleQ.id)
@@ -185,17 +185,41 @@ describe('(f) leser cannot filter free text by group', () => {
     expect((res.data as { error?: string })?.error).toBeUndefined()
   })
 
-  it('quotes stay k-gated below the threshold', async () => {
+  it('returns real quotes once the threshold is met', async () => {
+    // The suite previously only asserted the refusal side, so a get_quotes that
+    // returned insufficient_data forever would have stayed green.
     const res = await f.adminA.client.rpc('get_quotes', {
-      p_survey: f.surveyA.id, p_question: f.textQ.id,
+      p_survey: f.surveyA.id,
+      p_question: f.textQ.id,
+    })
+    const payload = res.data as { n?: number; quotes?: { text: string }[]; insufficient_data?: boolean }
+    expect(payload.insufficient_data).toBeUndefined()
+    expect(payload.n).toBeGreaterThanOrEqual(5)
+    expect(payload.quotes?.length).toBeGreaterThan(0)
+    // Never any author, group or timestamp in the payload.
+    for (const q of payload.quotes ?? []) expect(Object.keys(q)).toEqual(['text'])
+  })
+
+  it('quotes stay k-gated below the threshold', async () => {
+    // sparseTextQ has 2 answers, so this exercises the k gate rather than an
+    // empty result.
+    const res = await f.adminA.client.rpc('get_quotes', {
+      p_survey: f.surveyA.id, p_question: f.sparseTextQ.id,
     })
     expect(res.data).toMatchObject({ insufficient_data: true, n: null })
   })
 })
 
-async function submit(token: string, fx: Fixture, value: number) {
+async function submit(token: string, fx: Fixture, value: number, index = 0) {
+  const answers: Record<string, { value: unknown }> = {
+    [fx.scaleQ.id]: { value },
+    [fx.textQ.id]: { value: `Frisvar ${index}` },
+  }
+  // Only the first two respondents answer the sparse question, keeping it below k.
+  if (index < 2) answers[fx.sparseTextQ.id] = { value: `Sjelden frisvar ${index}` }
+
   const res = await anon().rpc('submit_response', {
-    p_token: token, p_lang: 'no', p_answers: { [fx.scaleQ.id]: { value } },
+    p_token: token, p_lang: 'no', p_answers: answers,
   })
   if ((res.data as { error?: string })?.error) {
     throw new Error(`submit failed: ${JSON.stringify(res.data)}`)

@@ -1,20 +1,20 @@
 import { getRequestConfig } from 'next-intl/server'
-import { SOURCE_LOCALE, getMergedMessages, isLocale } from './messages'
+import { getMergedMessages } from './messages'
+import { resolveLocale } from './resolve-locale'
 
 /**
- * Locale resolution for the app surface: the signed-in user's profile `lang`,
- * then the org's `default_lang`, then `no`. The respondent surface at
- * /s/[token] does not use this — it passes its locale explicitly, because a
- * respondent has no session to read a preference from.
+ * There is no locale routing in this project, so next-intl's `requestLocale`
+ * is always undefined. Resolving it ourselves is what makes the language
+ * picker actually change the UI — without this every request silently fell
+ * back to `no` no matter what the profile said.
  */
-export default getRequestConfig(async ({ locale }) => {
-  const resolved = isLocale(locale) ? locale : SOURCE_LOCALE
+export default getRequestConfig(async () => {
+  const locale = await resolveLocale()
   return {
-    locale: resolved,
-    messages: await getMergedMessages(resolved),
+    locale,
+    messages: await getMergedMessages(locale),
     // A key missing from both the requested locale and `no` renders as
     // `namespace.key` so the gap is visible in review instead of blank.
-    onError() {},
     getMessageFallback({ namespace, key }) {
       return namespace ? `${namespace}.${key}` : key
     },

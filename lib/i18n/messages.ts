@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { unstable_cache } from 'next/cache'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { SOURCE_LOCALE, i18nCacheTag, type Locale } from './locales'
 
 export { LOCALES, SOURCE_LOCALE, ACTIVE_LOCALES, isLocale, i18nCacheTag } from './locales'
@@ -11,12 +11,20 @@ type Messages = Record<string, Record<string, string>>
 
 /**
  * UI copy lives in the `ui_messages` table (data-not-code), seeded from
- * /messages/*.json. Read with the service role because the table is global
- * reference data and the respondent surface is unauthenticated — there is no
- * per-user data here, so no RLS decision is being bypassed.
+ * /messages/*.json.
+ *
+ * Read with the ANON key, not the service role. The i18n_sel policy is
+ * `using (true)`, so the anon role can already read every row — using the
+ * service role here bought nothing and put an RLS-bypassing client on the hot
+ * path of every page render. A sessionless client is also correct because this
+ * runs inside unstable_cache, where request cookies are not available.
  */
 async function fetchMessages(locale: Locale): Promise<Messages> {
-  const supabase = createAdminClient()
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } },
+  )
   const { data, error } = await supabase
     .from('ui_messages')
     .select('namespace, key, value')
