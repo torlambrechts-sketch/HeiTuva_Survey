@@ -26,9 +26,11 @@ export default async function ProfilePage() {
     .eq('user_id', viewer.userId)
     .maybeSingle()
 
+  // Named FK: org_members and groups are related twice (member's group, and
+  // group's lead), so an unqualified embed is ambiguous and returns an error.
   const { data: member } = await supabase
     .from('org_members')
-    .select('email, groups(name)')
+    .select('email, groups!org_members_group_id_fkey(name)')
     .eq('user_id', viewer.userId)
     .eq('status', 'active')
     .limit(1)

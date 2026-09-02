@@ -4,7 +4,17 @@ import { useOptimistic, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { setDefaultLang, setOption } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
-import { OPTION_KEYS, type OptionKey } from './keys'
+import { type OptionKey } from './keys'
+
+/** Row order exactly as the design lists it (HeiTuva.dc.html:3288-3294), with
+ *  the disabled SSO row in its fourth position. */
+const ROW_ORDER = [
+  'reminders',
+  'weekly_digest',
+  'allow_self_serve',
+  'sso',
+  'brand_mail',
+] as const
 
 const LABEL: Record<OptionKey, [string, string]> = {
   reminders: ['oReminders', 'oRemindersDesc'],
@@ -53,7 +63,33 @@ export function OptionsPanel({
       <h2 className="font-display text-[22px] font-medium">{t('optionsHeading')}</h2>
 
       <div className="mt-4 flex flex-col gap-3.5">
-        {OPTION_KEYS.map((key) => {
+        {ROW_ORDER.map((key) => {
+          // SSO keeps the design's fourth position rather than being pushed to
+          // the end because it is disabled — the order is part of the layout.
+          if (key === 'sso') {
+            return (
+              <div key="sso" className="flex items-center gap-3.5">
+                <span className="flex-1">
+                  <span className="block text-[14px] font-semibold">{t('oSso')}</span>
+                  <span className="mt-0.5 block text-[13px] text-mut">
+                    {t('oSsoDesc')} — {t('comingSoon')}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={false}
+                  aria-label={t('oSso')}
+                  disabled
+                  className="flex h-[26px] w-[46px] flex-none cursor-not-allowed justify-start rounded-full border-none p-[3px] opacity-50"
+                  style={{ background: 'var(--sf2)' }}
+                >
+                  <span className="block h-5 w-5 rounded-full bg-white" />
+                </button>
+              </div>
+            )
+          }
+
           const on = optimistic[key]
           const [label, desc] = LABEL[key]
           return (
@@ -79,26 +115,6 @@ export function OptionsPanel({
             </div>
           )
         })}
-
-        <div className="flex items-center gap-3.5">
-          <span className="flex-1">
-            <span className="block text-[14px] font-semibold">{t('oSso')}</span>
-            <span className="mt-0.5 block text-[13px] text-mut">
-              {t('oSsoDesc')} — {t('comingSoon')}
-            </span>
-          </span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={false}
-            aria-label={t('oSso')}
-            disabled
-            className="flex h-[26px] w-[46px] flex-none cursor-not-allowed justify-start rounded-full border-none p-[3px] opacity-50"
-            style={{ background: 'var(--sf2)' }}
-          >
-            <span className="block h-5 w-5 rounded-full bg-white" />
-          </button>
-        </div>
       </div>
 
       <div className="my-[18px] h-px bg-line" />

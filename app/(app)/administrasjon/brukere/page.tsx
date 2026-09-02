@@ -8,11 +8,17 @@ export default async function UsersTab() {
   if (viewer.role !== 'administrator') return null
 
   const supabase = await createClient()
-  const { data } = await supabase
+  // The FK must be named. There are two relationships between org_members and
+  // groups — a member's group, and a group's lead member — so an unqualified
+  // `groups(name)` is ambiguous and PostgREST refuses the whole query. It
+  // returned an error, not rows, and the screen showed "Ingen brukere ennå" for
+  // an org with three of them.
+  const { data, error } = await supabase
     .from('org_members')
-    .select('id, name, email, role, status, groups(name)')
+    .select('id, name, email, role, status, groups!org_members_group_id_fkey(name)')
     .eq('org_id', viewer.orgId)
     .order('created_at', { ascending: true })
+  if (error) throw new Error(`org_members read failed: ${error.message}`)
 
   const users: AdminUser[] = (data ?? []).map((m) => {
     const name = m.name || m.email

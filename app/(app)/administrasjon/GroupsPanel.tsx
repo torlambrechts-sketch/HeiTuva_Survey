@@ -78,8 +78,8 @@ export function GroupsPanel({ groups }: { groups: AdminGroup[] }) {
                 </button>
               </div>
               <div className="mt-[3px] text-[13px] text-mut">
-                {t('groupMembers', { count: g.count })} · {t('groupLead')}{' '}
-                {g.lead ?? t('groupNoLead')}
+                {t('groupMembers', { count: g.count })} ·{' '}
+                {g.lead ? `${t('groupLead')} ${g.lead}` : t('groupNoLead')}
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-sf2">
                 <div
