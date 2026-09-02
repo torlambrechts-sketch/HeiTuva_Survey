@@ -46,12 +46,17 @@ export const getMfaState = cache(async (): Promise<MfaState> => {
 /**
  * Whether an administrator's session clears the MFA bar.
  *
- * Both halves matter: an administrator who has never enrolled must enrol, and
- * one who has enrolled must have completed the challenge for THIS session.
+ * Only the assurance level is read, not the factor list: aal2 is minted by the
+ * auth server when a challenge is verified, so a session that carries it has by
+ * definition enrolled and completed a factor. Listing factors as well would put
+ * a second auth round-trip on every request an administrator makes and answer
+ * nothing this does not already know.
+ *
  * Callers that gate a write must use this — a layout redirect only protects the
  * screen, and a server action is reachable without ever rendering it.
  */
-export async function adminMfaSatisfied(): Promise<boolean> {
-  const mfa = await getMfaState()
-  return mfa.enrolled && mfa.current === 'aal2'
-}
+export const adminMfaSatisfied = cache(async (): Promise<boolean> => {
+  const supabase = await createClient()
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  return aal?.currentLevel === 'aal2'
+})

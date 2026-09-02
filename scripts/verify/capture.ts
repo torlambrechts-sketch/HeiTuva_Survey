@@ -133,6 +133,12 @@ async function main() {
           })
 
           try {
+            // Each state signs in for itself, which costs up to one 30-second
+            // TOTP window per administrator capture. Reusing a persona's
+            // storageState across states was tried to avoid that; two runs then
+            // stalled on a capture whose setup posts a server action, and the
+            // cause was not established — plausibly a restored auth cookie the
+            // server had already rotated. Not re-added without a diagnosis.
             if (spec.as !== 'anon') await signIn(page, spec.as, BASE_URL)
             // Not networkidle: Next prefetches every <Link> in the nav, so the
             // network never goes idle and every app route would time out.

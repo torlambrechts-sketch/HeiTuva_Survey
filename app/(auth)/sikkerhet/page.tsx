@@ -21,7 +21,9 @@ export default async function SecurityPage() {
   // Nothing to do here: either the session already carries aal2, or this user
   // is not an administrator and is not being asked for a factor.
   if (mfa.current === 'aal2' || (viewer && viewer.role !== 'administrator')) redirect('/')
-  if (!viewer) redirect('/logg-inn')
+  // Signed in but in no organization yet: onboarding, not the login screen —
+  // sending them to /logg-inn would only bounce off the middleware.
+  if (!viewer) redirect(mfa.current ? '/kom-i-gang' : '/logg-inn')
 
   const t = await getTranslations('mfa')
   const tCommon = await getTranslations('common')
