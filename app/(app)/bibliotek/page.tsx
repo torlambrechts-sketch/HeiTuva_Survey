@@ -89,12 +89,22 @@ export default async function LibraryPage({
           view={view}
           href={href}
           canEdit={canEdit}
+          readOnlyNote={canEdit ? undefined : t('readOnlyNote')}
           t={t}
           tQ={tQ}
           supabase={supabase}
         />
       ) : (
-        <BankTab orgId={viewer.orgId} category={category} query={query} href={href} t={t} tQ={tQ} supabase={supabase} />
+        <BankTab
+          orgId={viewer.orgId}
+          category={category}
+          query={query}
+          href={href}
+          readOnlyNote={canEdit ? undefined : t('readOnlyNote')}
+          t={t}
+          tQ={tQ}
+          supabase={supabase}
+        />
       )}
     </main>
   )
@@ -110,6 +120,7 @@ async function TemplatesTab({
   view,
   href,
   canEdit,
+  readOnlyNote,
   t,
   tQ,
   supabase,
@@ -119,6 +130,7 @@ async function TemplatesTab({
   view: PackView
   href: (next: Partial<Search>) => string
   canEdit: boolean
+  readOnlyNote?: string
   t: T
   tQ: TQ
   supabase: Supa
@@ -178,6 +190,11 @@ async function TemplatesTab({
 
   return (
     <>
+      {readOnlyNote ? (
+        <p className="mt-[18px] rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
+          {readOnlyNote}
+        </p>
+      ) : null}
       {mine.length ? (
         <section className="mt-[22px]">
           <h2 className="text-[11px] uppercase tracking-[.1em] text-mut">{t('ownTemplates')}</h2>
@@ -190,6 +207,7 @@ async function TemplatesTab({
                 labels={labelsFor(p)}
                 typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
                 canEdit={canEdit}
+                disabledReason={readOnlyNote}
               />
             ))}
           </div>
@@ -233,6 +251,7 @@ async function TemplatesTab({
               labels={labelsFor(p)}
               typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
               canEdit={canEdit}
+              disabledReason={readOnlyNote}
             />
           ))}
         </div>
@@ -272,6 +291,7 @@ async function TemplatesTab({
                 packId={p.id}
                 label={t('usePack')}
                 failedLabel={t('failed')}
+                disabledReason={readOnlyNote}
                 className="p-2.5 text-[12.5px] md:w-full"
               />
             </div>
@@ -287,6 +307,7 @@ async function BankTab({
   category,
   query,
   href,
+  readOnlyNote,
   t,
   tQ,
   supabase,
@@ -295,6 +316,7 @@ async function BankTab({
   category: PackCategory | string
   query: string
   href: (next: Partial<Search>) => string
+  readOnlyNote?: string
   t: T
   tQ: TQ
   supabase: Supa
@@ -338,6 +360,11 @@ async function BankTab({
 
   return (
     <section className="mt-[22px] rounded-[18px] border border-line bg-sf p-[22px]">
+      {readOnlyNote ? (
+        <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
+          {readOnlyNote}
+        </p>
+      ) : null}
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <BankSearch placeholder={t('bankSearch')} initial={query} />
         <span className="text-[13px] text-mut">
@@ -374,6 +401,7 @@ async function BankTab({
             text={r.text}
             badge={r.isOwn ? t('badgeOwn') : t('badgeValidated')}
             isOwn={r.isOwn}
+            disabledReason={readOnlyNote}
             meta={[
               r.category,
               tQ(r.type as 'scale'),

@@ -9,11 +9,15 @@ export function UsePackButton({
   packId,
   label,
   failedLabel,
+  disabledReason,
   className = '',
 }: {
   packId: string
   label: string
   failedLabel: string
+  /** Set for a reader: the button stays visible but refuses up front rather
+   *  than calling an action that RLS will reject. */
+  disabledReason?: string
   className?: string
 }) {
   const [pending, startTransition] = useTransition()
@@ -23,7 +27,8 @@ export function UsePackButton({
     <>
       <button
         type="button"
-        disabled={pending}
+        disabled={pending || Boolean(disabledReason)}
+        title={disabledReason}
         onClick={() =>
           startTransition(async () => {
             const res = await createSurveyFromPack(packId)
@@ -31,7 +36,7 @@ export function UsePackButton({
             setFailed(res !== undefined && !res.ok)
           })
         }
-        className={`touch-44 cursor-pointer rounded-[10px] border-none bg-ac text-[13px] font-semibold text-ink disabled:opacity-60 ${className}`}
+        className={`touch-44 cursor-pointer rounded-[10px] border-none bg-ac text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
         {label}
       </button>

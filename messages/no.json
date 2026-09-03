@@ -345,7 +345,8 @@
     "bankBenchmark": "benchmark",
     "bankBy": "av {author}",
     "bankEmpty": "Ingen spørsmål matcher søket.",
-    "failed": "Noe gikk galt. Prøv igjen."
+    "failed": "Noe gikk galt. Prøv igjen.",
+    "readOnlyNote": "Lesere kan bla i biblioteket, men ikke opprette undersøkelser eller endre maler."
   },
   "auth": {
     "signInTitle": "Logg inn",

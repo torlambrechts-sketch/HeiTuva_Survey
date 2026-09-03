@@ -25,6 +25,7 @@ export function TemplateCard({
   labels,
   typeLabels,
   canEdit,
+  disabledReason,
 }: {
   pack: TemplatePack
   tint: string
@@ -39,6 +40,7 @@ export function TemplateCard({
   }
   typeLabels: string[]
   canEdit: boolean
+  disabledReason?: string
 }) {
   return (
     <div
@@ -81,7 +83,13 @@ export function TemplateCard({
         ))}
       </div>
 
-      <UsePackButton packId={pack.id} label={labels.use} failedLabel={labels.failed} className="mt-[18px] w-full p-[11px]" />
+      <UsePackButton
+        packId={pack.id}
+        label={labels.use}
+        failedLabel={labels.failed}
+        disabledReason={disabledReason}
+        className="mt-[18px] w-full p-[11px]"
+      />
     </div>
   )
 }

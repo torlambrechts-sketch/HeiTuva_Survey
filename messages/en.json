@@ -345,7 +345,8 @@
     "bankBenchmark": "benchmark",
     "bankBy": "by {author}",
     "bankEmpty": "No questions match that search.",
-    "failed": "Something went wrong. Try again."
+    "failed": "Something went wrong. Try again.",
+    "readOnlyNote": "Readers can browse the library but cannot create surveys or change templates."
   },
   "auth": {
     "signInTitle": "Sign in",

@@ -19,6 +19,7 @@ export function BankRow({
   meta,
   badge,
   isOwn,
+  disabledReason,
   labels,
 }: {
   questionId: string
@@ -27,6 +28,8 @@ export function BankRow({
   meta: string
   badge: string
   isOwn: boolean
+  /** Set for a reader — see UsePackButton. */
+  disabledReason?: string
   labels: { add: string; added: string; remove: string; noDraft: string; failed: string }
 }) {
   const [pending, startTransition] = useTransition()
@@ -69,8 +72,8 @@ export function BankRow({
           type="button"
           // Disabled rather than hidden: rule 4 forbids removing a feature on
           // mobile, and the reason it cannot run is explained above the list.
-          disabled={pending || !targetSurveyId || state === 'added'}
-          title={targetSurveyId ? undefined : labels.noDraft}
+          disabled={pending || !targetSurveyId || state === 'added' || Boolean(disabledReason)}
+          title={disabledReason ?? (targetSurveyId ? undefined : labels.noDraft)}
           onClick={() =>
             startTransition(async () => {
               if (!targetSurveyId) return
