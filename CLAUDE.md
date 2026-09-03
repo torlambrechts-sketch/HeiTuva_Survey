@@ -52,5 +52,19 @@ Definition of done per screen: pixel-diff pass, all states from the design reach
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.
 
+## Standing permissions (granted by Tor)
+- **Run SQL directly — always allowed, no need to ask.** Applies to the local
+  stack and to `heituva-prod`. Do not hand over `.sql` files to paste when a
+  connection is available; run them. Destructive statements against production
+  (`drop`, `truncate`, `delete` without a `where`) are still worth a sentence of
+  warning first, because permission to run SQL is not the same as permission to
+  lose data.
+- This permission is only usable where a credential exists. As of 2026-09-03
+  this environment has the prod URL and anon key, an empty
+  `SUPABASE_SERVICE_ROLE_KEY=`, and no route to Postgres — 5432 and 6543 are
+  blocked to `db.*.supabase.co` and the poolers, and the Supabase MCP is
+  unauthenticated. Fill the service-role key in `.env.local`, or authorise the
+  MCP, and the permission becomes usable.
+
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.
