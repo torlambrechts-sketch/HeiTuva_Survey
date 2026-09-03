@@ -127,7 +127,7 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
                     setError(res.ok ? null : res)
                   })
                 }}
-                className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-[13px] text-ink outline-none"
+                className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
               >
                 {DSR_STATUSES.map((s) => (
                   <option key={s} value={s}>

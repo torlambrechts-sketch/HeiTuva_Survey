@@ -85,12 +85,20 @@
      grown with a transparent border while `background-clip: padding-box` keeps
      the paint at the padding edge, and the design's 1px border is redrawn as an
      inset shadow in the same place. Painted size and colour are unchanged; only
-     the hit box grows. Pair with `py-[10px]` where the design used `py-[9px]`,
-     so the padding box still measures the design's height. */
+     the hit box grows.
+
+     The padding compensation lives HERE, not in the element's class: the real
+     border is 1px and the transparent one is 3px, so the padding box has to
+     absorb the 2px difference to keep the painted height identical. Putting
+     `py-[10px]` on the element instead applied it at every width and made two
+     desktop selects 2px taller than the design — the exact regression a
+     retrofit is supposed to avoid. */
   .touch-44-field {
     border-color: transparent !important;
     border-top-width: 3px;
     border-bottom-width: 3px;
+    padding-top: calc(var(--field-pad-y, 9px) + 1px);
+    padding-bottom: calc(var(--field-pad-y, 9px) + 1px);
     background-clip: padding-box;
     box-shadow: inset 0 0 0 1px var(--line);
   }

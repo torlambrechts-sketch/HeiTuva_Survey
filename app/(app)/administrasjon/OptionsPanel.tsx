@@ -137,7 +137,7 @@ export function OptionsPanel({
               }
             })
           }}
-          className="touch-44-field rounded-[10px] border border-line bg-bg px-[13px] py-2.5 text-[13.5px] text-ink outline-none"
+          className="touch-44-field [--field-pad-y:10px] rounded-[10px] border border-line bg-bg px-[13px] py-2.5 text-[13.5px] text-ink outline-none"
         >
           <option value="no">{t('langLabelNo')}</option>
           <option value="en">{t('langLabelEn')}</option>

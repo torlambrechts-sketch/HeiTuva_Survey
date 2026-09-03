@@ -25,7 +25,7 @@ must never be what silently settles an open question.
 
 | ID | What | Status | Link |
 |----|------|--------|------|
-| D12 | At 390px the app shell header overflows; page renders ~898px wide | **To-fix (blocker)** | DECISIONS Q15, docs/RESPONSIVE.md |
+| D12 | At 390px the app shell header overflows; page renders ~898px wide | **Fixed** — slide-over nav, `scrollWidth == viewport` at 390px and 320px | DECISIONS Q15, docs/RESPONSIVE.md |
 | D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
 
 ## Entries
@@ -176,7 +176,7 @@ instead. The rule is now unlayered with `!important`, which is the narrowest
 mechanism that reliably wins. Verified: `outlineWidth 3px, style solid,
 color rgb(25,21,16), offset 2px`.
 
-### D12 — app shell is not usable at 390px — **TO-FIX (blocker)**
+### D12 — app shell is not usable at 390px — **FIXED**
 At a 390px viewport the header's content is 867px wide, so the browser expands
 the layout viewport to ~886px and the page renders zoomed out.
 
@@ -190,6 +190,12 @@ viewport at 390px.
 
 This row is the standing rule's own example: an accepted-deviation label was
 holding an open scope question shut.
+
+**Fixed.** `components/MobileNav.tsx` moves the nav, the CTA and the language
+switcher into a slide-over below `md`, per § App shell. Measured with
+`npm run verify:responsive`: `scrollWidth` equals the viewport on all 12 routes
+at 390px and at 320px, against 892–898px before, with 0 hit-area overlaps and
+0 token drift. Nothing was removed to achieve it — rule 4 — only relocated.
 
 ### D13 — Profil "Pålogging og enheter" shows one session, not three
 The design lists three devices with last-active times (HeiTuva.dc.html:3347).

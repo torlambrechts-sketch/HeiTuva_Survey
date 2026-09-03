@@ -118,7 +118,7 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
               const next = e.target.value
               startTransition(async () => setRowError(await setMemberRole(u.id, next)))
             }}
-            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-[13px] text-ink outline-none"
+            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
           >
             <option value="administrator">{tRole('administrator')}</option>
             <option value="redaktor">{tRole('redaktor')}</option>
