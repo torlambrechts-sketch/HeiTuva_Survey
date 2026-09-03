@@ -18,7 +18,7 @@ export function AdminTabs({ tabs }: { tabs: AdminTab[] }) {
   const pathname = usePathname()
 
   return (
-    <div className="mt-4 flex w-fit flex-wrap gap-[3px] rounded-[14px] bg-sf2 p-1">
+    <div className="mt-4 flex flex-wrap gap-2 rounded-[14px] bg-sf2 p-1 md:w-fit md:gap-[3px]">
       {tabs.map((tab) => {
         const on = pathname === tab.href
         return (
@@ -26,7 +26,7 @@ export function AdminTabs({ tabs }: { tabs: AdminTab[] }) {
             key={tab.href}
             href={tab.href}
             aria-current={on ? 'page' : undefined}
-            className="cursor-pointer rounded-[11px] border-none px-[18px] py-2.5 text-[13px] font-semibold text-ink no-underline"
+            className="touch-44 cursor-pointer rounded-[11px] border-none px-[18px] py-2.5 text-[13px] font-semibold text-ink no-underline"
             style={{
               background: on ? 'var(--sf)' : 'transparent',
               boxShadow: on ? '0 2px 10px rgba(25,21,16,.05)' : 'none',

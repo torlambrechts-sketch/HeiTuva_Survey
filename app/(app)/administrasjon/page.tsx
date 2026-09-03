@@ -17,7 +17,7 @@ export default async function CompanyTab() {
     .single()
 
   return (
-    <div className="mt-5 grid grid-cols-[1.2fr_.8fr] items-start gap-[18px]">
+    <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.2fr_.8fr]">
       <CompanyForm
         company={{
           name: org?.name ?? '',

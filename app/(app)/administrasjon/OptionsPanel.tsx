@@ -104,7 +104,7 @@ export function OptionsPanel({
                 aria-checked={on}
                 aria-label={t(label)}
                 onClick={() => toggle(key)}
-                className="flex h-[26px] w-[46px] flex-none cursor-pointer rounded-full border-none p-[3px]"
+                className="touch-44 flex h-[26px] w-[46px] flex-none cursor-pointer rounded-full border-none p-[3px]"
                 style={{
                   background: on ? 'var(--ac)' : 'var(--sf2)',
                   justifyContent: on ? 'flex-end' : 'flex-start',
@@ -137,7 +137,7 @@ export function OptionsPanel({
               }
             })
           }}
-          className="rounded-[10px] border border-line bg-bg px-[13px] py-2.5 text-[13.5px] text-ink outline-none"
+          className="touch-44-field rounded-[10px] border border-line bg-bg px-[13px] py-2.5 text-[13.5px] text-ink outline-none"
         >
           <option value="no">{t('langLabelNo')}</option>
           <option value="en">{t('langLabelEn')}</option>

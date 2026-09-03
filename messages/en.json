@@ -27,7 +27,9 @@
     "userMenu": "User menu",
     "myProfile": "My profile",
     "administration": "Administration",
-    "privacyGdpr": "Privacy and GDPR"
+    "privacyGdpr": "Privacy and GDPR",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "dash": {
     "overline": "Overview",

@@ -48,7 +48,7 @@ export function LanguageCard({
                 })
               }
               title={l.active ? undefined : comingLabel}
-              className="cursor-pointer rounded-full border border-line px-[15px] py-[9px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              className="touch-44 cursor-pointer rounded-full border border-line px-[15px] py-[9px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
               style={{ background: selected ? 'var(--ac)' : 'transparent' }}
             >
               {t(l.value)}

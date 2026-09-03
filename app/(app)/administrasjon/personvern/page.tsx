@@ -42,7 +42,7 @@ export default async function PrivacyTab() {
   ]
 
   return (
-    <div className="mt-5 grid grid-cols-[1.1fr_.9fr] items-start gap-[18px]">
+    <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.1fr_.9fr]">
       <div className="flex flex-col gap-[18px]">
         <PrivacyPanel privacy={privacy} retention={org?.retention_months ?? 12} />
         <DsrPanel requests={(dsr ?? []) as DsrRequest[]} />

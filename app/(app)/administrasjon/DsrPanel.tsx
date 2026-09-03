@@ -55,7 +55,7 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
                 type="button"
                 aria-expanded={openForm === type}
                 onClick={() => setOpenForm(openForm === type ? null : type)}
-                className="cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-4 py-[9px] text-[12.5px] font-semibold text-ink"
+                className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-4 py-[9px] text-[12.5px] font-semibold text-ink"
               >
                 {openForm === type ? t('dsrCancel') : t(row.cta)}
               </button>
@@ -83,7 +83,7 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
                 />
                 <button
                   type="submit"
-                  className="cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-2.5 text-[13px] font-semibold text-ink"
+                  className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-2.5 text-[13px] font-semibold text-ink"
                 >
                   {t('dsrRegister')}
                 </button>
@@ -127,7 +127,7 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
                     setError(res.ok ? null : res)
                   })
                 }}
-                className="flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
+                className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-[13px] text-ink outline-none"
               >
                 {DSR_STATUSES.map((s) => (
                   <option key={s} value={s}>

@@ -37,7 +37,7 @@ export function AboutMeCard({
       </div>
 
       <form action={action}>
-        <div className="mt-4 grid grid-cols-2 gap-3.5">
+        <div className="mt-4 grid grid-cols-1 gap-3.5 md:grid-cols-2">
           <label className="block">
             <span className={label}>{labels.name}</span>
             <input name="display_name" defaultValue={defaults.display_name} required className={field} />
@@ -76,7 +76,7 @@ export function AboutMeCard({
         <button
           type="submit"
           disabled={pending}
-          className="mt-4 cursor-pointer rounded-[10px] border-none bg-ac px-[22px] py-3 text-[13.5px] font-bold text-ink disabled:opacity-60"
+          className="touch-44 mt-4 cursor-pointer rounded-[10px] border-none bg-ac px-[22px] py-3 text-[13.5px] font-bold text-ink disabled:opacity-60"
         >
           {labels.save}
         </button>

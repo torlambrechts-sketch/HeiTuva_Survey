@@ -31,26 +31,96 @@ async function overflow(page: Page) {
   }))
 }
 
-/** Interactive controls below the 44px tap target rule. Elements that are not
- *  rendered at all are skipped — a control inside a closed panel is not a
- *  violation, it is a control you have not opened yet. */
-async function smallTapTargets(page: Page) {
+/**
+ * Touch-area audit (RESPONSIVE.md rule 2).
+ *
+ * Rule 2 is about the touchable region, not the painted control: the control
+ * keeps its design size and the hit area is grown around it. So this reports
+ * two different things, and the second is the one that actually hurts users:
+ *
+ *   small    — the effective hit area is under 44px, so the control is hard to hit
+ *   overlap  — two hit areas intersect, so one control steals the other's taps
+ *
+ * `::after` does not render on replaced elements, so `<select>` and `<input>`
+ * are reported with their tag: they cannot take the overlay treatment and need
+ * a different answer.
+ */
+async function touchAreas(page: Page) {
   return page.evaluate((min) => {
     const sel = 'a[href], button, select, input:not([type="hidden"]), [role="switch"]'
-    const out: { label: string; w: number; h: number }[] = []
+    type Box = { label: string; tag: string; painted: DOMRect; hit: DOMRect }
+
+    const controls: Box[] = []
     for (const el of Array.from(document.querySelectorAll(sel))) {
       const r = el.getBoundingClientRect()
       if (r.width === 0 && r.height === 0) continue
       const style = getComputedStyle(el)
       if (style.visibility === 'hidden' || style.display === 'none') continue
-      if (r.width >= min && r.height >= min) continue
-      const label =
-        el.getAttribute('aria-label') ||
-        (el.textContent ?? '').trim().slice(0, 40) ||
-        `<${el.tagName.toLowerCase()}>`
-      out.push({ label, w: Math.round(r.width), h: Math.round(r.height) })
+      if (style.opacity === '0') continue
+      // Disabled controls cannot be activated, so a tap area is meaningless —
+      // the locked k=5 switch and the SSO switch are both deliberately inert.
+      if ((el as HTMLButtonElement).disabled) continue
+      if (el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('aria-disabled')) continue
+      // The sr-only idiom: clipped to 1x1 but still focusable. It is reachable
+      // by keyboard, never by thumb, so a touch area does not apply.
+      if (style.clipPath !== 'none' && r.width <= 2 && r.height <= 2) continue
+
+      // The hit area an ::after overlay produces: centred on the control,
+      // at least min in each axis. Read it off the element when one is present
+      // so a control that already carries the treatment measures as it really is.
+      // Replaced elements never render ::after, so crediting one here would
+      // silently pass a <select> that is still 39px to the thumb.
+      const replaced = ['select', 'input', 'textarea'].includes(el.tagName.toLowerCase())
+      const after = getComputedStyle(el, '::after')
+      const hasOverlay = !replaced && after.content !== 'none' && after.position === 'absolute'
+      const w = hasOverlay ? Math.max(r.width, parseFloat(after.width) || 0) : r.width
+      const h = hasOverlay ? Math.max(r.height, parseFloat(after.height) || 0) : r.height
+      const hit = new DOMRect(
+        r.x - (w - r.width) / 2,
+        r.y - (h - r.height) / 2,
+        w,
+        h,
+      )
+      controls.push({
+        label:
+          el.getAttribute('aria-label') ||
+          (el.textContent ?? '').trim().slice(0, 40) ||
+          `<${el.tagName.toLowerCase()}>`,
+        tag: el.tagName.toLowerCase(),
+        painted: r,
+        hit,
+      })
     }
-    return out
+
+    const small = controls
+      .filter((c) => c.hit.width < min || c.hit.height < min)
+      .map((c) => ({
+        label: c.label,
+        tag: c.tag,
+        w: Math.round(c.painted.width),
+        h: Math.round(c.painted.height),
+      }))
+
+    // Every pair whose hit areas intersect. O(n^2) is fine at these counts and
+    // is the check the spec asks for — comparing bounding boxes, not eyeballing.
+    const overlaps: { a: string; b: string; area: number }[] = []
+    for (let i = 0; i < controls.length; i++) {
+      for (let j = i + 1; j < controls.length; j++) {
+        const a = controls[i]!.hit
+        const b = controls[j]!.hit
+        const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+        const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+        if (dx > 0.5 && dy > 0.5) {
+          overlaps.push({
+            a: controls[i]!.label,
+            b: controls[j]!.label,
+            area: Math.round(dx * dy),
+          })
+        }
+      }
+    }
+
+    return { small, overlaps, total: controls.length }
   }, MIN_TAP)
 }
 
@@ -109,13 +179,23 @@ async function main() {
             })
           }
 
-          const small = await smallTapTargets(page)
+          const { small, overlaps, total } = await touchAreas(page)
           for (const t of small) {
             findings.push({
               route: spec.label,
               width,
               severity: 'defect',
-              detail: `tap target ${t.w}x${t.h} (<${MIN_TAP}): ${t.label}`,
+              detail: `touch area ${t.w}x${t.h} (<${MIN_TAP}) on <${t.tag}>: ${t.label}`,
+            })
+          }
+          // An expansion that swallows a neighbour's taps is worse than a small
+          // control, so this is a blocker, not a defect.
+          for (const o of overlaps) {
+            findings.push({
+              route: spec.label,
+              width,
+              severity: 'blocker',
+              detail: `hit areas overlap by ${o.area}px²: "${o.a}" / "${o.b}"`,
             })
           }
 
@@ -131,9 +211,11 @@ async function main() {
             }
           }
 
-          const status = scrollWidth > clientWidth ? 'OVERFLOW' : 'ok'
+          const status =
+            scrollWidth > clientWidth ? 'OVERFLOW' : overlaps.length ? 'OVERLAP' : small.length ? 'SMALL' : 'ok'
           console.log(
-            `  ${status.padEnd(8)} ${spec.label.padEnd(26)} ${width}px  scrollWidth=${scrollWidth}  small-targets=${small.length}`,
+            `  ${status.padEnd(8)} ${spec.label.padEnd(26)} ${width}px  scrollWidth=${scrollWidth}` +
+              `  controls=${total}  small=${small.length}  overlaps=${overlaps.length}`,
           )
         } catch (e) {
           findings.push({

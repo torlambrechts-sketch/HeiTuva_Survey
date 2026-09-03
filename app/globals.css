@@ -52,3 +52,46 @@
   outline: 3px solid var(--ink) !important;
   outline-offset: 2px !important;
 }
+
+/* Touch-area expansion — RESPONSIVE.md rule 2.
+   ------------------------------------------------------------------
+   Rule 2 is about the touchable region, not the painted control: the control
+   keeps its design dimensions at every breakpoint (rule 3) and the hit area is
+   grown around it, invisibly. Two utilities because one technique cannot cover
+   both cases.
+
+   Scoped below `md` (768px). Desktop is pixel-perfect and its spacing is the
+   design's own, so an invisible overlay there would risk swallowing a
+   neighbour's clicks for no benefit — a pointer is precise, a thumb is not. */
+@media (max-width: 767px) {
+  /* Non-replaced controls: buttons, links, [role=switch]. The overlay is
+     absolutely positioned, so it never becomes a flex item of a control that
+     is itself a flex container (the design's 46x26 switches are). */
+  .touch-44 {
+    position: relative;
+  }
+  .touch-44::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Native <select> and <input> are replaced elements — ::after does not render
+     on them, so the overlay above is not available. Instead the border box is
+     grown with a transparent border while `background-clip: padding-box` keeps
+     the paint at the padding edge, and the design's 1px border is redrawn as an
+     inset shadow in the same place. Painted size and colour are unchanged; only
+     the hit box grows. Pair with `py-[10px]` where the design used `py-[9px]`,
+     so the padding box still measures the design's height. */
+  .touch-44-field {
+    border-color: transparent !important;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+}

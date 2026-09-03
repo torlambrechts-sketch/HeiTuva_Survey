@@ -40,7 +40,7 @@ export function UserMenu({
   }, [open])
 
   const item =
-    'block w-full cursor-pointer rounded-[10px] border-none bg-transparent px-3 py-2.5 text-left text-[13.5px] text-ink no-underline'
+    'touch-44 block w-full cursor-pointer rounded-[10px] border-none bg-transparent px-3 py-2.5 text-left text-[13.5px] text-ink no-underline'
 
   return (
     <div ref={wrap}>
@@ -50,7 +50,7 @@ export function UserMenu({
         aria-label={labels.menu}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex cursor-pointer items-center gap-[9px] rounded-full border border-line bg-transparent py-1.5 pl-1.5 pr-3 text-[12.5px] font-semibold text-ink"
+        className="touch-44 flex cursor-pointer items-center gap-[9px] rounded-full border border-line bg-transparent py-1.5 pl-1.5 pr-3 text-[12.5px] font-semibold text-ink"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ac3 text-[11.5px] font-bold">
           {initials}

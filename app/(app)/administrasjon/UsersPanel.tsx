@@ -43,19 +43,19 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
             {t('userCount', { active: count.active, total: count.total })}
           </p>
         </div>
-        <form action={inviteAction} className="flex gap-[9px]">
+        <form action={inviteAction} className="flex w-full gap-[9px] md:w-auto">
           <input
             name="email"
             type="email"
             required
             placeholder={t('invitePlaceholder')}
             aria-label={t('invite')}
-            className="w-[230px] rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13.5px] text-ink outline-none"
+            className="w-full rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13.5px] text-ink outline-none md:w-[230px]"
           />
           <button
             type="submit"
             disabled={inviting}
-            className="cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink disabled:opacity-60"
+            className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink disabled:opacity-60"
           >
             {t('invite')}
           </button>
@@ -83,25 +83,34 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
       ) : null}
 
       {users.map((u) => (
-        <div key={u.id} className="flex items-center gap-3.5 border-b border-line py-3.5">
-          <span
-            className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-semibold"
-            style={{ background: roleBg(u.role) }}
-          >
-            {u.initials}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14.5px] font-semibold">{u.name}</span>
-            <span className="mt-0.5 block text-[13px] text-mut">
-              {[u.email, u.group].filter(Boolean).join(' · ')}
+        // RESPONSIVE.md § Data tables: below md the row becomes a card — the
+        // name is the title, the rest are label/value pairs, controls beneath.
+        // No horizontal scrolling table.
+        <div
+          key={u.id}
+          className="flex flex-col gap-3 border-b border-line py-3.5 md:flex-row md:items-center md:gap-3.5"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3.5">
+            <span
+              className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-semibold"
+              style={{ background: roleBg(u.role) }}
+            >
+              {u.initials}
             </span>
-          </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14.5px] font-semibold">{u.name}</span>
+              <span className="mt-0.5 block break-words text-[13px] text-mut">
+                {[u.email, u.group].filter(Boolean).join(' · ')}
+              </span>
+            </span>
+          </div>
           <span
-            className="w-[74px] flex-none text-[12.5px]"
+            className="flex-none text-[12.5px] md:w-[74px]"
             style={{ color: u.status === 'inactive' ? 'var(--ac3)' : 'var(--mut)' }}
           >
             {statusLabel(u.status)}
           </span>
+          <div className="flex items-center gap-3.5 md:contents">
           <select
             defaultValue={u.role}
             aria-label={`${t('tabBrukere')}: ${u.name}`}
@@ -109,7 +118,7 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
               const next = e.target.value
               startTransition(async () => setRowError(await setMemberRole(u.id, next)))
             }}
-            className="flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
+            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-[13px] text-ink outline-none"
           >
             <option value="administrator">{tRole('administrator')}</option>
             <option value="redaktor">{tRole('redaktor')}</option>
@@ -122,10 +131,11 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
                 setRowError(await setMemberStatus(u.id, u.status === 'inactive')),
               )
             }
-            className="flex-none cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-[15px] py-[9px] text-[12.5px] font-semibold text-ink"
+            className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-[15px] py-[9px] text-[12.5px] font-semibold text-ink"
           >
             {u.status === 'inactive' ? t('activate') : t('deactivate')}
           </button>
+          </div>
         </div>
       ))}
 

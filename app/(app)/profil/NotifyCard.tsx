@@ -61,7 +61,7 @@ export function NotifyCard({
                 aria-checked={on}
                 aria-label={item.label}
                 onClick={() => toggle(item.key)}
-                className="flex h-[26px] w-[46px] flex-none cursor-pointer rounded-full border-none p-[3px]"
+                className="touch-44 flex h-[26px] w-[46px] flex-none cursor-pointer rounded-full border-none p-[3px]"
                 style={{
                   background: on ? 'var(--ac)' : 'var(--sf2)',
                   justifyContent: on ? 'flex-end' : 'flex-start',

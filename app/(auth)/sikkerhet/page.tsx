@@ -73,7 +73,7 @@ export default async function SecurityPage() {
           <form action={signOut}>
             <button
               type="submit"
-              className="mt-4 w-full cursor-pointer rounded-[10px] border border-line bg-transparent p-3 text-[13px] font-semibold text-ink"
+              className="touch-44 mt-4 w-full cursor-pointer rounded-[10px] border border-line bg-transparent p-3 text-[13px] font-semibold text-ink"
             >
               {tCommon('logout')}
             </button>

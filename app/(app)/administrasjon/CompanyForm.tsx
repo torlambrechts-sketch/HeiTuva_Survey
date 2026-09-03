@@ -87,7 +87,7 @@ export function CompanyForm({ company }: { company: Company }) {
           save()
         }}
       >
-        <div className="mt-[18px] grid grid-cols-2 gap-3.5">
+        <div className="mt-[18px] grid grid-cols-1 gap-3.5 md:grid-cols-2">
           {fields.map((f) => (
             <label key={f.name} className="block">
               <span className={label}>{f.label}</span>

@@ -28,19 +28,19 @@ export function GroupsPanel({ groups }: { groups: AdminGroup[] }) {
           <h2 className="font-display text-[22px] font-medium">{t('groupsHeading')}</h2>
           <p className="mt-0.5 text-[13px] text-mut">{t('groupThresholdNote')}</p>
         </div>
-        <form action={action} className="flex gap-[9px]">
+        <form action={action} className="flex w-full gap-[9px] md:w-auto">
           <input
             name="name"
             required
             maxLength={120}
             placeholder={t('groupPlaceholder')}
             aria-label={t('groupPlaceholder')}
-            className="w-[200px] rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13.5px] text-ink outline-none"
+            className="w-full rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13.5px] text-ink outline-none md:w-[200px]"
           />
           <button
             type="submit"
             disabled={pending}
-            className="cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink disabled:opacity-60"
+            className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink disabled:opacity-60"
           >
             {t('createGroup')}
           </button>
@@ -61,7 +61,7 @@ export function GroupsPanel({ groups }: { groups: AdminGroup[] }) {
       {groups.length === 0 ? (
         <p className="mt-[18px] text-[13px] text-mut">{t('groupsEmpty')}</p>
       ) : (
-        <div className="mt-[18px] grid grid-cols-2 gap-3.5">
+        <div className="mt-[18px] grid grid-cols-1 gap-3.5 md:grid-cols-2">
           {groups.map((g, i) => (
             <div key={g.id} className="rounded-[14px] border border-line bg-bg p-[18px]">
               <div className="flex items-baseline justify-between gap-3">
@@ -72,7 +72,7 @@ export function GroupsPanel({ groups }: { groups: AdminGroup[] }) {
                   onClick={() =>
                     startTransition(async () => setRowError(await deleteGroup(g.id)))
                   }
-                  className="cursor-pointer border-none bg-transparent text-[16px] leading-none text-mut"
+                  className="touch-44 cursor-pointer border-none bg-transparent text-[16px] leading-none text-mut"
                 >
                   ×
                 </button>

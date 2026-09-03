@@ -193,6 +193,23 @@ export const ROUTES: RouteSpec[] = [
     phase: 'phase-1',
     states: [{ name: 'default' }],
   },
+  // Both were built in Phase 1 but never listed, so nothing had ever measured
+  // them at any viewport. They are signed-in-but-not-yet-placed states, which
+  // no persona in this manifest can reach, so they are captured signed out —
+  // the middleware sends an anonymous visitor to /logg-inn, and asserting that
+  // redirect is itself worth having.
+  {
+    route: '/logg-inn',
+    label: 'kom-i-gang-redirects-anon',
+    as: 'anon',
+    phase: 'phase-1',
+    states: [{ name: 'default', setup: async (page) => {
+      await page.goto(`${page.url().replace(/\/logg-inn.*$/, '')}/kom-i-gang`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.waitForURL((u) => u.pathname.startsWith('/logg-inn'), { timeout: 15_000 })
+    } }],
+  },
 ]
 
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;

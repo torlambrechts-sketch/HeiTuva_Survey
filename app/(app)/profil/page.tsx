@@ -59,7 +59,7 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-[1.15fr_.85fr] items-start gap-[18px]">
+      <div className="mt-6 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.15fr_.85fr]">
         <div className="flex flex-col gap-[18px]">
           <AboutMeCard
             defaults={{
@@ -126,7 +126,7 @@ export default async function ProfilePage() {
             <form action={signOutEverywhere}>
               <button
                 type="submit"
-                className="mt-4 w-full cursor-pointer rounded-[10px] border border-line bg-transparent p-3 text-[13px] font-semibold text-ink"
+                className="touch-44 mt-4 w-full cursor-pointer rounded-[10px] border border-line bg-transparent p-3 text-[13px] font-semibold text-ink"
               >
                 {t('signOutEverywhere')}
               </button>

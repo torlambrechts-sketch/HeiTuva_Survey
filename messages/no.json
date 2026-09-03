@@ -27,7 +27,9 @@
     "userMenu": "Brukermeny",
     "myProfile": "Min profil",
     "administration": "Administrasjon",
-    "privacyGdpr": "Personvern og GDPR"
+    "privacyGdpr": "Personvern og GDPR",
+    "openMenu": "Åpne meny",
+    "closeMenu": "Lukk meny"
   },
   "dash": {
     "overline": "Oversikt",

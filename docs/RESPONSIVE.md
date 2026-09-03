@@ -15,7 +15,7 @@ Tailwind: use `md:` (768) and `xl:` (1280). Do not introduce other breakpoints w
 
 ## Global rules (all app screens)
 1. **No horizontal scroll at 390px.** `document.documentElement.scrollWidth` must not exceed the viewport. This is the D12 defect and it is a blocker, not a deviation.
-2. **Tap targets ≥44×44px** for anything interactive.
+2. **Touch area ≥44×44px** for anything interactive — the *touchable region*, not the painted control. These are different things and rule 2 originally conflated them. The control keeps its design dimensions at every breakpoint (rule 3); the touch area is grown around it with transparent padding or an `::after` overlay, so nothing visible changes. Expanded areas **must not overlap**: where two controls sit close enough that their 44px regions would collide, increase the spacing between them at mobile — spacing is layout and may change, the control is a token and may not. Verify overlap programmatically by comparing adjacent hit-area bounding boxes, not by eye; an invisible expansion that steals a neighbour's taps is worse than a 40px control.
 3. **Tokens never change across breakpoints** — same colours, radii, shadows, fonts, borders. Only layout, spacing scale, and font *size* may step down, and font size only where the design's own hierarchy is preserved.
 4. **No feature hidden on mobile.** Reflow, collapse, or paginate — never remove. If something genuinely cannot work at 390px, stop and ask; do not silently drop it.
 5. **Content order is preserved** when columns stack: left/primary column first, sidebars after.
