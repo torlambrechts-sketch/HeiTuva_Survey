@@ -1,4 +1,34 @@
-# Deviations
+# DEVIATIONS.md
+
+Every departure from the design bundle, and every choice made where the design
+was silent. Claude Code appends here (VERIFY.md Gate 6, item 5); we review the
+whole list together in Phase 6.
+
+## How to use this file
+- **Accepted** means it matches a written decision. If the decision changes, the
+  row becomes **to-fix** — an accepted-deviation label must never be what
+  silently settles an open question.
+- Every row needs a *reason*, not just a description. "Looked better" is not a
+  reason; "the prototype has no error state for this and the minimal consistent
+  option was X" is.
+- Rows without a decision link are the ones to scrutinize in Phase 6: they are
+  choices nobody explicitly made.
+
+## Standing rule
+D12's shape recurs, and D12 itself demonstrates it: a limitation correct under
+one scope, a defect under another. It was logged as accepted, the scope decision
+then changed, and the row flipped to to-fix. When logging this kind of
+deviation, always name the decision it depends on — an accepted-deviation label
+must never be what silently settles an open question.
+
+## Status register
+
+| ID | What | Status | Link |
+|----|------|--------|------|
+| D12 | At 390px the app shell header overflows; page renders ~898px wide | **To-fix (blocker)** | DECISIONS Q15, docs/RESPONSIVE.md |
+| D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
+
+## Entries
 
 Choices made where the handoff bundle, the design bundle, or CLAUDE.md left
 something unspecified or self-contradictory. One entry per deviation.
@@ -146,13 +176,20 @@ instead. The rule is now unlayered with `!important`, which is the narrowest
 mechanism that reliably wins. Verified: `outlineWidth 3px, style solid,
 color rgb(25,21,16), offset 2px`.
 
-### D12 — app shell is not usable at 390px
+### D12 — app shell is not usable at 390px — **TO-FIX (blocker)**
 At a 390px viewport the header's content is 867px wide, so the browser expands
-the layout viewport to ~886px and the page renders zoomed out. CLAUDE.md scopes
-the app surface to pixel-perfect at >=1280px and only the respondent flow at
-`/s/[token]` to mobile-first, so this is in line with the stated scope — but
-the app shell has no mobile treatment at all, and nothing in the design bundle
-specifies one. Needs a decision before any phase ships a mobile app surface.
+the layout viewport to ~886px and the page renders zoomed out.
+
+This was logged as accepted while CLAUDE.md scoped the app surface to >=1280px.
+**DECISIONS Q15 (confirmed) puts admin mobile in v1, so it is now a defect, not
+a deviation.** The fix is specified: `docs/RESPONSIVE.md` § App shell — below
+`md`, logo + hamburger + avatar only, nav in a slide-over panel, "Ny
+undersøkelse" as its first item, language switcher in the panel footer, and no
+overflow at 320px. `document.documentElement.scrollWidth` must not exceed the
+viewport at 390px.
+
+This row is the standing rule's own example: an accepted-deviation label was
+holding an open scope question shut.
 
 ### D13 — Profil "Pålogging og enheter" shows one session, not three
 The design lists three devices with last-active times (HeiTuva.dc.html:3347).

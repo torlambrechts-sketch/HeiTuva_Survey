@@ -2,6 +2,8 @@
 
 Status legend: **CONFIRMED** = decided by Tor · **DEFAULT** = Claude-recommended default, applied so the build can start; overrule with a one-line instruction and the plan/migrations adjust.
 
+16 decisions. Q11 and Q15 are confirmed by Tor and shape verification scope; the rest are defaults shaping the build.
+
 | # | Question | Decision | Rationale / consequence |
 |---|----------|----------|--------------------------|
 | Q1 | Tenancy | **DEFAULT: Multi-tenant SaaS from day one.** | Splash page has pricing; retrofitting tenancy is far costlier than building it in. `organizations` is the RLS root everywhere. |
@@ -18,6 +20,8 @@ Status legend: **CONFIRMED** = decided by Tor · **DEFAULT** = Claude-recommende
 | Q12 | Translation editing | **DEFAULT: Supabase Studio (direct `ui_messages` edits) initially; admin editor screen in Phase 6.** | Edits are cache-revalidated live either way. |
 | Q13 | AI-assisted survey translation | **DEFAULT: Manual-only in v1.** | Statutory packs ship pre-translated as seed data (no/en). |
 | Q14 | MFA for administrators | **DEFAULT: Required (TOTP via Supabase MFA).** | Admins control privacy settings and DSR handling; enforced at login for role=administrator. |
+| Q15 | Viewport scope | **CONFIRMED: admin mobile support is in v1.** All surfaces responsive. Desktop (≥1280px) stays pixel-perfect to the design; tablet/mobile follow `docs/RESPONSIVE.md`, which is the specification for layouts the prototype does not contain. Respondent-facing surfaces stay mobile-first pixel-perfect. | The prototype is a fixed 1440px canvas with no mobile app layouts, so "pixel-perfect" cannot apply below 1280px — RESPONSIVE.md supplies decided patterns instead, and CLAUDE.md's do-not-invent rule is relaxed only to those patterns. Consequence: D12 (header overflow at 390px) is now a defect to fix, not an accepted deviation; verification captures app routes at mobile again, judged rule-based rather than against a reference image. |
+| Q16 | Job queue | **DEFAULT: pgmq in Supabase.** The plan's earlier alternative (Inngest) is not being used. | Keeps the send pipeline inside the EU/EØS boundary and one operational surface. Revisit only if scheduling needs outgrow it. |
 
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing n ≥ 5 per cell.

@@ -45,7 +45,7 @@ Scope:
 4. Administrasjon, all five tabs: Firma (company fields + behandlingsansvarlig/DPO panel), Brukere (invite input, role select Administrator/Redaktør/Leser, activate/deactivate), Grupper (create, cards with lead + progress bar, min-5 note), Personvern (privacy toggles — render 'Skjul resultater under 5 svar' as always-on informational per DECISIONS Q3; retention select wired to organizations.retention_months; DSR table with the four request types and 30-day due dates; Dokumentasjon list; 'Slik beskyttes anonymiteten' panel), Valg (option toggles — SSO toggle disabled with 'kommer' badge per DECISIONS Q5; default respondent language select).
 5. Audit-log writes for: privacy toggle changes, role changes, retention changes, DSR status changes.
 
-DoD per screen: pixel match vs design (add Playwright screenshot tests to /tests/visual), all states reachable, no+en complete, keyboard focus-visible per the design's 3px outline, CI green. Open one PR per screen group and stop for my review after Administrasjon.
+DoD per screen: pixel match vs design at desktop; responsive per docs/RESPONSIVE.md at tablet and 390px (read that file before laying out any screen — fixing D12's header overflow is part of this phase); all states reachable, no+en complete, keyboard focus-visible per the design's 3px outline, CI green. Open one PR per screen group and stop for my review after Administrasjon.
 ```
 
 ---
@@ -63,7 +63,7 @@ Scope:
 3. Undersøkelser: list with status chips, progress bars, filters (Alle/Aktiv/Utkast), search, sort; the full ··· menu; 'Del med teamet' co-editor panel writing survey_editors with result-scope copy from the design; 'Kopier som ny runde'.
 
 Persistence: autosave drafts (debounced server actions), optimistic UI. Everything RLS-scoped — no service-role in this phase except org creation.
-Same DoD. PR per screen group; stop after Undersøkelser for review.
+Same DoD, including docs/RESPONSIVE.md compliance — the Builder's three-pane layout and the question list have explicit mobile patterns there; apply them rather than improvising. PR per screen group; stop after Undersøkelser for review.
 ```
 
 ---
@@ -101,7 +101,7 @@ Scope:
 4. Dashboard: filters, multi-survey chips, stat cards, bar panels, the heatmap, text panel, pin/unpin (persist per member).
 5. Leser role: verify in tests that every element on both screens renders for leser without any path to raw answers or filtered quotes.
 
-Same DoD; stop for review after the heatmap PR.
+Same DoD; the heatmap has a specific mobile pattern in docs/RESPONSIVE.md (grouped list, not a shrunken grid) — apply it. Stop for review after the heatmap PR.
 ```
 
 ---
@@ -121,7 +121,7 @@ Scope:
 5. PDF export: server-side render of the report document (Playwright print or @react-pdf), stored in Supabase Storage, signed URL, report_exports row. PPTX button rendered but disabled behind feature_flags.pptx_export.
 6. Oversikt: build last — action items derived from real state (unsent drafts, duties due, low-score follow-ups), compliance chips from duties, loop_actions list + 'Legg til tiltak', activity chart from participation RPC, onboarding checklist card.
 
-Same DoD; stop for review after duty engine, again after report editor.
+Same DoD; the report editor's mobile pattern is in docs/RESPONSIVE.md (side tabs become a sheet, reorder via up/down not drag). Stop for review after duty engine, again after report editor.
 ```
 
 ---

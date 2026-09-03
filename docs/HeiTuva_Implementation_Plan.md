@@ -66,7 +66,7 @@ Focus outline: 3px solid #191510, offset 2px. Entry animation: fade+6px translat
 **Adaptations (not deviations):**
 1. Inline styles → Tailwind classes + CSS variables; identical rendered output, jsdom/Playwright-verifiable.
 2. The prototype's phone-frame preview and QR grid are UI elements — keep them, but QR becomes a real generated QR.
-3. Responsive behavior is unspecified in the prototype (fixed 1440px preview). Desktop-first pixel-perfect at ≥1280px; the respondent flow (`/s/[token]`) is mobile-first pixel-perfect at 380–420px. Admin screens get sensible tablet fallbacks. ⚠️ DECIDE if admin mobile support is v1.
+3. Responsive behavior is unspecified in the prototype (fixed 1440px preview). Desktop (≥1280px) stays pixel-perfect; respondent-facing surfaces are mobile-first pixel-perfect at 380–420px. **Admin mobile is in v1 (DECISIONS Q15)**, and because the prototype has no mobile app layouts, `docs/RESPONSIVE.md` supplies the specification — breakpoints, per-pattern rules (shell, builder, tables, heatmap, report editor), and a rule-based verification bar in place of image comparison.
 
 **Verification loop:** build the design prototype's static states as reference screenshots (Playwright against the .dc.html rendered once, or manual reference captures), then screenshot-diff each implemented screen per PR.
 
@@ -197,7 +197,7 @@ Two very different translation surfaces exist in the design, and they need diffe
 ### 6a. UI copy (app chrome + respondent chrome) — DB-backed with file seeds
 The respondent flow ships in **no / en / sv / da** (the design's `RS` object); the admin app is Norwegian in the design. Recommended architecture — the hybrid that gives you type safety *and* runtime editing:
 
-- **Source of truth for defaults: JSON files in the repo** (`/messages/no.json`, `en.json`, `sv.json`, `da.json`), organized by namespace (`respondent.*`, `builder.*`, `admin.*`, `reports.*`). These are versioned, reviewable in PRs, and a script generates a TypeScript key union from `no.json` so a missing or misspelled key is a compile error.
+- **Source of truth for defaults: JSON files in the repo** (`/messages/no.json`, `en.json`; `sv.json`/`da.json` are added when those languages are activated — their respondent strings already live in `ui_messages` seed), organized by namespace (`respondent.*`, `builder.*`, `admin.*`, `reports.*`). These are versioned, reviewable in PRs, and a script generates a TypeScript key union from `no.json` so a missing or misspelled key is a compile error.
 - **Runtime store: `ui_messages` table** — `(namespace, key, lang, value, updated_at, updated_by)`, seeded from the JSON files by migration. **You edit here** — via a small admin screen (Administrasjon → Språk, admin-role only, audit-logged) or directly in Supabase Studio — and the change is live without a deploy.
 - **Serving:** server-side loader fetches messages per locale with Next.js `unstable_cache`/`revalidateTag('i18n:no')`; an edit calls `revalidateTag`, so changes appear within seconds but reads cost ~zero. Library: **next-intl** with a custom `getMessages()` backed by this loader; ICU message format for plurals/interpolation ("{n} svar", "{days} dager igjen").
 - **Fallback chain:** requested lang → `no` → the key itself rendered visibly (so gaps are seen, not silent).
@@ -229,10 +229,10 @@ Additions to the plan that make this a durable multi-tenant product rather than 
 - Security headers + strict CSP (nonce-based), HSTS; `X-Frame-Options`/frame-ancestors deny except the respondent page if you ever want embedding (⚠️ default: deny).
 - Rate limiting on `/s/[token]` submissions, auth endpoints, and export generation (Vercel WAF rules or Upstash Redis, EU region). Cloudflare Turnstile on open-link submissions only (invited-token flows don't need the friction).
 - Token hygiene: invitation/share/report tokens stored **hashed** (SHA-256) with expiry; constant-time comparison; single-use semantics where the design implies it (test sends, DSR export links). Signed URLs for Storage objects (report PDFs, question images) — nothing public.
-- Service-role key exists only in server-side env; anon key + RLS is the only client credential. Supabase MFA (TOTP) **required for administrator role** (⚠️ Q14 — recommend yes; they control privacy settings).
+- Service-role key exists only in server-side env; anon key + RLS is the only client credential. Supabase MFA (TOTP) **required for administrator role** (DECISIONS Q14).
 
 **Reliability of the send pipeline (Phase 3)**
-- All email/SMS sends, reminders, scheduled rounds, and export jobs go through a **queue** (pgmq in Supabase, or Inngest if you prefer managed) — never fire-and-forget from a request. Jobs are idempotent (invitation-scoped idempotency keys), retried with backoff, and dead-lettered with alerting. A recurring survey that silently fails to send is a compliance product killing its own value proposition.
+- All email/SMS sends, reminders, scheduled rounds, and export jobs go through a **queue** (pgmq in Supabase — settled, DECISIONS Q16) — never fire-and-forget from a request. Jobs are idempotent (invitation-scoped idempotency keys), retried with backoff, and dead-lettered with alerting. A recurring survey that silently fails to send is a compliance product killing its own value proposition.
 - Webhook ingestion from the email provider (bounces, complaints) updates invitation status; hard bounces suppress reminders.
 
 **Observability & response (Phase 6, wired from Phase 1)**
@@ -253,7 +253,11 @@ Additions to the plan that make this a durable multi-tenant product rather than 
 
 ---
 
-## 8. Open questions (blocking decisions)
+## 8. Decisions (register lives in DECISIONS.md)
+
+**`DECISIONS.md` is the single source of truth for all 16 decisions and their current status.** The list below records what was originally open and is kept only as history — do not read it as unresolved.
+
+### Original open questions
 Q1–Q10: see conversation (tenancy, anonymity model, k=5 toggle, identity, auth, providers, AI, benchmarks, import scope, exports/splash).
 Added in v0.15:
 - **Q11 — App UI languages:** admin app Norwegian-only in v1 (respondent no/en/sv/da as designed), with English admin later? The i18n architecture supports it either way; this only decides translation effort now.
@@ -261,4 +265,6 @@ Added in v0.15:
 - **Q13 — AI-assisted survey translation:** on (with human-confirm badge) or manual-only v1?
 - **Q14 — Require MFA for administrator role:** recommend yes.
 
-Answers get folded into v0.2 of this plan before Phase 0 starts.
+Added after the first verification run: **Q15** (viewport scope) and **Q16** (job queue). All sixteen are settled in DECISIONS.md.
+
+All answers are recorded in DECISIONS.md; this plan is not the register.
