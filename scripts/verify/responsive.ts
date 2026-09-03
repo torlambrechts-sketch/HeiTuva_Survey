@@ -62,8 +62,11 @@ async function touchAreas(page: Page) {
       if ((el as HTMLButtonElement).disabled) continue
       if (el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('aria-disabled')) continue
       // The sr-only idiom: clipped to 1x1 but still focusable. It is reachable
-      // by keyboard, never by thumb, so a touch area does not apply.
-      if (style.clipPath !== 'none' && r.width <= 2 && r.height <= 2) continue
+      // by keyboard, never by thumb, so a touch area does not apply. Tailwind's
+      // .sr-only uses the legacy `clip`, not `clip-path` — checking only the
+      // latter missed it and reported a 1x1 "touch target".
+      const clipped = style.clipPath !== 'none' || (style.clip !== 'auto' && style.clip !== '')
+      if (clipped && r.width <= 2 && r.height <= 2) continue
 
       // The hit area an ::after overlay produces: centred on the control,
       // at least min in each axis. Read it off the element when one is present
