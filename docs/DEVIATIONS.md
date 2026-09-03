@@ -342,3 +342,21 @@ Worth keeping for the pattern it demonstrates: a named pattern in a
 specification is still a claim about the world, and the right move on
 disagreeing with one is to implement what is defensible, log it, and say so —
 not to comply quietly or diverge quietly.
+
+### D26 — the question bank adds to the most recent draft
+The design's bank rows read "legges rett inn i {draftTitle}"
+(HeiTuva.dc.html:1659) against a single implicit draft — the prototype has
+exactly one survey, so the question of *which* one never arises. It does here.
+
+"Legg til" targets the org's most recently updated survey with status `utkast`.
+When there is no draft, the button is disabled with the reason shown above the
+list ("Du har ingen utkast ennå — opprett en undersøkelse først") rather than
+hidden: RESPONSIVE.md rule 4 forbids removing a feature, and a control that
+silently does nothing is worse than one that says why it cannot.
+
+The alternative — creating a draft on the fly — was rejected: a survey appearing
+in Undersøkelser as a side effect of browsing the library is a surprise, and the
+design gives no title for it.
+
+Revisit when the Builder lands in this phase: if the builder holds an explicit
+"current draft", this should follow it instead.
