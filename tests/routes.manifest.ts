@@ -199,6 +199,62 @@ export const ROUTES: RouteSpec[] = [
   // the middleware sends an anonymous visitor to /logg-inn, and asserting that
   // redirect is itself worth having.
   {
+    route: '/bibliotek',
+    label: 'bibliotek-maler',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      { name: 'default' },
+      {
+        name: 'lovpalagt',
+        setup: async (page) => {
+          // The statutory category is the one that carries a note, and the
+          // legal_ref badges only appear on those packs.
+          await page.getByRole('link', { name: 'Lovpålagt' }).click()
+          await page.waitForURL((u) => u.searchParams.get('kategori') === 'Lovpålagt')
+        },
+      },
+      {
+        name: 'liste',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Liste' }).click()
+          await page.waitForURL((u) => u.searchParams.get('visning') === 'liste')
+        },
+      },
+    ],
+  },
+  {
+    route: '/bibliotek',
+    label: 'bibliotek-bank',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Spørsmålsbank' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'bank')
+        },
+      },
+      {
+        name: 'search',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Spørsmålsbank' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'bank')
+          await page.fill('input[aria-label="Søk i spørsmålsbanken…"]', 'leder')
+          await page.waitForURL((u) => u.searchParams.get('sok') === 'leder', { timeout: 15_000 })
+        },
+      },
+    ],
+  },
+  {
+    route: '/bibliotek',
+    label: 'bibliotek-leser',
+    as: 'leser',
+    phase: 'phase-2',
+    states: [{ name: 'default' }],
+  },
+  {
     route: '/logg-inn',
     label: 'kom-i-gang-redirects-anon',
     as: 'anon',
@@ -217,7 +273,6 @@ export const ROUTES: RouteSpec[] = [
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
   { route: '/undersokelser', phase: 'phase-2', note: 'Undersøkelser list' },
   { route: '/undersokelser/ny', phase: 'phase-2', note: 'New-survey wizard entry' },
-  { route: '/bibliotek', phase: 'phase-2', note: 'Bibliotek' },
   { route: '/dashboard', phase: 'phase-4', note: 'Dashboard (heatmap, trends)' },
   { route: '/rapporter', phase: 'phase-5', note: 'Rapporter' },
   { route: '/s/[token]', phase: 'phase-3', note: 'Respondent flow (mobile-first)' },
