@@ -1,7 +1,12 @@
 import { notFound } from 'next/navigation'
+
+/** Canonical UUID shape; anything else cannot name a survey. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import type { QualityRule } from '@/lib/questions/quality'
+import { parseEngagement } from '@/lib/engagement'
+import { SurveyContextBar } from '../SurveyContextBar'
 import { Builder } from './Builder'
 import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
 
@@ -14,12 +19,17 @@ import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
  */
 export default async function BuilderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // A malformed id is a bad URL, not a server fault. Without this the string
+  // reaches Postgres, the uuid cast raises, the read throws and the route
+  // answers 500 — telling a crawler or a mistyped link that something broke
+  // here rather than that the address is wrong.
+  if (!UUID.test(id)) notFound()
   const viewer = await requireViewer()
   const supabase = await createClient()
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, org_id')
+    .select('id, title, audience_label, status, anonymity, org_id, engage')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -65,20 +75,32 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   const draft: BuilderDraft = {
     title: survey.title,
     audience: survey.audience_label ?? '',
+    // Every field falls back to its column default rather than to undefined —
+    // a missing key must not render a switch as off and then save it off.
+    engage: parseEngagement(survey.engage),
     questions,
   }
 
   return (
-    <Builder
-      surveyId={survey.id}
-      initial={draft}
-      rules={rules}
-      anonymous={survey.anonymity === 'anonymous'}
-      canEdit={viewer.role !== 'leser'}
-      // A sent survey's questions are frozen: rounds snapshot their question
-      // set, so editing after sending would leave the live round and the
-      // Builder disagreeing.
-      locked={survey.status !== 'utkast'}
-    />
+    <>
+      <SurveyContextBar
+        surveyId={survey.id}
+        title={survey.title}
+        audience={survey.audience_label}
+        status={survey.status}
+        current="bygg"
+      />
+      <Builder
+        surveyId={survey.id}
+        initial={draft}
+        rules={rules}
+        anonymous={survey.anonymity === 'anonymous'}
+        canEdit={viewer.role !== 'leser'}
+        // A sent survey's questions are frozen: rounds snapshot their question
+        // set, so editing after sending would leave the live round and the
+        // Builder disagreeing.
+        locked={survey.status !== 'utkast'}
+      />
+    </>
   )
 }

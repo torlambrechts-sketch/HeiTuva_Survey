@@ -245,6 +245,10 @@ describe('audit trail', () => {
       .from('audit_events')
       .select('actor_user_id, action')
       .eq('target', target)
+      // audit_events is append-only, so a re-run against a database that was
+      // not reset accumulates rows. The marker is unique per run, but the limit
+      // makes that a property of the query rather than an assumption.
+      .limit(1)
       .single()
     expect(data?.actor_user_id).toBe(me.user!.id)
     expect(data?.action).toBe('privacy.toggle')

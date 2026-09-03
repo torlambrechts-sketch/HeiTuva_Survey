@@ -1,5 +1,6 @@
 import type { Database } from '@/types/database'
 import type { QuestionType } from '@/lib/questions/registry'
+import type { Engagement } from '@/lib/engagement'
 
 export type CommentMode = Database['public']['Tables']['survey_questions']['Row']['comment_mode']
 
@@ -43,6 +44,8 @@ export type QuestionConfig = {
 export type BuilderDraft = {
   title: string
   audience: string
+  /** surveys.engage — the engagement panel's settings, saved with the draft. */
+  engage: Engagement
   questions: DraftQuestion[]
 }
 
@@ -51,6 +54,21 @@ export const isNewQuestion = (id: string) => id.startsWith(NEW_ID_PREFIX)
 
 /** The design warns above eight questions (HeiTuva.dc.html length note). */
 export const LONG_SURVEY_THRESHOLD = 8
+
+/**
+ * Input types a `field` question can collect (HeiTuva.dc.html:2702 seeds
+ * name/email/date). Kept here rather than in the component so the editor and
+ * Phase 3's respondent renderer read the same list.
+ */
+export const FIELD_INPUT_TYPES = ['text', 'email', 'date', 'number', 'phone'] as const
+export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number]
+export const FIELD_TYPE_KEY: Record<FieldInputType, string> = {
+  text: 'ftText',
+  email: 'ftEmail',
+  date: 'ftDate',
+  number: 'ftNumber',
+  phone: 'ftPhone',
+}
 
 export const COMMENT_MODES: CommentMode[] = ['arv', 'pa', 'av']
 export const COMMENT_MODE_KEY: Record<CommentMode, string> = {
@@ -75,6 +93,16 @@ export const TYPE_OPTION_KEY: Record<QuestionType, string> = {
   text: 'optText',
   field: 'optField',
 }
+
+/**
+ * The Add panel's label for a type, which is NOT always the select's label.
+ * The design's palette row reads "Skala" while the per-question select reads
+ * "Skala · tall" — the palette adds one scale question and the card then picks
+ * a style, so naming a style in the palette would promise a choice the row does
+ * not make (HeiTuva.dc.html:3969 vs TYPE_LABEL). Every other type reads the
+ * same in both places.
+ */
+export const ADD_LABEL_KEY: Partial<Record<QuestionType, string>> = { scale: 'addScale' }
 
 export const GROUP_KEY = {
   skala: 'grpSkala',

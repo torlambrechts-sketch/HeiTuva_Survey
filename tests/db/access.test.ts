@@ -8,7 +8,7 @@ import {
   serviceClient,
   type Client,
 } from './clients'
-import { ORG_OTHER, ORG_PRIMARY } from './personas'
+import { ORG_OTHER, ORG_PRIMARY, GROUP_PRIMARY } from './personas'
 
 /**
  * Access rules asserted through real persona sessions.
@@ -38,6 +38,12 @@ beforeAll(async () => {
     .select('id')
     .eq('org_id', orgId)
     .eq('title', 'Arbeidsmiljø — månedlig')
+    // `.limit(1)` before `.single()`, everywhere the filter is not a primary
+    // key. A title is not unique — "Kopier som ny runde" and the round-trip
+    // harness both create surveys in this org — and `.single()` errors on more
+    // than one row, so without the limit this suite's green depends on nothing
+    // else ever writing here (VERIFY.md Gate 5a2).
+    .limit(1)
     .single()
   surveyId = survey!.id
 })
@@ -127,6 +133,7 @@ describe('k-anonymity through persona sessions', () => {
       .select('id')
       .eq('org_id', orgId)
       .eq('title', 'Psykososial kartlegging')
+      .limit(1)
       .single()
 
     const { data } = await admin.rpc('aggregate_results', { p_survey: below!.id })
@@ -143,7 +150,17 @@ describe('k-anonymity through persona sessions', () => {
       .eq('survey_id', surveyId)
       .eq('type', 'text')
       .single()
-    const { data: g } = await svc.from('groups').select('id').eq('org_id', orgId).single()
+    // Pinned to the seeded group by name. Filtering on org alone made this
+    // assertion depend on the org having exactly one group, and it broke the
+    // moment the Gate 2a round-trip created a second one — the failure that
+    // exposed the whole class.
+    const { data: g } = await svc
+      .from('groups')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('name', GROUP_PRIMARY)
+      .limit(1)
+      .single()
 
     const { data } = await leser.rpc('get_quotes', {
       p_survey: surveyId,

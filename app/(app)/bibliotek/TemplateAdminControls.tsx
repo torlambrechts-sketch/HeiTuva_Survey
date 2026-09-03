@@ -20,7 +20,11 @@ export function TemplateAdminControls({
   const [, startTransition] = useTransition()
 
   return (
-    <span className="flex items-center gap-1.5">
+    // The × paints ~10px wide, so its 44px hit area expands 17px each side and
+    // ate 11px of the share pill's — a thumb aimed at "Slett mal" could flip
+    // the template to private instead. RESPONSIVE.md rules 2-3: the painted
+    // size is the design's, only the spacing grows, and only below md.
+    <span className="flex items-center gap-[18px] md:gap-1.5">
       <button
         type="button"
         aria-pressed={optimistic}

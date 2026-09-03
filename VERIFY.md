@@ -30,6 +30,20 @@ Build the verification harness. This is infrastructure I will reuse every phase.
    Also record document.documentElement.scrollWidth per route at 390px to
    artifacts/overflow.json — any value exceeding the viewport is a blocker, not a metric.
 
+   The sweep must be incapable of silently skipping. Three failure modes, all observed:
+   - It must run EVERY state of every route, not only a state named `default`. A route
+     whose states are named anything else must not be dropped.
+   - It must EXECUTE each state's setup before measuring. A screen reachable only by
+     clicking (the Builder) is otherwise measured as whatever page linked to it —
+     producing a green result for a screen never loaded.
+   - Routes not yet built must be declared pending explicitly and matched correctly,
+     parameterised segments included. A pending-route matcher that ignores `[` will
+     start failing captures the moment any earlier screen links to a later phase's route.
+   At the end of the run, print counts: routes declared, measured, skipped, pending —
+   and treat `measured < declared - pending` as a failure of the harness, not a pass.
+   Any harness fix that widens coverage requires RE-RUNNING earlier completed phases:
+   a gate that could not see a defect never proved its absence.
+
 3. scripts/verify/reference.ts — opens the design file
    /design-reference/heituva-survey-app-design/project/HeiTuva.dc.html in Playwright,
    drives its internal state to each screen (the prototype is a single page with JS
@@ -148,6 +162,11 @@ Report each with file:line, no summaries without locations:
 === GATE 5 — TEST QUALITY (the tests must be able to fail) ===
 a) Run the full suite; show output including counts. Zero skipped, zero `.only`,
    zero snapshots updated to make things pass.
+a2) Hermeticity. Every test must pass from any starting database state, in any order,
+   run twice in a row. No `.single()` on a query that another test or a fixture could
+   make return more than one row; no assertion on a count that grows when unrelated data
+   is added. Prove it: run the suite, run a round-trip that creates extra rows, run the
+   suite again. A suite whose green depends on nothing else existing is not a suite.
 b) Mutation check — this is mandatory and the most important step in this gate:
    pick the three most safety-critical behaviours this phase touches (for security phases
    these must include a k-anonymity gate and an RLS denial). For each: deliberately break
@@ -161,6 +180,10 @@ c) List behaviours from Gate 1 that have no automated test, and state which are 
 === GATE 6 — REPORT ===
 Output in this exact structure, nothing else:
 1. VERDICT: READY FOR REVIEW / NOT READY — one line, and if not ready, why.
+   READY is not available while any gate this protocol declares remains UNVERIFIED.
+   Fixing defects does not close an unrun gate: if Gate 3a compared three screens of
+   twenty, or 3c/3d/3f were not exercised, the verdict stays NOT READY until they are
+   actually run. Defects and unrun gates are separate debts and both must clear.
 2. Evidence table: claim | gate | evidence (command output excerpt, file:line, or
    screenshot path).
 3. DEFECTS: numbered, each with severity (blocker/major/minor), location, and proposed fix.

@@ -28,7 +28,8 @@ export function TemplateCard({
   disabledReason,
 }: {
   pack: TemplatePack
-  tint: string
+  /** Undefined past the fifth standard card — the design leaves those untinted. */
+  tint: string | undefined
   labels: {
     eyebrow: string
     meta: string
@@ -45,7 +46,7 @@ export function TemplateCard({
   return (
     <div
       className="flex min-h-[290px] flex-col rounded-[18px] border border-line p-[22px]"
-      style={{ background: tint }}
+      style={{ background: tint ?? 'transparent' }}
     >
       <div className="flex items-center justify-between gap-2.5">
         <span className="text-[11px] uppercase tracking-[.1em] text-mut">{labels.eyebrow}</span>

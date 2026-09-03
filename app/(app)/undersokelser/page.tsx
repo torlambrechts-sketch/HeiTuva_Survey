@@ -248,8 +248,16 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
                 menuClose: t('menuClose'),
                 menuDelete: t('menuDelete'),
                 statusDraft: t('statusDraft', { count: s.questionCount }),
-                statusActive: t('statusActive', { pct: Math.min(100, Math.round(pctOf(s) * 100)) }),
-                statusClosed: t('statusClosed', { pct: Math.min(100, Math.round(pctOf(s) * 100)) }),
+                // No denominator, no percentage: the pill falls back to the
+                // response count rather than reporting a 0 % that is not true
+                // (CLAUDE.md, "Never fabricate data in the UI").
+                statusActive: s.target
+                  ? t('statusActive', { pct: Math.min(100, Math.round(pctOf(s) * 100)) })
+                  : t('statusActiveNoTarget', { done: s.responseCount }),
+                statusClosed: s.target
+                  ? t('statusClosed', { pct: Math.min(100, Math.round(pctOf(s) * 100)) })
+                  : t('statusClosedNoTarget', { done: s.responseCount }),
+                people: s.target ? t('people', { count: s.target }) : '',
                 responses: s.target
                   ? t('responses', { done: s.responseCount, target: s.target })
                   : t('responsesNoTarget', { done: s.responseCount }),

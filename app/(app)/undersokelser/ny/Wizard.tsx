@@ -214,6 +214,13 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
                 // A range input paints its own 16px track and cannot take the
                 // ::after overlay, so the touch height comes from the element.
                 className="min-w-[180px] flex-1 py-[14px] md:py-0"
+                // The prototype leaves this slider unstyled, so it paints the
+                // browser's own blue — the one control in the app that is not
+                // in the palette. The design's OTHER slider, the respondent's
+                // (HeiTuva.dc.html:2022), sets accent-color to the amber, so
+                // this follows that rather than the omission.
+                // docs/DEVIATIONS.md D36.
+                style={{ accentColor: 'var(--ac)' }}
               />
               <span className="whitespace-nowrap text-[13px] text-mut">
                 {t('countLabel', { count: effectiveCount, mins: respondentMinutes })}
@@ -299,13 +306,24 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
             </div>
             <div className="mt-[18px] rounded-[13px] bg-sbg px-[18px] py-4">
               <div className="text-[13px] font-semibold">{t('summary')}</div>
+              {/* With no group chosen, `people` is 0 — and "til 0 personer"
+                  reads as "nobody will get this", which is false: recipients
+                  are chosen under Send. The design's own summary interpolates
+                  the count unconditionally (HeiTuva.dc.html:3527); it never
+                  meets the empty case because its groups are hard-coded. */}
               <p className="mt-[6px] text-sm leading-relaxed">
-                {t('summaryLine', {
-                  title: pack?.title ?? '',
-                  count: effectiveCount,
-                  people,
-                  cadence: t(CADENCE_KEY[cadence].sentence),
-                })}
+                {people
+                  ? t('summaryLine', {
+                      title: pack?.title ?? '',
+                      count: effectiveCount,
+                      people,
+                      cadence: t(CADENCE_KEY[cadence].sentence),
+                    })
+                  : t('summaryLineNoPeople', {
+                      title: pack?.title ?? '',
+                      count: effectiveCount,
+                      cadence: t(CADENCE_KEY[cadence].sentence),
+                    })}
               </p>
             </div>
           </div>
@@ -334,8 +352,20 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
               {t('back')}
             </button>
           ) : null}
+          {/*
+            Distinct keys, and this is not cosmetic. Both branches render a
+            <button> in the same slot, so without them React reconciles the two
+            as one element and merely flips `type` from "button" to "submit" —
+            on the very click that advanced the step. The synthetic handler runs
+            during dispatch, so the browser then performs the *submit* default
+            action on the node it now sees, creating the survey the instant you
+            reached the last step: "Hvor ofte?" was never seen and no recipients
+            were ever chosen, so every wizard survey got target = null.
+            Separate keys force a real swap, and the click dies with the old node.
+          */}
           {isLast ? (
             <button
+              key="wizard-submit"
               type="submit"
               disabled={pending || !packId}
               className="touch-44 flex-1 cursor-pointer rounded-[11px] border-none py-[13px] text-[15px] font-bold disabled:opacity-60"
@@ -345,6 +375,7 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
             </button>
           ) : (
             <button
+              key="wizard-next"
               type="button"
               onClick={() => setStep((s) => Math.min(3, s + 1))}
               disabled={!packId}

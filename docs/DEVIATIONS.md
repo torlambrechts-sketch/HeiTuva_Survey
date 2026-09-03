@@ -34,6 +34,11 @@ must never be what silently settles an open question.
 | D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
 | D30 | Builder spacing grows below `md` so 44px hit areas stop overlapping | Accepted | docs/RESPONSIVE.md rules 2-3 |
 | D31 | A sent survey's questions are read-only | **Enforced structurally** — database trigger, 2026-09-03 | supabase/migrations/20260903000004 |
+| D33 | Standard packs ship without the design's headcount suffixes, and without the "Privat spørsmål" pack | Accepted | see entry below |
+| D34 | The Undersøkelser row's meta line omits segments whose value does not exist yet | Accepted | see entry below |
+| D35 | The selected survey row carries no ink border | Accepted | see entry below |
+| D36 | The wizard's slider is themed, where the prototype leaves it unstyled | Accepted | see entry below |
+| D37 | Supabase's PERFORMANCE advisors are deferred to the Phase 6 hardening pass | **Deferred** — Tor's call, 2026-09-03 | see entry below |
 
 ## Entries
 
@@ -544,3 +549,110 @@ portals a dialog to `body` and marks every sibling `inert`, so the wizard and
 the Builder's sheet no longer leave the shell behind them tabbable.
 
 The sweep now prints `declared / measured / skipped` and fails on any shortfall.
+
+
+### D33 — standard template packs drop the design's headcounts, and one pack
+
+The design bundle's `PACKS` gives four packs an audience with a headcount:
+
+| pack | design bundle | seeded |
+| --- | --- | --- |
+| Ukespuls — Produkt | `Produktteamet · 34 personer` | `Produktteamet` |
+| Oppstartssjekk — 30 dager | `Nyansatte · 12 personer` | `Nyansatte` |
+| Samling i Bergen | `Deltakere · 58 personer` | `Deltakere` |
+| Arbeidsmiljø — månedlig | `Hele selskapet · 86 personer` | `Hele selskapet` |
+
+A standard pack is a global row with `org_id NULL`: every organisation on
+HeiTuva reads the same one. "34 personer" is therefore a number no organisation
+supplied and none can be measured against — it is the prototype's stage
+dressing, and shipping it renders a count that looks like data on a screen where
+everything else is. CLAUDE.md forbids exactly that. The counts stay off until an
+audience is a real membership with a real size, at which point the segment can be
+computed rather than seeded.
+
+The bundle's eighteenth pack, `"Privat spørsmål"` — title "Hei! Et kjapt
+spørsmål", audience "Bare vennene mine · 9 personer" — is not seeded at all. It
+is the designer's own placeholder illustrating a *private* template; as a
+standard pack it would appear in every customer's Bibliotek. Firmaets maler is
+where a private template belongs, and Phase 2's "Lagre som mal" now produces one,
+so the state the pack was standing in for is reachable without it.
+
+Consequence to keep in mind: the standard grid renders 17 cards, the reference
+render 18. The pixel gate for `/bibliotek` compares against the app's own
+baseline for that reason; `verify:reference` remains the fidelity check and it is
+read with this entry beside it.
+
+Everything else in `PACKS` is seeded verbatim, including `Samling i Bergen`,
+which migration `20260903000005` restored after it had been shortened to
+`Samling` with no entry here.
+
+### D34 — the survey row's meta line omits what it cannot know
+
+The design's row reads `Aktiv · 68 % · 42 av 62 svar · v1`. Three of those
+segments need data Phase 2 does not have: the round's target headcount, and a
+question-set version. The row now renders only the segments whose values exist —
+status, and the response count as "N svar" — and hides the progress bar entirely
+when no target is known.
+
+The alternative was the one this replaced: a literal `v1` in the JSX and a
+percentage computed against an unknown denominator, which rendered "Aktiv · 0 %"
+on a survey with responses. Both looked like data and neither was. When Phase 3
+records a round's invited count, the percentage and "42 av 62" come back from the
+same place the count does; a question-set version arrives with Phase 3's round
+snapshots.
+
+### D35 — the selected survey row has no ink border
+
+The prototype gives the row you last clicked a 1.5px `--ink` border, held in
+component state. Selection here means "the survey whose panel is open", which is
+a URL, and the share panel already marks it — the row's border would be a second
+indicator of the same fact. Left out until a screen has a selection that is not
+otherwise visible.
+
+
+### D36 — the wizard's slider takes the accent colour
+
+`HeiTuva.dc.html:79` gives the "Hvor mange spørsmål?" range input `flex:1` and
+nothing else, so it paints the browser's default control — bright system blue,
+the only colour in the app outside the palette. The design's other slider, the
+respondent's (`HeiTuva.dc.html:2022`), sets `accent-color:#F5C64A`.
+
+Read as an instruction the two conflict; read as intent they do not, so the
+wizard's slider takes `accent-color: var(--ac)` like the respondent's. The
+bundle wins on visuals, but not on an omission it contradicts elsewhere in
+itself.
+
+
+### D37 — the performance advisors are deferred to Phase 6
+
+CLAUDE.md's testing gate asks for `supabase db lint` and the advisors clean.
+The SECURITY advisors are clean. The PERFORMANCE advisors are not, and the four
+findings below are deferred to the Phase 6 hardening pass rather than fixed now:
+
+| advisor | count | what it is |
+| --- | --- | --- |
+| `unindexed_foreign_keys` | 46 | a foreign key with no covering index |
+| `multiple_permissive_policies` | 75 | two or more permissive policies on the same table and action, so both are evaluated |
+| `unused_index` | 6 | an index nothing has used yet |
+| `auth_rls_initplan` | 7 | `auth.uid()` called per row instead of once per statement |
+
+Deferred, not dismissed, and deliberately in that order:
+
+- Every one of them is a cost, not a correctness or a security problem. A
+  missing index makes a join slower; an overlapping permissive policy makes a
+  read slower and is never more permissive than the union it already is;
+  `auth_rls_initplan` re-evaluates a function that returns the same answer.
+- Three of the four cannot be judged on an empty database. `unused_index` on a
+  table with six rows means "nothing has run yet", not "this index is dead" —
+  acting on it now would drop indexes Phase 4's aggregation is about to need.
+  The unindexed foreign keys are the same: which ones matter depends on the
+  queries Phases 3-5 actually issue.
+- The policy overlaps are the one item with a real design decision behind it
+  (a per-role policy set that reads clearly versus one combined policy that
+  reads fast), and that decision wants the whole policy surface in front of it,
+  which Phase 5 completes.
+
+The Phase 6 pass owns all four, against a database with representative data and
+the full query set. Until then the advisor output is expected to be non-empty
+and is read with this entry beside it. A new SECURITY advisor finding is not
+covered by this deferral and still fails the gate.

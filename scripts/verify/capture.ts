@@ -165,6 +165,12 @@ async function main() {
             captured++
             if (bad) {
               failures++
+              // Keep the evidence under a name a later clean run does not
+              // overwrite. A failure whose log has been replaced by the next
+              // green run cannot be diagnosed at all — which is exactly what
+              // happened to one capture during Gate 7.
+              await writeFile(`${base}.FAIL.log.json`, JSON.stringify({ ...log, url: page.url() }, null, 2))
+              await page.screenshot({ path: `${base}.FAIL.png`, fullPage: true })
               console.log(`  FAIL ${spec.label}/${state.name}/${project.name} — ${bad} console/network problem(s)`)
               for (const e of [
                 ...log.pageErrors,

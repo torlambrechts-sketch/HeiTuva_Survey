@@ -12,11 +12,14 @@ import {
   type QuestionType,
 } from '@/lib/questions/registry'
 import { qualityFlags, type QualityRule } from '@/lib/questions/quality'
+import type { Engagement } from '@/lib/engagement'
 import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
 import { PreviewPane } from './PreviewPane'
+import { EngagementPanel } from './EngagementPanel'
 import {
   ADD_DESC_KEY,
+  ADD_LABEL_KEY,
   GROUP_KEY,
   LONG_SURVEY_THRESHOLD,
   NEW_ID_PREFIX,
@@ -24,7 +27,7 @@ import {
   type BuilderDraft,
   type DraftQuestion,
 } from './types'
-import { saveDraft, saveQuestionToBank } from './actions'
+import { saveDraft, saveQuestionToBank, saveSurveyAsTemplate } from './actions'
 
 const TABS = ['add', 'settings', 'preview'] as const
 type Tab = (typeof TABS)[number]
@@ -68,6 +71,7 @@ export function Builder({
   const [saved, setSaved] = useState(false)
   const [failed, setFailed] = useState(false)
   const [banked, setBanked] = useState<Record<string, boolean>>({})
+  const [templateSaved, setTemplateSaved] = useState(false)
   const [, startTransition] = useTransition()
 
   const disabled = !canEdit || locked
@@ -85,6 +89,7 @@ export function Builder({
         surveyId,
         title: current.title,
         audience: current.audience,
+        engage: current.engage,
         questions: current.questions,
       })
       if (!result.ok) {
@@ -114,6 +119,9 @@ export function Builder({
     const id = setTimeout(persist, 700)
     return () => clearTimeout(id)
   }, [draft, disabled, persist])
+
+  const patchEngagement = (patch: Partial<Engagement>) =>
+    setDraft((d) => ({ ...d, engage: { ...d.engage, ...patch } }))
 
   const patchQuestion = (index: number, patch: Partial<DraftQuestion>) =>
     setDraft((d) => ({
@@ -271,7 +279,7 @@ export function Builder({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13.5px] font-semibold">
-                          {t(TYPE_OPTION_KEY[type])}
+                          {t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type])}
                         </span>
                         <span className="mt-px block text-[11.5px] leading-snug text-mut">
                           {t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
@@ -319,7 +327,7 @@ export function Builder({
                     className="flex items-start gap-[10px] rounded-[10px] border border-line bg-bg px-[11px] py-[9px]"
                   >
                     <span className="flex-none rounded-full bg-ac px-2 py-[3px] text-[10.5px] font-bold">
-                      HVIS
+                      {t('logicIf')}
                     </span>
                     <span className="flex-1 text-[12.5px] leading-snug">
                       {t('logicRule', { question: q.text })}
@@ -329,6 +337,15 @@ export function Builder({
             )}
           </div>
         </div>
+      ) : null}
+
+      {tab === 'settings' ? (
+        <EngagementPanel
+          value={draft.engage}
+          questionCount={count}
+          disabled={disabled}
+          onChange={patchEngagement}
+        />
       ) : null}
 
       {tab === 'preview' ? (
@@ -442,12 +459,31 @@ export function Builder({
             >
               {t('toSend')}
             </Link>
+            {/* The design's three controls (HeiTuva.dc.html:483-489). "Lagre
+                utkast" is a link to the list because the draft is already
+                saved — the debounce owns persistence, so a second Save button
+                that did nothing would be a lie about what it does. */}
             <Link
               href="/undersokelser"
               className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-[13px] text-sm font-semibold text-ink no-underline"
             >
-              {t('backToList')}
+              {t('saveDraft')}
             </Link>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                setTemplateSaved(false)
+                startTransition(async () => {
+                  const result = await saveSurveyAsTemplate({ surveyId, category: 'Annet' })
+                  if (result.ok) setTemplateSaved(true)
+                  else setFailed(true)
+                })
+              }}
+              className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-[13px] text-sm font-semibold text-ink disabled:opacity-60"
+            >
+              {templateSaved ? t('templateSaved') : t('saveTemplate')}
+            </button>
             {saved && !failed ? (
               <span className="rounded-full bg-ac2 px-[15px] py-[9px] text-[12.5px] font-semibold">
                 {t('saved')}

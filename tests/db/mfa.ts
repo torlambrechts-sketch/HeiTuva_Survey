@@ -72,3 +72,29 @@ export async function setAdminMfaRequired(enabled: boolean): Promise<void> {
     .upsert({ key: 'admin_mfa', org_id: null, enabled }, { onConflict: 'key,org_id' })
   if (error) throw new Error(`could not set admin_mfa=${enabled}: ${error.message}`)
 }
+
+/**
+ * Removes every TOTP factor the persona has, so a test that pins the
+ * *not-enrolled* screen actually gets it.
+ *
+ * /sikkerhet renders `enrollTitle` when the user has no factor and
+ * `verifyTitle` when they have one, so the screen the pixel baseline holds
+ * depends on state that other runs create: signing in as an administrator with
+ * `admin_mfa` on enrols a factor, and it outlives the test that made it. The
+ * baseline then failed against a screen that was correct — the suite was
+ * asserting against whatever the previous run had left behind.
+ */
+export async function clearMfaFactors(email: string): Promise<void> {
+  const { serviceClient } = await import('./clients')
+  const svc = serviceClient()
+  const { data: users, error } = await svc.auth.admin.listUsers()
+  if (error) throw new Error(`could not list users: ${error.message}`)
+  const user = users.users.find((u) => u.email === email)
+  if (!user) throw new Error(`no user ${email}`)
+  const { data, error: listError } = await svc.auth.admin.mfa.listFactors({ userId: user.id })
+  if (listError) throw new Error(`could not list factors: ${listError.message}`)
+  for (const f of data?.factors ?? []) {
+    const { error: delError } = await svc.auth.admin.mfa.deleteFactor({ id: f.id, userId: user.id })
+    if (delError) throw new Error(`could not delete factor ${f.id}: ${delError.message}`)
+  }
+}

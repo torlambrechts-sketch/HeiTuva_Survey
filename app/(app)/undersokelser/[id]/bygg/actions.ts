@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
-import { QUESTION_TYPE_KEYS } from '@/lib/questions/registry'
+import { QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
 import { isNewQuestion } from './types'
 
 export type BuilderResult =
@@ -25,10 +25,33 @@ const QuestionInput = z.object({
   config: z.record(z.string(), z.unknown()),
 })
 
+/**
+ * The engagement settings, validated field by field rather than passed through
+ * as opaque jsonb: this object reaches Phase 3's respondent renderer and the
+ * invitation mailer, so an unvalidated string here is an unvalidated string
+ * there.
+ */
+const EngagementInput = z.object({
+  audience: z.enum(['ansatte', 'kunder']),
+  incentive: z.enum(['ingen', 'lotteri', 'alle', 'veldedig']),
+  prize: z.string().max(200),
+  charity: z.string().max(200),
+  comments: z.enum(['ingen', 'lav', 'alle']),
+  thank_you: z.string().max(500),
+  personal: z.boolean(),
+  deadline: z.boolean(),
+  show_progress: z.boolean(),
+  one_question: z.boolean(),
+  reveal_results: z.boolean(),
+  follow_up: z.boolean(),
+  mobile_first: z.boolean(),
+})
+
 const DraftInput = z.object({
   surveyId: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
   audience: z.string().trim().max(200),
+  engage: EngagementInput,
   questions: z.array(QuestionInput).max(200),
 })
 
@@ -49,7 +72,7 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
 
   const parsed = DraftInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'invalid' }
-  const { surveyId, title, audience, questions } = parsed.data
+  const { surveyId, title, audience, engage, questions } = parsed.data
 
   const supabase = await createClient()
 
@@ -69,7 +92,7 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
 
   const { error: titleError } = await supabase
     .from('surveys')
-    .update({ title, audience_label: audience || null })
+    .update({ title, audience_label: audience || null, engage: engage as never })
     .eq('id', surveyId)
   if (titleError) {
     console.error(`saveDraft: survey update failed: ${titleError.message}`)
@@ -150,6 +173,49 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
     }
   }
 
+  /**
+   * logic_rules mirrors the follow-up-on-low flags.
+   *
+   * Phase 2's scope says the toggle "writes logic_rules", and Phase 3's
+   * respondent flow reads that table rather than the question column — a
+   * follow-up prompt is a rule about the survey, not a property of one
+   * question's rendering. Keeping the flag as the only record would leave the
+   * respondent flow with nothing to read.
+   *
+   * Rewritten wholesale for this survey and kind, because the set is derived:
+   * reconciling row by row would mean tracking which rule belongs to which
+   * question through a reorder, and the derivation already knows the answer.
+   */
+  const numericFollowUps = questions
+    .filter((q) => q.followUpOnLow && specOf(q.type as never).numeric)
+    .map((q) => (isNewQuestion(q.id) ? ids[q.id] : q.id))
+    .filter((id): id is string => Boolean(id))
+
+  const { error: clearError } = await supabase
+    .from('logic_rules')
+    .delete()
+    .eq('survey_id', surveyId)
+    .eq('kind', 'low_score_follow_up')
+  if (clearError) {
+    console.error(`saveDraft: logic_rules clear failed: ${clearError.message}`)
+    return { ok: false, error: 'failed' }
+  }
+  if (numericFollowUps.length) {
+    const { error: logicError } = await supabase.from('logic_rules').insert(
+      numericFollowUps.map((questionId) => ({
+        survey_id: surveyId,
+        kind: 'low_score_follow_up',
+        // The threshold is the design's own: a follow-up fires at or below 2
+        // on the question's scale (HeiTuva.dc.html's low-score prompt).
+        config: { question_id: questionId, threshold: 2 } as never,
+      })),
+    )
+    if (logicError) {
+      console.error(`saveDraft: logic_rules insert failed: ${logicError.message}`)
+      return { ok: false, error: 'failed' }
+    }
+  }
+
   revalidatePath(`/undersokelser/${surveyId}/bygg`)
   revalidatePath('/undersokelser')
   return { ok: true, ids }
@@ -186,4 +252,85 @@ export async function saveQuestionToBank(input: unknown): Promise<BuilderResult>
 
   revalidatePath('/bibliotek')
   return { ok: true, ids: {} }
+}
+
+const TemplateInput = z.object({
+  surveyId: z.string().uuid(),
+  category: z.enum(['Ansatte', 'Kunder', 'Lovpålagt', 'Annet']),
+})
+
+/**
+ * "Lagre som mal" — the Builder's third action, and the only path that creates
+ * a row in Firmaets maler.
+ *
+ * Bibliotek could already flip a company template private and delete one, but
+ * nothing created one, so that whole section of the library was unreachable.
+ *
+ * The pack stores a snapshot of the questions rather than referencing them: a
+ * template is a starting point, and a later edit to this survey must not
+ * silently rewrite a template someone else is about to use — the same reasoning
+ * that makes `createSurveyFromPack` copy rather than link.
+ */
+export async function saveSurveyAsTemplate(input: unknown): Promise<BuilderResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = TemplateInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+  const { surveyId, category } = parsed.data
+
+  const supabase = await createClient()
+  const { data: survey, error: readError } = await supabase
+    .from('surveys')
+    .select('title, audience_label')
+    .eq('id', surveyId)
+    .single()
+  if (readError || !survey) return { ok: false, error: 'forbidden' }
+
+  const { data: questions, error: qError } = await supabase
+    .from('survey_questions')
+    .select('type, text, help, required, config')
+    .eq('survey_id', surveyId)
+    .order('position')
+  if (qError) {
+    console.error(`saveSurveyAsTemplate: questions read failed: ${qError.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  const config = (q: (typeof questions)[number]) => (q.config ?? {}) as Record<string, unknown>
+
+  const { data: pack, error } = await supabase
+    .from('template_packs')
+    .insert({
+      org_id: viewer.orgId,
+      // `unique nulls not distinct (org_id, key)` means the key only has to be
+      // unique within this organisation, but a second "Lagre som mal" on the
+      // same survey must not collide with the first.
+      key: `${surveyId}-${Date.now()}`,
+      category,
+      title: survey.title,
+      audience: survey.audience_label,
+      questions: (questions ?? []).map((q) => ({
+        text: q.text,
+        type: q.type,
+        help: q.help ?? undefined,
+        required: q.required,
+        ...config(q),
+      })) as never,
+      // Shared with the company, as the design saves it
+      // (HeiTuva.dc.html:3825 sets `private:false`) — the section is called
+      // "Firmaets maler" and the card's own toggle is what makes one private.
+      // Both states stay inside the org either way; RLS scopes the row to it.
+      private: false,
+      author_member_id: viewer.memberId,
+    })
+    .select('id')
+    .single()
+  if (error || !pack) {
+    console.error(`saveSurveyAsTemplate: insert failed: ${error?.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath('/bibliotek')
+  return { ok: true, ids: { template: pack.id } }
 }

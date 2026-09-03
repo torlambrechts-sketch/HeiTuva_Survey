@@ -26,7 +26,7 @@ type Labels = {
   menuEdit: string; menuSend: string; menuResults: string; menuReport: string
   menuAnswer: string; menuShare: string; menuCopy: string; menuClose: string; menuDelete: string
   statusDraft: string; statusActive: string; statusClosed: string
-  responses: string; sharedWith: string; failed: string
+  responses: string; sharedWith: string; failed: string; people: string
 }
 
 // The rows are ~37px tall in a gap-[2px] stack, so their 44px touch areas
@@ -95,10 +95,16 @@ export function SurveyRow({
         ? labels.primaryActive
         : labels.primaryClosed
 
-  const pct =
-    survey.target && survey.target > 0
-      ? Math.min(100, Math.round((survey.responseCount / survey.target) * 100))
-      : 0
+  /**
+   * A percentage needs a denominator. `target` is null until Send chooses
+   * recipients, and a 0 % derived from an unknown denominator is a fabricated
+   * number — it reads as "nobody answered" when six people did. So the bar is
+   * hidden entirely until the denominator exists.
+   */
+  const hasTarget = Boolean(survey.target && survey.target > 0)
+  const pct = hasTarget
+    ? Math.min(100, Math.round((survey.responseCount / survey.target!) * 100))
+    : null
 
   function run(action: () => Promise<{ ok: boolean }>) {
     setOpen(false)
@@ -124,8 +130,17 @@ export function SurveyRow({
         </span>
         <span className="min-w-full flex-1 md:min-w-[200px]">
           <span className="block font-display text-[20px] font-medium">{survey.title}</span>
+          {/*
+            The design's meta line is "{audience} · {N} personer · sendt {date}
+            · v{version}". Three of those four do not exist in this schema yet:
+            there is no version column, `target` is null until Send sets it, and
+            nothing has been sent before Phase 3. CLAUDE.md forbids rendering a
+            placeholder that looks like data, so the row shows only the segments
+            that are real and omits the rest — a shorter true line rather than a
+            complete false one. docs/DEVIATIONS.md D34.
+          */}
           <span className="mt-[2px] block text-[13px] text-mut">
-            {[survey.audience, `v1`].filter(Boolean).join(' · ')}
+            {[survey.audience, labels.people].filter(Boolean).join(' · ')}
           </span>
           {labels.sharedWith ? (
             <span className="mt-[6px] inline-block rounded-full bg-ac2 px-[10px] py-1 text-[11.5px] font-semibold">
@@ -154,18 +169,24 @@ export function SurveyRow({
       </div>
 
       <div className="mt-[14px] flex items-center gap-[14px]">
+        {pct === null ? null : (
+          <span
+            className="block h-[9px] flex-1 overflow-hidden rounded-full"
+            style={{ background: 'var(--sf2)' }}
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={labels.responses}
+          >
+            <span className="block h-full rounded-full bg-ac" style={{ width: `${pct}%` }} />
+          </span>
+        )}
         <span
-          className="block h-[9px] flex-1 overflow-hidden rounded-full"
-          style={{ background: 'var(--sf2)' }}
-          role="progressbar"
-          aria-valuenow={pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={labels.responses}
+          className={`whitespace-nowrap text-[13px] text-mut${pct === null ? ' flex-1' : ''}`}
         >
-          <span className="block h-full rounded-full bg-ac" style={{ width: `${pct}%` }} />
+          {labels.responses}
         </span>
-        <span className="whitespace-nowrap text-[13px] text-mut">{labels.responses}</span>
       </div>
 
       {failed ? (

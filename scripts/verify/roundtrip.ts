@@ -16,7 +16,7 @@ import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
 import { signIn } from '../../tests/helpers/session'
 import { personaClient, serviceClient } from '../../tests/db/clients'
-import { ORG_PRIMARY } from '../../tests/db/personas'
+import { ORG_PRIMARY, PERSONAS } from '../../tests/db/personas'
 
 config({ path: '.env.local', quiet: true })
 
@@ -165,9 +165,9 @@ async function main() {
       show('survey_questions (autosave)', data?.text === text, data)
     }
 
-    // question_bank — "Lagre i banken".
+    // question_bank — "Lagre til banken".
     {
-      await page.getByRole('button', { name: 'Lagre i banken' }).first().click()
+      await page.getByRole('button', { name: 'Lagre til banken' }).first().click()
       await page.waitForTimeout(2000)
       const { data } = await admin
         .from('question_bank')
@@ -181,11 +181,13 @@ async function main() {
     // survey_editors + surveys.results_scope — the share panel.
     {
       await page.goto(`${BASE_URL}/undersokelser?del=${surveyId}`, { waitUntil: 'domcontentloaded' })
-      const editor = page.locator('button[aria-pressed]').filter({ hasText: '·' }).first()
-      if (await editor.count()) {
-        await editor.click()
-        await page.waitForTimeout(1500)
-      }
+      // Name the person, not the shape. The first cut filtered the panel's
+      // toggles by a "·" in their label — the separator between role and group
+      // — and a member with no group has no separator, so it matched nothing,
+      // clicked nothing, and reported the empty read as a persisted write.
+      const editor = page.getByRole('button', { name: new RegExp(PERSONAS.redaktor.name) }).first()
+      await editor.click()
+      await page.waitForTimeout(1500)
       const { data } = await admin.from('survey_editors').select('member_id').eq('survey_id', surveyId)
       show('survey_editors', (data?.length ?? 0) > 0, data?.[0] ?? null)
 
@@ -220,25 +222,39 @@ async function main() {
       show('survey_questions (wizard)', (qs?.length ?? 0) > 0, { count: qs?.length })
     }
 
-    // template_packs — the only write path Phase 2 declares is "Lagre som mal".
+    // template_packs — "Lagre som mal" in the Builder's action row.
     {
+      await page.goto(`${BASE_URL}/undersokelser/${surveyId}/bygg`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.getByRole('button', { name: 'Lagre som mal' }).click()
+      await page.getByRole('button', { name: 'Lagret som mal ✓' }).waitFor({ timeout: 15_000 })
       const { data } = await admin
         .from('template_packs')
-        .select('id')
+        .select('id, title, private')
         .eq('org_id', orgId)
-      show('template_packs (org-owned)', (data?.length ?? 0) > 0, {
-        count: data?.length ?? 0,
-        note: 'no UI path creates one — see Gate 1',
-      })
+      show('template_packs (org-owned)', (data?.length ?? 0) > 0, data?.[0] ?? { count: 0 })
     }
 
-    // logic_rules — Phase 2 scope says follow-up-on-low writes this table.
+    // logic_rules — the follow-up-on-low switch on a scale question.
     {
-      const { data } = await admin.from('logic_rules').select('id')
-      show('logic_rules', (data?.length ?? 0) > 0, {
-        count: data?.length ?? 0,
-        note: 'no write path exists — see Gate 1',
-      })
+      await page.getByRole('button', { name: 'Avansert', exact: true }).click()
+      const followUp = page
+        .getByRole('button', { name: 'Oppfølging ved lav score', exact: true })
+        .first()
+      await followUp.click()
+      // The Builder autosaves on a debounce; the rule is written by saveDraft.
+      await page.waitForTimeout(3000)
+      // `threshold` lives inside `config`, not as a column. Naming it here
+      // made PostgREST reject the whole read, and the probe reported the empty
+      // result as "no write path exists" — a harness fault dressed up as an
+      // application finding. The error is printed now rather than folded into
+      // a count.
+      const { data, error } = await admin
+        .from('logic_rules')
+        .select('id, kind, config')
+        .eq('survey_id', surveyId)
+      show('logic_rules', (data?.length ?? 0) > 0, error ? { error: error.message } : (data?.[0] ?? { count: 0 }))
     }
 
     await ctx.close()

@@ -288,6 +288,23 @@ export const ROUTES: RouteSpec[] = [
           await openBuilderPane(page, 'Vis')
         },
       },
+      {
+        // The Settings tab was never captured or measured until now: the
+        // Builder's states were default/avansert/vis only, so the readiness
+        // checks, the logic list and the whole engagement panel — the largest
+        // surface in this screen — had no coverage at any viewport.
+        name: 'innstillinger',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Innstillinger')
+          // Scoped to the visible heading: below xl the right pane exists
+          // twice in the DOM — the sticky column is `hidden` and the sheet is
+          // the live copy — so an unscoped text match is a strict-mode
+          // violation rather than a wait.
+          await page.locator('h2:visible', { hasText: 'Engasjement og svarprosent' }).first().waitFor()
+        },
+      },
     ],
   },
   {
@@ -339,6 +356,32 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    route: '/undersokelser',
+    label: 'bibliotek-firmaets-maler',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      {
+        // "Firmaets maler" — the design's own-templates section
+        // (HeiTuva.dc.html:1570-1590), with its own four-colour tint cycle and
+        // the "Delt med firmaet" chip. The seed ships no org templates, so the
+        // section only exists once one has been SAVED. Producing it through
+        // the Builder's own "Lagre som mal" is the point: a state faked by
+        // inserting a row would not prove the button works.
+        name: 'default',
+        setup: async (page) => {
+          const base = page.url().replace(/\/undersokelser.*$/, '')
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('button', { name: 'Lagre som mal' }).click()
+          await page.getByRole('button', { name: 'Lagret som mal ✓' }).waitFor({ timeout: 15_000 })
+          await page.goto(`${base}/bibliotek`, { waitUntil: 'domcontentloaded' })
+          await page.getByText('Firmaets maler').waitFor({ timeout: 15_000 })
+        },
+      },
+    ],
+  },
+  {
     route: '/bibliotek',
     label: 'bibliotek-bank',
     as: 'administrator',
@@ -358,6 +401,32 @@ export const ROUTES: RouteSpec[] = [
           await page.waitForURL((u) => u.searchParams.get('fane') === 'bank')
           await page.fill('input[aria-label="Søk i spørsmålsbanken…"]', 'leder')
           await page.waitForURL((u) => u.searchParams.get('sok') === 'leder', { timeout: 15_000 })
+        },
+      },
+    ],
+  },
+  {
+    route: '/undersokelser',
+    label: 'bibliotek-bank-egne',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      {
+        // The bank's own-question state (HeiTuva.dc.html:1666-1680): the grey
+        // "Egen" badge instead of the teal "Validert", the author in the meta
+        // line, and the × that only an org's own question carries. The seed
+        // ships twelve validated questions and no own ones, so the state has
+        // to be produced — through the Builder's "Lagre til banken", which is
+        // also the only way a user produces it.
+        name: 'default',
+        setup: async (page) => {
+          const base = page.url().replace(/\/undersokelser.*$/, '')
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('button', { name: 'Lagre til banken' }).first().click()
+          await page.getByRole('button', { name: 'I banken ✓' }).first().waitFor({ timeout: 15_000 })
+          await page.goto(`${base}/bibliotek?fane=bank`, { waitUntil: 'domcontentloaded' })
+          await page.getByText('Egen', { exact: true }).first().waitFor({ timeout: 15_000 })
         },
       },
     ],

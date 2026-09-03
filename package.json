@@ -16,12 +16,15 @@
     "verify:db": "vitest run tests/invariants tests/db",
     "verify:attack": "tsx scripts/verify/attack.ts",
     "verify:roundtrip": "tsx scripts/verify/roundtrip.ts --local",
+    "verify:hermetic": "tsx scripts/verify/hermetic.ts",
+    "verify:interaction": "tsx scripts/verify/interaction.ts --local",
+    "verify:i18n": "tsx scripts/verify/i18n.ts --local",
     "verify:browser": "tsx scripts/verify/capture.ts --local",
     "verify:reference": "tsx scripts/verify/reference.ts",
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
-    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:attack && npm run verify:roundtrip && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
+    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:attack && npm run verify:roundtrip && npm run verify:hermetic && npm run verify:interaction && npm run verify:i18n && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
     "seed:mfa": "tsx scripts/seed-mfa.ts --local",
-    "verify:visual": "playwright test",
+    "verify:visual": "tsx scripts/verify/visual.ts --local",
     "verify:responsive": "tsx scripts/verify/responsive.ts --local"
   },
   "dependencies": {

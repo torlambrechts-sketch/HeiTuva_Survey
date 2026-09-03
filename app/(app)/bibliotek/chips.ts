@@ -30,9 +30,32 @@ export const CATEGORY_NOTE_KEY: Partial<Record<PackCategory, string>> = {
   Kunder: 'noteKunder',
 }
 
-/** Card tints, in the design's order (HeiTuva.dc.html:3739). Cycled so a
- *  category filter that shows six packs does not run out. */
-export const CARD_TINTS = ['#FFFDF6', '#FBD5C4', '#CFE7E4', '#FBEBBE', '#F3E7DB'] as const
+/**
+ * Standard-pack tints (HeiTuva.dc.html:3737). The design indexes this array
+ * with the card's position and NO modulo, so only the first five cards on the
+ * grid are tinted and the sixth onwards sit untinted on the page ground. That
+ * is deliberate — the tints lead the eye into the grid rather than colouring
+ * all eighteen — so `packTint` returns undefined past the fifth instead of
+ * cycling.
+ */
+const STANDARD_TINTS = ['#FFFDF6', '#FBD5C4', '#CFE7E4', '#FBEBBE', '#F3E7DB'] as const
+
+/**
+ * Firmaets maler use a different, four-colour palette and DO cycle
+ * (HeiTuva.dc.html:3817) — an org can save many templates and the design keeps
+ * every one of them tinted.
+ */
+const OWN_TINTS = ['#FBEBBE', '#CFE7E4', '#FBD5C4', '#F3E7DB'] as const
+
+/** The background for the i-th standard pack card, or undefined for no tint. */
+export function packTint(i: number): string | undefined {
+  return STANDARD_TINTS[i]
+}
+
+/** The background for the i-th Firmaets maler card. */
+export function ownTint(i: number): string {
+  return OWN_TINTS[i % OWN_TINTS.length]!
+}
 
 /** The design shows "~N min" at 0.6 min per question (HeiTuva.dc.html:3737). */
 export function estimateMinutes(questionCount: number): number {

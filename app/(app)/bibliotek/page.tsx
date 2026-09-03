@@ -2,13 +2,14 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import {
-  CARD_TINTS,
   CATEGORY_KEY,
   CATEGORY_NOTE_KEY,
   LIBRARY_TABS,
   PACK_CATEGORIES,
   PACK_VIEWS,
   estimateMinutes,
+  ownTint,
+  packTint,
   type LibraryTab,
   type PackCategory,
   type PackView,
@@ -137,8 +138,15 @@ async function TemplatesTab({
 }) {
   const { data, error } = await supabase
     .from('template_packs')
-    .select('id, key, org_id, category, legal_ref, title, audience, questions, private, org_members(name)')
-    .order('category')
+    .select(
+      'id, key, org_id, category, legal_ref, title, audience, questions, private, created_at, sort_order, org_members(name)',
+    )
+    // The grid tints by POSITION, so the order decides which cards are
+    // coloured. `sort_order` carries the design bundle's own editorial
+    // sequence (migration 0005); `title` only breaks ties between org
+    // templates, which all sit at the default.
+    .order('sort_order')
+    .order('created_at', { ascending: false })
     .order('title')
   if (error) throw new Error(`template_packs read failed: ${error.message}`)
 
@@ -203,7 +211,7 @@ async function TemplatesTab({
               <TemplateCard
                 key={p.id}
                 pack={p}
-                tint={CARD_TINTS[i % CARD_TINTS.length]!}
+                tint={ownTint(i)}
                 labels={labelsFor(p)}
                 typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
                 canEdit={canEdit}
@@ -247,7 +255,7 @@ async function TemplatesTab({
             <TemplateCard
               key={p.id}
               pack={p}
-              tint={CARD_TINTS[i % CARD_TINTS.length]!}
+              tint={packTint(i)}
               labels={labelsFor(p)}
               typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
               canEdit={canEdit}
@@ -324,9 +332,15 @@ async function BankTab({
   const [{ data: bank, error }, { data: draft }] = await Promise.all([
     supabase
       .from('question_bank')
-      .select('id, org_id, text, type, category, used_count, org_members(name)')
-      .order('category')
-      .order('text'),
+      .select('id, org_id, text, type, category, used_count, sort_order, created_at, org_members(name)')
+      // The design renders the bank in its own array order and derives the
+      // category chips from where each category first appears in it
+      // (HeiTuva.dc.html:3832-3834), so the order is stored (migration 0006)
+      // rather than alphabetical. Org questions all sit at the default and
+      // sort newest first, above the standard ones — `myBank` concatenated
+      // ahead of `BANK` in the design.
+      .order('sort_order')
+      .order('created_at', { ascending: false }),
     // The design adds bank questions "rett inn i {draftTitle}" against one
     // implicit draft. Here that is the org's most recently touched draft —
     // docs/DEVIATIONS.md D26.
@@ -351,8 +365,10 @@ async function BankTab({
     author: (q.org_members as unknown as { name: string } | null)?.name ?? null,
   }))
 
-  const categories = ['Alle', 'Egne', ...new Set(rows.map((r) => r.category))]
-  const filtered = rows
+  // Own questions first, then the standard bank in its stored order.
+  const ordered = [...rows.filter((r) => r.isOwn), ...rows.filter((r) => !r.isOwn)]
+  const categories = ['Alle', 'Egne', ...new Set(ordered.map((r) => r.category))]
+  const filtered = ordered
     .filter((r) =>
       category === 'Alle' ? true : category === 'Egne' ? r.isOwn : r.category === category,
     )

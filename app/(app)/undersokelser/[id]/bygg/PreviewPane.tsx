@@ -15,7 +15,12 @@ const SMILEYS = ['☹', '🙁', '😐', '🙂', '😀']
  * read. Anything without a fixed set of choices previews as a single chip
  * standing in for the input.
  */
-function previewChips(q: DraftQuestion, answerPlaceholder: string): string[] {
+function previewChips(
+  q: DraftQuestion,
+  answerPlaceholder: string,
+  yes: string,
+  no: string,
+): string[] {
   const c = q.config
   switch (q.type) {
     case 'scale':
@@ -27,7 +32,7 @@ function previewChips(q: DraftQuestion, answerPlaceholder: string): string[] {
     case 'enps':
       return Array.from({ length: 11 }, (_, i) => String(i))
     case 'yesno':
-      return ['Ja', 'Nei']
+      return [yes, no]
     case 'choice':
     case 'dropdown':
     case 'image':
@@ -84,7 +89,7 @@ export function PreviewPane({
             })}
           </div>
           {questions.map((q, i) => {
-            const chips = previewChips(q, t('previewAnswer'))
+            const chips = previewChips(q, t('previewAnswer'), t('previewYes'), t('previewNo'))
             return (
               <div key={q.id} className="mt-[17px]">
                 <div className="text-[13.5px] font-medium">

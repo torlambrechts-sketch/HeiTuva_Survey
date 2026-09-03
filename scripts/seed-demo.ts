@@ -46,7 +46,7 @@ async function main() {
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
-  ])
+  ], { audience: 'Hele selskapet' })
   const aboveRound = await createRound(above, 8, { groupId: org.groupId })
   await submitResponses(
     aboveRound.tokens,
@@ -59,7 +59,7 @@ async function main() {
 
   const below = await createSurvey(org.id, 'Psykososial kartlegging', [
     { type: 'likert', text: 'Jeg vet hva som forventes av meg i jobben min' },
-  ])
+  ], { audience: 'Alle ansatte · årlig' })
   const belowRound = await createRound(below, 6, { groupId: org.groupId })
   await submitResponses(
     belowRound.tokens,
@@ -69,7 +69,7 @@ async function main() {
 
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
-  ], { status: 'utkast' })
+  ], { status: 'utkast', audience: 'Hele selskapet' })
 
   console.log(`seeded:
   ${ORG_PRIMARY} (${org.id}) — ${org.members.length} members, group ${GROUP_PRIMARY}

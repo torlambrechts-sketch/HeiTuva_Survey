@@ -12,9 +12,12 @@ import type { QualityFlag } from '@/lib/questions/quality'
 import {
   COMMENT_MODES,
   COMMENT_MODE_KEY,
+  FIELD_INPUT_TYPES,
+  FIELD_TYPE_KEY,
   GROUP_KEY,
   TYPE_OPTION_KEY,
   type DraftQuestion,
+  type FieldInputType,
   type QuestionConfig,
 } from './types'
 
@@ -375,8 +378,9 @@ export function QuestionCard({
       ) : null}
 
       {/* Statement and option lists. One block, two labels — the markup is
-          identical in the design, only the bullet shape differs. */}
-      {spec.statements || spec.optionList || spec.imageOptions ? (
+          identical in the design, only the bullet shape differs. Image options
+          are NOT here: they are a grid of upload cards, below. */}
+      {spec.statements || spec.optionList ? (
         <div className="mt-[11px] flex flex-col gap-[7px] md:pl-9">
           {spec.statements ? (
             <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('statements')}</div>
@@ -424,7 +428,127 @@ export function QuestionCard({
             disabled={disabled}
             className="touch-44 cursor-pointer self-start rounded-full border border-dashed border-line bg-transparent px-3 py-[6px] text-[12.5px] text-mut disabled:opacity-40"
           >
-            {spec.statements ? t('addStatement') : spec.imageOptions ? t('addImage') : t('addOption')}
+            {spec.statements ? t('addStatement') : t('addOption')}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Image options: the design's 3-column grid of upload cards
+          (HeiTuva.dc.html:437-452), not a text list. The upload target itself
+          is Storage, which Phase 6 wires; until then the card shows the slot
+          and its label, so the shape a respondent will see is visible here. */}
+      {spec.imageOptions ? (
+        <div className="mt-[11px] flex flex-col gap-[10px] md:pl-9">
+          <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 md:grid-cols-3">
+            {(config.options ?? []).map((label, i) => (
+              <div key={i} className="overflow-hidden rounded-xl border border-line bg-sf">
+                <div
+                  className="flex h-[92px] items-center justify-center bg-bg text-[12px] text-mut"
+                  role="img"
+                  aria-label={t('imageAlt', { label: label || String(i + 1) })}
+                >
+                  {t('imageUpload')}
+                </div>
+                <div className="flex items-center gap-[6px] px-[10px] py-2">
+                  <input
+                    value={label}
+                    onChange={(e) => setListItem('options', i, e.target.value)}
+                    disabled={disabled}
+                    aria-label={t('optionLabel', { n: i + 1 })}
+                    className="touch-44-field min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 py-[6px] text-[12.5px] text-ink outline-none disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeListItem('options', i)}
+                    disabled={disabled}
+                    aria-label={t('imageRemove')}
+                    className="touch-44 cursor-pointer border-none bg-transparent text-[15px] leading-none text-mut disabled:opacity-40"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => addListItem('options', t('optionLabel', { n: (config.options ?? []).length + 1 }))}
+            disabled={disabled}
+            className="touch-44 cursor-pointer self-start rounded-[9px] border border-line bg-transparent px-[14px] py-2 text-[12.5px] font-semibold text-ink disabled:opacity-40"
+          >
+            {t('addImage')}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Form fields: a label and an input type per row. The registry has
+          declared `formFields: true` for this type since the Builder landed,
+          but nothing rendered it, so `config.fields` was uneditable — the
+          survey could collect name and email and the author could not see or
+          change which. That matters here more than elsewhere: this is the type
+          that trips the anonymity warning. */}
+      {spec.formFields ? (
+        <div className="mt-[11px] flex flex-col gap-[7px] md:pl-9">
+          {(config.fields ?? []).map(([label, inputType], i) => (
+            <div key={i} className="flex flex-wrap items-center gap-[18px] md:gap-[9px]">
+              <span className="h-[11px] w-[11px] flex-none rounded-[3px] border-[1.5px] border-mut" />
+              <input
+                value={label}
+                onChange={(e) => {
+                  const next = (config.fields ?? []).map((f, j) =>
+                    j === i ? ([e.target.value, f[1]] as [string, string]) : f,
+                  )
+                  patchConfig({ fields: next })
+                }}
+                disabled={disabled}
+                aria-label={t('fieldLabel', { n: i + 1 })}
+                className="touch-44-field min-w-0 flex-1 rounded-lg border border-line bg-bg px-[10px] py-[7px] text-[13px] text-ink outline-none disabled:opacity-60"
+              />
+              <select
+                value={inputType}
+                onChange={(e) => {
+                  const next = (config.fields ?? []).map((f, j) =>
+                    j === i ? ([f[0], e.target.value] as [string, string]) : f,
+                  )
+                  patchConfig({ fields: next })
+                }}
+                disabled={disabled}
+                aria-label={t('fieldType', { n: i + 1 })}
+                className="touch-44-field rounded-lg border border-line bg-bg px-[10px] py-[7px] text-[13px] text-ink outline-none disabled:opacity-60"
+              >
+                {FIELD_INPUT_TYPES.map((ft) => (
+                  <option key={ft} value={ft}>
+                    {t(FIELD_TYPE_KEY[ft as FieldInputType])}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  patchConfig({ fields: (config.fields ?? []).filter((_, j) => j !== i) })
+                }
+                disabled={disabled}
+                aria-label={t('removeField')}
+                className="touch-44 cursor-pointer border-none bg-transparent text-sm text-mut disabled:opacity-40"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              patchConfig({
+                fields: [
+                  ...(config.fields ?? []),
+                  [t('fieldLabel', { n: (config.fields ?? []).length + 1 }), 'text'],
+                ],
+              })
+            }
+            disabled={disabled}
+            className="touch-44 cursor-pointer self-start rounded-full border border-dashed border-line bg-transparent px-3 py-[6px] text-[12.5px] text-mut disabled:opacity-40"
+          >
+            {t('addField')}
           </button>
         </div>
       ) : null}

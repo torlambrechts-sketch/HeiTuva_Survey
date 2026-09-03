@@ -85,7 +85,13 @@ export async function createSurvey(
   orgId: string,
   title: string,
   questions: QuestionSpec[],
-  opts: { anonymity?: 'anonymous' | 'named' | 'optional'; status?: 'utkast' | 'aktiv' | 'lukket'; svc?: Client } = {},
+  opts: {
+    anonymity?: 'anonymous' | 'named' | 'optional'
+    status?: 'utkast' | 'aktiv' | 'lukket'
+    /** The design's meta line starts with who the survey is for. */
+    audience?: string
+    svc?: Client
+  } = {},
 ) {
   const svc = opts.svc ?? serviceClient()
 
@@ -94,6 +100,7 @@ export async function createSurvey(
     .insert({
       org_id: orgId,
       title,
+      audience_label: opts.audience ?? null,
       anonymity: opts.anonymity ?? 'anonymous',
       status: opts.status ?? 'aktiv',
     })

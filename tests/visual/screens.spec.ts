@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { BASE_URL } from '../../playwright.config'
 import { gotoRoute, signIn } from '../helpers/session'
-import { setAdminMfaRequired } from '../db/mfa'
+import { clearMfaFactors, setAdminMfaRequired } from '../db/mfa'
 
 /**
  * Screenshot regression for the screens whose pixels are a function of code
@@ -108,8 +108,17 @@ test.describe('administrator MFA gate', () => {
   // seeded default is OFF, so this block turns it on for itself and puts it
   // back afterwards. Leaving it to the seed would mean the gate silently
   // stopped being tested the day it was suspended.
-  test.beforeAll(() => setAdminMfaRequired(true))
-  test.afterAll(() => setAdminMfaRequired(false))
+  test.beforeAll(async () => {
+    // The baseline pins the not-enrolled screen, so clear whatever an earlier
+    // run left enrolled — otherwise the shot is of `verifyTitle` and the diff
+    // reports a change nobody made.
+    await clearMfaFactors('admin@nordiskstudio.test')
+    await setAdminMfaRequired(true)
+  })
+  test.afterAll(async () => {
+    await setAdminMfaRequired(false)
+    await clearMfaFactors('admin@nordiskstudio.test')
+  })
 
   // The gate itself has no org data on it, so it is stable enough to pin.
   test('an administrator is held at /sikkerhet until TOTP is confirmed', async ({ page }) => {
