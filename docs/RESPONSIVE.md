@@ -15,7 +15,10 @@ Tailwind: use `md:` (768) and `xl:` (1280). Do not introduce other breakpoints w
 
 ## Global rules (all app screens)
 1. **No horizontal scroll at 390px.** `document.documentElement.scrollWidth` must not exceed the viewport. This is the D12 defect and it is a blocker, not a deviation.
-2. **Touch area ≥44×44px** for anything interactive — the *touchable region*, not the painted control. These are different things and rule 2 originally conflated them. The control keeps its design dimensions at every breakpoint (rule 3); the touch area is grown around it with transparent padding or an `::after` overlay, so nothing visible changes. Expanded areas **must not overlap**: where two controls sit close enough that their 44px regions would collide, increase the spacing between them at mobile — spacing is layout and may change, the control is a token and may not. Verify overlap programmatically by comparing adjacent hit-area bounding boxes, not by eye; an invisible expansion that steals a neighbour's taps is worse than a 40px control.
+2. **Touch *area* ≥44×44px** for anything interactive — the *painted control keeps its design size*. This is a hit-area requirement, not a sizing requirement: reach 44px with transparent padding or an `::after` overlay (`position:absolute; inset:-Npx; content:''`), never by growing the visual. The design's switch (46×26), secondary buttons (39px), and tab chips (40px) all keep their exact dimensions at every breakpoint.
+   - **Expanded areas must not overlap.** Where two controls sit close enough that their 44px regions would collide, increase the *spacing* between them at mobile — spacing is layout and may change; the control is a token and may not. Verify with an overlap check, not by eye.
+   - Implement once as a shared utility/component (e.g. a `touch-target` class or a wrapper), not per instance. A finding count in the hundreds is one systemic fix, not hundreds of edits.
+   - Note: 44px is a product bar above WCAG 2.1 AA (which requires no minimum) and matches WCAG 2.5.5 AAA and Apple HIG. It is about thumbs, not compliance, which is exactly why it belongs in the hit area rather than the paint.
 3. **Tokens never change across breakpoints** — same colours, radii, shadows, fonts, borders. Only layout, spacing scale, and font *size* may step down, and font size only where the design's own hierarchy is preserved.
 4. **No feature hidden on mobile.** Reflow, collapse, or paginate — never remove. If something genuinely cannot work at 390px, stop and ask; do not silently drop it.
 5. **Content order is preserved** when columns stack: left/primary column first, sidebars after.
@@ -28,6 +31,13 @@ Below `md`: logo + hamburger + user avatar only. Nav items move into a slide-ove
 
 **Three-pane Builder**
 Below `xl`: the right pane (Add / Settings / Preview) becomes a full-screen sheet opened by a button row pinned under the header — three buttons using the existing tab chip styling. The question list is the base layer. Below `md`: question cards go full-width, the advanced options row collapses into a disclosure ("Flere valg") that is closed by default.
+
+**Tab rails and chip groups** (Administrasjon tabs, Undersøkelser filters, Bibliotek categories, Rapporter tabs, Builder mode chips, Resultater/Dashboard survey chips)
+Below `md`: **wrap to multiple rows.** Remove the width constraint and let the existing `flex-wrap` do the work. Chips keep their exact design dimensions, styling, order, and active state — nothing is hidden, no new interaction is introduced, and the page still has no horizontal scroll.
+- Do **not** use horizontal scroll with snap: it moves tabs off-screen (a discoverability loss the design never intended) and reads as if the page itself scrolls.
+- Do **not** collapse to a `<select>`: that substitutes a different control, which is restyling.
+- Row gap must be large enough that the 44px touch areas of vertically adjacent chips do not overlap (global rule 2). With 40px chips this means a minimum 4px vertical gap purely for hit-area separation — use the design's existing spacing step at or above that, never a smaller one.
+- Left-align rows; do not justify or centre. The active chip keeps its position in reading order.
 
 **Data tables (users, reports, recipients, DSR)**
 Below `md`: each row becomes a card — primary field as the card title in the design's card styling, remaining fields as label/value pairs, row actions in an overflow menu. Do not use horizontal scrolling tables.
@@ -51,7 +61,7 @@ Maintain aspect ratio, minimum height 200px, legend below rather than beside. Ax
 Because there is no mobile reference image for app screens, mobile verification of app routes is **rule-based, not comparison-based**. For each app route at 390px, check:
 - no horizontal scroll (blocker if violated)
 - nothing clipped, overlapping, or cut off
-- every interactive element reachable and ≥44px
+- every interactive element reachable, with a ≥44px touch area and no overlapping hit regions — measured on the hit area, not the painted control, which must match desktop pixel-for-pixel
 - tokens match desktop exactly (colour-pick and compare, do not eyeball)
 - the pattern above for that screen type was actually applied
 - keyboard/focus still works, focus ring visible
