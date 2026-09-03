@@ -46,12 +46,23 @@ export async function createOrganization(
 
   // Refuse if this user is already attached to an org. Without this the action
   // would be an unauthenticated-in-effect org factory for anyone with a session.
-  const { data: existing } = await admin
+  //
+  // The read must fail closed. Swallowing its error let the guard pass silently
+  // whenever the admin client could not reach PostgREST at all — a bad
+  // service-role key, a network fault — and the action would then hand an
+  // existing member a second organization. Same class of bug as the swallowed
+  // PGRST201 in Brukere and Profil: an unread `error` is a guard that only
+  // works on the happy path.
+  const { data: existing, error: existingError } = await admin
     .from('org_members')
     .select('id')
     .eq('user_id', user.id)
     .limit(1)
     .maybeSingle()
+  if (existingError) {
+    console.error(`createOrganization: membership pre-check failed: ${existingError.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
   if (existing) return { ok: false, error: 'already' }
 
   const { data: org, error: orgError } = await admin
