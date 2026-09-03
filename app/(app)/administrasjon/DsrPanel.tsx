@@ -63,7 +63,10 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
 
             {openForm === type ? (
               <form
-                className="mt-3 flex gap-[9px]"
+                // Below md the email field and its button do not fit on one
+                // row at 320px (339px measured). Wrapping is layout; both
+                // controls keep their design size.
+                className="mt-3 flex flex-wrap gap-[9px]"
                 action={(formData) => {
                   startTransition(async () => {
                     const res = await createDsr(null, formData)
@@ -79,7 +82,7 @@ export function DsrPanel({ requests }: { requests: DsrRequest[] }) {
                   required
                   placeholder={t('dsrSubjectPlaceholder')}
                   aria-label={t(row.title)}
-                  className="flex-1 rounded-[10px] border border-line bg-bg px-3.5 py-2.5 text-[13.5px] text-ink outline-none"
+                  className="touch-44-field w-full min-w-0 flex-1 rounded-[10px] border border-line bg-bg px-3.5 py-2.5 text-[13.5px] text-ink outline-none"
                 />
                 <button
                   type="submit"

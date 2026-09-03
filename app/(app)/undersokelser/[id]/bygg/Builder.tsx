@@ -12,6 +12,7 @@ import {
   type QuestionType,
 } from '@/lib/questions/registry'
 import { qualityFlags, type QualityRule } from '@/lib/questions/quality'
+import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
 import { PreviewPane } from './PreviewPane'
 import {
@@ -465,8 +466,9 @@ export function Builder({
       </div>
 
       {sheetOpen ? (
+        <ModalLayer>
         <div
-          className="fixed inset-0 z-[70] overflow-auto bg-bg p-5 xl:hidden"
+          className="fixed inset-0 z-[70] overflow-auto bg-bg p-5"
           role="dialog"
           aria-modal="true"
           aria-label={t(TAB_KEY[tab])}
@@ -483,6 +485,7 @@ export function Builder({
           </div>
           {rightPane}
         </div>
+        </ModalLayer>
       ) : null}
     </div>
   )

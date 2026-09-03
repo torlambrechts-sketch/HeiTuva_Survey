@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import { ModalLayer } from '@/components/ModalLayer'
 import {
   CADENCE_KEY,
   WIZARD_CADENCES,
@@ -43,22 +44,6 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
   const t = useTranslations('wizard')
   const tSurveys = useTranslations('surveys')
 
-  /**
-   * The wizard is a route rendered inside the app shell, so the header is a
-   * sibling that stays in the DOM behind the scrim. The scrim swallows clicks,
-   * but nothing stopped Tab reaching the header's controls from inside an
-   * aria-modal dialog — and the close × lands exactly on top of the user-menu
-   * avatar, so the two share a touch area at 390px and below.
-   *
-   * `inert` is the fix for both: the header stops being focusable, hit-testable
-   * and exposed to assistive tech for as long as the dialog is open.
-   */
-  useEffect(() => {
-    const header = document.querySelector('header')
-    if (!header) return
-    header.setAttribute('inert', '')
-    return () => header.removeAttribute('inert')
-  }, [])
 
   const [step, setStep] = useState(0)
   const [packId, setPackId] = useState(packs[0]?.id ?? '')
@@ -92,6 +77,7 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
   }
 
   return (
+    <ModalLayer>
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center overflow-auto p-0 md:p-8"
       style={{ background: 'rgba(25,21,16,.42)' }}
@@ -225,7 +211,9 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
                 aria-label={t('countAria')}
-                className="min-w-[180px] flex-1"
+                // A range input paints its own 16px track and cannot take the
+                // ::after overlay, so the touch height comes from the element.
+                className="min-w-[180px] flex-1 py-[14px] md:py-0"
               />
               <span className="whitespace-nowrap text-[13px] text-mut">
                 {t('countLabel', { count: effectiveCount, mins: respondentMinutes })}
@@ -368,5 +356,6 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
         </form>
       </div>
     </div>
+    </ModalLayer>
   )
 }

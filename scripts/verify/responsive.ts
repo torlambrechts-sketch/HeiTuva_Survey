@@ -14,6 +14,7 @@ import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
 import { ROUTES } from '../../tests/routes.manifest'
 import { gotoRoute, signIn } from '../../tests/helpers/session'
+import type { PersonaName } from '../../tests/db/personas'
 
 if (!process.argv.includes('--local')) config({ path: '.env.local' })
 
@@ -48,7 +49,7 @@ async function overflow(page: Page) {
 async function touchAreas(page: Page) {
   return page.evaluate((min) => {
     const sel = 'a[href], button, select, input:not([type="hidden"]), [role="switch"]'
-    type Box = { label: string; tag: string; painted: DOMRect; hit: DOMRect }
+    type Box = { label: string; tag: string; painted: DOMRect; hit: DOMRect; el: Element }
 
     const controls: Box[] = []
     for (const el of Array.from(document.querySelectorAll(sel))) {
@@ -79,6 +80,27 @@ async function touchAreas(page: Page) {
       // so a control that already carries the treatment measures as it really is.
       // Replaced elements never render ::after, so crediting one here would
       // silently pass a <select> that is still 39px to the thumb.
+      /**
+       * Occluded controls do not compete for taps.
+       *
+       * Without this, every element under an overlay pairs with everything on
+       * top of it: an open dropdown reported overlaps against the row buttons
+       * it covers, and the Builder's sheet against the whole page beneath it.
+       * Those are stacking, not a hit-area conflict — a tap at that point
+       * reaches the topmost element, which is the overlay.
+       *
+       * Focus is a separate axis and is not fixed by this: a control that
+       * cannot be tapped can still be reached with Tab, which is why the
+       * dialogs mark the layer beneath them `inert` rather than relying on
+       * paint order.
+       */
+      const cx = r.x + r.width / 2
+      const cy = r.y + r.height / 2
+      if (cx >= 0 && cy >= 0 && cx <= innerWidth && cy <= innerHeight) {
+        const top = document.elementFromPoint(cx, cy)
+        if (top && top !== el && !el.contains(top)) continue
+      }
+
       const replaced = ['select', 'input', 'textarea'].includes(el.tagName.toLowerCase())
       const after = getComputedStyle(el, '::after')
       const hasOverlay = !replaced && after.content !== 'none' && after.position === 'absolute'
@@ -91,6 +113,7 @@ async function touchAreas(page: Page) {
         h,
       )
       controls.push({
+        el,
         label:
           el.getAttribute('aria-label') ||
           (el.textContent ?? '').trim().slice(0, 40) ||
@@ -120,6 +143,32 @@ async function touchAreas(page: Page) {
         const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
         const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
         if (dx > 0.5 && dy > 0.5) {
+          /**
+           * Whoever actually paints the disputed region owns it.
+           *
+           * Two cases look identical as rectangles and are not the same defect:
+           * a control sitting *on top of* another (an open menu over the row
+           * buttons it covers) — where a tap unambiguously reaches the one in
+           * front, and the other's expansion there was never reachable; and two
+           * neighbours at the same level whose expansions collide in the gap
+           * between them — where a thumb aimed at one lands on the other. That
+           * second one is the defect RESPONSIVE.md rule 3 is about.
+           *
+           * elementFromPoint at the centre of the overlap separates them: in
+           * the stacked case it lands inside one of the two controls, in the
+           * neighbour case it lands on whatever is behind the gap.
+           */
+          const ox = Math.max(a.left, b.left) + dx / 2
+          const oy = Math.max(a.top, b.top) + dy / 2
+          const owner =
+            ox >= 0 && oy >= 0 && ox <= innerWidth && oy <= innerHeight
+              ? document.elementFromPoint(ox, oy)
+              : null
+          const stacked =
+            owner !== null &&
+            (controls[i]!.el.contains(owner) || controls[j]!.el.contains(owner))
+          if (stacked) continue
+
           overlaps.push({
             a: controls[i]!.label,
             b: controls[j]!.label,
@@ -147,9 +196,35 @@ async function main() {
   const server = await ensureServer()
   const browser = await chromium.launch()
   const findings: Finding[] = []
+  // VERIFY.md: print declared/measured/skipped and treat a shortfall as a
+  // harness failure, not a pass. A sweep that silently skips is the failure
+  // mode this accounting exists to make impossible.
+  let declared = 0
+  let measured = 0
   let desktopTokens: Record<string, string> | null = null
 
   try {
+    /**
+     * One sign-in per persona, reused as a storage state.
+     *
+     * Measuring every state at two widths means ~90 contexts; signing in
+     * afresh in each took the sweep past ten minutes and produced nothing but
+     * repeated auth round trips. The session is the same either way.
+     */
+    const sessions = new Map<string, Awaited<ReturnType<typeof ctxState>>>()
+    async function ctxState(persona: PersonaName) {
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'nb-NO' })
+      const page = await ctx.newPage()
+      await signIn(page, persona, BASE_URL)
+      const state = await ctx.storageState()
+      await ctx.close()
+      return state
+    }
+    for (const spec of ROUTES) {
+      if (spec.as === 'anon' || sessions.has(spec.as)) continue
+      sessions.set(spec.as, await ctxState(spec.as))
+    }
+
     // Baseline the tokens once at desktop so mobile can be compared to them.
     {
       const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'nb-NO' })
@@ -161,15 +236,19 @@ async function main() {
 
     for (const width of WIDTHS) {
       for (const spec of ROUTES) {
-        // One capture per route; the manifest's extra states are the capture
-        // harness's job, this is about layout.
+        // EVERY state of every route, not one per route.
         //
-        // Every route is swept, whatever its first state is called. Requiring
-        // the name 'default' quietly dropped the new-survey wizard — whose
-        // first state is 'formal' — so a screen RESPONSIVE.md names a pattern
-        // for was never measured at any width. A route with no states at all
-        // has nothing to visit.
-        if (spec.states.length === 0) continue
+        // This loop used to measure a single state, and only one whose name was
+        // literally 'default'. Both were silent skips: the wizard (first state
+        // 'formal') was dropped entirely, and every click-reachable state — the
+        // invite modal, the DSR form, the open user menu, the row menu — was
+        // never measured at any width. A gate that cannot see a surface has not
+        // proved anything about it, so Phase 1's green covered less than it
+        // appeared to. VERIFY.md now requires re-running earlier phases whenever
+        // a harness fix widens coverage.
+        declared += spec.states.length
+        for (const state of spec.states) {
+        const label = state.name === 'default' ? spec.label : `${spec.label}/${state.name}`
 
         const ctx = await browser.newContext({
           viewport: { width, height: 844 },
@@ -177,22 +256,22 @@ async function main() {
           isMobile: true,
           hasTouch: true,
           locale: 'nb-NO',
+          storageState: spec.as === 'anon' ? undefined : sessions.get(spec.as),
         })
         const page = await ctx.newPage()
         try {
-          if (spec.as !== 'anon') await signIn(page, spec.as, BASE_URL)
           await gotoRoute(page, spec.route, spec.as, BASE_URL)
-          // Run the first state's setup when it has one. Without this a screen
-          // only reachable through a click — the Builder, which needs a real
-          // survey id — would be measured as whatever page links to it, and
-          // the pattern RESPONSIVE.md specifies for it would never be checked.
-          await spec.states[0]?.setup?.(page)
+          // Setup is what makes a state a state. Without running it, a screen
+          // only reachable through a click is measured as whatever page links
+          // to it — a green result for a surface never loaded.
+          await state.setup?.(page)
           await page.evaluate(() => document.fonts.ready)
+          measured++
 
           const { scrollWidth, clientWidth } = await overflow(page)
           if (scrollWidth > clientWidth) {
             findings.push({
-              route: spec.label,
+              route: label,
               width,
               severity: 'blocker',
               detail: `horizontal scroll: scrollWidth ${scrollWidth} > clientWidth ${clientWidth}`,
@@ -202,7 +281,7 @@ async function main() {
           const { small, overlaps, total } = await touchAreas(page)
           for (const t of small) {
             findings.push({
-              route: spec.label,
+              route: label,
               width,
               severity: 'defect',
               detail: `touch area ${t.w}x${t.h} (<${MIN_TAP}) on <${t.tag}>: ${t.label}`,
@@ -212,7 +291,7 @@ async function main() {
           // control, so this is a blocker, not a defect.
           for (const o of overlaps) {
             findings.push({
-              route: spec.label,
+              route: label,
               width,
               severity: 'blocker',
               detail: `hit areas overlap by ${o.area}px²: "${o.a}" / "${o.b}"`,
@@ -223,7 +302,7 @@ async function main() {
           for (const [name, value] of Object.entries(mobileTokens)) {
             if (desktopTokens![name] !== value) {
               findings.push({
-                route: spec.label,
+                route: label,
                 width,
                 severity: 'defect',
                 detail: `token ${name} is "${value}" at ${width}px but "${desktopTokens![name]}" at desktop`,
@@ -234,19 +313,20 @@ async function main() {
           const status =
             scrollWidth > clientWidth ? 'OVERFLOW' : overlaps.length ? 'OVERLAP' : small.length ? 'SMALL' : 'ok'
           console.log(
-            `  ${status.padEnd(8)} ${spec.label.padEnd(26)} ${width}px  scrollWidth=${scrollWidth}` +
+            `  ${status.padEnd(8)} ${label.padEnd(34)} ${width}px  scrollWidth=${scrollWidth}` +
               `  controls=${total}  small=${small.length}  overlaps=${overlaps.length}`,
           )
         } catch (e) {
           findings.push({
-            route: spec.label,
+            route: label,
             width,
             severity: 'blocker',
             detail: `could not be measured: ${e instanceof Error ? e.message : e}`,
           })
-          console.log(`  ERROR    ${spec.label} ${width}px: ${e instanceof Error ? e.message : e}`)
+          console.log(`  ERROR    ${label} ${width}px: ${e instanceof Error ? e.message : e}`)
         } finally {
           await ctx.close()
+        }
         }
       }
     }
@@ -256,11 +336,18 @@ async function main() {
   }
 
   const blockers = findings.filter((f) => f.severity === 'blocker')
-  console.log(`\n${findings.length} finding(s), ${blockers.length} blocker(s)`)
+  const skipped = declared - measured
+  console.log(
+    `\nstate/viewport combinations: ${declared} declared, ${measured} measured, ${skipped} skipped`,
+  )
+  console.log(`${findings.length} finding(s), ${blockers.length} blocker(s)`)
   for (const f of findings) {
     console.log(`  [${f.severity}] ${f.route} @${f.width}px — ${f.detail}`)
   }
-  process.exit(blockers.length ? 1 : 0)
+  // A shortfall is a broken gate, not a pass: a sweep that could not see a
+  // surface has proved nothing about it (VERIFY.md, one-time setup §2).
+  if (skipped > 0) console.log(`HARNESS FAILURE: ${skipped} combination(s) were never measured`)
+  process.exit(blockers.length || skipped > 0 ? 1 : 0)
 }
 
 main().catch((e) => {

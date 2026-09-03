@@ -16,6 +16,19 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
+  /**
+   * Deterministic capture conditions, so a baseline diff means a real change
+   * rather than a repaint. `animations: 'disabled'` fast-forwards the theme's
+   * entry animation (ht-in, .25s) to its end state instead of catching it
+   * mid-fade; `caret: 'hide'` removes the blinking text cursor, which is a real
+   * source of one-pixel diffs on any screen with a focused input.
+   *
+   * `scale` is left at its default so captures stay at deviceScaleFactor 2 —
+   * these are retina by design, and halving them would hide subpixel changes.
+   */
+  expect: {
+    toHaveScreenshot: { animations: 'disabled', caret: 'hide' },
+  },
   use: {
     baseURL: BASE_URL,
     // Norwegian is the source language; capture in it by default so the

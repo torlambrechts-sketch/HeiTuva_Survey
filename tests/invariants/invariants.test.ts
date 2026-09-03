@@ -233,3 +233,95 @@ function questionOf(payload: unknown, questionId: string) {
   if (!q) throw new Error(`question ${questionId} missing from aggregate_results`)
   return q as { insufficient_data?: boolean; n: number | null; avg?: number }
 }
+
+describe('(g) D31 — a sent survey\'s questions are frozen in the database', () => {
+  /**
+   * Aggregation keys on `question_id`. A question edited after a round opened
+   * silently re-labels answers already given to the old wording, and a deleted
+   * one cascades its answers away — both corrupt results rather than raising,
+   * so a UI-only guard fails invisibly in the place it matters most.
+   *
+   * The redaktør here is a co-editor on both surveys, so RLS permits every
+   * write below. Anything that fails, fails because of the trigger — not
+   * because a policy filtered the row away.
+   */
+  it('the redaktor really may edit an unsent survey (so the refusals below mean something)', async () => {
+    const { data, error } = await f.redaktorA.client
+      .from('survey_questions')
+      .update({ text: 'Endret før utsending' })
+      .eq('id', f.draftQ.id)
+      .select('id, text')
+    expect(error).toBeNull()
+    // A non-empty result is what proves RLS is not the thing doing the work.
+    expect(data).toHaveLength(1)
+    expect(data?.[0]?.text).toBe('Endret før utsending')
+  })
+
+  it('a scheduled round does not freeze anything', async () => {
+    // Only 'open' and 'closed' mean the questions have been seen. A survey
+    // scheduled in advance must stay editable, or planning locks the Builder.
+    const { error } = await f.redaktorA.client
+      .from('survey_questions')
+      .update({ help: 'fortsatt redigerbar' })
+      .eq('id', f.draftQ.id)
+    expect(error).toBeNull()
+  })
+
+  it('rejects UPDATE on a question whose survey has an open round', async () => {
+    const { error } = await f.redaktorA.client
+      .from('survey_questions')
+      .update({ text: 'Omskrevet etter utsending' })
+      .eq('id', f.scaleQ.id)
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/frozen/i)
+  })
+
+  it('rejects DELETE on a question whose survey has an open round', async () => {
+    const { error } = await f.redaktorA.client
+      .from('survey_questions')
+      .delete()
+      .eq('id', f.scaleQ.id)
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/frozen/i)
+  })
+
+  it('rejects INSERT of a new question into a sent survey', async () => {
+    const { error } = await f.redaktorA.client.from('survey_questions').insert({
+      survey_id: f.surveyA.id,
+      position: 99,
+      type: 'text',
+      text: 'Smuglet inn etterpå',
+    })
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/frozen/i)
+  })
+
+  it('the question survived every attempt', async () => {
+    // The refusals must be refusals, not partial writes that errored late.
+    const { data } = await admin().from('survey_questions').select('text').eq('id', f.scaleQ.id)
+    expect(data?.[0]?.text).toBe('Hvordan har uken vært?')
+  })
+
+  it('rejects a translation write on a sent survey', async () => {
+    // Translations carry the respondent-visible wording, so editing one after
+    // sending changes what the question said just as surely as editingit source.
+    const { error } = await f.redaktorA.client.from('question_translations').insert({
+      question_id: f.scaleQ.id,
+      lang: 'en',
+      text: 'Rewritten after sending',
+    })
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/frozen/i)
+  })
+
+  it('service role is refused too — this is a data rule, not a permission', async () => {
+    // The trigger fires regardless of role. A background job or a migration
+    // that edits a sent question corrupts results exactly as a user would.
+    const { error } = await admin()
+      .from('survey_questions')
+      .update({ text: 'Fra en jobb' })
+      .eq('id', f.scaleQ.id)
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/frozen/i)
+  })
+})

@@ -33,7 +33,7 @@ must never be what silently settles an open question.
 | D28 | Wizard reports the number of questions it will actually create | Accepted | see entry below |
 | D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
 | D30 | Builder spacing grows below `md` so 44px hit areas stop overlapping | Accepted | docs/RESPONSIVE.md rules 2-3 |
-| D31 | A sent survey's questions are read-only in the Builder | Accepted | see entry below |
+| D31 | A sent survey's questions are read-only | **Enforced structurally** — database trigger, 2026-09-03 | supabase/migrations/20260903000004 |
 
 ## Entries
 
@@ -477,8 +477,70 @@ renders every control disabled with a line saying to copy the survey as a new
 round instead. The design has no such state: its prototype has no rounds, so the
 question cannot arise there.
 
-Not enforced in the database because the same table legitimately changes after
-sending in Phase 3 — reminders and schedule state — and a CHECK that froze the
-row would block those too. Revisit when the round-opening RPC lands: the natural
-home is that RPC refusing to open a round whose questions changed after the
-previous one closed.
+**Updated 2026-09-03 — this is now enforced in the database** (Tor's call), by
+`app.forbid_edit_after_send()` on `survey_questions` and
+`app.forbid_translation_edit_after_send()` on `question_translations`
+(migration 20260903000004).
+
+The reasoning that moved it: aggregation keys on `question_id`. A question
+edited after a round opened silently re-labels answers already given to the old
+wording, and a deleted one cascades its answers away — both corrupt results
+rather than raising, so a UI-only guard fails invisibly in exactly the place it
+matters most.
+
+The threshold is a round whose status is not `scheduled`. A survey scheduled in
+advance stays editable; `open` and `closed` both mean the questions have been
+seen. The trigger fires regardless of role, service role included: this is a
+data rule, not a permission, and a background job corrupts results exactly as a
+user would.
+
+My earlier note said a CHECK would block Phase 3's reminder and schedule writes.
+That argument was wrong on its own terms — those write to `survey_rounds` and
+`schedules`, not to `survey_questions` — and it argued against a CHECK when a
+trigger was the right instrument anyway.
+
+Eight invariant tests cover it, including one that proves the redaktør really
+may edit an unsent survey, so the refusals are refusals and not an RLS filter
+returning an empty set.
+
+### D32 — the responsive sweep measured a fraction of what it reported
+Found by re-running Phase 1 against the fixed harness, which VERIFY.md now
+requires whenever a harness fix widens coverage.
+
+The sweep took one state per route, and only if that state was named
+`default`. Everything reachable only by clicking was therefore never measured
+at any width: the user menu, the DSR form, the invite states, the survey row
+menu, the share panel, the Builder's panes, the wizard. Phase 1 and Phase 2
+both reported green over surfaces the gate could not see.
+
+With every state measured (74 combinations, up from 22), five real defects
+surfaced — three of them in Phase 1, which had been signed off twice:
+
+- `admin-firma/saved` scrolled horizontally at 320px (323px): the "Lagret" chip
+  beside the display heading.
+- `admin-personvern/dsr-form-open` scrolled at 320px (339px), and its email
+  field was 42px tall.
+- The user menu's rows sat flush, so their 44px areas overlapped by 840px² — a
+  thumb aimed at "Min profil" could land on "Administrasjon".
+- The survey row's ··· menu had the same overlap, 505px² per pair.
+- The wizard's range input was 16px tall.
+
+And one behavioural bug the sweep exposed rather than measured: the row menu's
+links navigate client-side, so React reused the component and `open` survived
+the navigation — the menu hung over the share panel it had just opened.
+
+Two measurement corrections came with it, because the first widened run
+reported 34 overlaps that were stacking rather than conflict:
+
+- A control whose centre is covered by an overlay is skipped; it cannot receive
+  a tap.
+- An overlapping pair is skipped when the centre of the overlap is painted by
+  one of the two. Whoever paints the region owns it; the other's expansion
+  there was never reachable. Two neighbours colliding in the gap between them
+  still report, which is the case the rule is about.
+
+Focus is a separate axis and is not covered by either: `components/ModalLayer.tsx`
+portals a dialog to `body` and marks every sibling `inert`, so the wizard and
+the Builder's sheet no longer leave the shell behind them tabbable.
+
+The sweep now prints `declared / measured / skipped` and fails on any shortfall.

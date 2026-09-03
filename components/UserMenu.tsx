@@ -39,8 +39,12 @@ export function UserMenu({
     }
   }, [open])
 
+  // The rows are ~39px tall and sat flush against each other, so their 44px
+  // touch areas overlapped by 840px² at 320px — a thumb aimed at "Min profil"
+  // could land on "Administrasjon". The row keeps its exact painted size; only
+  // the spacing between rows grows, and only below md.
   const item =
-    'touch-44 block w-full cursor-pointer rounded-[10px] border-none bg-transparent px-3 py-2.5 text-left text-[13.5px] text-ink no-underline'
+    'touch-44 mb-[6px] block w-full cursor-pointer rounded-[10px] border-none bg-transparent px-3 py-2.5 text-left text-[13.5px] text-ink no-underline last:mb-0 md:mb-0'
 
   return (
     <div ref={wrap}>

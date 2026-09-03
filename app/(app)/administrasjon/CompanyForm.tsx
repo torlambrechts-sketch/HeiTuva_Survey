@@ -55,7 +55,9 @@ export function CompanyForm({ company }: { company: Company }) {
 
   return (
     <section className="rounded-[18px] border border-line bg-sf p-6">
-      <div className="flex items-baseline justify-between gap-3">
+      {/* The saved chip is 100px wide beside a 22px display heading; at 320px
+          the pair is 323px. Wrapping keeps both at their design size. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="font-display text-[22px] font-medium">{t('companyHeading')}</h2>
         {state?.ok ? (
           <span

@@ -22,6 +22,7 @@ export async function buildFixture() {
   const adminA = await asUser(uniq('admin-a') + '@example.test')
   const leserA = await asUser(uniq('leser-a') + '@example.test')
   const adminB = await asUser(uniq('admin-b') + '@example.test')
+  const redaktorA = await asUser(uniq('redaktor-a') + '@example.test')
 
   const groupA = await insert(a, 'groups', { org_id: orgA.id, name: 'Team Alfa' })
 
@@ -36,6 +37,10 @@ export async function buildFixture() {
   await insert(a, 'org_members', {
     org_id: orgB.id, user_id: adminB.userId, email: uniq('admin-b') + '@example.test',
     role: 'administrator', status: 'active',
+  })
+  const redaktorMember = await insert(a, 'org_members', {
+    org_id: orgA.id, user_id: redaktorA.userId, email: uniq('redaktor-a') + '@example.test',
+    role: 'redaktor', status: 'active',
   })
 
   const surveyA = await insert(a, 'surveys', {
@@ -57,6 +62,32 @@ export async function buildFixture() {
   const sparseTextQ = await insert(a, 'survey_questions', {
     survey_id: surveyA.id, position: 3, type: 'text', text: 'Noe annet?',
   })
+
+  /**
+   * A draft whose only round is still 'scheduled'.
+   *
+   * D31 freezes questions once a round has actually gone out. Without this
+   * survey the freeze test would only prove the trigger fires — never that it
+   * leaves a survey scheduled in advance editable, which is the case a
+   * too-broad trigger would break.
+   */
+  const draftSurvey = await insert(a, 'surveys', {
+    org_id: orgA.id, title: 'Planlagt — ikke sendt', status: 'utkast', anonymity: 'anonymous',
+  })
+  const draftQ = await insert(a, 'survey_questions', {
+    survey_id: draftSurvey.id, position: 1, type: 'scale', text: 'Fortsatt redigerbart',
+  })
+  await insert(a, 'survey_rounds', {
+    survey_id: draftSurvey.id, round_no: 1, status: 'scheduled',
+    question_snapshot: [{ id: draftQ.id, type: 'scale', text: 'Fortsatt redigerbart' }],
+  })
+
+  // The redaktør is a co-editor on both, so RLS permits the write and only the
+  // D31 trigger can refuse it. Without this the freeze test would pass on an
+  // empty result set — an RLS filter, not a denial.
+  for (const sid of [surveyA.id, draftSurvey.id]) {
+    await insert(a, 'survey_editors', { survey_id: sid, member_id: redaktorMember.id })
+  }
 
   const round = await insert(a, 'survey_rounds', {
     survey_id: surveyA.id, round_no: 1, status: 'open',
@@ -80,7 +111,9 @@ export async function buildFixture() {
 
   return {
     orgA, orgB, groupA, surveyA, surveyB, scaleQ, textQ, sparseTextQ, round, tokens,
-    adminA, leserA, adminB, leserMemberId: leserMember.id as string,
+    adminA, leserA, adminB, redaktorA, leserMemberId: leserMember.id as string,
+    redaktorMemberId: redaktorMember.id as string,
+    draftSurvey, draftQ,
   }
 }
 

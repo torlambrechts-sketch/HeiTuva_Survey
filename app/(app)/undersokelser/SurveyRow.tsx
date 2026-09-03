@@ -29,8 +29,11 @@ type Labels = {
   responses: string; sharedWith: string; failed: string
 }
 
+// The rows are ~37px tall in a gap-[2px] stack, so their 44px touch areas
+// overlapped by 505px² — a thumb aimed at "Resultater" could land on "Lag
+// rapport". The row keeps its painted size; only the spacing grows, below md.
 const menuItem =
-  'touch-44 cursor-pointer rounded-[9px] border-none bg-transparent px-3 py-[10px] text-left text-[13px] text-ink no-underline'
+  'touch-44 mb-[7px] cursor-pointer rounded-[9px] border-none bg-transparent px-3 py-[10px] text-left text-[13px] text-ink no-underline last:mb-0 md:mb-0'
 
 /**
  * One survey row (HeiTuva.dc.html:766-801).
@@ -57,7 +60,10 @@ export function SurveyRow({
   const wrap = useRef<HTMLDivElement>(null)
 
   // A menu that only closes on its own trigger is a trap: click-away and Escape
-  // are how people expect to leave one.
+  // are how people expect to leave one. Its links close it explicitly too —
+  // they navigate client-side, so React reuses this component and `open` would
+  // otherwise survive the navigation, leaving the menu hanging over the screen
+  // it just opened.
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
@@ -176,26 +182,56 @@ export function SurveyRow({
           className="absolute left-4 top-[64px] z-[5] flex min-w-[220px] flex-col gap-[2px] rounded-[14px] border border-line bg-sf p-2 md:left-auto md:right-[22px]"
           style={{ boxShadow: '0 14px 34px rgba(25,21,16,.14)' }}
         >
-          <Link href={`/undersokelser/${survey.id}/bygg`} role="menuitem" className={menuItem}>
+          <Link
+            href={`/undersokelser/${survey.id}/bygg`}
+            role="menuitem"
+            className={menuItem}
+            onClick={() => setOpen(false)}
+          >
             {labels.menuEdit}
           </Link>
-          <Link href={`/undersokelser/${survey.id}/send`} role="menuitem" className={menuItem}>
+          <Link
+            href={`/undersokelser/${survey.id}/send`}
+            role="menuitem"
+            className={menuItem}
+            onClick={() => setOpen(false)}
+          >
             {labels.menuSend}
           </Link>
-          <Link href={`/undersokelser/${survey.id}/resultater`} role="menuitem" className={menuItem}>
+          <Link
+            href={`/undersokelser/${survey.id}/resultater`}
+            role="menuitem"
+            className={menuItem}
+            onClick={() => setOpen(false)}
+          >
             {labels.menuResults}
           </Link>
-          <Link href={`/undersokelser/${survey.id}/rapport`} role="menuitem" className={menuItem}>
+          <Link
+            href={`/undersokelser/${survey.id}/rapport`}
+            role="menuitem"
+            className={menuItem}
+            onClick={() => setOpen(false)}
+          >
             {labels.menuReport}
           </Link>
-          <Link href={`/undersokelser/${survey.id}/test`} role="menuitem" className={menuItem}>
+          <Link
+            href={`/undersokelser/${survey.id}/test`}
+            role="menuitem"
+            className={menuItem}
+            onClick={() => setOpen(false)}
+          >
             {labels.menuAnswer}
           </Link>
 
           {canEdit ? (
             <>
               <div className="my-1 h-px" style={{ background: 'var(--line)' }} />
-              <Link href={shareHref} role="menuitem" className={`${menuItem} font-semibold`}>
+              <Link
+                href={shareHref}
+                role="menuitem"
+                className={`${menuItem} font-semibold`}
+                onClick={() => setOpen(false)}
+              >
                 {labels.menuShare}
               </Link>
               <button

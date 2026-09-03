@@ -18,6 +18,20 @@ import { setAdminMfaRequired } from '../db/mfa'
  *
  * Tolerance is CLAUDE.md's 0.1%: maxDiffPixelRatio 0.001.
  *
+ * WHAT THESE BASELINES ARE, AND ARE NOT
+ * They are regression guards: they catch a screen changing when nobody meant
+ * it to. They are NOT proof of fidelity to the design — they were generated
+ * from this implementation, so they can only ever confirm it still looks like
+ * itself. `npm run verify:reference` is the fidelity gate; it renders the
+ * design bundle and compares against that.
+ *
+ * They are committed only for screens whose pixels are a function of code and
+ * seed data alone. Determinism comes from: one pinned Chromium/WebKit build,
+ * `document.fonts.ready` awaited before every capture, animations disabled and
+ * the caret hidden (playwright.config.ts), a fixed nb-NO locale and
+ * Europe/Oslo timezone, and no rendered timestamp or relative date on any
+ * captured screen.
+ *
  * Update baselines deliberately, never reflexively:
  *   npx playwright test --update-snapshots
  */
@@ -36,9 +50,31 @@ test.describe('signed out', () => {
     await page.fill('input[name="email"]', 'ingen@example.test')
     await page.fill('input[name="password"]', 'feil-passord')
     await page.getByRole('button', { name: /^Logg inn$/ }).click()
-    await page.getByRole('alert').waitFor({ state: 'visible', timeout: 15_000 })
+    // Scoped to the form's own <p role="alert">, not getByRole('alert'):
+    // Next.js injects #__next-route-announcer__ with the same role, and it
+    // intermittently resolves alongside ours, failing strict mode rather than
+    // producing a pixel diff.
+    await page.locator('p[role="alert"]').waitFor({ state: 'visible', timeout: 15_000 })
+    // The submit button carries disabled:opacity-60 while the action is in
+    // flight. The alert can render before the transition settles, so capturing
+    // on the alert alone caught a 40%-dimmed button under load — a real diff,
+    // not noise. Wait for the form to be idle, not merely for the error.
+    await expect(page.getByRole('button', { name: /^Logg inn$/ })).toBeEnabled()
     await page.evaluate(() => document.fonts.ready)
     await expect(page).toHaveScreenshot('logg-inn-feil.png', TOLERANCE)
+  })
+})
+
+test.describe('the new-survey wizard', () => {
+  // The wizard renders from `template_packs`, which the seed fixes and the
+  // database suites never mutate — so it is stable enough to pin, unlike the
+  // survey list beside it.
+  test('step one lists the seeded purposes', async ({ page }) => {
+    await signIn(page, 'administrator', BASE_URL)
+    await gotoRoute(page, '/undersokelser/ny', 'administrator', BASE_URL)
+    await page.getByRole('dialog').waitFor()
+    await page.evaluate(() => document.fonts.ready)
+    await expect(page).toHaveScreenshot('veiviser-formal.png', TOLERANCE)
   })
 })
 
@@ -84,7 +120,15 @@ test.describe('administrator MFA gate', () => {
       page.waitForURL((u) => !u.pathname.startsWith('/logg-inn'), { timeout: 20_000 }),
       page.getByRole('button', { name: /^Logg inn$/ }).click(),
     ])
-    await page.goto(`${BASE_URL}/administrasjon`, { waitUntil: 'domcontentloaded' })
+    // The app redirects this request to /sikkerhet, and that redirect is the
+    // assertion. WebKit rejects a goto interrupted by another navigation where
+    // Chromium resolves it, so the interruption is caught and the landing URL
+    // is what gets asserted — the same check, stated as the outcome rather than
+    // as a side effect of goto resolving.
+    await page
+      .goto(`${BASE_URL}/administrasjon`, { waitUntil: 'domcontentloaded' })
+      .catch(() => {})
+    await page.waitForURL((u) => u.pathname === '/sikkerhet', { timeout: 15_000 })
     await page.waitForLoadState('load')
 
     expect(new URL(page.url()).pathname).toBe('/sikkerhet')
