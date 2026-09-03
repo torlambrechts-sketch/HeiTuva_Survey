@@ -1640,6 +1640,7 @@ export type Database = {
           id: string
           langs: string[]
           org_id: string
+          results_scope: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang: string
           status: "utkast" | "aktiv" | "lukket"
           target: number | null
@@ -1657,6 +1658,7 @@ export type Database = {
           id?: string
           langs?: string[]
           org_id: string
+          results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
           target?: number | null
@@ -1674,6 +1676,7 @@ export type Database = {
           id?: string
           langs?: string[]
           org_id?: string
+          results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
           target?: number | null
@@ -1823,6 +1826,15 @@ export type Database = {
       claim_membership: {
         Args: Record<string, never>
         Returns: string | null
+      }
+      survey_response_counts: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          responses: number
+          survey_id: string
+        }[]
       }
       get_quotes: {
         Args: {

@@ -30,6 +30,8 @@ must never be what silently settles an open question.
 | D25 | Brukere keeps its row and its inline controls below `md` | **Resolved** — spec corrected; implementation unchanged | docs/RESPONSIVE.md § Data tables |
 | D26 | Question bank adds to the most recent draft | Accepted | see entry below |
 | D27 | DECISIONS Q14 (administrator TOTP) suspended behind the `admin_mfa` flag | **Suspended** — Tor's call, 2026-09-03; enforcement code intact | DECISIONS Q14 |
+| D28 | Wizard reports the number of questions it will actually create | Accepted | see entry below |
+| D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
 
 ## Entries
 
@@ -400,3 +402,40 @@ the day someone writes the row.
 Revisit: as soon as App Authenticator is enabled on `heituva-prod` and Tor has
 enrolled, flip the row back to `true`. This is a suspension, not a decision that
 Q14 was wrong.
+
+### D28 — the wizard counts the questions it will actually create
+The prototype's count slider runs 2-7 and slices the chosen pack
+(HeiTuva.dc.html:78, :3535). A pack with four questions therefore produces four
+while the summary still reads "med 7 spørsmål", and the question list on step 2
+shows four rows under a label claiming seven.
+
+The slider keeps the design's 2-7 range, and the slicing is unchanged. Only the
+reported number moved: the step-2 label, the respondent-time estimate and the
+step-4 summary all use `min(count, pack.questions.length)`, so the wizard never
+promises a survey it is not about to create.
+
+Not treated as a visual change: the same controls, in the same places, with the
+same wording — the number inside the sentence is the only difference, and the
+alternative is a summary that is wrong for eleven of the seventeen packs.
+
+### D29 — the survey row links into screens that do not exist yet
+The ··· menu and the primary button are the design's
+(HeiTuva.dc.html:766-801), and five of their destinations belong to later
+phases: `send` and `test` to Phase 3, `resultater` to Phase 4, `rapport` to
+Phase 5.
+
+They are rendered as real links rather than hidden or disabled. Hiding them
+would make the menu a different menu at every phase boundary, and RESPONSIVE.md
+rule 4 already refuses "hide the feature" as an answer elsewhere. Each
+destination is declared in `tests/routes.manifest.ts` as a pending route, so the
+verification harness classifies their prefetches as pending rather than as
+failures, and the list of what is still missing stays visible in every capture
+run.
+
+`isPendingRoute` had to learn dynamic segments for this: it previously ignored
+any pending route containing `[`, which was harmless while `/s/[token]` was the
+only one and nothing linked to it. The moment a row prefetched
+`/undersokelser/<uuid>/send`, every one of those reads as a real 404.
+
+Revisit: nothing to revisit — each entry stops being pending when its phase
+lands.

@@ -169,3 +169,37 @@ describe('the answers vault stays closed to every persona', () => {
     }
   })
 })
+
+describe('survey_response_counts exposes participation, never answers', () => {
+  it('a member gets a count for every survey in their own org', async () => {
+    const { data, error } = await leser.rpc('survey_response_counts', { p_org: orgId })
+    expect(error).toBeNull()
+    // The seed has one survey above k=5 and one below, so a real count must be
+    // present and non-zero somewhere — a silently-empty result is exactly what
+    // an aggregate embed on `responses` would have produced.
+    expect((data ?? []).length).toBeGreaterThan(0)
+    expect((data ?? []).some((r) => Number(r.responses) > 0)).toBe(true)
+  })
+
+  it('an outsider counts nothing in another org', async () => {
+    // SECURITY DEFINER bypasses RLS, so the org check inside the function is
+    // the only thing standing between two tenants.
+    const { data, error } = await outsider.rpc('survey_response_counts', { p_org: orgId })
+    expect(error).toBeNull()
+    expect(data ?? []).toEqual([])
+  })
+
+  it('anon cannot execute it at all', async () => {
+    const { error } = await anonClient().rpc('survey_response_counts', { p_org: orgId })
+    expect(error).not.toBeNull()
+  })
+
+  it('counting does not open a path to the answers themselves', async () => {
+    // The RPC returns totals only; the vault stays shut for the same persona.
+    await leser.rpc('survey_response_counts', { p_org: orgId })
+    const r = await leser.from('responses').select('id')
+    const a = await leser.from('answers').select('id')
+    expect(r.data ?? []).toEqual([])
+    expect(a.data ?? []).toEqual([])
+  })
+})

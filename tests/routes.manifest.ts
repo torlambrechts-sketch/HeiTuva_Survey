@@ -199,6 +199,71 @@ export const ROUTES: RouteSpec[] = [
   // the middleware sends an anonymous visitor to /logg-inn, and asserting that
   // redirect is itself worth having.
   {
+    route: '/undersokelser',
+    label: 'undersokelser',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      { name: 'default' },
+      {
+        name: 'utkast',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Utkast', exact: true }).click()
+          await page.waitForURL((u) => u.searchParams.get('filter') === 'utkast')
+        },
+      },
+      {
+        name: 'row-menu',
+        setup: async (page) => {
+          // The ··· menu is the only part of the row that is not a link, and
+          // it carries the three destructive actions.
+          await page.getByRole('button', { name: 'Flere valg' }).first().click()
+          await page.getByRole('menu').first().waitFor()
+        },
+      },
+      {
+        name: 'share',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Flere valg' }).first().click()
+          await page.getByRole('menuitem', { name: 'Del med teamet' }).click()
+          await page.waitForURL((u) => u.searchParams.has('del'))
+        },
+      },
+    ],
+  },
+  {
+    route: '/undersokelser',
+    label: 'undersokelser-leser',
+    as: 'leser',
+    phase: 'phase-2',
+    // A reader sees the list and the read-only menu items, and is told why
+    // rather than handed buttons RLS would refuse.
+    states: [{ name: 'default' }],
+  },
+  {
+    route: '/undersokelser/ny',
+    label: 'undersokelser-ny',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      { name: 'formal' },
+      {
+        name: 'sporsmal',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Neste' }).click()
+          await page.getByRole('slider').waitFor()
+        },
+      },
+      {
+        name: 'hyppighet',
+        setup: async (page) => {
+          for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Neste' }).click()
+          await page.getByText('Oppsummering').waitFor()
+        },
+      },
+    ],
+  },
+  {
     route: '/bibliotek',
     label: 'bibliotek-maler',
     as: 'administrator',
@@ -271,8 +336,11 @@ export const ROUTES: RouteSpec[] = [
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
-  { route: '/undersokelser', phase: 'phase-2', note: 'Undersøkelser list' },
-  { route: '/undersokelser/ny', phase: 'phase-2', note: 'New-survey wizard entry' },
+  { route: '/undersokelser/[id]/bygg', phase: 'phase-2', note: 'Builder (three-pane)' },
+  { route: '/undersokelser/[id]/send', phase: 'phase-3', note: 'Send screen (channels, import)' },
+  { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
+  { route: '/undersokelser/[id]/resultater', phase: 'phase-4', note: 'Resultater for one survey' },
+  { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },
   { route: '/dashboard', phase: 'phase-4', note: 'Dashboard (heatmap, trends)' },
   { route: '/rapporter', phase: 'phase-5', note: 'Rapporter' },
   { route: '/s/[token]', phase: 'phase-3', note: 'Respondent flow (mobile-first)' },
@@ -286,11 +354,26 @@ export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = 
  */
 export function isPendingRoute(urlPath: string): boolean {
   const clean = urlPath.split('?')[0] ?? urlPath
-  return PENDING_ROUTES.some(
-    (p) =>
-      !p.route.includes('[') &&
-      // Match sub-paths too: /administrasjon/personvern belongs to the pending
-      // /administrasjon screen group.
-      (p.route === clean || clean.startsWith(`${p.route}/`)),
-  )
+  return PENDING_ROUTES.some((p) => {
+    // A dynamic segment matches exactly one path segment, so the pending
+    // /undersokelser/[id]/send matches /undersokelser/<uuid>/send. Dynamic
+    // routes used to be excluded outright, which was harmless while none was
+    // ever prefetched — the moment Undersøkelser linked to a survey's own
+    // sub-screens, every row's prefetch counted as a real 404.
+    if (p.route.includes('[')) {
+      const pattern = p.route
+        .split('/')
+        .map((seg) =>
+          seg.startsWith('[') && seg.endsWith(']')
+            ? '[^/]+'
+            : seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        )
+        .join('/')
+      // Sub-paths of a pending dynamic route are pending too.
+      return new RegExp(`^${pattern}(/|$)`).test(clean)
+    }
+    // Match sub-paths too: /administrasjon/personvern belongs to the pending
+    // /administrasjon screen group.
+    return p.route === clean || clean.startsWith(`${p.route}/`)
+  })
 }

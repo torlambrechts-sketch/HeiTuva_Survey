@@ -61,6 +61,12 @@ async function touchAreas(page: Page) {
       // the locked k=5 switch and the SSO switch are both deliberately inert.
       if ((el as HTMLButtonElement).disabled) continue
       if (el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('aria-disabled')) continue
+      // Inside an inert or aria-hidden subtree: not focusable, not hit-testable
+      // and not exposed to assistive tech, so it has no touch area to overlap.
+      // The new-survey wizard marks the app header inert while it is open, and
+      // without this its close button and the header avatar — which really do
+      // occupy the same corner — read as a genuine overlap.
+      if (el.closest('[inert]') || el.closest('[aria-hidden="true"]')) continue
       // The sr-only idiom: clipped to 1x1 but still focusable. It is reachable
       // by keyboard, never by thumb, so a touch area does not apply. Tailwind's
       // .sr-only uses the legacy `clip`, not `clip-path` — checking only the
@@ -157,7 +163,13 @@ async function main() {
       for (const spec of ROUTES) {
         // One capture per route; the manifest's extra states are the capture
         // harness's job, this is about layout.
-        if (spec.states[0]?.name !== 'default') continue
+        //
+        // Every route is swept, whatever its first state is called. Requiring
+        // the name 'default' quietly dropped the new-survey wizard — whose
+        // first state is 'formal' — so a screen RESPONSIVE.md names a pattern
+        // for was never measured at any width. A route with no states at all
+        // has nothing to visit.
+        if (spec.states.length === 0) continue
 
         const ctx = await browser.newContext({
           viewport: { width, height: 844 },
