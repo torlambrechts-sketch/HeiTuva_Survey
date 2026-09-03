@@ -69,3 +69,19 @@ A third guard covers the same class of problem in the browser: after
 navigating, the harness asserts the browser actually stayed on the requested
 path. An unexpected redirect used to be captured as a clean screenshot of a
 completely different screen.
+
+## Supabase advisors on heituva-prod — expected findings
+
+Run 2026-09-03 after migration 0016. No ERROR-level findings. Every remaining
+one is intentional, so they should not be "fixed" in a later phase without
+reading this first.
+
+| Finding | Level | Why it stands |
+|---|---|---|
+| `rls_enabled_no_policy` on `responses`, `answers` | INFO | This is CLAUDE.md invariant 1 working. RLS is on and there is deliberately no SELECT policy, so the tables are default-deny to every client. Reads go through the k-gated RPCs. Adding a policy to silence the advisor would be the security regression. |
+| `anon` can execute `get_survey_for_token`, `submit_response` | WARN | The respondent surface is unauthenticated by design — a respondent has no account. Both are token-validated and `submit_response` is the only write path into `responses`. |
+| `authenticated` can execute `aggregate_results`, `get_quotes` | WARN | They must be SECURITY DEFINER: that is how k≥5 is enforced above RLS rather than trusting the caller. |
+| `authenticated` can execute `claim_membership` | WARN | Intended. It can only attach the caller to a row already naming their own verified email, and only while unclaimed — covered by four tests in tests/db/administration.test.ts. |
+
+The advisor cannot distinguish "no policy because nobody may read" from "no
+policy because someone forgot", which is exactly why this table exists.
