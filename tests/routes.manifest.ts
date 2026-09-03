@@ -29,6 +29,20 @@ export type RouteSpec = {
   states: RouteState[]
 }
 
+/**
+ * Open the Builder's right pane and select a tab.
+ *
+ * At xl the pane is a sticky column and its tabs carry role="tab". Below xl
+ * RESPONSIVE.md turns it into a sheet behind a pinned button row, so the same
+ * three labels are plain buttons that open the sheet. One helper so a state's
+ * setup does not have to know which viewport it is running at.
+ */
+async function openBuilderPane(page: Page, tab: 'Legg til' | 'Innstillinger' | 'Vis') {
+  const opener = page.getByRole('button', { name: tab, exact: true })
+  if (await opener.count()) await opener.first().click()
+  else await page.getByRole('tab', { name: tab, exact: true }).click()
+}
+
 export const ROUTES: RouteSpec[] = [
   {
     route: '/logg-inn',
@@ -241,6 +255,42 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
+    // The Builder needs a concrete survey, so the harness resolves the org's
+    // most recent draft rather than hard-coding an id the seed may renumber.
+    route: '/undersokelser',
+    label: 'bygg',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+        },
+      },
+      {
+        name: 'avansert',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          // The mode chips sit at the top of the right pane, so below xl the
+          // sheet has to be open before "Avansert" exists.
+          await openBuilderPane(page, 'Legg til')
+          await page.getByRole('button', { name: 'Avansert', exact: true }).first().click()
+        },
+      },
+      {
+        name: 'vis',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Vis')
+        },
+      },
+    ],
+  },
+  {
     route: '/undersokelser/ny',
     label: 'undersokelser-ny',
     as: 'administrator',
@@ -336,7 +386,6 @@ export const ROUTES: RouteSpec[] = [
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
-  { route: '/undersokelser/[id]/bygg', phase: 'phase-2', note: 'Builder (three-pane)' },
   { route: '/undersokelser/[id]/send', phase: 'phase-3', note: 'Send screen (channels, import)' },
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
   { route: '/undersokelser/[id]/resultater', phase: 'phase-4', note: 'Resultater for one survey' },

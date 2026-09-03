@@ -32,6 +32,8 @@ must never be what silently settles an open question.
 | D27 | DECISIONS Q14 (administrator TOTP) suspended behind the `admin_mfa` flag | **Suspended** — Tor's call, 2026-09-03; enforcement code intact | DECISIONS Q14 |
 | D28 | Wizard reports the number of questions it will actually create | Accepted | see entry below |
 | D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
+| D30 | Builder spacing grows below `md` so 44px hit areas stop overlapping | Accepted | docs/RESPONSIVE.md rules 2-3 |
+| D31 | A sent survey's questions are read-only in the Builder | Accepted | see entry below |
 
 ## Entries
 
@@ -439,3 +441,44 @@ only one and nothing linked to it. The moment a row prefetched
 
 Revisit: nothing to revisit — each entry stops being pending when its phase
 lands.
+
+### D30 — the Builder's spacing grows below `md`, its controls do not
+Measuring the Builder at 390px and 320px produced 34 overlap blockers, all of
+one shape: the card's icon buttons are 30-32px at a 4px gap, and the option
+rows put a bare `×` 9px from a text input. Expanded to 44px, those hit areas
+sit on top of each other — RESPONSIVE.md rule 3's "the failure mode that
+actually hurts users".
+
+Per the rule, the control is a token and the spacing is layout. Every button
+keeps its exact design size at every width; three gaps widen below `md` and
+return to the design's value at `md` and up:
+
+- card header row `10px → 14px`
+- the reorder/duplicate/bank cluster `4px → 14px` (30px control + 14px = a 44px
+  pitch exactly)
+- option and statement rows `9px → 18px` (the bare `×` expands ~17px into the
+  input, so anything less still overlaps)
+
+The two header inputs — title and audience — are borderless and transparent, so
+they cannot take the `touch-44-field` treatment: its inset ring would paint a
+border the design does not have. They get plain vertical padding below `md`
+instead, which is invisible on a transparent control and raises a 20px audience
+field to a 44px touch box.
+
+### D31 — a sent survey's questions are read-only
+`can_edit_survey` answers who may edit, never when. Nothing in the schema stops
+an administrator rewriting the questions of a survey that has already gone out,
+and `survey_rounds.question_snapshot` is immutable by design — so the live round
+and the Builder would simply disagree, with responses already attached to the
+frozen set.
+
+`saveDraft` refuses with `locked` unless `status = 'utkast'`, and the Builder
+renders every control disabled with a line saying to copy the survey as a new
+round instead. The design has no such state: its prototype has no rounds, so the
+question cannot arise there.
+
+Not enforced in the database because the same table legitimately changes after
+sending in Phase 3 — reminders and schedule state — and a CHECK that froze the
+row would block those too. Revisit when the round-opening RPC lands: the natural
+home is that RPC refusing to open a round whose questions changed after the
+previous one closed.

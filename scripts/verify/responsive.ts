@@ -182,6 +182,11 @@ async function main() {
         try {
           if (spec.as !== 'anon') await signIn(page, spec.as, BASE_URL)
           await gotoRoute(page, spec.route, spec.as, BASE_URL)
+          // Run the first state's setup when it has one. Without this a screen
+          // only reachable through a click — the Builder, which needs a real
+          // survey id — would be measured as whatever page links to it, and
+          // the pattern RESPONSIVE.md specifies for it would never be checked.
+          await spec.states[0]?.setup?.(page)
           await page.evaluate(() => document.fonts.ready)
 
           const { scrollWidth, clientWidth } = await overflow(page)
