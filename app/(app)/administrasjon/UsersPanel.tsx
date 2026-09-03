@@ -83,9 +83,13 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
       ) : null}
 
       {users.map((u) => (
-        // RESPONSIVE.md § Data tables: below md the row becomes a card — the
-        // name is the title, the rest are label/value pairs, controls beneath.
-        // No horizontal scrolling table.
+        // RESPONSIVE.md § Data tables, narrow row: three fields that fit, so it
+        // stays a row rather than becoming a card. It stacks below md only
+        // because the controls do not fit at 390px, which that clause allows.
+        // The role select and Deaktiver stay visible at every viewport — both
+        // are consequential controls and the section forbids hiding those
+        // behind an overflow menu. No per-row card chrome: the rows sit on the
+        // section's surface already, and nesting a card in a card is barred.
         <div
           key={u.id}
           className="flex flex-col gap-3 border-b border-line py-3.5 md:flex-row md:items-center md:gap-3.5"

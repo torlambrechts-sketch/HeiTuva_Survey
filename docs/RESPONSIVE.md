@@ -39,8 +39,15 @@ Below `md`: **wrap to multiple rows.** Remove the width constraint and let the e
 - Row gap must be large enough that the 44px touch areas of vertically adjacent chips do not overlap (global rule 2). With 40px chips this means a minimum 4px vertical gap purely for hit-area separation — use the design's existing spacing step at or above that, never a smaller one.
 - Left-align rows; do not justify or centre. The active chip keeps its position in reading order.
 
-**Data tables (users, reports, recipients, DSR)**
-Below `md`: each row becomes a card — primary field as the card title in the design's card styling, remaining fields as label/value pairs, row actions in an overflow menu. Do not use horizontal scrolling tables.
+**Data tables (reports, recipients, DSR, and any wide row)**
+Below `md`: never horizontally scroll a table. Which treatment applies depends on the row, not on the fact that it is a table:
+
+- **Wide rows — 4+ fields, or controls that cannot fit at 390px:** each row becomes a card. Primary field as the card title in the design's card styling, remaining fields as label/value pairs, row actions in an overflow menu.
+- **Narrow rows — 3 or fewer fields that fit at 390px:** keep the row. Stack label/value only if needed. Do **not** convert to a card and do **not** move controls into an overflow menu; a menu that hides two controls costs more than it saves. (This is the Brukere case: email + role select + status fit cleanly.)
+
+Two constraints that override the card treatment in either case:
+- **Consequential controls stay visible.** Anything that changes permissions, access, state, or deletes data — a role select, a deactivate action, a retention setting — is never placed behind an overflow menu on any viewport. Burying it is a safety regression, not a layout choice.
+- **Never nest a card in a card.** Where the table already sits on a card surface, the rows keep the surface they have; the bundle contains no nested-card treatment and inventing one is restyling.
 
 **Heatmap (team × question)**
 Below `md`: switch to a grouped list — one section per team, each question as a row with its coloured cell and value. Same colour scale, same `insufficient_data` treatment ("—"). Do not shrink cells below 44px or allow pinch-zoom as the reading mechanism.

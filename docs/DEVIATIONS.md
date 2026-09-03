@@ -27,6 +27,7 @@ must never be what silently settles an open question.
 |----|------|--------|------|
 | D12 | At 390px the app shell header overflows; page renders ~898px wide | **Fixed** — slide-over nav, `scrollWidth == viewport` at 390px and 320px | DECISIONS Q15, docs/RESPONSIVE.md |
 | D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
+| D25 | Brukere keeps its row and its inline controls below `md` | **Resolved** — spec corrected; implementation unchanged | docs/RESPONSIVE.md § Data tables |
 
 ## Entries
 
@@ -320,9 +321,24 @@ not implemented as written:
    already, so giving each row its own border, radius and surface would nest
    cards two deep, which appears nowhere in the bundle.
 
-Status: **open — needs Tor's call.** RESPONSIVE.md is a specification and this
-is a named pattern, so this is not mine to settle: CLAUDE.md relaxes
-do-not-invent only *to* those patterns. Logged rather than silently diverged.
-If the pattern is meant literally, both parts are small changes; if it was
-written for the wider tables coming in Phase 3 (recipients) and Phase 5
-(reports), this row records why Brukere reads differently.
+Status: **resolved — the spec moved, the code did not.** Tor's call: the
+implementation was right and § Data tables was wrong. The section now scopes the
+card treatment to wide rows (4+ fields, or controls that cannot fit at 390px)
+and keeps narrow rows as rows, naming Brukere as the example. It also adds two
+constraints that override the card treatment either way: consequential controls
+— role selects, deactivate, retention, anything changing permissions or deleting
+data — never go behind an overflow menu on any viewport, and a card is never
+nested in a card.
+
+Re-checked against the updated section rather than assumed: Brukere keeps the
+row with only a `border-b` separator (UsersPanel.tsx:90), stacks below `md`
+solely because ~335px of controls cannot fit at 390px (which the narrow-row
+clause permits), renders the role select and Deaktiver inline at every viewport,
+and carries no per-row card chrome — the one `rounded-[18px]` in the file is the
+outer section. No code change was needed; only the stale comment citing the old
+clause was corrected.
+
+Worth keeping for the pattern it demonstrates: a named pattern in a
+specification is still a claim about the world, and the right move on
+disagreeing with one is to implement what is defensible, log it, and say so —
+not to comply quietly or diverge quietly.
