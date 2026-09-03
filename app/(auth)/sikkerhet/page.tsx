@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Logo, Wordmark } from '@/components/Logo'
 import { getViewer } from '@/lib/auth/session'
-import { getMfaState } from '@/lib/auth/mfa'
+import { adminMfaRequired, getMfaState } from '@/lib/auth/mfa'
 import { signOut } from '@/app/(auth)/logg-inn/actions'
 import { MfaForm } from './MfaForm'
 import { EnrollPanel } from './EnrollPanel'
@@ -24,6 +24,12 @@ export default async function SecurityPage() {
   // Signed in but in no organization yet: onboarding, not the login screen —
   // sending them to /logg-inn would only bounce off the middleware.
   if (!viewer) redirect(mfa.current ? '/kom-i-gang' : '/logg-inn')
+  // The requirement is suspended and there is no factor to challenge, so there
+  // is nothing to complete here. Offering enrolment instead would strand the
+  // administrator: enrol() fails while App Authenticator is off in GoTrue,
+  // which is the very situation the flag exists to avoid. Someone who has
+  // enrolled voluntarily still gets their challenge.
+  if (!mfa.enrolled && !(await adminMfaRequired(viewer.orgId))) redirect('/')
 
   const t = await getTranslations('mfa')
   const tCommon = await getTranslations('common')

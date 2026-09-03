@@ -2,6 +2,7 @@ import 'server-only'
 
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { isFlagEnabled } from '@/lib/flags'
 
 export type AalLevel = 'aal1' | 'aal2'
 
@@ -44,6 +45,20 @@ export const getMfaState = cache(async (): Promise<MfaState> => {
 })
 
 /**
+ * Whether DECISIONS Q14 is in force.
+ *
+ * Suspended by Tor on 2026-09-03 (see docs/DEVIATIONS.md D27) via the
+ * `admin_mfa` feature flag, so the requirement is one row rather than a code
+ * change — no administrator is stranded at /sikkerhet while App Authenticator
+ * is off in GoTrue, and switching it back on needs no deploy.
+ *
+ * The fallback is ON: an unreadable flag must not quietly drop a security gate.
+ */
+export const adminMfaRequired = cache(
+  async (orgId?: string): Promise<boolean> => isFlagEnabled('admin_mfa', orgId, true),
+)
+
+/**
  * Whether an administrator's session clears the MFA bar.
  *
  * Only the assurance level is read, not the factor list: aal2 is minted by the
@@ -53,9 +68,12 @@ export const getMfaState = cache(async (): Promise<MfaState> => {
  * nothing this does not already know.
  *
  * Callers that gate a write must use this — a layout redirect only protects the
- * screen, and a server action is reachable without ever rendering it.
+ * screen, and a server action is reachable without ever rendering it. Keeping
+ * the flag check here rather than at each call site is deliberate: the gate has
+ * exactly one definition, so suspending it cannot be half-applied.
  */
-export const adminMfaSatisfied = cache(async (): Promise<boolean> => {
+export const adminMfaSatisfied = cache(async (orgId?: string): Promise<boolean> => {
+  if (!(await adminMfaRequired(orgId))) return true
   const supabase = await createClient()
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
   return aal?.currentLevel === 'aal2'

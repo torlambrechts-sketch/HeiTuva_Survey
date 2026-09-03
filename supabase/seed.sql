@@ -104,7 +104,14 @@ insert into public.benchmarks (industry, metric_key, value, source) values
 insert into public.feature_flags (key, org_id, enabled) values
 ('sms_channel', null, false), ('entra_sync', null, false), ('google_sync', null, false),
 ('hr_sync', null, false), ('ai_insights', null, false), ('ai_translate', null, false),
-('pptx_export', null, false), ('stripe_billing', null, false);
+('pptx_export', null, false), ('stripe_billing', null, false),
+-- DECISIONS Q14 suspended 2026-09-03 (docs/DEVIATIONS.md D27). true restores it.
+('admin_mfa', null, false)
+-- Migration 20260903000001 seeds admin_mfa for databases that already existed,
+-- and migrations run before this file on a reset. Keeping the full list here is
+-- what makes the global defaults readable in one place, so absorb the overlap
+-- rather than splitting the list across two files.
+on conflict (key, org_id) do nothing;
 
 -- Respondent-chrome UI messages (verbatim from the design's RS object).
 -- Fuller namespaces are seeded from /messages/*.json by scripts/seed-i18n.ts.

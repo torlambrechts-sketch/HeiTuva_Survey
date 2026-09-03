@@ -51,3 +51,24 @@ export async function freshTotpCode(secret: string): Promise<string> {
   lastIssued.set(secret, code)
   return code
 }
+
+/**
+ * Turns DECISIONS Q14 on or off for the duration of a test.
+ *
+ * The requirement is a feature flag now (`admin_mfa`, docs/DEVIATIONS.md D27)
+ * and its seeded default is OFF, so a suite that wants to prove the gate still
+ * works has to switch it on for itself. Without this the gate would quietly
+ * stop being tested the moment it was suspended — the failure mode of every
+ * flagged-off invariant.
+ *
+ * Safe only because playwright.config.ts pins `workers: 1` and
+ * `fullyParallel: false`: the row is global, so a parallel run would flip the
+ * requirement underneath an unrelated test.
+ */
+export async function setAdminMfaRequired(enabled: boolean): Promise<void> {
+  const { serviceClient } = await import('./clients')
+  const { error } = await serviceClient()
+    .from('feature_flags')
+    .upsert({ key: 'admin_mfa', org_id: null, enabled }, { onConflict: 'key,org_id' })
+  if (error) throw new Error(`could not set admin_mfa=${enabled}: ${error.message}`)
+}

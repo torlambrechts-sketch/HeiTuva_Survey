@@ -9,10 +9,12 @@ import { AppHeader } from '@/components/AppHeader'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requireViewer()
 
-  // DECISIONS Q14: administrators must clear TOTP. This redirect protects the
-  // screens; the same check is repeated in the Administrasjon actions, which
-  // are reachable without ever rendering a layout.
-  if (viewer.role === 'administrator' && !(await adminMfaSatisfied())) redirect('/sikkerhet')
+  // DECISIONS Q14: administrators must clear TOTP, while the `admin_mfa` flag
+  // says so. This redirect protects the screens; the same check is repeated in
+  // the Administrasjon actions, which are reachable without ever rendering a
+  // layout.
+  if (viewer.role === 'administrator' && !(await adminMfaSatisfied(viewer.orgId)))
+    redirect('/sikkerhet')
 
   return (
     <>

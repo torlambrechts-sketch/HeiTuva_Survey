@@ -28,6 +28,8 @@ must never be what silently settles an open question.
 | D12 | At 390px the app shell header overflows; page renders ~898px wide | **Fixed** — slide-over nav, `scrollWidth == viewport` at 390px and 320px | DECISIONS Q15, docs/RESPONSIVE.md |
 | D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
 | D25 | Brukere keeps its row and its inline controls below `md` | **Resolved** — spec corrected; implementation unchanged | docs/RESPONSIVE.md § Data tables |
+| D26 | Question bank adds to the most recent draft | Accepted | see entry below |
+| D27 | DECISIONS Q14 (administrator TOTP) suspended behind the `admin_mfa` flag | **Suspended** — Tor's call, 2026-09-03; enforcement code intact | DECISIONS Q14 |
 
 ## Entries
 
@@ -360,3 +362,41 @@ design gives no title for it.
 
 Revisit when the Builder lands in this phase: if the builder holds an explicit
 "current draft", this should follow it instead.
+
+### D27 — administrator MFA is a flag, and it is currently off
+DECISIONS Q14 makes TOTP mandatory for `administrator`. Tor suspended the
+requirement on 2026-09-03: App Authenticator was not enabled in GoTrue on
+`heituva-prod`, so the first administrator was held at `/sikkerhet` on a screen
+whose enrol call could not succeed — the gate locked out the only person who
+could unlock it.
+
+The enforcement was not removed. It moved behind `feature_flags.admin_mfa`
+(global row, `enabled = false`), read by `adminMfaRequired()` in
+`lib/auth/mfa.ts`. Restoring Q14 is one row:
+
+    update public.feature_flags set enabled = true
+    where key = 'admin_mfa' and org_id is null;
+
+Three things were deliberate:
+
+- **One definition.** The flag is checked inside `adminMfaSatisfied()`, not at
+  each call site, so the layout redirect and the Administrasjon write gate
+  cannot drift apart. Suspending the requirement cannot be half-applied.
+- **The read fails ON.** `isFlagEnabled('admin_mfa', orgId, true)` — an
+  unreadable or unseeded flag resolves to *required*, so a database hiccup
+  cannot silently drop a security gate. Every other flag fails OFF, because for
+  those OFF is the safe direction.
+- **The gate is still tested.** `tests/visual/screens.spec.ts` turns the flag on
+  for its own describe block and back off afterwards. A flagged-off invariant
+  that also stops being tested is how a suspension becomes permanent by
+  accident.
+
+`feature_flags` rather than an env var because the column shape already carries
+what this needs next: `org_id` NULL is the global default and a per-org row
+overrides it, and "require MFA for our administrators" is a per-tenant policy.
+Both gate call sites already pass `viewer.orgId`, so a per-org override works
+the day someone writes the row.
+
+Revisit: as soon as App Authenticator is enabled on `heituva-prod` and Tor has
+enrolled, flip the row back to `true`. This is a suspension, not a decision that
+Q14 was wrong.

@@ -25,7 +25,7 @@ async function requireAdmin() {
   // A server action is a POST endpoint: it does not go through the layout that
   // redirects an aal1 administrator to /sikkerhet, so the MFA requirement has
   // to be re-checked at the write itself or it is decorative.
-  if (!(await adminMfaSatisfied())) return null
+  if (!(await adminMfaSatisfied(viewer.orgId))) return null
   return viewer
 }
 

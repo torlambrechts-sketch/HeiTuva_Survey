@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { BASE_URL } from '../../playwright.config'
 import { gotoRoute, signIn } from '../helpers/session'
+import { setAdminMfaRequired } from '../db/mfa'
 
 /**
  * Screenshot regression for the screens whose pixels are a function of code
@@ -67,6 +68,13 @@ test.describe('focus is visible', () => {
 })
 
 test.describe('administrator MFA gate', () => {
+  // Q14 is a feature flag now (admin_mfa, docs/DEVIATIONS.md D27) and its
+  // seeded default is OFF, so this block turns it on for itself and puts it
+  // back afterwards. Leaving it to the seed would mean the gate silently
+  // stopped being tested the day it was suspended.
+  test.beforeAll(() => setAdminMfaRequired(true))
+  test.afterAll(() => setAdminMfaRequired(false))
+
   // The gate itself has no org data on it, so it is stable enough to pin.
   test('an administrator is held at /sikkerhet until TOTP is confirmed', async ({ page }) => {
     await page.goto(`${BASE_URL}/logg-inn`, { waitUntil: 'domcontentloaded' })
