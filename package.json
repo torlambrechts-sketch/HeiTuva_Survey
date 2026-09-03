@@ -19,7 +19,8 @@
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
     "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:browser && npm run verify:visual",
     "seed:mfa": "tsx scripts/seed-mfa.ts --local",
-    "verify:visual": "playwright test"
+    "verify:visual": "playwright test",
+    "verify:responsive": "tsx scripts/verify/responsive.ts --local"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
