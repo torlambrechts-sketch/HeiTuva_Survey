@@ -14,10 +14,12 @@
     "gen:i18n": "tsx scripts/gen-i18n-types.ts",
     "seed:demo": "tsx scripts/seed-demo.ts --local",
     "verify:db": "vitest run tests/invariants tests/db",
+    "verify:attack": "tsx scripts/verify/attack.ts",
+    "verify:roundtrip": "tsx scripts/verify/roundtrip.ts --local",
     "verify:browser": "tsx scripts/verify/capture.ts --local",
     "verify:reference": "tsx scripts/verify/reference.ts",
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
-    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:browser && npm run verify:visual",
+    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:attack && npm run verify:roundtrip && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
     "seed:mfa": "tsx scripts/seed-mfa.ts --local",
     "verify:visual": "playwright test",
     "verify:responsive": "tsx scripts/verify/responsive.ts --local"
