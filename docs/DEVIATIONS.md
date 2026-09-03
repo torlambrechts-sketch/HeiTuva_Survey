@@ -301,3 +301,28 @@ would change anything. It renders on, non-interactive, with
 "Alltid på — håndheves i databasen" appended to the design's own description.
 Leaving the description verbatim would have meant shipping a switch that looks
 live and silently ignores every click.
+
+### D25 — Brukere cards keep their actions inline, not in an overflow menu
+`docs/RESPONSIVE.md` § Data tables says a row below `md` becomes "a card —
+primary field as the card title in the design's card styling, remaining fields
+as label/value pairs, row actions in an overflow menu". Two parts of that are
+not implemented as written:
+
+1. **Actions are inline, not behind an overflow menu.** A row has exactly two
+   controls, the role `<select>` and Deaktiver/Aktiver, and both fit at 390px
+   with no horizontal scroll and no hit-area overlap (measured: 0 findings).
+   Putting a role select behind a menu adds an interaction the design does not
+   have anywhere and hides the single most consequential control on the screen
+   — role assignment — behind a tap. The overflow menu earns its place when
+   actions outnumber the width; here it would cost more than it saves.
+2. **The card keeps the design's row separator rather than card chrome.** The
+   pattern says "the design's card styling"; the rows sit inside a card
+   already, so giving each row its own border, radius and surface would nest
+   cards two deep, which appears nowhere in the bundle.
+
+Status: **open — needs Tor's call.** RESPONSIVE.md is a specification and this
+is a named pattern, so this is not mine to settle: CLAUDE.md relaxes
+do-not-invent only *to* those patterns. Logged rather than silently diverged.
+If the pattern is meant literally, both parts are small changes; if it was
+written for the wider tables coming in Phase 3 (recipients) and Phase 5
+(reports), this row records why Brukere reads differently.
