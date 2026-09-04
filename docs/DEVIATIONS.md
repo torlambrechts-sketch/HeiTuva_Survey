@@ -993,3 +993,42 @@ in `tests/invariants/invariants.test.ts`.
 This matters beyond the harness: "sletting" is one of the four DSR types the
 Personvern tab offers under GDPR art. 17, and an organisation that cannot be
 deleted cannot honour it.
+
+### D51 — one co-editor grant made an organisation undeletable
+
+The third member of D50's family, found once `dropOrg` started reporting its
+errors instead of swallowing them.
+
+`survey_editors.granted_by` records who shared a survey with a co-editor. It was
+declared with no ON DELETE action, so it defaulted to NO ACTION — and deleting
+an organisation cascades into `org_members`, which then could not be removed
+while any grant still named one of them.
+
+It is now SET NULL rather than CASCADE, deliberately: the grant is what governs
+access and must survive the granter leaving the company. Losing the name of who
+granted it is a smaller loss than silently revoking a co-editor's access the day
+their manager's account is removed. Every other "who did this" column in the
+schema (`surveys.created_by`, `duties.owner_member_id`, `dsr_requests.handled_by`)
+was already SET NULL; this one was the outlier.
+
+The whole schema was audited for the same shape while there. The only other
+foreign key with no delete action is `duties.definition_key → duty_definitions`,
+and NO ACTION is correct there: a duty definition that is in use must not be
+deletable.
+
+### D52 — two verification gates were measuring history, not this run
+
+Not deviations either — the same "stale state" defect as D50, in the harness.
+
+`verify:send` asserted "2 invitations arrived" against a Mailpit inbox that had
+been purged (fixed in Phase 3) but a **pgmq queue** that had not. Anything an
+earlier run enqueued and never drained was delivered by this run's worker and
+counted as this run's mail, which turned two into six. The queue is archived at
+the start now, for the same reason and one hop earlier.
+
+The same gate also SENDS the seeded draft, which flips it to `aktiv` and
+consumes it — so a second run in a row had nothing to send. It re-seeds first,
+as the capture harness now does. Both call sites pin the seeding child to the
+local stack explicitly: `verify:send` loads `.env.local` unconditionally, so the
+child would otherwise inherit the production URL, and the seed's own guard
+refused it — correctly, which is how this was found.

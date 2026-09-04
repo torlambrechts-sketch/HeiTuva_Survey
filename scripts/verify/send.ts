@@ -8,8 +8,9 @@
  */
 import { chromium } from '@playwright/test'
 import { config } from 'dotenv'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { BASE_URL, ensureServer } from './server'
+import { LOCAL_SUPABASE } from './local-env'
 import { signIn } from '../../tests/helpers/session'
 import { serviceClient } from '../../tests/db/clients'
 
@@ -23,6 +24,21 @@ function check(label: string, ok: boolean, detail: string) {
 }
 
 async function main() {
+  // Re-seed first. This gate SENDS the seeded draft, which flips it to `aktiv`
+  // and consumes it — so a second run in a row has nothing to send, and a run
+  // that follows any other verifier inherits whatever that one left behind.
+  // Re-seeding is what makes "one round was opened" a statement about this run.
+  if (process.argv.includes('--local')) {
+    // Pin the child to the local stack explicitly. This script loads
+    // `.env.local` unconditionally, so the child would otherwise inherit the
+    // PRODUCTION url from this process's env and the seed's own guard would
+    // refuse it — which it did, correctly.
+    execFileSync('npx', ['tsx', 'scripts/seed-demo.ts', '--local'], {
+      stdio: 'inherit',
+      env: { ...process.env, ...LOCAL_SUPABASE },
+    })
+  }
+
   const server = await ensureServer()
   const browser = await chromium.launch()
   const svc = serviceClient()
@@ -43,6 +59,18 @@ async function main() {
     // "2 messages have ever arrived" and grew by two every time. Purge first:
     // the assertion is about what THIS run delivered.
     await fetch(`${MAILPIT}/api/v1/messages`, { method: 'DELETE' }).catch(() => {})
+
+    // And the queue behind it, for the same reason and one step earlier: pgmq
+    // survives a reseed, so anything an earlier run enqueued and never drained
+    // gets delivered by THIS run's worker and counted as this run's mail. That
+    // is what turned "2 invitations arrived" into six. Archive rather than
+    // delete, so a stuck message is still inspectable afterwards.
+    for (;;) {
+      const { data: stale } = await svc.rpc('mail_outbox_read', { p_batch: 100, p_visibility: 0 })
+      const rows = (stale ?? []) as { msg_id: number }[]
+      if (!rows.length) break
+      for (const r of rows) await svc.rpc('mail_outbox_archive', { p_msg_id: r.msg_id })
+    }
 
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'nb-NO' })
     const page = await ctx.newPage()

@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path'
 import { chromium, devices, type Browser, type Page } from '@playwright/test'
 import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
+import { LOCAL_SUPABASE } from './local-env'
 import { ROUTES, PENDING_ROUTES, isPendingRoute } from '../../tests/routes.manifest'
 import { gotoRoute, signIn } from '../../tests/helpers/session'
 import sourceMessages from '../../messages/no.json'
@@ -99,7 +100,10 @@ async function main() {
   // surveys beside the two real ones. A capture has to start from the seed it
   // documents, and `dropOrg` can finally replace it (migration 20260904000002).
   if (process.argv.includes('--local')) {
-    execFileSync('npx', ['tsx', 'scripts/seed-demo.ts', '--local'], { stdio: 'inherit' })
+    execFileSync('npx', ['tsx', 'scripts/seed-demo.ts', '--local'], {
+      stdio: 'inherit',
+      env: { ...process.env, ...LOCAL_SUPABASE },
+    })
   }
 
   const server = await ensureServer()

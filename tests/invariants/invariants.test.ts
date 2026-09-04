@@ -358,6 +358,48 @@ describe('integrity triggers survive their own cascade', () => {
     expect(after ?? []).toHaveLength(0)
   })
 
+  it('a co-editor grant survives its granter and does not pin the organisation open', async () => {
+    const a = admin()
+    const { data: org } = await a
+      .from('organizations')
+      .insert({ name: uniq('Grant Cascade') })
+      .select('id')
+      .single()
+    const { data: granter } = await a
+      .from('org_members')
+      .insert({ org_id: org!.id, email: uniq('granter') + '@example.test', role: 'administrator', status: 'active' })
+      .select('id')
+      .single()
+    const { data: editor } = await a
+      .from('org_members')
+      .insert({ org_id: org!.id, email: uniq('editor') + '@example.test', role: 'redaktor', status: 'active' })
+      .select('id')
+      .single()
+    const { data: survey } = await a
+      .from('surveys')
+      .insert({ org_id: org!.id, title: uniq('Delt') })
+      .select('id')
+      .single()
+    await a
+      .from('survey_editors')
+      .insert({ survey_id: survey!.id, member_id: editor!.id, granted_by: granter!.id })
+
+    // The granter leaves: the grant stays, and only the attribution is lost.
+    const { error: leaveErr } = await a.from('org_members').delete().eq('id', granter!.id)
+    expect(leaveErr).toBeNull()
+    const { data: grant } = await a
+      .from('survey_editors')
+      .select('member_id, granted_by')
+      .eq('survey_id', survey!.id)
+      .single()
+    expect(grant!.member_id).toBe(editor!.id)
+    expect(grant!.granted_by).toBeNull()
+
+    // And the organisation is deletable, which one grant used to prevent.
+    const { error: dropErr } = await a.from('organizations').delete().eq('id', org!.id)
+    expect(dropErr).toBeNull()
+  })
+
   it('a sent survey is still frozen against question edits, but deletable whole', async () => {
     const a = admin()
     const { data: org } = await a
