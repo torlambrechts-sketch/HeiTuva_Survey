@@ -94,10 +94,12 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // Oversikt (HeiTuva.dc.html:218-317). Built last in Phase 5 because it
+    // aggregates every other screen; the phase tag moves with it.
     route: '/',
     label: 'oversikt',
     as: 'administrator',
-    phase: 'phase-1',
+    phase: 'phase-5',
     states: [
       { name: 'default' },
       {
@@ -106,6 +108,15 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await page.getByRole('button', { name: 'Brukermeny' }).click()
           await page.getByRole('menu').waitFor({ state: 'visible' })
+        },
+      },
+      {
+        // The "Legg til tiltak" input, which replaces the prototype's
+        // placeholder row (D65).
+        name: 'loop-action-open',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Legg til tiltak' }).click()
+          await page.getByLabel('Legg til tiltak').waitFor({ state: 'visible' })
         },
       },
     ],

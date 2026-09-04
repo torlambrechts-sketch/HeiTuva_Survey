@@ -1965,6 +1965,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      overview_activity: { Args: { p_org: string }; Returns: Json }
       publish_duty: {
         Args: { p_duty: string; p_label?: string }
         Returns: Json

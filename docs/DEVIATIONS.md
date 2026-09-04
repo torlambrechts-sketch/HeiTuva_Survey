@@ -1264,3 +1264,58 @@ thing in June and another in September with no edit and no version.
 `reports.filters.rounds` therefore holds round ids. The words remain the way you
 choose them; what is written down is which rounds you chose.
 
+### D65 — Oversikt shows real figures, or none; the prototype's padding is dropped
+The prototype pads three numbers on the first screen anyone sees:
+
+| Prototype | What it actually is |
+|---|---|
+| `milestone: responses + 289` | the response count plus a literal 289 |
+| `managerGrade: "3 av 4"` | a hard-coded string |
+| `streakLine: "Produktteamet har svart 6 uker på rad"` | one named team, six weeks, no data behind either |
+
+That is mock scaffolding, and rendering it would put invented measurements on
+the landing screen where they are indistinguishable from real ones (CLAUDE.md:
+never fabricate data in the UI). So: the year total is the year total, the grade
+counts real `loop_actions` against real surveys, and the streak is the run of
+consecutive weeks in which the ORGANISATION had any response.
+
+Organisation-wide, not per team, for a reason beyond honesty. Per-group
+participation over time is exactly the shape k-anonymity protects — a group of
+three answering in week 31 and not week 32 is a statement about three people —
+so `overview_activity` has no group parameter at all and cannot be asked for
+one.
+
+Two more places where the honest answer is nothing:
+
+- **No response rate without invitations.** `completion` is NULL, not 0, when
+  nothing has been sent. A percentage over an empty denominator is a fabricated
+  measurement, so the panel says "Ingen invitasjoner sendt" instead.
+- **No "frisvar venter på lesing" item.** The prototype's third action counts
+  unread free text. Nothing in the schema records that anything was read, so the
+  count would never go down and the item would be permanent. It is left out
+  until a read marker exists, rather than shown as a number that means nothing.
+
+"Legg til tiltak" also changes: the prototype inserts a row reading "Nytt tiltak
+— skriv hva dere gjorde", a placeholder standing in for text nobody wrote. The
+button opens an input, and the row is created when there is something to put in
+it.
+
+### D66 — `revoke ... from anon` is not enough; PUBLIC holds the grant
+`overview_activity` was written with `grant execute ... to authenticated` and
+`revoke all ... from anon`, which reads as though anonymous callers are excluded.
+They were not. PostgreSQL grants EXECUTE on every new function to **PUBLIC**, and
+`anon` inherits that — revoking from the role leaves the PUBLIC grant standing,
+so the function stayed callable without a session.
+
+It was caught by the test that asserts an anonymous caller is refused, not by
+reading the migration, which is the point: the migration looked correct. The
+rule is **revoke from `public` first, then grant the one role that should have
+it**, and the order matters because a later `grant ... to authenticated` does
+not undo PUBLIC either.
+
+The audit that follows from it — every `public.*` function `anon` can execute —
+returns exactly four on both local and prod, each deliberate:
+`submit_response`, `get_survey_for_token`, `get_peer_results` (the three
+token-validated respondent paths) and `compose_report` (a share link has no
+session; authorisation is inside the function). Nothing else.
+

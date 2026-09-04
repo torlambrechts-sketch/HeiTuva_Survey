@@ -466,6 +466,80 @@ describe('scope-aware snapshots: a frozen number belongs to the filter that froz
     const doc = await compose(fx.editor.client, pinned.id)
     const summary = doc.sections?.find((s) => s.key === 'summary')
     expect(summary?.source).toBe('live')
-    expect(JSON.stringify(doc)).not.toContain('999')
+    // Assert on the cells, not on a substring of the whole document: "999"
+    // matches any UUID that happens to contain it, and one did — a test that
+    // fails on the random ids it generated is worse than no test, because the
+    // next person deletes it rather than reading it.
+    expect(summary?.cells?.some((c) => c.n === 999 || c.avg === 5)).toBe(false)
+    expect(summary?.snapshot_id).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// overview_activity — participation, never results, never per group
+// ---------------------------------------------------------------------------
+
+describe('overview_activity: counts rows, discloses nothing about answers', () => {
+  const activity = async (client: SupabaseClient, orgId: string) => {
+    const { data, error } = await client.rpc('overview_activity', { p_org: orgId })
+    if (error) throw new Error(`overview_activity: ${error.message}`)
+    return data as Record<string, unknown>
+  }
+
+  test('a member of another organisation is refused', async () => {
+    const doc = await activity(fx.outsider.client, fx.org.id)
+    expect(doc.error).toBe('forbidden')
+    expect(doc.this_week).toBeUndefined()
+  })
+
+  test('an anonymous caller cannot execute it at all', async () => {
+    const { error } = await anon().rpc('overview_activity', { p_org: fx.org.id })
+    // Not merely 'forbidden' in the body: anon has no EXECUTE grant, so the
+    // call itself is refused. A share link must never reach participation data.
+    expect(error).not.toBeNull()
+  })
+
+  test('a leser sees the same participation figures as a redaktør', async () => {
+    // Participation is not a result. Both roles are entitled to it, and the
+    // whole point of routing it through an RPC is that neither reads the table.
+    const asEditor = await activity(fx.editor.client, fx.org.id)
+    const asLeser = await activity(fx.reader.client, fx.org.id)
+    expect(asLeser.this_year).toEqual(asEditor.this_year)
+  })
+
+  test('it never returns an answer value, a group, or a respondent', async () => {
+    const doc = await activity(fx.editor.client, fx.org.id)
+    const json = JSON.stringify(doc)
+    for (const groupId of [fx.stor.id, fx.liten.id, fx.bitte1.id, fx.bitte2.id]) {
+      expect(json, 'a group id reached the participation figures').not.toContain(groupId)
+    }
+    expect(Object.keys(doc).sort()).toEqual(
+      ['completion', 'days', 'invited', 'responded', 'streak_weeks', 'this_week', 'this_year', 'weeks'],
+    )
+  })
+
+  test('every day of the week is present, including the empty ones', async () => {
+    const doc = await activity(fx.editor.client, fx.org.id)
+    const days = doc.days as { day: string; n: number }[]
+    expect(days).toHaveLength(7)
+    expect(days.every((d) => typeof d.n === 'number')).toBe(true)
+    // Ascending, so the bar chart cannot render the week backwards.
+    expect([...days].sort((a, b) => a.day.localeCompare(b.day))).toEqual(days)
+  })
+
+  test('an organisation that has sent nothing has no response rate, not 0 %', async () => {
+    const a = admin()
+    const empty = await insert(a, 'organizations', { name: uniq('Helt ny') })
+    const user = await asUser(uniq('ny-admin') + '@example.test')
+    await insert(a, 'org_members', {
+      org_id: empty.id, user_id: user.userId, email: uniq('ny-admin') + '@example.test',
+      role: 'administrator', status: 'active',
+    })
+
+    const doc = await activity(user.client, empty.id)
+    expect(doc.invited).toBe(0)
+    expect(doc.completion, 'a percentage over an empty denominator is invented').toBeNull()
+    expect(doc.this_week).toBe(0)
+  })
+})
+
