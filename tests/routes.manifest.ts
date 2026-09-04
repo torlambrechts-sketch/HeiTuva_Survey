@@ -692,6 +692,51 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // The editor is a STATE of /rapporter in the design (`repEditing`), not a
+    // screen of its own, so it is captured through the route that opens it.
+    // Each state opens one of the three side panels — they are the screen.
+    route: '/rapporter',
+    label: 'rapport-editor',
+    as: 'redaktor',
+    phase: 'phase-5',
+    states: [
+      {
+        name: 'innhold',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await page.getByRole('button', { name: 'Ny rapport' }).click()
+          await page.waitForURL((u) => !!u.searchParams.get('rapport'))
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'filter',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await page.getByRole('link', { name: 'Åpne' }).first().click()
+          await page.waitForURL((u) => !!u.searchParams.get('rapport'))
+          await page.getByRole('button', { name: 'Filter', exact: true }).click()
+          await page.getByLabel('Gruppe').first().waitFor()
+        },
+      },
+      {
+        name: 'del',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await page.getByRole('link', { name: 'Åpne' }).first().click()
+          await page.waitForURL((u) => !!u.searchParams.get('rapport'))
+          // `exact` because "Deltakelse og svarprosent" is also a button on
+          // this screen and starts with the same three letters.
+          await page.getByRole('button', { name: 'Del', exact: true }).click()
+          await page.getByText('Hvem skal se den').waitFor()
+        },
+      },
+    ],
+  },
+  {
     // The same screen as a leser: every control is present but inert, and the
     // signing buttons are absent because none of the slots is theirs.
     route: '/rapporter',
@@ -706,7 +751,7 @@ export const ROUTES: RouteSpec[] = [
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
-  { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },
+
 ]
 
 /**

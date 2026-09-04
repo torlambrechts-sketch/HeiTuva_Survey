@@ -1211,3 +1211,56 @@ M5's is a cross-tenant read. Tests were added until both died. A negative test
 that has never seen its defect is a decoration, and the only way to know which
 ones those are is to break the code on purpose.
 
+### D61 — "Lagre rapport" moves the report out of Utkast; it does not save content
+The design's editor footer has a **Lagre rapport** button, and the prototype's
+handler appends the draft to the saved list — because the prototype has no
+database and the draft lives in component state until that click.
+
+Here the content is saved on every change. It has to be: the document beside the
+controls is composed by `compose_report` on the SERVER, so a section list held
+only in the browser could not be rendered without shipping the composition —
+and with it the k-gate — to the client. That is the one thing the gate must
+never depend on.
+
+So the control stays exactly where the design puts it and means the other half
+of what "lagret" means on the Mine rapporter list: the report leaves `utkast`
+and becomes `klar`. A published report is not walked back from here; publication
+is `publish_duty`'s decision and carries a signature.
+
+### D62 — the report editor is a state of /rapporter, not a route under a survey
+`tests/routes.manifest.ts` carried a pending route `/undersokelser/[id]/rapport`
+("Report editor for one survey") from an earlier phase. The design has no such
+screen. The editor is `repEditing` on the Rapporter screen
+(HeiTuva.dc.html:1092-1288), reached four ways — **Ny rapport**, **Bruk mal** on
+a standard template, **Åpne** on a saved report, and **Lag rapport** from a
+survey row — all of which set the same state.
+
+It is therefore `/rapporter?rapport=<id>`, matching the `?fane=` pattern the
+screen's own tabs already use. The survey row's **Lag rapport** now creates the
+report with that survey already in its filter and opens the editor, which is
+what the prototype's handler does; before this it linked to the route that did
+not exist, and the capture harness reported the 404 as a pending route rather
+than as the dead link it was.
+
+### D63 — the share link is minted, shown once, and never derived from the title
+The prototype prints `heituva.no/r/<slug-of-title>` in the Del panel, always,
+before anything is shared. A slug of a title that appears in the report list is
+guessable, and DECISIONS makes the link itself the credential — there is no
+password behind it.
+
+So the field shows nothing until a link is minted, and then shows it once:
+32 bytes of CSPRNG, base64url, stored only as a SHA-256 hash, the same rule as
+invitation tokens. `report_shares.group_id` carries the scope and
+`compose_report` re-runs the whole k-gate under it, so the link does not hand
+out a rendered document — it hands out the right to ask for one, and the answer
+is composed for that scope.
+
+### D64 — the period filter picks rounds, it does not store a relative window
+The design's Periode select offers "Siste runde / Siste to runder / Alle
+runder". Stored as those words, an archived statutory report would silently
+repoint at newer data the next time a round closed — the document would say one
+thing in June and another in September with no edit and no version.
+
+`reports.filters.rounds` therefore holds round ids. The words remain the way you
+choose them; what is written down is which rounds you chose.
+

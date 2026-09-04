@@ -1,14 +1,17 @@
+import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { ReportsScreen } from './ReportsScreen'
+import { ReportEditor } from './ReportEditor'
 import type { DutyCardData } from './types'
+import type { ComposedDocument, EditorReport } from './editor-types'
 
 /**
  * Rapporter — HeiTuva.dc.html:911-1330.
  *
- * Three tabs. This slice builds Lovpålagte (the duty engine) and the two
- * listing tabs; the report editor itself is the next slice.
+ * Three tabs, plus the editor — which is a STATE of this screen in the design
+ * (`repEditing`), not a screen of its own, so it is `?rapport=<id>` here.
  *
  * The Lovpålagte tab renders every row of `duty_definitions`, not the
  * organisation's `duties` rows. The four laws are the same for every Norwegian
@@ -25,14 +28,102 @@ const isTab = (v: string | undefined): v is Tab => !!v && TABS.includes(v as Tab
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fane?: string }>
+  searchParams: Promise<{ fane?: string; rapport?: string }>
 }) {
-  const { fane } = await searchParams
+  const { fane, rapport } = await searchParams
   const tab: Tab = isTab(fane) ? fane : 'lov'
 
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('reports')
+
+  // ---------------------------------------------------------------------
+  // The editor
+  // ---------------------------------------------------------------------
+  if (rapport) {
+    const [{ data: row }, { data: sectionTypes }, { data: groups }, { data: surveys }] =
+      await Promise.all([
+        supabase
+          .from('reports')
+          .select('id, org_id, title, status, base_template, sections, filters, share_scope, schedule')
+          .eq('id', rapport)
+          .is('deleted_at', null)
+          .maybeSingle(),
+        supabase
+          .from('report_section_types')
+          .select('key, label, description, supports_group_filter'),
+        supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
+        supabase
+          .from('surveys')
+          .select('id, title, status')
+          .eq('org_id', viewer.orgId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false }),
+      ])
+
+    // RLS already scopes `reports` to the org, so a row from elsewhere cannot
+    // arrive here — but a missing row and a foreign one must look the same, or
+    // the URL becomes an existence oracle for report ids.
+    if (!row) notFound()
+
+    // The composed document. This is the ONLY read of results on this screen:
+    // no aggregate RPC is called beside it, so there is no second path with
+    // different gating rules.
+    const { data: composed } = await supabase.rpc('compose_report', { p_report: row.id })
+    const doc = (composed ?? {}) as ComposedDocument
+    if (doc.error) notFound()
+
+    const { data: counts } = await supabase.rpc('survey_response_counts', { p_org: viewer.orgId })
+    const countBySurvey = new Map(
+      ((counts ?? []) as { survey_id: string; responses: number }[]).map((c) => [
+        c.survey_id,
+        c.responses,
+      ]),
+    )
+
+    const filters = (row.filters ?? {}) as Record<string, unknown>
+    const schedule = (row.schedule ?? null) as { cadence?: string } | null
+    const report: EditorReport = {
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      baseTemplate: row.base_template,
+      sections: (row.sections ?? []) as string[],
+      filters: {
+        surveys: (filters.surveys ?? []) as string[],
+        rounds: (filters.rounds ?? []) as string[],
+        group: (filters.group ?? null) as string | null,
+        sectionGroups: (filters.sectionGroups ?? {}) as Record<string, string | null>,
+      },
+      shareScope: row.share_scope,
+      cadence: (schedule?.cadence ?? 'none') as EditorReport['cadence'],
+    }
+
+    return (
+      <ReportEditor
+        report={report}
+        doc={doc}
+        canEdit={viewer.role !== 'leser'}
+        options={{
+          sectionTypes: (sectionTypes ?? []).map((s) => ({
+            key: s.key,
+            label: s.label,
+            description: s.description,
+            supportsGroupFilter: s.supports_group_filter,
+          })),
+          groups: groups ?? [],
+          surveys: (surveys ?? []).map((s) => ({
+            id: s.id,
+            title: s.title,
+            status: s.status,
+            responses: countBySurvey.get(s.id) ?? 0,
+          })),
+          orgName: viewer.orgName,
+        }}
+        sectionLabels={Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label]))}
+      />
+    )
+  }
 
   const [
     { data: definitions },

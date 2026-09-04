@@ -118,30 +118,6 @@ export type Database = {
         }
         Relationships: []
       }
-      theme_rules: {
-        Row: {
-          key: string
-          label: string
-          lang: string
-          ord: number
-          pattern: string
-        }
-        Insert: {
-          key: string
-          label: string
-          lang: string
-          ord?: number
-          pattern: string
-        }
-        Update: {
-          key?: string
-          label?: string
-          lang?: string
-          ord?: number
-          pattern?: string
-        }
-        Relationships: []
-      }
       dsr_requests: {
         Row: {
           created_at: string
@@ -1856,6 +1832,30 @@ export type Database = {
           },
         ]
       }
+      theme_rules: {
+        Row: {
+          key: string
+          label: string
+          lang: string
+          ord: number
+          pattern: string
+        }
+        Insert: {
+          key: string
+          label: string
+          lang: string
+          ord?: number
+          pattern: string
+        }
+        Update: {
+          key?: string
+          label?: string
+          lang?: string
+          ord?: number
+          pattern?: string
+        }
+        Relationships: []
+      }
       ui_messages: {
         Row: {
           key: string
@@ -1892,59 +1892,41 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
-      duty_status: {
-        Args: { p_duty: string }
-        Returns: Json
-      }
-      publish_duty: {
-        Args: { p_duty: string; p_label?: string }
-        Returns: Json
-      }
-      sign_duty: {
-        Args: { p_duty: string; p_role_key: string }
+      claim_membership: { Args: never; Returns: string }
+      close_round: { Args: { p_round: string }; Returns: Json }
+      compose_report: {
+        Args: { p_report: string; p_token?: string }
         Returns: Json
       }
       dashboard_summary: {
-        Args: { p_group?: string; p_org: string; p_rounds?: string[]; p_surveys?: string[] }
+        Args: {
+          p_group?: string
+          p_org: string
+          p_rounds?: string[]
+          p_surveys?: string[]
+        }
         Returns: Json
       }
+      duty_status: { Args: { p_duty: string }; Returns: Json }
       get_benchmarks: {
-        Args: { p_group?: string; p_industry?: string; p_round?: string; p_survey: string }
+        Args: {
+          p_group?: string
+          p_industry?: string
+          p_round?: string
+          p_survey: string
+        }
         Returns: Json
       }
       get_heatmap: {
-        Args: { p_group?: string; p_org: string; p_rounds?: string[]; p_surveys?: string[] }
-        Returns: Json
-      }
-      get_themes: {
-        Args: { p_group?: string; p_lang?: string; p_rounds?: string[]; p_survey: string }
-        Returns: Json
-      }
-      get_trends: {
-        Args: { p_group?: string; p_survey: string }
-        Returns: Json
-      }
-      results_summary: {
-        Args: { p_group?: string; p_round?: string; p_survey: string }
-        Returns: Json
-      }
-      snapshot_results: {
-        Args: { p_group?: string; p_round?: string; p_survey: string }
-        Returns: Json
-      }
-      claim_membership: {
-        Args: Record<string, never>
-        Returns: string | null
-      }
-      survey_response_counts: {
         Args: {
+          p_group?: string
           p_org: string
+          p_rounds?: string[]
+          p_surveys?: string[]
         }
-        Returns: {
-          responses: number
-          survey_id: string
-        }[]
+        Returns: Json
       }
+      get_peer_results: { Args: { p_token: string }; Returns: Json }
       get_quotes: {
         Args: {
           p_group?: string
@@ -1960,13 +1942,35 @@ export type Database = {
         Args: { p_lang?: string; p_token: string }
         Returns: Json
       }
-      submit_response: {
+      get_themes: {
         Args: {
-          p_anon_choice?: boolean
-          p_answers: Json
-          p_lang: string
-          p_token: string
+          p_group?: string
+          p_lang?: string
+          p_rounds?: string[]
+          p_survey: string
         }
+        Returns: Json
+      }
+      get_trends: {
+        Args: { p_group?: string; p_survey: string }
+        Returns: Json
+      }
+      mail_outbox_archive: { Args: { p_msg_id: number }; Returns: boolean }
+      mail_outbox_delete: { Args: { p_msg_id: number }; Returns: boolean }
+      mail_outbox_read: {
+        Args: { p_batch?: number; p_visibility?: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
+      publish_duty: {
+        Args: { p_duty: string; p_label?: string }
+        Returns: Json
+      }
+      results_summary: {
+        Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
       send_round: {
@@ -1985,29 +1989,26 @@ export type Database = {
         }
         Returns: Json
       }
-      close_round: {
-        Args: { p_round: string }
+      sign_duty: { Args: { p_duty: string; p_role_key: string }; Returns: Json }
+      snapshot_results: {
+        Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
-      get_peer_results: {
-        Args: { p_token: string }
+      submit_response: {
+        Args: {
+          p_anon_choice?: boolean
+          p_answers: Json
+          p_lang: string
+          p_token: string
+        }
         Returns: Json
       }
-      mail_outbox_read: {
-        Args: { p_batch?: number; p_visibility?: number }
+      survey_response_counts: {
+        Args: { p_org: string }
         Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
+          responses: number
+          survey_id: string
         }[]
-      }
-      mail_outbox_delete: {
-        Args: { p_msg_id: number }
-        Returns: boolean
-      }
-      mail_outbox_archive: {
-        Args: { p_msg_id: number }
-        Returns: boolean
       }
     }
     Enums: {

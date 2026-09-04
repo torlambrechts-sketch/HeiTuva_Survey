@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { DutyCard } from './DutyCard'
+import { DeleteReportButton, NewReportButton } from './ReportRowActions'
 import type { DutyCardData, ReportTemplate, SavedReport } from './types'
 
 const TAB_KEYS = [
@@ -132,6 +133,15 @@ export async function ReportsScreen({
                   </span>
                 ))}
               </div>
+              {canEdit ? (
+                <NewReportButton
+                  label={t('useTemplate')}
+                  title={`${tpl.title} — ${t('draft').toLowerCase()}`}
+                  baseTemplate={tpl.key}
+                  sections={tpl.sections}
+                  className="touch-44 mt-[18px] cursor-pointer rounded-[10px] border-none bg-ac p-[11px] text-[13px] font-semibold text-acf"
+                />
+              ) : null}
             </div>
           ))}
         </div>
@@ -141,6 +151,15 @@ export async function ReportsScreen({
         <div className="mt-5 rounded-[18px] border border-line bg-sf px-6 py-[22px]">
           <div className="flex flex-wrap items-center justify-between gap-[14px]">
             <p className="text-[13px] text-mut">{t('reportRowCount', { count: reports.length })}</p>
+            {canEdit ? (
+              <NewReportButton
+                label={t('newReport')}
+                title={t('newReport')}
+                baseTemplate={null}
+                sections={['summary']}
+                className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-acf"
+              />
+            ) : null}
           </div>
           {reports.length === 0 ? (
             <div className="mt-6 text-center">
@@ -168,6 +187,29 @@ export async function ReportsScreen({
                     </span>
                   </span>
                   <span className="whitespace-nowrap text-[12px] text-mut">{r.status}</span>
+                  {/* RESPONSIVE.md § Row actions: the group wraps to its own
+                      line below md rather than shrinking the 44px targets. */}
+                  <span className="flex flex-wrap gap-2">
+                    <a
+                      href={`/rapporter/${r.id}/pdf`}
+                      className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-[14px] py-[9px] text-[12px] font-semibold text-ink no-underline"
+                    >
+                      {t('exportPdf')}
+                    </a>
+                    <Link
+                      href={`/rapporter?rapport=${r.id}`}
+                      className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[9px] border-none bg-ac px-4 py-[9px] text-[12px] font-semibold text-acf no-underline"
+                    >
+                      {t('openReport')}
+                    </Link>
+                    {canEdit ? (
+                      <DeleteReportButton
+                        reportId={r.id}
+                        label={t('deleteReport')}
+                        className="touch-44 w-[34px] cursor-pointer rounded-[9px] border border-line bg-transparent text-[15px] leading-none text-mut"
+                      />
+                    ) : null}
+                  </span>
                 </div>
               ))}
             </div>

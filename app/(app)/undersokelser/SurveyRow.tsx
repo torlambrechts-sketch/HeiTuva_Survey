@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { NewReportButton } from '../rapporter/ReportRowActions'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { DELETE_FG, PRIMARY_ACTION, STATUS_COLORS, type ShareScope, type SurveyStatus } from './keys'
@@ -227,14 +228,19 @@ export function SurveyRow({
           >
             {labels.menuResults}
           </Link>
-          <Link
-            href={`/undersokelser/${survey.id}/rapport`}
+          {/* "Lag rapport" creates the report and opens the editor with this
+              survey already in the filter. The design has no per-survey report
+              route — the editor is a state of /rapporter — so a link here would
+              be a link to a screen that does not exist (D62). */}
+          <NewReportButton
+            label={labels.menuReport}
+            title={survey.title}
+            baseTemplate={null}
+            sections={['summary', 'teams']}
+            surveys={[survey.id]}
             role="menuitem"
             className={menuItem}
-            onClick={() => setOpen(false)}
-          >
-            {labels.menuReport}
-          </Link>
+          />
           <Link
             href={`/undersokelser/${survey.id}/test`}
             role="menuitem"
