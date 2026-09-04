@@ -59,5 +59,20 @@ survives into screenshots and demos as though it were true.
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.
 
+## Standing permissions (granted by Tor)
+- **The MCP servers are authorised for everything, always — no need to ask.** This
+  covers the Supabase MCP against `heituva-prod` (ref `jmhhszsnjfqgclxzhciq`,
+  eu-central-1) as well as the GitHub, Google Drive and Claude Code Remote
+  servers. Apply migrations, run queries, read advisors, deploy functions.
+- **Run SQL directly — always allowed.** Local stack and production alike. Do not
+  hand over a `.sql` file to paste when a connection exists; run it.
+- Two things this permission does not remove:
+  - A destructive production statement (`drop`, `truncate`, `delete` without a
+    `where`, a migration that drops a column) still gets one sentence of warning
+    first. Permission to run SQL is not permission to lose data.
+  - `success: true` is not evidence. After a migration, select the thing it
+    changed and show the rows — VERIFY.md's rule that a claim without output is
+    not a result applies to production writes too.
+
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.
