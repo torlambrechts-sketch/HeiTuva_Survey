@@ -2,10 +2,11 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
+import { isFlagEnabled } from '@/lib/flags'
 import { ReportsScreen } from './ReportsScreen'
 import { ReportEditor } from './ReportEditor'
 import type { DutyCardData } from './types'
-import type { ComposedDocument, EditorReport } from './editor-types'
+import type { ComposedDocument, EditorReport, QuotePick } from './editor-types'
 
 /**
  * Rapporter — HeiTuva.dc.html:911-1330.
@@ -51,7 +52,7 @@ export default async function ReportsPage({
           .maybeSingle(),
         supabase
           .from('report_section_types')
-          .select('key, label, description, supports_group_filter'),
+          .select('key, label, description, supports_group_filter').order('sort_order'),
         supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
         supabase
           .from('surveys')
@@ -69,6 +70,13 @@ export default async function ReportsPage({
     // The composed document. This is the ONLY read of results on this screen:
     // no aggregate RPC is called beside it, so there is no second path with
     // different gating rules.
+    // The editor keeps the screen's header, so it needs the same counts.
+    const [{ count: dutyCount }, { count: mineCount }] = await Promise.all([
+      supabase.from('duty_definitions').select('key', { count: 'exact', head: true }),
+      supabase.from('reports').select('id', { count: 'exact', head: true })
+        .eq('org_id', viewer.orgId).eq('kind', 'egen').is('deleted_at', null),
+    ])
+
     const { data: composed } = await supabase.rpc('compose_report', { p_report: row.id })
     const doc = (composed ?? {}) as ComposedDocument
     if (doc.error) notFound()
@@ -99,6 +107,23 @@ export default async function ReportsPage({
       cadence: (schedule?.cadence ?? 'none') as EditorReport['cadence'],
     }
 
+    // The picker's candidate list — only when the section is actually on, the
+    // way the design gates it (`quotesOn`, HeiTuva.dc.html:1202). The RPC is
+    // administrator/redaktør only and k-gated per question, so a leser opening
+    // the same editor gets `forbidden` and no picker; nothing here decides who
+    // may see free text.
+    let quotePicks: QuotePick[] = []
+    if (report.sections.includes('quotes') && report.filters.surveys[0]) {
+      const { data: cand } = await supabase.rpc('quote_candidates', {
+        p_survey: report.filters.surveys[0],
+        p_group: report.filters.group ?? undefined,
+        p_rounds: report.filters.rounds.length ? report.filters.rounds : undefined,
+        p_limit: 6,
+      })
+      const payload = (cand ?? {}) as { candidates?: QuotePick[] }
+      quotePicks = payload.candidates ?? []
+    }
+
     return (
       <ReportEditor
         report={report}
@@ -121,6 +146,10 @@ export default async function ReportsPage({
           orgName: viewer.orgName,
         }}
         sectionLabels={Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label]))}
+        counts={t('counts', { lov: dutyCount ?? 0, mine: mineCount ?? 0 })}
+        pptxEnabled={await isFlagEnabled('pptx_export', viewer.orgId)}
+        quotePicks={quotePicks}
+        quotesChosen={(filters.quotes ?? []) as string[]}
       />
     )
   }
@@ -147,7 +176,7 @@ export default async function ReportsPage({
         .eq('org_id', viewer.orgId)
         .eq('status', 'active')
         .order('name'),
-      supabase.from('report_section_types').select('key, label'),
+      supabase.from('report_section_types').select('key, label').order('sort_order'),
     ])
 
   const dutyByKey = new Map((duties ?? []).map((d) => [d.definition_key, d]))

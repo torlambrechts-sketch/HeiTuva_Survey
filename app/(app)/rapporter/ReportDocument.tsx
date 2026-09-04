@@ -21,6 +21,20 @@ type Labels = {
   noSurvey: string
   sourceSnapshot: string
   sourceLive: string
+  pending: string
+  pendingSub: string
+  trendRound: string
+  driversHigh: string
+  driversLow: string
+  invited: string
+  responded: string
+  themeMentions: string
+  quotesFallback: string
+  quotesPicked: string
+  quotesWithheld: string
+  /** Set only when the document came from a published report's frozen copy. */
+  frozen: string | null
+  notes: Record<string, string>
   sectionLabels: Record<string, string>
 }
 
@@ -51,9 +65,21 @@ export function ReportDocument({
 
   const sections = report.sections
   const byKey = new Map((doc.sections ?? []).map((s) => [s.key, s]))
-  const groupable = new Set(
-    options.sectionTypes.filter((s) => s.supportsGroupFilter).map((s) => s.key),
-  )
+  /**
+   * Which sections carry a group picker — the DESIGN's rule
+   * (HeiTuva.dc.html:3087, `canGroup: k === "heatmap" || k === "teams"`), not
+   * `report_section_types.supports_group_filter`.
+   *
+   * The column disagreed in both directions: false for `teams`, where the
+   * design's own screenshot shows the picker, and true for `drivers` and
+   * `themes`, where it does not. It is also not a UI flag — `get_quotes` reads
+   * it to decide whether a leser may pass a group filter at all — so flipping
+   * rows to fix a control would quietly widen a security input to answer a
+   * layout question. The design's control is authoritative (CLAUDE.md); the
+   * column keeps its own meaning.
+   */
+  const groupable = new Set(['heatmap', 'teams'])
+  const hiddenCount = doc.suppressed_groups?.length ?? 0
 
   function patch(next: Parameters<typeof saveReport>[0]) {
     startTransition(async () => {
@@ -185,9 +211,13 @@ export function ReportDocument({
         )
       })}
 
-      {(doc.suppressed_groups?.length ?? 0) > 0 ? (
+      {labels.frozen ? (
+        <p className="mt-2 text-[12px] leading-[1.5] text-mut">{labels.frozen}</p>
+      ) : null}
+
+      {hiddenCount > 0 ? (
         <p className="mt-2 text-[12px] leading-[1.5] text-mut">
-          {labels.suppressedNote.replace('{count}', String(doc.suppressed_groups!.length))}
+          {labels.suppressedNote.replace('{count}', String(hiddenCount))}
         </p>
       ) : null}
     </div>
@@ -203,35 +233,116 @@ export function ReportDocument({
 function SectionBody({ section, labels }: { section: ComposedSection | undefined; labels: Labels }) {
   if (!section) return null
 
+  // Named, not faked. A section with no composer says so; borrowing another
+  // section's numbers would be indistinguishable from content.
+  if (section.pending) {
+    return (
+      <div className="mt-2">
+        <p className="text-[13px] text-mut">{labels.pending}</p>
+        <p className="mt-[2px] text-[11.5px] text-mut">{labels.pendingSub}</p>
+      </div>
+    )
+  }
+
+  const extra = section.extra ?? undefined
+  const note = labels.notes[section.key]
+
   if (section.rows) {
     if (section.rows.length === 0) return null
     return (
+      <>
+        <div className="mt-3 flex flex-col gap-[9px]">
+          {section.rows.map((row) => (
+            <Bar
+              key={row.group_id ?? row.label ?? 'row'}
+              label={row.label}
+              value={row.suppressed ? null : row.avg}
+              withheldLabel={labels.suppressedRow}
+            />
+          ))}
+        </div>
+        {note ? <Note text={note} /> : null}
+      </>
+    )
+  }
+
+  if (extra?.points) {
+    return (
+      <>
+        <div className="mt-3 flex flex-col gap-[9px]">
+          {extra.points.map((pt) => (
+            <Bar
+              key={pt.round_id}
+              label={labels.trendRound.replace('{n}', String(pt.round_no))}
+              value={pt.avg}
+              withheldLabel={labels.suppressedRow}
+            />
+          ))}
+        </div>
+        {note ? <Note text={note} /> : null}
+      </>
+    )
+  }
+
+  if (extra?.quotes) {
+    if (extra.quotes.length === 0) return null
+    return (
+      <>
+        <div className="mt-2 flex flex-col gap-[6px]">
+          {extra.quotes.map((q) => (
+            <p key={q.answer_id} className="text-[13.5px] leading-[1.65]">
+              «{q.text}»
+            </p>
+          ))}
+        </div>
+        {/* The design carries one of two notes under this section
+            (HeiTuva.dc.html:2831): picked quotes say who chose them, an
+            unpicked section says the first three are showing. The third line
+            is ours — a pick the k-gate refused this render is said out loud
+            rather than silently dropped from the list. */}
+        <Note text={extra.picked ? labels.quotesPicked : labels.quotesFallback} />
+        {extra.withheld ? (
+          <Note text={labels.quotesWithheld.replace('{count}', String(extra.withheld))} />
+        ) : null}
+      </>
+    )
+  }
+
+  if (extra?.themes) {
+    if (extra.themes.length === 0) return null
+    return (
+      <>
+        <div className="mt-2 flex flex-col gap-[6px]">
+          {extra.themes.map((th) => (
+            <div key={th.label} className="text-[13.5px] leading-[1.65]">
+              {labels.themeMentions.replace('{label}', th.label).replace('{count}', String(th.count))}
+            </div>
+          ))}
+        </div>
+        {note ? <Note text={note} /> : null}
+      </>
+    )
+  }
+
+  if (extra?.drivers) {
+    if (extra.drivers.length === 0) return null
+    return (
       <div className="mt-3 flex flex-col gap-[9px]">
-        {section.rows.map((row) => (
-          <div key={row.group_id ?? row.label ?? 'row'} className="flex items-center gap-3">
-            <span className="w-[120px] flex-none overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] leading-[1.35] text-ink xl:w-[220px]">
-              {row.label}
-            </span>
-            <span className="block h-[14px] flex-1 overflow-hidden rounded-[7px] bg-sf2">
-              {row.suppressed || row.avg === null ? null : (
-                <span
-                  className="block h-full rounded-[7px] bg-ac"
-                  style={{ width: `${Math.max(0, Math.min(100, (row.avg / 5) * 100))}%` }}
-                />
-              )}
-            </span>
-            <span className="w-[76px] flex-none text-right text-[12.5px] font-semibold">
-              {/* Never a 0 or a dash that reads as a measurement: the design's
-                  own "for få svar" wording, so a withheld cell is legible as
-                  withheld rather than as a low score. */}
-              {row.suppressed || row.avg === null ? (
-                <span className="text-[11px] font-normal text-mut">{labels.suppressedRow}</span>
-              ) : (
-                row.avg.toFixed(1)
-              )}
-            </span>
-          </div>
+        {extra.drivers.map((d) => (
+          <Bar key={d.question_id} label={d.text} value={d.avg} withheldLabel={labels.insufficient} />
         ))}
+      </div>
+    )
+  }
+
+  if (extra && typeof extra.invited === 'number') {
+    return (
+      <div className="mt-3 flex flex-wrap gap-6">
+        <Stat label={labels.invited} value={String(extra.invited)} />
+        <Stat label={labels.responded} value={String(extra.responded ?? 0)} />
+        {extra.completion !== null && extra.completion !== undefined ? (
+          <Stat label={labels.sourceLive} value={`${Math.round(extra.completion * 100)} %`} />
+        ) : null}
       </div>
     )
   }
@@ -239,27 +350,84 @@ function SectionBody({ section, labels }: { section: ComposedSection | undefined
   if (section.cells) {
     if (section.cells.length === 0) return null
     return (
-      <div className="mt-2 flex flex-col gap-[6px]">
-        {section.cells.map((cell) => (
-          <div key={cell.question_id} className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 flex-1 text-[13.5px] leading-[1.65]">{cell.text}</span>
-            <span className="flex-none text-[13.5px] font-semibold">
-              {cell.insufficient_data || cell.n === null ? (
-                <span className="text-[11.5px] font-normal text-mut">{labels.insufficient}</span>
-              ) : cell.avg !== null ? (
-                cell.avg.toFixed(1)
-              ) : (
-                `n=${cell.n}`
-              )}
-            </span>
+      <>
+        {extra?.findings?.length ? (
+          <div className="mt-2 flex flex-col gap-[6px]">
+            {extra.findings
+              .filter((f) => f.text)
+              .map((f, i) => (
+                <p key={i} className="text-[13.5px] leading-[1.65]">
+                  {f.text}
+                </p>
+              ))}
           </div>
-        ))}
-        <p className="mt-1 text-[11.5px] text-mut">
-          {section.source === 'snapshot' ? labels.sourceSnapshot : labels.sourceLive}
-        </p>
-      </div>
+        ) : null}
+        <div className="mt-2 flex flex-col gap-[6px]">
+          {section.cells.map((cell) => (
+            <div key={cell.question_id} className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 flex-1 text-[13.5px] leading-[1.65]">{cell.text}</span>
+              <span className="flex-none text-[13.5px] font-semibold">
+                {cell.insufficient_data || cell.n === null ? (
+                  <span className="text-[11.5px] font-normal text-mut">{labels.insufficient}</span>
+                ) : cell.avg !== null ? (
+                  cell.avg.toFixed(1)
+                ) : (
+                  `n=${cell.n}`
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      </>
     )
   }
 
   return null
+}
+
+/** The design's bar row: label, track, value — used by teams, trend and drivers
+ *  alike, because the design draws all three the same way. */
+function Bar({
+  label, value, withheldLabel,
+}: { label: string | null; value: number | null | undefined; withheldLabel: string }) {
+  // `== null` on purpose: a gated round from get_trends has no `avg` key at all,
+  // so the value arrives undefined rather than null. `value === null` let it
+  // through to .toFixed() and took the whole page down.
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-[120px] flex-none overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] leading-[1.35] text-ink xl:w-[220px]">
+        {label}
+      </span>
+      <span className="block h-[14px] flex-1 overflow-hidden rounded-[7px] bg-sf2">
+        {value == null ? null : (
+          <span
+            className="block h-full rounded-[7px] bg-ac"
+            style={{ width: `${Math.max(0, Math.min(100, (value / 5) * 100))}%` }}
+          />
+        )}
+      </span>
+      <span className="w-[76px] flex-none text-right text-[12.5px] font-semibold">
+        {value == null ? (
+          <span className="text-[11px] font-normal text-mut">{withheldLabel}</span>
+        ) : (
+          value.toFixed(1)
+        )}
+      </span>
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[12px] text-mut">{label}</div>
+      <div className="mt-[2px] font-display text-[22px] font-semibold">{value}</div>
+    </div>
+  )
+}
+
+/** The muted line the design puts under a section, where it explains what the
+ *  numbers are and why a row is missing. */
+function Note({ text }: { text: string }) {
+  return <p className="mt-[10px] text-[12px] leading-[1.5] text-mut">{text}</p>
 }

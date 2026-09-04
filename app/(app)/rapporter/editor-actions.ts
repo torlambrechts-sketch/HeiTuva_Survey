@@ -85,6 +85,20 @@ export async function createReport(input: z.input<typeof CreateInput>): Promise<
       .eq('org_id', viewer.orgId)
       .in('id', parsed.data.surveys)
     ownSurveys = (mine ?? []).map((s) => s.id)
+  } else {
+    // A report with no survey composes to an empty document, so "Ny rapport"
+    // used to open on a page telling the reader to go find the Filter tab. It
+    // starts on the org's active surveys instead — the same set the Filter tab
+    // would have offered, already chosen, and changeable there.
+    const { data: active } = await supabase
+      .from('surveys')
+      .select('id')
+      .eq('org_id', viewer.orgId)
+      .eq('status', 'aktiv')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    ownSurveys = (active ?? []).map((s) => s.id)
   }
 
   const { data: member } = await supabase
@@ -124,6 +138,18 @@ const SaveInput = z.object({
   surveys: z.array(Uuid).max(50).optional(),
   rounds: z.array(Uuid).max(50).optional(),
   sectionGroups: z.record(z.string(), Uuid.nullable()).optional(),
+  /**
+   * The quote picker stores ANSWER IDS, never the text.
+   *
+   * The design's picker keeps the chosen string in report state
+   * (HeiTuva.dc.html:3059, `repQuotes`). Doing that here would copy respondent
+   * free text into `reports` — behind every future read path on that table, and
+   * outliving the retention job whose whole purpose is to delete it. Ids are
+   * resolved by `app.report_quotes` at render, which re-runs the per-question
+   * k-gate every time, so a quote stops appearing on its own when the answers
+   * behind its question fall below the threshold.
+   */
+  quotes: z.array(Uuid).max(20).optional(),
 })
 
 export async function saveReport(input: z.input<typeof SaveInput>): Promise<EditorResult> {
@@ -162,6 +188,11 @@ export async function saveReport(input: z.input<typeof SaveInput>): Promise<Edit
     next.surveys = (mine ?? []).map((s) => s.id)
   }
   if (parsed.data.rounds !== undefined) next.rounds = parsed.data.rounds
+  // Not validated against the org here on purpose: an answer id is not a
+  // readable handle, and `app.report_quotes` only ever resolves ids that are
+  // already inside the report's own survey, round and group scope. A foreign id
+  // stored in the filter resolves to nothing.
+  if (parsed.data.quotes !== undefined) next.quotes = parsed.data.quotes
 
   if (parsed.data.group !== undefined) {
     if (parsed.data.group === null) {

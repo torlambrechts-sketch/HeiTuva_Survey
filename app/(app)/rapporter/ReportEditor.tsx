@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { ReportDocument } from './ReportDocument'
 import { ReportSidePanel } from './ReportSidePanel'
-import type { ComposedDocument, EditorOptions, EditorReport } from './editor-types'
+import type { ComposedDocument, EditorOptions, EditorReport, QuotePick } from './editor-types'
 
 /**
  * The report editor — HeiTuva.dc.html:1092-1288.
@@ -20,12 +20,20 @@ export async function ReportEditor({
   options,
   canEdit,
   sectionLabels,
+  counts,
+  pptxEnabled,
+  quotePicks,
+  quotesChosen,
 }: {
   report: EditorReport
   doc: ComposedDocument
   options: EditorOptions
   canEdit: boolean
   sectionLabels: Record<string, string>
+  counts: string
+  pptxEnabled: boolean
+  quotePicks: QuotePick[]
+  quotesChosen: string[]
 }) {
   const t = await getTranslations('reports')
 
@@ -37,12 +45,20 @@ export async function ReportEditor({
 
   return (
     <div className="max-w-[1080px] animate-enter pt-[34px]">
-      <Link
-        href="/rapporter?fane=mine"
-        className="touch-44 inline-flex items-center text-[13px] text-mut no-underline"
-      >
-        {t('backToReports')}
-      </Link>
+      {/* The design keeps the screen's own header while editing and puts the
+          back control top-right as a bordered button (HeiTuva.dc.html:1065). */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
+          <p className="mt-[3px] text-[13px] text-mut">{counts}</p>
+        </div>
+        <Link
+          href="/rapporter?fane=mine"
+          className="touch-44 inline-flex items-center whitespace-nowrap rounded-[10px] border border-line bg-transparent px-5 py-3 text-[13px] font-semibold text-ink no-underline"
+        >
+          {t('backToReports')}
+        </Link>
+      </div>
 
       <div className="mt-5 grid grid-cols-1 items-start gap-[18px] xl:grid-cols-[1fr_340px]">
         <ReportDocument
@@ -82,6 +98,34 @@ export async function ReportEditor({
               date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }),
             }),
             sourceLive: t('sourceLive'),
+            pending: t('sectionPending'),
+            pendingSub: t('sectionPendingSub'),
+            trendRound: t('trendRound', { n: 0 }).replace('0', '{n}'),
+            driversHigh: t('driversHigh'),
+            driversLow: t('driversLow'),
+            invited: t('participationInvited'),
+            responded: t('participationResponded'),
+            themeMentions: t('themeMentions', { label: '{label}', count: '{count}' }),
+            quotesFallback: t('quotesFallback'),
+            quotesPicked: t('quotesPicked'),
+            quotesWithheld: t('quotesWithheld', { count: 0 }).replace('0', '{count}'),
+            frozen: doc.frozen_at
+              ? t('frozenAt', {
+                  date: new Date(doc.frozen_at).toLocaleDateString('nb-NO', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  }),
+                })
+              : null,
+            // The design puts a muted explanation under a section — it is where
+            // "Ledelse har færre enn fem svar og vises ikke" lives.
+            notes: {
+              teams: t('noteTeams'),
+              heatmap: t('noteTeams'),
+              trend: t('noteTrend'),
+              themes: t('noteThemes'),
+            },
             sectionLabels,
           }}
         />
@@ -90,6 +134,9 @@ export async function ReportEditor({
           report={report}
           options={options}
           canEdit={canEdit}
+          pptxEnabled={pptxEnabled}
+          quotePicks={quotePicks}
+          quotesChosen={quotesChosen}
           labels={{
             content: t('content'),
             filter: t('filter'),
@@ -126,7 +173,11 @@ export async function ReportEditor({
               monthly: t('scheduleNoteMonthly'),
               round: t('scheduleNoteRound'),
             },
-            planSend: t('planSend'),
+            planSend: t('planSendCta'),
+            closeSheet: t('closeSheet'),
+            surveyChipMeta: t('surveyChipMeta', { status: '{status}', count: '{count}' }),
+            pickQuotes: t('pickQuotes'),
+            quotesEmpty: t('quotesEmpty'),
             summary: t('reportSummary', {
               sections: report.sections.length,
               period: t('periodShortAll'),

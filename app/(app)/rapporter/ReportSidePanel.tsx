@@ -9,7 +9,7 @@ import {
   setReportStatus,
   setShareScope,
 } from './editor-actions'
-import type { EditorOptions, EditorReport } from './editor-types'
+import type { EditorOptions, EditorReport, QuotePick } from './editor-types'
 
 type Labels = {
   content: string
@@ -34,8 +34,12 @@ type Labels = {
   scheduleOptions: { key: 'none' | 'weekly' | 'monthly' | 'round'; label: string }[]
   scheduleNotes: Record<string, string>
   planSend: string
+  closeSheet: string
+  surveyChipMeta: string
   summary: string
   saveReport: string
+  pickQuotes: string
+  quotesEmpty: string
 }
 
 type Tab = 'innhold' | 'filter' | 'del'
@@ -53,15 +57,29 @@ export function ReportSidePanel({
   report,
   options,
   canEdit,
+  pptxEnabled,
+  quotePicks,
+  quotesChosen,
   labels,
 }: {
   report: EditorReport
   options: EditorOptions
   canEdit: boolean
+  pptxEnabled: boolean
+  quotePicks: QuotePick[]
+  quotesChosen: string[]
   labels: Labels
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('innhold')
+  /**
+   * Below xl the rail is a SHEET, not a second column (docs/RESPONSIVE.md § Report
+   * editor: "side tabs become a sheet, same pattern as the Builder's right pane.
+   * The document preview is the base layer at full width"). The button row stays
+   * pinned under the header and opens it; at xl the sheet state is ignored and
+   * the rail is simply the right column, exactly as the design draws it.
+   */
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [link, setLink] = useState<string | null>(null)
 
@@ -74,11 +92,17 @@ export function ReportSidePanel({
 
   const on = new Set(report.sections)
   const chosenSurveys = new Set(report.filters.surveys)
+  const picked = new Set(quotesChosen)
 
   const card = 'rounded-2xl border border-line bg-sf p-[18px]'
   const field =
     'touch-44-field mt-[6px] w-full rounded-[10px] border border-line bg-bg px-3 py-[10px] text-[13px] text-ink outline-none'
   const legend = 'block text-[11px] uppercase tracking-[.09em] text-mut'
+
+  const openSheet = (next: Tab) => {
+    setTab(next)
+    setSheetOpen(true)
+  }
 
   return (
     <div className="flex flex-col gap-[14px] xl:sticky xl:top-0">
@@ -95,7 +119,7 @@ export function ReportSidePanel({
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => openSheet(key)}
             aria-current={tab === key ? 'true' : undefined}
             className="touch-44 flex-1 cursor-pointer rounded-[10px] border-none px-3 py-[10px] text-[12.5px] font-semibold text-ink"
             style={{
@@ -107,6 +131,24 @@ export function ReportSidePanel({
           </button>
         ))}
       </div>
+
+      {/* Base layer at xl, sheet below it. `hidden` rather than unmounted so a
+          half-typed value in the Del panel survives closing the sheet. */}
+      <div
+        className={
+          sheetOpen
+            ? 'fixed inset-0 z-[70] flex flex-col gap-[14px] overflow-auto bg-bg p-5 xl:static xl:z-auto xl:overflow-visible xl:bg-transparent xl:p-0'
+            : 'hidden flex-col gap-[14px] xl:flex'
+        }
+      >
+        <button
+          type="button"
+          onClick={() => setSheetOpen(false)}
+          aria-label={labels.closeSheet}
+          className="touch-44 self-end rounded-[10px] border border-line bg-transparent px-4 py-2 text-[13px] font-semibold text-ink xl:hidden"
+        >
+          {labels.closeSheet}
+        </button>
 
       {tab === 'innhold' ? (
         <div className={card}>
@@ -153,6 +195,62 @@ export function ReportSidePanel({
               )
             })}
           </div>
+
+          {/* "Velg sitater" — HeiTuva.dc.html:1202-1216. Shown only while the
+              quotes section is on, exactly as `quotesOn` gates it there.
+
+              What is stored differs from the prototype and is the whole point:
+              it toggles an ANSWER ID, never the string. `app.report_quotes`
+              resolves ids to text at render and re-runs the per-question
+              k-gate each time, so a quote can stop appearing without anyone
+              editing the report — which is what has to happen when the answers
+              behind its question are deleted. */}
+          {on.has('quotes') ? (
+            <div className="mt-4">
+              <div className={legend}>{labels.pickQuotes}</div>
+              {quotePicks.length === 0 ? (
+                <p className="mt-2 text-[12px] leading-[1.45] text-mut">{labels.quotesEmpty}</p>
+              ) : (
+                <div className="mt-2 flex flex-col gap-[6px]">
+                  {quotePicks.map((q) => {
+                    const active = picked.has(q.answer_id)
+                    return (
+                      <button
+                        key={q.answer_id}
+                        type="button"
+                        disabled={!canEdit || pending}
+                        aria-pressed={active}
+                        onClick={() =>
+                          patch({
+                            reportId: report.id,
+                            quotes: active
+                              ? quotesChosen.filter((x) => x !== q.answer_id)
+                              : [...quotesChosen, q.answer_id],
+                          })
+                        }
+                        className="touch-44 flex cursor-pointer items-start gap-[9px] rounded-[10px] border px-[11px] py-[9px] text-left text-ink"
+                        style={{
+                          borderColor: active ? 'var(--ink)' : 'var(--line)',
+                          background: active ? 'var(--sbg)' : 'var(--bg)',
+                        }}
+                      >
+                        <span
+                          className="mt-px flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[5px] border-[1.5px] text-[10px] font-bold"
+                          style={{
+                            borderColor: active ? 'var(--ink)' : 'var(--line)',
+                            background: active ? 'var(--ac2)' : 'transparent',
+                          }}
+                        >
+                          {active ? '✓' : ''}
+                        </span>
+                        <span className="text-[12px] leading-[1.45]">{q.text}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -230,7 +328,9 @@ export function ReportSidePanel({
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold">{s.title}</span>
                       <span className="mt-px block text-[11.5px] text-mut">
-                        {s.status} · {s.responses}
+                        {labels.surveyChipMeta
+                          .replace('{status}', s.status)
+                          .replace('{count}', String(s.responses))}
                       </span>
                     </span>
                   </button>
@@ -308,11 +408,14 @@ export function ReportSidePanel({
             >
               {labels.exportPdf}
             </a>
+            {/* Rendered but disabled behind feature_flags.pptx_export (Phase 5
+                scope 5). The flag decides, not a hardcoded `disabled` — that is
+                what makes turning it on in Phase 6 a row rather than a deploy. */}
             <button
               type="button"
-              disabled
+              disabled={!pptxEnabled}
               title={labels.exportPptx}
-              className="touch-44 flex-1 cursor-not-allowed rounded-[10px] border border-line bg-transparent p-[11px] text-[12.5px] font-semibold text-ink opacity-40"
+              className="touch-44 flex-1 rounded-[10px] border border-line bg-transparent p-[11px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40"
             >
               {labels.exportPptx}
             </button>
@@ -343,8 +446,27 @@ export function ReportSidePanel({
             ))}
           </select>
           <p className="text-[12px] leading-[1.5] text-mut">{labels.scheduleNotes[report.cadence]}</p>
+          {/* The design's bordered confirm under the schedule note. It commits
+              the cadence that is already selected — the select saves on change,
+              so this is the "yes, that one" the design asks for rather than a
+              second source of truth. */}
+          <button
+            type="button"
+            disabled={!canEdit || pending || report.cadence === 'none'}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await setReportSchedule({ reportId: report.id, cadence: report.cadence })
+                if (result.ok) router.refresh()
+              })
+            }
+            className="touch-44 cursor-pointer rounded-[10px] border border-ink bg-transparent p-[11px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {labels.planSend}
+          </button>
         </div>
       ) : null}
+
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-[10px]">
         <span className="text-[12px] text-mut">{labels.summary}</span>

@@ -113,5 +113,18 @@ survives into screenshots and demos as though it were true.
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.
 
+**A phase gets ONE verification pass and ONE fix pass.** Findings from the fix pass are
+logged to the next phase's list, never fixed in a third round. If the fix pass surfaces
+something that genuinely cannot ship — a security invariant actually broken, not merely
+untested — say so plainly and stop for a decision. Everything else is logged. A phase that
+has had its two passes closes.
+
+The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
+(`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
+the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
+manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
+phase, not built. Two numbers carry forward and may only move up: **50 of 64 surfaces
+actively checked** by 5a3, and **14 files / 307 tests** in the census manifest.
+
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.

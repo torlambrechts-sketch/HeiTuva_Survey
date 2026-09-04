@@ -31,6 +31,12 @@ export type PrintLabels = {
   suppressedRow: string
   suppressedNote: string
   insufficient: string
+  pending: string
+  trendRound: string
+  themeMentions: string
+  invited: string
+  responded: string
+  completion: string
   sectionLabels: Record<string, string>
 }
 
@@ -79,25 +85,97 @@ export function renderReportHtml(doc: ComposedDocument, labels: PrintLabels): st
 </body></html>`
 }
 
+/** One bar row, shared by the group partition, the trend and the drivers. */
+function barHtml(label: string | null, value: number | null | undefined, withheld: string): string {
+  // `== null`, not `=== null`: a gated trend round arrives with no `avg` key at
+  // all, so a strict check would put `undefined` into `.toFixed`.
+  const gated = value == null
+  const pct = gated ? 0 : Math.max(0, Math.min(100, (value / 5) * 100))
+  return `<div class="row">
+        <span class="label">${esc(label)}</span>
+        <span class="track">${gated ? '' : `<span class="fill" style="width:${pct.toFixed(1)}%"></span>`}</span>
+        <span class="value">${
+          gated ? `<span class="withheld">${esc(withheld)}</span>` : esc(value.toFixed(1))
+        }</span>
+      </div>`
+}
+
 function sectionHtml(section: ComposedSection, labels: PrintLabels): string {
   const title = esc(labels.sectionLabels[section.key] ?? section.key)
+  const wrap = (body: string) => `<section><h2>${title}</h2>${body}</section>`
+  const extra = section.extra ?? undefined
+
+  // A section with no composer prints the fact, not a blank. An export that
+  // silently drops a section the reader chose is indistinguishable from one
+  // where the section was empty.
+  if (section.pending) return wrap(`<p class="note">${esc(labels.pending)}</p>`)
+
+  if (extra?.quotes) {
+    if (extra.quotes.length === 0) return ''
+    return wrap(
+      extra.quotes.map((q) => `<div class="cell"><span>«${esc(q.text)}»</span></div>`).join('\n'),
+    )
+  }
+
+  if (extra?.themes) {
+    if (extra.themes.length === 0) return ''
+    return wrap(
+      extra.themes
+        .map(
+          (th) =>
+            `<div class="cell"><span>${esc(
+              labels.themeMentions
+                .replace('{label}', th.label)
+                .replace('{count}', String(th.count)),
+            )}</span></div>`,
+        )
+        .join('\n'),
+    )
+  }
+
+  if (extra?.points) {
+    if (extra.points.length === 0) return ''
+    return wrap(
+      extra.points
+        .map((pt) =>
+          barHtml(
+            labels.trendRound.replace('{n}', String(pt.round_no)),
+            pt.avg,
+            labels.suppressedRow,
+          ),
+        )
+        .join('\n'),
+    )
+  }
+
+  if (extra?.drivers) {
+    if (extra.drivers.length === 0) return ''
+    return wrap(
+      extra.drivers.map((d) => barHtml(d.text, d.avg, labels.insufficient)).join('\n'),
+    )
+  }
+
+  if (extra && typeof extra.invited === 'number') {
+    const stats: [string, string][] = [
+      [labels.invited, String(extra.invited)],
+      [labels.responded, String(extra.responded ?? 0)],
+    ]
+    if (extra.completion !== null && extra.completion !== undefined) {
+      stats.push([labels.completion, `${Math.round(extra.completion * 100)} %`])
+    }
+    return wrap(
+      stats
+        .map(([l, v]) => `<div class="cell"><span>${esc(l)}</span><span>${esc(v)}</span></div>`)
+        .join('\n'),
+    )
+  }
 
   if (section.rows) {
     if (section.rows.length === 0) return ''
     const rows = section.rows
-      .map((r) => {
-        const withheld = r.suppressed || r.avg === null
-        const pct = withheld ? 0 : Math.max(0, Math.min(100, (r.avg! / 5) * 100))
-        return `<div class="row">
-        <span class="label">${esc(r.label)}</span>
-        <span class="track">${withheld ? '' : `<span class="fill" style="width:${pct.toFixed(1)}%"></span>`}</span>
-        <span class="value">${
-          withheld ? `<span class="withheld">${esc(labels.suppressedRow)}</span>` : esc(r.avg!.toFixed(1))
-        }</span>
-      </div>`
-      })
+      .map((r) => barHtml(r.label, r.suppressed ? null : r.avg, labels.suppressedRow))
       .join('\n')
-    return `<section><h2>${title}</h2>${rows}</section>`
+    return wrap(rows)
   }
 
   if (section.cells) {
@@ -113,7 +191,7 @@ function sectionHtml(section: ComposedSection, labels: PrintLabels): string {
         return `<div class="cell"><span>${esc(c.text)}</span><span>${value}</span></div>`
       })
       .join('\n')
-    return `<section><h2>${title}</h2>${cells}</section>`
+    return wrap(cells)
   }
 
   return ''

@@ -91,10 +91,15 @@ async function buildFixture() {
   const packTranslation = await insert(a, 'template_pack_translations', {
     pack_id: pack.id, lang: 'en', title: 'Cov pack',
   })
+  // A pin belongs to ONE member, so the row is the administrator's and the
+  // redaktør in the same org is one of the readers that must be refused.
+  const pin = await insert(a, 'dashboard_pins', {
+    org_id: org.id, user_id: administrator.userId, panel_key: 'trend',
+  })
 
   return {
     org, other, survey, question, round, duty, pack,
-    link, importJob, rule, loop, notification, packTranslation,
+    link, importJob, rule, loop, notification, packTranslation, pin,
     adminMember, redaktorMember, leserMember,
     administrator, redaktor, leser, outsider, stranger,
   }
@@ -170,6 +175,38 @@ describe('import_jobs — a recipient import holds email addresses', () => {
   test('a leser cannot read import jobs', async () => {
     // imports_all is the only policy, and it excludes leser entirely.
     expect(await visible(fx.leser.client, 'import_jobs', { id: fx.importJob.id })).toBe(0)
+  })
+})
+
+describe('dashboard_pins — one member\'s working selection, not the org\'s', () => {
+  test('POSITIVE CONTROL: the member who pinned it reads it back', async () => {
+    expect(await visible(fx.administrator.client, 'dashboard_pins', { id: fx.pin.id })).toBe(1)
+  })
+  for (const who of OUTSIDE_READERS) {
+    test(`${who} cannot read it`, async () => {
+      expect(await visible(reader(who), 'dashboard_pins', { id: fx.pin.id })).toBe(0)
+    })
+  }
+  test('a colleague in the same organisation cannot read another member\'s pins', async () => {
+    // Membership is not enough on this table, deliberately: two people looking
+    // at the same dashboard must not share one selection.
+    expect(await visible(fx.redaktor.client, 'dashboard_pins', { id: fx.pin.id })).toBe(0)
+  })
+  test('a colleague cannot unpin what another member pinned', async () => {
+    await fx.redaktor.client.from('dashboard_pins').delete().eq('id', fx.pin.id)
+    expect(await visible(fx.administrator.client, 'dashboard_pins', { id: fx.pin.id })).toBe(1)
+  })
+  test('a member cannot pin on behalf of somebody else', async () => {
+    const { error } = await fx.redaktor.client.from('dashboard_pins')
+      .insert({ org_id: fx.org.id, user_id: fx.administrator.userId, panel_key: 'themes' })
+      .select()
+    expect(error).not.toBeNull()
+  })
+  test('a member cannot pin into an organisation they do not belong to', async () => {
+    const { error } = await fx.redaktor.client.from('dashboard_pins')
+      .insert({ org_id: fx.other.id, user_id: fx.redaktor.userId, panel_key: 'themes' })
+      .select()
+    expect(error).not.toBeNull()
   })
 })
 

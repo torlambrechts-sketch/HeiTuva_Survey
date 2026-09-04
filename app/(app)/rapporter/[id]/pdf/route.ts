@@ -43,7 +43,10 @@ export async function GET(
   // same reason the RPC does: the URL must not confirm that a report id exists.
   if (!composed || doc.error) return new Response('Not found', { status: 404 })
 
-  const { data: sectionTypes } = await supabase.from('report_section_types').select('key, label')
+  const { data: sectionTypes } = await supabase
+    .from('report_section_types')
+    .select('key, label')
+    .order('sort_order')
 
   const html = renderReportHtml(doc, {
     org: viewer.orgName,
@@ -58,6 +61,12 @@ export async function GET(
     suppressedRow: t('suppressedRow'),
     suppressedNote: t('suppressedNote', { count: doc.suppressed_groups?.length ?? 0 }),
     insufficient: t('insufficientCell'),
+    pending: t('sectionPending'),
+    trendRound: t('trendRound', { n: 0 }).replace('0', '{n}'),
+    themeMentions: t('themeMentions', { label: '{label}', count: '{count}' }),
+    invited: t('participationInvited'),
+    responded: t('participationResponded'),
+    completion: t('participationCompletion'),
     sectionLabels: Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label])),
   })
 

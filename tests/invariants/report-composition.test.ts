@@ -86,9 +86,33 @@ async function buildCompositionFixture() {
   const scaleQ = await insert(a, 'survey_questions', {
     survey_id: survey.id, position: 1, type: 'scale', text: 'Hvordan har uken vært?',
   })
+  // Two free-text questions on the same survey, chosen so the per-question gate
+  // has to bite in one place and not the other:
+  //
+  //   rikQ      6 written answers   above k, quotable
+  //   sjeldenQ  2 written answers   below k, must never be quotable
+  //
+  // A report picks one answer from each. If the gate were applied across free
+  // text as a whole (6 + 2 = 8, comfortably above k) both would render, and one
+  // of two people would have been quoted to the organisation.
+  //
+  // They are created before the round because a survey's questions freeze the
+  // moment a round exists (D31), which is also why the quotes fixture cannot be
+  // bolted on further down.
+  const rikQ = await insert(a, 'survey_questions', {
+    survey_id: survey.id, position: 2, type: 'text', text: 'Hva bør vi endre?',
+  })
+  const sjeldenQ = await insert(a, 'survey_questions', {
+    survey_id: survey.id, position: 3, type: 'text', text: 'Noe annet?',
+  })
+
   const round = await insert(a, 'survey_rounds', {
     survey_id: survey.id, round_no: 1, status: 'open',
-    question_snapshot: [{ id: scaleQ.id, type: 'scale', text: 'Hvordan har uken vært?' }],
+    question_snapshot: [
+      { id: scaleQ.id, type: 'scale', text: 'Hvordan har uken vært?' },
+      { id: rikQ.id, type: 'text', text: 'Hva bør vi endre?' },
+      { id: sjeldenQ.id, type: 'text', text: 'Noe annet?' },
+    ],
   })
 
   // Freezing a result takes edit authority on the survey, not mere membership
@@ -168,6 +192,62 @@ async function buildCompositionFixture() {
   })
   await addResponses(a, foreignRound.id, foreignQ.id, foreignGroup.id, 9, 3)
 
+  // ---- Quotes -----------------------------------------------------------
+  const rikAnswers = await addTextAnswers(a, round.id, rikQ.id, stor.id, [
+    'Mer tid til dypt arbeid', 'Færre møter', 'Tydeligere prioriteringer',
+    'Bedre onboarding', 'Mer forutsigbare frister', 'Ryddigere backlog',
+  ])
+  const sjeldenAnswers = await addTextAnswers(a, round.id, sjeldenQ.id, stor.id, [
+    'Kantina', 'Parkering',
+  ])
+
+  const quoteReport = await insert(a, 'reports', {
+    org_id: org.id, title: 'Sitatrapport', kind: 'egen', status: 'utkast',
+    created_by: editorMember.id,
+    sections: ['quotes'],
+    filters: {
+      surveys: [survey.id], rounds: [round.id], group: null,
+      quotes: [rikAnswers[0], sjeldenAnswers[0]],
+    },
+  })
+
+  // ---- A frozen document, and who may be served it -----------------------
+  //
+  // Written directly rather than through publish_duty: the subject here is the
+  // scope comparison in compose_report, and routing it through the signing
+  // flow would make a failure ambiguous between the two.
+  const frozenReport = await insert(a, 'reports', {
+    org_id: org.id, title: 'Frosset rapport', kind: 'lov', status: 'publisert',
+    created_by: editorMember.id,
+    sections: ['summary'],
+    filters: { surveys: [survey.id], rounds: [round.id], group: null },
+    share_scope: 'ledelse',
+  })
+  const frozenSnapshot = await insert(a, 'result_snapshots', {
+    org_id: org.id, survey_id: survey.id, round_id: round.id,
+    scope: { group: null, round: round.id, share_scope: 'ledelse', report: frozenReport.id },
+    aggregates: {
+      document: {
+        report_id: frozenReport.id, title: 'Frosset rapport', k: 5,
+        sections: [{ key: 'summary', source: 'snapshot', rows: null,
+                     cells: [{ question_id: scaleQ.id, text: 'Frosset celle', n: 15, avg: 4 }] }],
+        suppressed_groups: [],
+      },
+      questions: [{ question_id: scaleQ.id, text: 'Frosset celle', n: 15, avg: 4 }],
+    },
+    content_hash: 'frozen-fixture',
+  })
+  await a.from('reports').update({ snapshot_id: frozenSnapshot.id }).eq('id', frozenReport.id)
+
+  const frozenBoardRaw = uniq('frozen-board')
+  await insert(a, 'report_shares', {
+    report_id: frozenReport.id, token_hash: hashToken(frozenBoardRaw), scope: 'ledelse',
+  })
+  const frozenAllRaw = uniq('frozen-all')
+  await insert(a, 'report_shares', {
+    report_id: frozenReport.id, token_hash: hashToken(frozenAllRaw), scope: 'alle_ansatte',
+  })
+
   const residualReport = await insert(a, 'reports', {
     org_id: org.id, title: 'Residual', kind: 'egen', status: 'utkast',
     sections: ['teams', 'summary'],
@@ -179,7 +259,26 @@ async function buildCompositionFixture() {
     survey2, scaleQ2, round2, stor2, bitte1, bitte2, residualReport,
     foreignSurvey, foreignQ, foreignRound, foreignGroup,
     editor, reader, outsider, shareRaw, expiredRaw,
+    rikQ, sjeldenQ, rikAnswers, sjeldenAnswers, quoteReport,
+    frozenReport, frozenSnapshot, frozenBoardRaw, frozenAllRaw,
   }
+}
+
+/** One response per written answer, so the per-question count is the number of
+ *  people who wrote — the same thing the gate counts. */
+async function addTextAnswers(
+  a: SupabaseClient, roundId: string, questionId: string, groupId: string, texts: string[],
+) {
+  const ids: string[] = []
+  for (const text of texts) {
+    const r = await insert(a, 'responses', {
+      round_id: roundId, respondent_group_id: groupId, anonymity_at_submission: 'anonymous',
+      submitted_hour: new Date().toISOString().slice(0, 13) + ':00:00Z',
+    })
+    const ans = await insert(a, 'answers', { response_id: r.id, question_id: questionId, value: text })
+    ids.push(ans.id)
+  }
+  return ids
 }
 
 async function addResponses(
@@ -478,6 +577,157 @@ describe('scope-aware snapshots: a frozen number belongs to the filter that froz
 // ---------------------------------------------------------------------------
 // overview_activity — participation, never results, never per group
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 4. Quotes — free text is picked by id and gated again at render
+// ---------------------------------------------------------------------------
+
+type QuotesExtra = {
+  quotes?: { answer_id: string; text: string }[]
+  picked?: boolean
+  withheld?: number
+}
+
+const quotesOf = (doc: Composed) =>
+  ((doc.sections?.find((s) => s.key === 'quotes') as { extra?: QuotesExtra } | undefined)?.extra ??
+    {}) as QuotesExtra
+
+describe('quotes: the report stores ids, and the text is re-gated at render', () => {
+  test('the report row holds no respondent free text at all', async () => {
+    const { data } = await admin().from('reports').select('filters, sections')
+      .eq('id', fx.quoteReport.id).single()
+    const serialised = JSON.stringify(data)
+    expect(serialised, 'a quote in the row survives the retention delete')
+      .not.toContain('Mer tid til dypt arbeid')
+    expect(serialised).not.toContain('Kantina')
+    // What it DOES hold is the pair of ids.
+    expect(serialised).toContain(fx.rikAnswers[0])
+  })
+
+  test('a pick from a question above the threshold renders', async () => {
+    const extra = quotesOf(await compose(fx.editor.client, fx.quoteReport.id))
+    expect(extra.quotes?.map((q) => q.text)).toContain('Mer tid til dypt arbeid')
+  })
+
+  test('a pick from a question BELOW the threshold is refused, not rendered', async () => {
+    const extra = quotesOf(await compose(fx.editor.client, fx.quoteReport.id))
+    // 2 written answers on that question. Rendering either one names one of two.
+    expect(extra.quotes?.map((q) => q.text)).not.toContain('Kantina')
+    expect(extra.withheld, 'a refused pick is reported, not silently dropped').toBe(1)
+  })
+
+  test('the gate runs at RENDER, so deleting answers changes the document', async () => {
+    // Its own question and its own report, because it destroys what it uses:
+    // a test that mutates the shared fixture passes once and then decides what
+    // every later test in the file is really measuring.
+    const a = admin()
+    const sv = await insert(a, 'surveys', {
+      org_id: fx.org.id, title: uniq('Retensjon'), status: 'aktiv', anonymity: 'anonymous',
+    })
+    const q = await insert(a, 'survey_questions', {
+      survey_id: sv.id, position: 1, type: 'text', text: 'Retensjon?',
+    })
+    const rd = await insert(a, 'survey_rounds', {
+      survey_id: sv.id, round_no: 1, status: 'open',
+      question_snapshot: [{ id: q.id, type: 'text', text: 'Retensjon?' }],
+    })
+    const answers = await addTextAnswers(a, rd.id, q.id, fx.stor.id, [
+      'Alfa', 'Beta', 'Gamma', 'Delta', 'Epsilon',
+    ])
+    const rep = await insert(a, 'reports', {
+      org_id: fx.org.id, title: 'Retensjon', kind: 'egen', status: 'utkast',
+      sections: ['quotes'],
+      filters: { surveys: [sv.id], rounds: [rd.id], group: null, quotes: [answers[0]] },
+    })
+
+    const before = quotesOf(await compose(fx.editor.client, rep.id))
+    expect(before.quotes?.map((x) => x.text), 'exactly k answers is above the gate')
+      .toEqual(['Alfa'])
+
+    // One answer deleted — the retention job's smallest possible act. The pick
+    // itself is untouched; its question now has four written answers.
+    await a.from('answers').delete().eq('id', answers[4])
+
+    const after = quotesOf(await compose(fx.editor.client, rep.id))
+    expect(after.quotes ?? [], 'the pick outlived its question falling under k').toHaveLength(0)
+    expect(after.withheld).toBe(1)
+  })
+
+  test('quote_candidates refuses a leser outright', async () => {
+    const { data } = await fx.reader.client.rpc('quote_candidates', { p_survey: fx.survey.id })
+    expect((data as { error?: string }).error).toBe('forbidden')
+  })
+
+  test('quote_candidates refuses another organisation', async () => {
+    const { data } = await fx.outsider.client.rpc('quote_candidates', { p_survey: fx.survey.id })
+    expect((data as { error?: string }).error).toBe('forbidden')
+  })
+
+  test('a candidate carries no author, group or timestamp', async () => {
+    const { data } = await fx.editor.client.rpc('quote_candidates', { p_survey: fx.survey.id })
+    const cands = (data as { candidates?: Record<string, unknown>[] }).candidates ?? []
+    for (const c of cands) {
+      expect(Object.keys(c).sort()).toEqual(['answer_id', 'question_id', 'text'])
+    }
+  })
+
+  test('a candidate never comes from a question below the threshold', async () => {
+    const { data } = await fx.editor.client.rpc('quote_candidates', { p_survey: fx.survey.id, p_limit: 50 })
+    const cands = (data as { candidates?: { question_id: string }[] }).candidates ?? []
+    expect(cands.some((c) => c.question_id === fx.sjeldenQ.id)).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 5. A frozen document is served to the reader it was frozen for, and no other
+// ---------------------------------------------------------------------------
+
+describe('published reports render from the document that was frozen for them', () => {
+  test('a member reads the frozen document, not a live recomposition', async () => {
+    const doc = await compose(fx.editor.client, fx.frozenReport.id)
+    expect((doc.sections?.[0]?.cells?.[0] as { text?: string } | undefined)?.text).toBe('Frosset celle')
+    expect((doc as { snapshot_id?: string }).snapshot_id).toBe(fx.frozenSnapshot.id)
+  })
+
+  test('a share link at the SAME scope is served the frozen document', async () => {
+    const doc = await compose(anon(), fx.frozenReport.id, fx.frozenBoardRaw)
+    expect((doc.sections?.[0]?.cells?.[0] as { text?: string } | undefined)?.text).toBe('Frosset celle')
+  })
+
+  test('a leser cannot freeze a report', async () => {
+    // snapshot_report writes the document that a statutory archive will quote
+    // for years. That is an editorial act, so it takes redaktør or
+    // administrator — a leser reads aggregates and decides nothing.
+    const { data } = await fx.reader.client.rpc('snapshot_report', { p_report: fx.report.id })
+    expect((data as { error?: string }).error).toBe('forbidden')
+  })
+
+  test('another organisation cannot freeze this report', async () => {
+    const { data } = await fx.outsider.client.rpc('snapshot_report', { p_report: fx.report.id })
+    expect((data as { error?: string }).error).toBe('forbidden')
+  })
+
+  test('a freeze records the scope it was gated under', async () => {
+    const { data } = await fx.editor.client.rpc('snapshot_report', { p_report: fx.report.id })
+    const out = data as { snapshot_id?: string; share_scope?: string; error?: string }
+    expect(out.error).toBeUndefined()
+    // The report itself is `ledere_eget_team` by default and carries a
+    // `ledelse` share, so the most restrictive scope in play is the report's.
+    expect(out.share_scope).toBe('ledere_eget_team')
+    const { data: row } = await admin().from('result_snapshots')
+      .select('scope').eq('id', out.snapshot_id!).single()
+    expect((row!.scope as { share_scope?: string }).share_scope).toBe('ledere_eget_team')
+  })
+
+  test('a BROADER audience is not served a document frozen for a narrower one', async () => {
+    // Frozen under `ledelse`, which is the scope that may see the most. An
+    // all-employees link must fall through to live composition and be gated
+    // again, not inherit the boardroom's copy.
+    const doc = await compose(anon(), fx.frozenReport.id, fx.frozenAllRaw)
+    expect((doc.sections?.[0]?.cells?.[0] as { text?: string } | undefined)?.text).not.toBe('Frosset celle')
+    expect((doc as { snapshot_id?: string }).snapshot_id).toBeUndefined()
+  })
+})
 
 describe('overview_activity: counts rows, discloses nothing about answers', () => {
   const activity = async (client: SupabaseClient, orgId: string) => {

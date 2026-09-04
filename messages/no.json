@@ -577,7 +577,27 @@
     "insufficientCell": "For få svar",
     "noSurveySelected": "Velg minst én undersøkelse under Filter.",
     "sourceSnapshot": "Frosne tall fra {date}",
-    "sourceLive": "Beregnet nå"
+    "sourceLive": "Beregnet nå",
+    "sectionPending": "Denne seksjonen bygges i neste fase",
+    "sectionPendingSub": "Innholdet er ikke laget ennå — den vises tom heller enn med andre tall.",
+    "trendRound": "Runde {n}",
+    "driversHigh": "Høyest",
+    "driversLow": "Lavest",
+    "participationInvited": "Invitert",
+    "participationResponded": "Svart",
+    "themeMentions": "{label} · nevnt {count} ganger",
+    "noteTeams": "Snitt per team. Grupper med færre enn fem svar vises ikke.",
+    "noteTrend": "Snitt per runde, alle skalaspørsmål.",
+    "noteThemes": "Automatisk gruppering av frisvar. Terskelen gjelder antall personer, ikke antall treff.",
+    "surveyChipMeta": "{status} · {count} svar",
+    "planSendCta": "Planlegg utsending",
+    "closeSheet": "Lukk",
+    "participationCompletion": "Svarprosent",
+    "quotesEmpty": "Ingen frisvar med nok svar til å kunne siteres ennå.",
+    "quotesPicked": "Sitater valgt av HR. Anonymiserte.",
+    "quotesFallback": "Ingen sitater valgt ennå — de tre første vises. Velg under Innhold.",
+    "quotesWithheld": "{count} valgte sitater vises ikke: spørsmålet de kom fra har nå for få svar.",
+    "frozenAt": "Frosne tall fra publiseringen {date}. Rapporten viser det som ble signert."
   },
   "admin": {
     "title": "Administrasjon",
@@ -977,6 +997,10 @@
     "empty": "Ingen undersøkelser med svar ennå",
     "emptyBody": "Send en undersøkelse, så fylles panelene her ut av seg selv.",
     "noData": "Ingen data i utvalget",
-    "unavailable": "Tallene kunne ikke hentes akkurat nå. Prøv igjen om litt."
+    "unavailable": "Tallene kunne ikke hentes akkurat nå. Prøv igjen om litt.",
+    "pinnedOn": "I rapporten ✓",
+    "pinnedOff": "Legg i rapport",
+    "openPinned": "Åpne rapport",
+    "pinnedReportTitle": "Fra dashboard — {date}"
   }
 }

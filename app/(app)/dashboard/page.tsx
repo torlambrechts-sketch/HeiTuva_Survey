@@ -16,9 +16,11 @@ import { DashboardScreen } from './DashboardScreen'
  *    per runde". Rounds are real here, so the selector picks rounds and every
  *    RPC takes the resulting id set. Narrowing can only push a cell below the
  *    threshold, so the gate carries the filter unchanged.
- *  - Its panels carry "Legg i rapport" pins and an "Åpne rapport" button. The
- *    report editor is Phase 5 and there is no table for a pin, so a pin here
- *    would store nothing and open nothing (docs/DEVIATIONS.md D46).
+ *  - Its panels carry "Legg i rapport" pins and an "Åpne rapport" button. Both
+ *    are live now that the report editor exists: a pin is a row in
+ *    `dashboard_pins`, keyed by (org, member, panel), and "Åpne rapport" opens
+ *    the editor on `summary` plus whatever this member has pinned. (D46 is
+ *    closed.)
  */
 type Period = 'q' | 'h' | 'y'
 const PERIODS: Period[] = ['q', 'h', 'y']
@@ -36,7 +38,7 @@ export default async function DashboardPage({
 
   const period: Period = isPeriod(periode) ? periode : 'y'
 
-  const [{ data: allSurveys }, { data: groups }] = await Promise.all([
+  const [{ data: allSurveys }, { data: groups }, { data: pins }] = await Promise.all([
     supabase
       .from('surveys')
       .select('id, title, status')
@@ -45,6 +47,13 @@ export default async function DashboardPage({
       .neq('status', 'utkast')
       .order('created_at', { ascending: false }),
     supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
+    // The member's own pins. RLS already restricts the table to `auth.uid()`;
+    // the filter here is what makes the query use the (org, user) index.
+    supabase
+      .from('dashboard_pins')
+      .select('panel_key')
+      .eq('org_id', viewer.orgId)
+      .eq('user_id', viewer.userId),
   ])
 
   const available = allSurveys ?? []
@@ -141,6 +150,7 @@ export default async function DashboardPage({
         responses: summary?.n ?? 0,
         group: group ? ((groups ?? []).find((g) => g.id === group)?.name ?? '') : t('allGroups'),
       })}
+      pinned={(pins ?? []).map((p) => p.panel_key)}
     />
   )
 }

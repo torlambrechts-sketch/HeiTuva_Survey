@@ -577,7 +577,27 @@
     "insufficientCell": "Too few responses",
     "noSurveySelected": "Choose at least one survey under Filter.",
     "sourceSnapshot": "Frozen figures from {date}",
-    "sourceLive": "Calculated now"
+    "sourceLive": "Calculated now",
+    "sectionPending": "This section is built in the next phase",
+    "sectionPendingSub": "Its content does not exist yet — it renders empty rather than with another section's numbers.",
+    "trendRound": "Round {n}",
+    "driversHigh": "Highest",
+    "driversLow": "Lowest",
+    "participationInvited": "Invited",
+    "participationResponded": "Responded",
+    "themeMentions": "{label} · mentioned {count} times",
+    "noteTeams": "Average per team. Groups with fewer than five responses are not shown.",
+    "noteTrend": "Average per round, all scale questions.",
+    "noteThemes": "Automatic grouping of free text. The threshold counts people, not mentions.",
+    "surveyChipMeta": "{status} · {count} responses",
+    "planSendCta": "Schedule delivery",
+    "closeSheet": "Close",
+    "participationCompletion": "Response rate",
+    "quotesEmpty": "No free-text question has enough answers to quote from yet.",
+    "quotesPicked": "Quotes chosen by HR. Anonymised.",
+    "quotesFallback": "No quotes chosen yet — the first three are shown. Choose under Content.",
+    "quotesWithheld": "{count} chosen quotes are not shown: their question now has too few answers.",
+    "frozenAt": "Frozen figures from publication on {date}. The report shows what was signed."
   },
   "admin": {
     "title": "Administration",
@@ -977,6 +997,10 @@
     "empty": "No surveys with responses yet",
     "emptyBody": "Send a survey and these panels fill themselves in.",
     "noData": "No data in this selection",
-    "unavailable": "The figures could not be loaded right now. Try again in a moment."
+    "unavailable": "The figures could not be loaded right now. Try again in a moment.",
+    "pinnedOn": "In the report ✓",
+    "pinnedOff": "Add to report",
+    "openPinned": "Open report",
+    "pinnedReportTitle": "From dashboard — {date}"
   }
 }

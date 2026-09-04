@@ -53,6 +53,14 @@ async function main() {
     // left this box in either state, and an assertion that presumes "untick"
     // passes or fails on what ran before it, not on what this run observed.
     const checkedBefore = await firstCheck.isChecked()
+    // The whole table before the click, so the row this click changed can be
+    // identified by observation afterwards rather than guessed at.
+    const { data: checksBefore } = await svc
+      .from('duty_checks')
+      .select('duty_id, key, done')
+    const wasDone = new Map(
+      (checksBefore ?? []).map((c) => [`${c.duty_id}:${c.key}`, c.done]),
+    )
     await firstCheck.click()
     await page.waitForTimeout(1500)
 
@@ -65,15 +73,26 @@ async function main() {
     const { data: checks } = await svc
       .from('duty_checks')
       .select('duty_id, key, done, done_by, done_at')
-      .in('duty_id', (duties ?? []).map((d) => d.id))
     ok('duty_checks (write persisted)', (checks ?? []).length > 0, checks?.[0] ?? null)
+
+    // The row this click actually changed, found by comparing before and after
+    // rather than by guessing at `k1`.
+    //
+    // Guessing was wrong twice over: the org holds several duties, each with
+    // its own `k1`, so `find(key === 'k1')` returned whichever the database
+    // listed first — and once a second duty existed that was a row this probe
+    // had never touched. It then reported the SEED's state as this run's
+    // result. A probe that names the row it is about cannot do that.
+    const changed = (checks ?? []).find(
+      (c) => wasDone.get(`${c.duty_id}:${c.key}`) !== c.done,
+    )
 
     // Attribution must agree with the state: a ticked check records who ticked
     // it and when; an unticked one records neither. A check showing unticked
     // while still naming someone is evidence of the wrong thing.
-    const k1 = (checks ?? []).find((c) => c.key === 'k1')
+    const k1 = changed
     const flipped = !!k1 && k1.done === !checkedBefore
-    const attributionAgrees = !k1 || (k1.done
+    const attributionAgrees = !!k1 && (k1.done
       ? k1.done_by !== null && k1.done_at !== null
       : k1.done_by === null && k1.done_at === null)
     ok('duty_checks (toggle flips the stored value)', flipped,

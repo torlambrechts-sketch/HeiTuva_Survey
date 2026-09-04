@@ -178,7 +178,18 @@ async function main() {
 
     const checks = (def!.checks ?? []) as { key: string }[]
     await svc.from('duty_checks').insert(
-      checks.map((c, i) => ({ duty_id: duty!.id, key: c.key, done: i < ticks })),
+      checks.map((c, i) => ({
+        duty_id: duty!.id,
+        key: c.key,
+        done: i < ticks,
+        // A ticked checklist item that names nobody is a state the product
+        // cannot produce — `toggleDutyCheck` always writes who and when — and
+        // it is a state a statutory checklist must not be in, because the
+        // attribution IS the evidence. Seeded ticks are attributed to the same
+        // administrator the signers are, for the same reason.
+        done_by: i < ticks ? adminMember!.id : null,
+        done_at: i < ticks ? new Date(Date.now() - (i + 1) * 86_400_000).toISOString() : null,
+      })),
     )
 
     const roles = (def!.signer_roles ?? []) as { key: string; label: string }[]
@@ -246,10 +257,19 @@ async function main() {
     if (trError) throw new Error(`seed question_translations: ${trError.message}`)
   }
 
-  // schedules — produced by send_round when a cadence is asked for. After the
-  // translation above, because sending gives the survey a round and freezes it.
+  // schedules — produced by send_round when a cadence is asked for.
+  //
+  // On its OWN survey, not on `draft`. Sending flips a survey to `aktiv`, so
+  // scheduling the draft consumed the one fixture whose entire purpose is to
+  // be unsent — `verify:send` re-seeded, found "Utkast uten svar" already
+  // active, and failed with "no seeded draft to send" while the seed's summary
+  // line went on claiming it had made one.
+  const schedSurvey = await createSurvey(org.id, 'Planlagt utsending', [
+    { type: 'scale', text: 'Hvordan går det?' },
+  ], { status: 'utkast', audience: 'Hele selskapet' })
+
   const { data: schedResult } = await asAdmin.rpc('send_round', {
-    p_survey: draft.id,
+    p_survey: schedSurvey.id,
     p_channels: ['link'],
     p_recipients: [],
     p_cadence: 'monthly',

@@ -1,6 +1,5 @@
-// GENERATED from the heituva-prod schema (supabase gen types typescript).
+// GENERATED: supabase gen types typescript --db-url <local>
 // Do not edit by hand — regenerate after every migration.
-
 export type Json =
   | string
   | number
@@ -10,10 +9,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -117,6 +136,42 @@ export type Database = {
           value?: number
         }
         Relationships: []
+      }
+      dashboard_pins: {
+        Row: {
+          created_at: string
+          org_id: string
+          panel_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          org_id: string
+          panel_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          org_id?: string
+          panel_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_pins_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_pins_panel_key_fkey"
+            columns: ["panel_key"]
+            isOneToOne: false
+            referencedRelation: "report_section_types"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       dsr_requests: {
         Row: {
@@ -1033,18 +1088,21 @@ export type Database = {
           description: string
           key: string
           label: string
+          sort_order: number
           supports_group_filter: boolean
         }
         Insert: {
           description: string
           key: string
           label: string
+          sort_order?: number
           supports_group_filter?: boolean
         }
         Update: {
           description?: string
           key?: string
           label?: string
+          sort_order?: number
           supports_group_filter?: boolean
         }
         Relationships: []
@@ -1895,7 +1953,11 @@ export type Database = {
       claim_membership: { Args: never; Returns: string }
       close_round: { Args: { p_round: string }; Returns: Json }
       compose_report: {
-        Args: { p_report: string; p_token?: string }
+        Args: {
+          p_as_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
+          p_report: string
+          p_token?: string
+        }
         Returns: Json
       }
       dashboard_summary: {
@@ -1970,6 +2032,16 @@ export type Database = {
         Args: { p_duty: string; p_label?: string }
         Returns: Json
       }
+      quote_candidates: {
+        Args: {
+          p_group?: string
+          p_limit?: number
+          p_rounds?: string[]
+          p_survey: string
+        }
+        Returns: Json
+      }
+      report_for_share_token: { Args: { p_token: string }; Returns: string }
       results_summary: {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
@@ -1991,6 +2063,7 @@ export type Database = {
         Returns: Json
       }
       sign_duty: { Args: { p_duty: string; p_role_key: string }; Returns: Json }
+      snapshot_report: { Args: { p_report: string }; Returns: Json }
       snapshot_results: {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
@@ -2029,12 +2102,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2058,11 +2131,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2083,11 +2156,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2108,11 +2181,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2125,11 +2198,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2139,7 +2212,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

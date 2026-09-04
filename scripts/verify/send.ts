@@ -44,12 +44,21 @@ async function main() {
   const svc = serviceClient()
 
   try {
-    const { data: draft } = await svc
+    // The NEWEST matching draft, not the only one.
+    //
+    // `maybeSingle()` errors on more than one row, and this gate re-seeds when
+    // it finds the fixture missing — so a second run created a second
+    // "Utkast uten svar" and then reported "no seeded draft to send" while two
+    // sat in the table. The failure said the fixture was absent when the
+    // problem was that it was duplicated.
+    const { data: drafts } = await svc
       .from('surveys')
       .select('id, title')
       .eq('status', 'utkast')
       .eq('title', 'Utkast uten svar')
-      .maybeSingle()
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const draft = drafts?.[0]
     if (!draft) throw new Error('no seeded draft to send')
 
     const before = await svc.from('survey_rounds').select('id').eq('survey_id', draft.id)

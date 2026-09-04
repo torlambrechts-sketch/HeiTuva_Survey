@@ -1319,3 +1319,58 @@ returns exactly four on both local and prod, each deliberate:
 token-validated respondent paths) and `compose_report` (a share link has no
 session; authorisation is inside the function). Nothing else.
 
+
+### D67 — complementary suppression hides a team the design shows
+The design's "Resultat per team" renders Produktteamet, Design and Utvikling with
+numbers and Ledelse as "for få svar". With real data the composition can hide a
+second team: when exactly one group of a partition is below the threshold, its
+size is `total − visible`, so the document would state it. `app.suppress_partition`
+therefore hides the smallest visible group too, and the note under the section
+says how many are hidden. The design's own screenshot cannot show this because
+its numbers are mocked and never sit one group away from disclosure.
+
+### D68 — the document says where its numbers came from
+Each section carries "Beregnet nå" or "Frosne tall fra {dato}". The prototype has
+no equivalent, because it has no snapshots. It is added rather than left out: a
+published statutory report renders from a frozen document and a draft renders
+live, and a reader who cannot tell which has no way to know whether the number in
+front of them can still move.
+
+### D69 — the share field is empty until a link is minted
+The design shows `heituva.no/r/rapport` in the Del panel at all times. That
+string is a slug derived from the title, which would make every report's link
+guessable from the report list — and the link IS the credential. The field shows
+`—` until "Kopier lenke" mints a 32-byte token, and the raw token is returned
+exactly once.
+
+### D70 — `report_section_types` labels are seeded content, not chrome
+The report editor's section names ("Utvikling over tid", "Heatmap team ×
+spørsmål", …) come from the `report_section_types` registry, like template pack
+titles and bank questions, so they render in Norwegian on the English UI. Several
+of them also exist in the message catalogue as dashboard panel titles, so the
+same words translate on the dashboard and do not in the report editor.
+
+The alternative was to move the labels into next-intl, which would make the
+registry half data and half component and break the rule that adding a section is
+a row. The consistent fix is the one `template_pack_translations` already models
+— a translation table for seeded rows — and that belongs to the Phase 6
+translation editor. `verify:i18n` classifies these as seeded content, the same
+treatment the packs get.
+
+### D71 — PowerPoint export is rendered but disabled
+The Del panel's "PowerPoint" button is drawn exactly as the design draws it and
+is disabled unless `feature_flags.pptx_export` is on. The design shows it
+enabled; there is no PPTX renderer until Phase 6, and a button that produces
+nothing is worse than one that says it is unavailable.
+
+### D72 — publishing freezes at the most restrictive scope, and the freeze can be refused
+`publish_duty` freezes the composed document under the least-permissive scope the
+report is shared at, and `compose_report` refuses to serve that frozen copy to a
+reader whose scope would have seen more. A boardroom reader of a report that also
+carries an all-employees link therefore reads a LIVE composition, not the frozen
+one — the frozen copy is the all-employees document and would show them less than
+they may see. The design has no concept of either, because it has no snapshots.
+
+A report with no survey behind it publishes without a snapshot rather than being
+refused: a statutory report can be entirely narrative, and there is nothing to
+freeze.

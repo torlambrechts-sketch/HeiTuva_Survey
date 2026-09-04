@@ -13,6 +13,7 @@
  *   - the PDF is a PDF, and a leser's PDF is not larger than a redaktør's
  *   - a suppressed group appears as suppressed in the PDF, not as a number
  */
+import { createHash } from 'node:crypto'
 import { chromium } from '@playwright/test'
 import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
@@ -62,7 +63,7 @@ async function main() {
         sections: ['teams', 'summary'],
         filters: { surveys: [survey.id], rounds: [], group: null },
       })
-      .select('id')
+      .select('id, title')
       .single()
     if (!report) throw new Error('could not create the verification report')
 
@@ -156,6 +157,56 @@ async function main() {
       )
       await outsider.close()
     }
+
+    // ---------------------------------------------------------- share link
+    // The link the UI hands out must resolve. This is the check that was
+    // missing when "Kopier lenke" copied a URL to a route nobody had built.
+    for (const scope of ['ledelse', 'ledere_eget_team', 'alle_ansatte'] as const) {
+      const raw = `verify-share-${scope}-${Date.now()}`
+      const { data: group } = await svc
+        .from('groups').select('id').eq('org_id', org.id).limit(1).single()
+      await svc.from('report_shares').insert({
+        report_id: report.id,
+        token_hash: createHash('sha256').update(raw).digest('hex'),
+        scope,
+        group_id: scope === 'ledere_eget_team' ? group!.id : null,
+      })
+
+      const anonPage = await browser.newPage()
+      const res = await anonPage.goto(`${BASE_URL}/r/${raw}`, { waitUntil: 'domcontentloaded' })
+      await anonPage.waitForLoadState('load')
+      const body = await anonPage.evaluate(() => document.body.innerText)
+      // Assert the REPORT is on the page, not merely that something 200'd.
+      // Checking only the status passed while middleware was redirecting every
+      // share link to the login screen — Playwright follows the redirect, so a
+      // login page reports 200 too.
+      const landed = new URL(anonPage.url()).pathname
+      check(
+        `share link renders the report for ${scope}`,
+        res?.status() === 200 && landed.startsWith('/r/') && body.includes(report.title),
+        `HTTP ${res?.status()} on ${landed}`,
+      )
+
+      // alle_ansatte must carry no per-group breakdown at all. Checking the
+      // rendered text rather than the RPC: the point is what a reader sees.
+      // The scope's actual effect: ledelse and ledere_eget_team carry the
+      // per-group breakdown, alle_ansatte must not. Asserting BOTH directions —
+      // "no group name" passed for every scope while the page was a login form.
+      const namesGroup = /Ledelse|Utvikling/.test(body)
+      check(
+        `${scope}: per-group rows ${scope === 'alle_ansatte' ? 'absent' : 'present'}`,
+        scope === 'alle_ansatte' ? !namesGroup : namesGroup,
+        namesGroup ? 'a group name appears' : 'no group name',
+      )
+      await anonPage.close()
+    }
+
+    const bad = await browser.newPage()
+    const notFound = await bad.goto(`${BASE_URL}/r/definitely-not-a-token`, {
+      waitUntil: 'domcontentloaded',
+    })
+    check('an unknown share token 404s', notFound?.status() === 404, `HTTP ${notFound?.status()}`)
+    await bad.close()
 
     check('no console errors in the editor', consoleErrors.length === 0, consoleErrors[0] ?? 'none')
 

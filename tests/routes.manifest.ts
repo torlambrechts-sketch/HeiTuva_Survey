@@ -761,6 +761,7 @@ export const ROUTES: RouteSpec[] = [
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
+  { route: '/r/[token]', phase: 'phase-5', note: 'Shared report — captured by verify:export, which mints a token' },
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
 
 ]

@@ -17,7 +17,7 @@
  *    hardcoded string or an untranslated key, and it is checked against the
  *    real rendered text rather than the source.
  */
-import { chromium } from '@playwright/test'
+import { chromium, type Page } from '@playwright/test'
 import { config } from 'dotenv'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { BASE_URL, ensureServer } from './server'
@@ -69,18 +69,75 @@ async function isSeededContent(value: string): Promise<boolean> {
   // annethvert år"; the phrase on the page is part of that value, so an exact
   // match said "not seeded" and accused the scope label instead.
   const like = `%${value}%`
-  const [packTitle, packAudience, bank, surveyTitle, surveyAudience] = await Promise.all([
-    svc.from('template_packs').select('id').ilike('title', like).limit(1),
-    svc.from('template_packs').select('id').ilike('audience', like).limit(1),
-    svc.from('question_bank').select('id').ilike('text', like).limit(1),
-    svc.from('surveys').select('id').ilike('title', like).limit(1),
-    svc.from('surveys').select('id').ilike('audience_label', like).limit(1),
-  ])
-  const found = [packTitle, packAudience, bank, surveyTitle, surveyAudience].some(
-    (r) => (r.data?.length ?? 0) > 0,
-  )
+  const [packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc] =
+    await Promise.all([
+      svc.from('template_packs').select('id').ilike('title', like).limit(1),
+      svc.from('template_packs').select('id').ilike('audience', like).limit(1),
+      svc.from('question_bank').select('id').ilike('text', like).limit(1),
+      svc.from('surveys').select('id').ilike('title', like).limit(1),
+      svc.from('surveys').select('id').ilike('audience_label', like).limit(1),
+      // `report_section_types` is a seeded registry, exactly like the template
+      // packs above: adding a section is a row, not a component. Its labels are
+      // therefore content, and content is Norwegian until the Phase 6
+      // translation editor gives it the treatment
+      // `template_pack_translations` already has (docs/DEVIATIONS.md D70).
+      //
+      // Several of these strings ALSO exist in the message catalogue as
+      // dashboard panel titles, which is why the check found them at all: the
+      // same words reach the dashboard through next-intl and the report editor
+      // through the database.
+      svc.from('report_section_types').select('key').ilike('label', like).limit(1),
+      svc.from('report_section_types').select('key').ilike('description', like).limit(1),
+    ])
+  const found = [
+    packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
+  ].some((r) => (r.data?.length ?? 0) > 0)
   seededCache.set(value, found)
   return found
+}
+
+/**
+ * One page, checked and screenshotted. Extracted so the editor states below run
+ * exactly the check the route loop runs — a second copy would drift, and the
+ * cheapest way to make a gate stop measuring is to have two of it.
+ *
+ * Returns 1 if the page failed, 0 if it passed, so callers can sum.
+ */
+async function checkPage(page: Page, label: string): Promise<number> {
+  const text = await page.locator('body').innerText()
+  await page.screenshot({ path: `${OUT}/${label}.png`, fullPage: true })
+
+  const rawKeys = KEYS.filter((k) => text.includes(k))
+
+  /**
+   * A Norwegian phrase on the English page is only a defect when it is UI
+   * chrome. Seeded CONTENT — pack titles and audiences, bank questions, a
+   * survey's own name — is Norwegian by design: `no` is the source language
+   * and translating content is the Phase 6 translation editor's job, not
+   * next-intl's. "Alle ansatte" is both a scope label and a template pack's
+   * audience, so matching on the string alone accused the wrong one.
+   */
+  const matches = NORWEGIAN_ONLY.filter((m) => text.includes(m.value))
+  const chrome: typeof matches = []
+  const seeded: typeof matches = []
+  for (const m of matches) {
+    if (await isSeededContent(m.value)) seeded.push(m)
+    else chrome.push(m)
+  }
+
+  if (rawKeys.length || chrome.length) {
+    console.log(`  FAIL ${label}`)
+    for (const k of rawKeys.slice(0, 5)) console.log(`       raw key rendered: ${k}`)
+    for (const m of chrome.slice(0, 5)) {
+      console.log(`       Norwegian chrome on the English page: ${m.key} = "${m.value.slice(0, 60)}"`)
+    }
+    return 1
+  }
+
+  console.log(
+    `  ok   ${label}${seeded.length ? `  (${seeded.length} Norwegian seed value(s), by design)` : ''}`,
+  )
+  return 0
 }
 
 async function main() {
@@ -132,46 +189,74 @@ async function main() {
           await page.waitForLoadState('load')
           await page.waitForTimeout(250)
 
-          const text = await page.locator('body').innerText()
-          await page.screenshot({ path: `${OUT}/${label}.png`, fullPage: true })
-
-          const rawKeys = KEYS.filter((k) => text.includes(k))
-
-          /**
-           * A Norwegian phrase on the English page is only a defect when it is
-           * UI chrome. Seeded CONTENT — pack titles and audiences, bank
-           * questions, a survey's own name — is Norwegian by design: `no` is
-           * the source language and translating content is the Phase 6
-           * translation editor's job, not next-intl's. "Alle ansatte" is both a
-           * scope label and a template pack's audience, so matching on the
-           * string alone accused the wrong one.
-           */
-          const matches = NORWEGIAN_ONLY.filter((m) => text.includes(m.value))
-          const chrome: typeof matches = []
-          const seeded: typeof matches = []
-          for (const m of matches) {
-            if (await isSeededContent(m.value)) seeded.push(m)
-            else chrome.push(m)
-          }
-
-          if (rawKeys.length || chrome.length) {
-            failures++
-            console.log(`  FAIL ${label}`)
-            for (const k of rawKeys.slice(0, 5)) console.log(`       raw key rendered: ${k}`)
-            for (const m of chrome.slice(0, 5)) {
-              console.log(`       Norwegian chrome on the English page: ${m.key} = "${m.value.slice(0, 60)}"`)
-            }
-          } else {
-            console.log(
-              `  ok   ${label}${seeded.length ? `  (${seeded.length} Norwegian seed value(s), by design)` : ''}`,
-            )
-          }
+          failures += await checkPage(page, label)
         } catch (e) {
           failures++
           console.log(`  ERROR ${label}: ${e instanceof Error ? e.message : e}`)
         }
       }
     }
+    /**
+     * The report editor, which the loop above cannot reach.
+     *
+     * It is a STATE of `/rapporter` (`?rapport=<id>`), the manifest opens it by
+     * clicking a Norwegian control, and its spec is `as: 'redaktor'` — so all
+     * three reasons the loop skips states apply at once and the screen with the
+     * most new copy in Phase 5 was never checked in English (defect 16).
+     *
+     * Addressed by URL instead, which needs no locator in either language. The
+     * three side panels are then reached through the tab rail by POSITION
+     * rather than by accessible name, for the same reason.
+     */
+    {
+      // Scoped to the persona's own organisation: a report from another tenant
+      // is a 404 for this reader, and the gate would then be measuring the
+      // not-found page.
+      const { data: membership } = await svc
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', persona.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+
+      const { data: rep } = await svc
+        .from('reports')
+        .select('id, sections')
+        .eq('org_id', membership?.org_id ?? '00000000-0000-0000-0000-000000000000')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!rep) {
+        failures++
+        console.log('  ERROR rapport-editor: no report to open — the gate cannot check the editor')
+      } else {
+        // Turn the quotes section on so the picker's copy is on the page. It is
+        // restored below: this gate reads, it does not leave state behind.
+        const originalSections = (rep.sections ?? []) as string[]
+        const withQuotes = originalSections.includes('quotes')
+          ? originalSections
+          : [...originalSections, 'quotes']
+        await svc.from('reports').update({ sections: withQuotes }).eq('id', rep.id)
+
+        try {
+          for (const [i, name] of ['innhold', 'filter', 'del'].entries()) {
+            await page.goto(`${BASE_URL}/rapporter?rapport=${rep.id}`, {
+              waitUntil: 'domcontentloaded',
+            })
+            await page.waitForLoadState('load')
+            await page.locator('div.bg-sf2 > button').nth(i).click()
+            await page.waitForTimeout(250)
+            failures += await checkPage(page, `rapport-editor.${name}`)
+          }
+        } finally {
+          await svc.from('reports').update({ sections: originalSections }).eq('id', rep.id)
+        }
+      }
+    }
+
     await ctx.close()
   } finally {
     await svc.from('profiles').update({ lang: before?.lang ?? 'no' }).eq('user_id', persona.id)

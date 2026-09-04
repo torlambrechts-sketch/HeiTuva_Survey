@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
 import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/results/types'
 import { DashboardFilters } from './DashboardFilters'
+import { PinButton } from './PinButton'
+import { OpenPinnedButton } from './OpenPinnedButton'
 
 const CARD = 'rounded-2xl border border-line bg-sf p-[22px]'
 
@@ -17,6 +19,7 @@ export async function DashboardScreen({
   trendBars,
   themes,
   filterLine,
+  pinned,
 }: {
   surveys: { id: string; title: string; status: string }[]
   selected: string[]
@@ -28,9 +31,21 @@ export async function DashboardScreen({
   trendBars: { key: string; label: string; avg: number | null }[]
   themes: Theme[]
   filterLine: string
+  /** The member's own pins, from `dashboard_pins`. */
+  pinned: string[]
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
+
+  const isPinned = new Set(pinned)
+  const pin = (key: string) => (
+    <PinButton
+      panelKey={key}
+      pinned={isPinned.has(key)}
+      labelOn={t('pinnedOn')}
+      labelOff={t('pinnedOff')}
+    />
+  )
 
   // Same rule as Resultater: a failed read renders as the em dash, not as zero.
   // "0 svar i utvalget" is a claim about the organisation; "—" is a claim about
@@ -110,6 +125,15 @@ export async function DashboardScreen({
             y: t('periodAll'),
           }}
         />
+        {/* The design puts "Åpne rapport" at the end of the filter row
+            (HeiTuva.dc.html:831), after the period and group selects. */}
+        <OpenPinnedButton
+          count={pinned.length}
+          label={t('openPinned')}
+          title={t('pinnedReportTitle', {
+            date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+          })}
+        />
       </div>
 
       {/* RESPONSIVE.md § Tab rails and chip groups: the chips wrap, keep their
@@ -162,7 +186,7 @@ export async function DashboardScreen({
             beside themes on row three — including the empty cell next to trend.
             Reordering to fill that cell reads as an improvement and is exactly
             what CLAUDE.md rules out. */}
-        <Panel title={t('panelTrend')} note={t('trendNote')}>
+        <Panel title={t('panelTrend')} note={t('trendNote')} action={pin('trend')}>
           {trendBars.length ? (
             <div className="mt-[14px] flex flex-col gap-[9px]">
               {trendBars.map((b) => (
@@ -181,12 +205,12 @@ export async function DashboardScreen({
         </Panel>
 
         <div className="xl:col-span-2">
-          <Panel title={t('panelHeatmap')} note={t('heatNote')}>
+          <Panel title={t('panelHeatmap')} note={t('heatNote')} action={pin('heatmap')}>
             <HeatGrid heatmap={heatmap} gated={tr('gatedCell')} gatedTitle={tr('gatedTitle')} empty={t('noData')} />
           </Panel>
         </div>
 
-        <Panel title={t('panelDrivers')} note={t('driversNote')}>
+        <Panel title={t('panelDrivers')} note={t('driversNote')} action={pin('drivers')}>
           {highest.length || lowest.length ? (
             <div className="mt-[14px] flex flex-col gap-[9px]">
               {highest.map((d) => (
@@ -201,7 +225,7 @@ export async function DashboardScreen({
           )}
         </Panel>
 
-        <Panel title={t('panelThemes')} note={t('themesNote')}>
+        <Panel title={t('panelThemes')} note={t('themesNote')} action={pin('themes')}>
           {themes.length ? (
             <div className="mt-[14px] flex flex-wrap gap-2">
               {themes.map((theme) => (
@@ -231,15 +255,21 @@ export async function DashboardScreen({
 function Panel({
   title,
   note,
+  action,
   children,
 }: {
   title: string
   note: string
+  /** The design puts the pin on the panel's own header row, right-aligned. */
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section className={CARD}>
-      <h2 className="font-display text-[21px] font-bold">{title}</h2>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-[21px] font-bold">{title}</h2>
+        {action}
+      </div>
       {children}
       <p className="mt-3 text-xs leading-[1.5] text-mut">{note}</p>
     </section>

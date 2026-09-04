@@ -54,6 +54,7 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
 /** Functions anon MUST be able to execute: the respondent surface and the share
  *  link, each of which authorises itself from a token INSIDE the function. */
 const ANON_BY_DESIGN: Record<string, string> = {
+  report_for_share_token: 'resolves a share token to its report id; returns an id or nothing, never content',
   submit_response: 'the only respondent write path; token-validated',
   get_survey_for_token: 'renders /s/[token]; token-validated',
   get_peer_results: 'thank-you peer results; token-validated and k-gated',
@@ -123,12 +124,16 @@ async function main() {
     where n.nspname = 'public' and p.prosecdef
     group by p.proname order by p.proname;`).map((r) => r[0]!)
 
+  // `bool_or(...)::text` renders 'true'/'false', not psql's 't'/'f'. Comparing
+  // to 't' made every function read as revoked, which silently made the whole
+  // function half of this gate vacuous — it could never have reported a
+  // function granted to anon. Both spellings are accepted now.
   const anonExec = new Map(
     sql(`
       select p.proname, bool_or(has_function_privilege('anon', p.oid, 'execute'))::text
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef
-      group by p.proname;`).map((r) => [r[0]!, r[1] === 't']),
+      group by p.proname;`).map((r) => [r[0]!, r[1] === 'true' || r[1] === 't']),
   )
 
   const { data: primary } = await svc
