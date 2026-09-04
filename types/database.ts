@@ -1859,6 +1859,18 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      duty_status: {
+        Args: { p_duty: string }
+        Returns: Json
+      }
+      publish_duty: {
+        Args: { p_duty: string; p_label?: string }
+        Returns: Json
+      }
+      sign_duty: {
+        Args: { p_duty: string; p_role_key: string }
+        Returns: Json
+      }
       dashboard_summary: {
         Args: { p_group?: string; p_org: string; p_rounds?: string[]; p_surveys?: string[] }
         Returns: Json

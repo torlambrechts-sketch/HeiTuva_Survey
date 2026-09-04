@@ -170,6 +170,11 @@ async function main() {
     ['get_themes', { p_survey: surveyA }],
     ['get_benchmarks', { p_survey: surveyA }],
     ['snapshot_results', { p_survey: surveyA }],
+    // Phase 5: the duty signature is a legal claim, so anon must not be able to
+    // read one, make one, or publish an archive entry.
+    ['duty_status', { p_duty: '00000000-0000-0000-0000-000000000000' }],
+    ['sign_duty', { p_duty: '00000000-0000-0000-0000-000000000000', p_role_key: 'styre' }],
+    ['publish_duty', { p_duty: '00000000-0000-0000-0000-000000000000' }],
   ] as const) {
     const r = await anon.rpc(fn as 'aggregate_results', args as never)
     report(`anon calls ${fn}`, ['DENIED'], classify(r.error, null))
