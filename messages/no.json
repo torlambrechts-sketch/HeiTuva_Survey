@@ -421,7 +421,8 @@
     "allRounds": "Alle runder",
     "pickRound": "Runde",
     "gatedCell": "n<5",
-    "gatedTitle": "For få svar til å vise"
+    "gatedTitle": "For få svar til å vise",
+    "unavailable": "Resultatene kunne ikke hentes akkurat nå. Prøv igjen om litt."
   },
   "reports": {
     "title": "Rapporter",
@@ -864,6 +865,7 @@
     "themesNote": "Temaene grupperes automatisk fra frisvarene i utvalget.",
     "empty": "Ingen undersøkelser med svar ennå",
     "emptyBody": "Send en undersøkelse, så fylles panelene her ut av seg selv.",
-    "noData": "Ingen data i utvalget"
+    "noData": "Ingen data i utvalget",
+    "unavailable": "Tallene kunne ikke hentes akkurat nå. Prøv igjen om litt."
   }
 }

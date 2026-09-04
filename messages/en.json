@@ -421,7 +421,8 @@
     "allRounds": "All rounds",
     "pickRound": "Round",
     "gatedCell": "n<5",
-    "gatedTitle": "Too few responses to show"
+    "gatedTitle": "Too few responses to show",
+    "unavailable": "Results could not be loaded right now. Try again in a moment."
   },
   "reports": {
     "title": "Reports",
@@ -864,6 +865,7 @@
     "themesNote": "Themes are grouped automatically from the free text in the selection.",
     "empty": "No surveys with responses yet",
     "emptyBody": "Send a survey and these panels fill themselves in.",
-    "noData": "No data in this selection"
+    "noData": "No data in this selection",
+    "unavailable": "The figures could not be loaded right now. Try again in a moment."
   }
 }

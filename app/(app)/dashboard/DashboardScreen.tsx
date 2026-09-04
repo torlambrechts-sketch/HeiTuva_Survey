@@ -32,6 +32,10 @@ export async function DashboardScreen({
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
 
+  // Same rule as Resultater: a failed read renders as the em dash, not as zero.
+  // "0 svar i utvalget" is a claim about the organisation; "—" is a claim about
+  // the request.
+  const unavailable = summary === null
   const completion = summary?.completion ?? null
   const pct = completion === null ? null : Math.round(completion * 100)
 
@@ -46,14 +50,14 @@ export async function DashboardScreen({
     {
       key: 'responses',
       label: t('statResponses'),
-      value: String(summary?.n ?? 0),
-      note: t('statResponsesNote', { invited: summary?.invited ?? 0 }),
+      value: summary ? String(summary.n) : DASH,
+      note: summary ? t('statResponsesNote', { invited: summary.invited }) : DASH,
     },
     {
       key: 'rate',
       label: t('statRate'),
       value: pct === null ? DASH : `${pct} %`,
-      note: pct !== null && pct >= 70 ? t('statRateAbove') : t('statRateBelow'),
+      note: unavailable ? DASH : pct !== null && pct >= 70 ? t('statRateAbove') : t('statRateBelow'),
     },
     {
       key: 'avg',
@@ -88,7 +92,7 @@ export async function DashboardScreen({
         <div>
           <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
           <p className="mt-[3px] text-[13px] text-mut">
-            {filterLine} · {t('updatedNow')}
+            {unavailable ? t('unavailable') : `${filterLine} · ${t('updatedNow')}`}
           </p>
         </div>
         <DashboardFilters
@@ -151,6 +155,13 @@ export async function DashboardScreen({
       </div>
 
       <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
+        {/* Panel order is the bundle's own: `dashPanels` is
+            ["trend","heatmap","drivers","themes"] and the heatmap spans
+            `1 / -1` (HeiTuva.dc.html:3045-3047). Grid auto-placement therefore
+            puts trend alone on row one, the heatmap across row two, and drivers
+            beside themes on row three — including the empty cell next to trend.
+            Reordering to fill that cell reads as an improvement and is exactly
+            what CLAUDE.md rules out. */}
         <Panel title={t('panelTrend')} note={t('trendNote')}>
           {trendBars.length ? (
             <div className="mt-[14px] flex flex-col gap-[9px]">
@@ -169,6 +180,12 @@ export async function DashboardScreen({
           )}
         </Panel>
 
+        <div className="xl:col-span-2">
+          <Panel title={t('panelHeatmap')} note={t('heatNote')}>
+            <HeatGrid heatmap={heatmap} gated={tr('gatedCell')} gatedTitle={tr('gatedTitle')} empty={t('noData')} />
+          </Panel>
+        </div>
+
         <Panel title={t('panelDrivers')} note={t('driversNote')}>
           {highest.length || lowest.length ? (
             <div className="mt-[14px] flex flex-col gap-[9px]">
@@ -183,12 +200,6 @@ export async function DashboardScreen({
             <Empty text={t('noData')} />
           )}
         </Panel>
-
-        <div className="xl:col-span-2">
-          <Panel title={t('panelHeatmap')} note={t('heatNote')}>
-            <HeatGrid heatmap={heatmap} gated={tr('gatedCell')} gatedTitle={tr('gatedTitle')} empty={t('noData')} />
-          </Panel>
-        </div>
 
         <Panel title={t('panelThemes')} note={t('themesNote')}>
           {themes.length ? (

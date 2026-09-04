@@ -1032,3 +1032,30 @@ as the capture harness now does. Both call sites pin the seeding child to the
 local stack explicitly: `verify:send` loads `.env.local` unconditionally, so the
 child would otherwise inherit the production URL, and the seed's own guard
 refused it — correctly, which is how this was found.
+
+### D53 — "Last ned rapport" is not on Resultater yet
+
+The insights panel's header carries a "Last ned rapport" button and a transient
+pill ("Rapporten er lagt i nedlastinger — klar for AMU og styret",
+HeiTuva.dc.html:2201-2205). The Dashboard's `dutyNote` pill is the same
+mechanism.
+
+PDF export is Phase 5, with the report editor. The prototype's button sets a
+message saying a file was downloaded and no file exists — rendering that would
+be a fabricated outcome, and a button that does nothing at all is worse than one
+that is not there yet. The panel keeps its heading, its insights, its note and
+the five content chips, all of which are real.
+
+It arrives with Rapporter, where there is something to download.
+
+### D54 — "Legg til et svar" goes to Send, not to an in-app respondent view
+
+The design's button opens the prototype's own respondent screen so the reader
+can answer their own survey ("Svar selv" in the survey-row menu).
+
+That route — `/undersokelser/[id]/test` — is still on the pending list; it was
+scoped to Phase 3 and not built. Rather than invent a second respondent surface
+here, the button goes to Send, which is where the survey's real respondent links
+live (the shareable link and the test send). The label is the design's.
+
+When `/test` is built, this button points at it and the deviation closes.

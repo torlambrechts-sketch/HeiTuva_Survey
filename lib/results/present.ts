@@ -54,7 +54,7 @@ export function panelTone(avg: number): string {
 
 /** Per-question distribution bars cycle the three accents — HeiTuva.dc.html:2745. */
 export const BAR_COLORS = ['var(--ac)', 'var(--ac2)', 'var(--ac3)'] as const
-export const barColor = (index: number): string => BAR_COLORS[index % 3]!
+export const barColor = (index: number): string => BAR_COLORS[index % 3] ?? BAR_COLORS[0]
 
 /** A 0–5 mean as a percentage of the bar's width. */
 export const pctOf5 = (avg: number): number => Math.round((avg / 5) * 100)
@@ -84,7 +84,7 @@ export function questionBars(
   const max = Math.max(1, ...values)
   const total = result.n || 1
   return keys.map((k, i) => {
-    const count = values[i]!
+    const count = values[i] ?? 0
     return {
       key: k.key,
       label: k.label,

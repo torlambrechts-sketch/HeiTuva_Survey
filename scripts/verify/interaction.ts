@@ -175,15 +175,24 @@ async function main() {
       // is the densest screen in the app, so leaving it out of the keyboard
       // gate left its whole control surface unchecked.
       ['bygg', '/undersokelser#bygg'],
+      ['dashboard', '/dashboard'],
+      // Resultater is reached through a survey too, and it is where Phase 4's
+      // controls live: the survey picker, the industry chips, the theme chips.
+      ['resultater', '/undersokelser#resultater'],
     ] as const) {
       const p = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'nb-NO' })
       const pg = await p.newPage()
       if (path !== '/logg-inn') await signIn(pg, 'administrator', BASE_URL)
-      await pg.goto(`${BASE_URL}${path.replace('#bygg', '')}`, { waitUntil: 'domcontentloaded' })
+      await pg.goto(`${BASE_URL}${path.replace(/#.*$/, '')}`, { waitUntil: 'domcontentloaded' })
       await pg.waitForLoadState('load')
       if (path.endsWith('#bygg')) {
         await pg.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
         await pg.waitForURL((u) => u.pathname.endsWith('/bygg'))
+        await pg.waitForLoadState('load')
+      }
+      if (path.endsWith('#resultater')) {
+        await pg.getByRole('link', { name: 'Se svar' }).first().click()
+        await pg.waitForURL((u) => u.pathname.endsWith('/resultater'))
         await pg.waitForLoadState('load')
       }
 
@@ -198,9 +207,9 @@ async function main() {
       check(`${label}: 3px focus ring on a focused control`, ok, JSON.stringify(ring))
       console.log(`       tab order: ${order.join(' → ')}`)
 
-      if (label === 'logg-inn') {
-        await pg.screenshot({ path: `${OUT}/focus-ring.png` })
-        console.log(`       proof: ${OUT}/focus-ring.png`)
+      if (label === 'logg-inn' || label === 'resultater') {
+        await pg.screenshot({ path: `${OUT}/focus-ring-${label}.png` })
+        console.log(`       proof: ${OUT}/focus-ring-${label}.png`)
       }
       await p.close()
     }

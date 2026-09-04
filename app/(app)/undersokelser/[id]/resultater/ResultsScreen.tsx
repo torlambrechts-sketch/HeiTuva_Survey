@@ -75,6 +75,7 @@ export async function ResultsScreen({
 }) {
   const t = await getTranslations('results')
   const tNav = await getTranslations('surveyNav')
+  const tResp = await getTranslations('respondent')
 
   const byQuestion = new Map<string, QuestionResult>(
     (aggregate?.questions ?? []).map((q) => [q.question_id, q]),
@@ -90,13 +91,20 @@ export async function ResultsScreen({
   const prevAvg = prevRound && !isGated(prevRound) ? prevRound.avg : null
   const delta = thisAvg !== null && prevAvg !== null ? thisAvg - prevAvg : null
 
+  // A read that failed is NOT a survey with no answers. `readSummary` returns
+  // null on a Postgres error, and rendering that as "0 svar av 0 inviterte"
+  // would put a fabricated number on the screen — indistinguishable from a real
+  // one, which is the case CLAUDE.md rules out. Every value becomes the design's
+  // em dash and the reason is said out loud. The design has no failure state
+  // (its data is a local array), so this is the minimal consistent one.
+  const unavailable = summary === null
   const completion = summary?.completion ?? null
   const stats = [
     {
       key: 'responses',
       label: t('statResponses'),
-      value: String(summary?.n ?? 0),
-      note: t('statResponsesNote', { invited: summary?.invited ?? 0 }),
+      value: summary ? String(summary.n) : DASH,
+      note: summary ? t('statResponsesNote', { invited: summary.invited }) : DASH,
       bg: 'var(--sf)',
       fg: 'var(--ink)',
     },
@@ -104,7 +112,7 @@ export async function ResultsScreen({
       key: 'rate',
       label: t('statRate'),
       value: completion === null ? DASH : `${Math.round(completion * 100)}%`,
-      note: t('statRateNote'),
+      note: unavailable ? DASH : t('statRateNote'),
       bg: 'var(--ac)',
       fg: 'var(--acf)',
     },
@@ -136,6 +144,11 @@ export async function ResultsScreen({
         <div>
           <h1 className="font-display text-[26px] font-medium">{t('title')}</h1>
           <p className="mt-[3px] text-[12.5px] text-mut">{scopeLabel}</p>
+          {unavailable ? (
+            <p role="alert" className="mt-[3px] text-[12.5px] text-mut">
+              {t('unavailable')}
+            </p>
+          ) : null}
         </div>
         <SurveyPicker label={t('switchSurvey')} current={surveyId} surveys={surveys} />
       </div>
@@ -184,7 +197,7 @@ export async function ResultsScreen({
               <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={t('insufficient')} />
             ) : (
               <div className="mt-[15px] flex flex-col gap-[10px]">
-                {questionBars(result, optionKeys(q)).map((b) => (
+                {questionBars(result, optionKeys(q, tResp('yes'), tResp('no'))).map((b) => (
                   <div key={b.key} className="flex items-center gap-3">
                     <span className="w-[126px] flex-none text-right text-[13px] text-mut">
                       {b.label}
@@ -447,8 +460,15 @@ export async function ResultsScreen({
   }
 }
 
-/** The option keys a distribution is drawn against, per question type. */
-function optionKeys(q: Question): { key: string; label: string }[] {
+/**
+ * The option keys a distribution is drawn against, per question type.
+ *
+ * `yes`/`no` are the only labels this function does not get from the question's
+ * own config, so they come from next-intl — the same two messages the
+ * respondent surface renders the buttons from, rather than a second Norwegian
+ * literal that would not follow a language switch.
+ */
+function optionKeys(q: Question, yes: string, no: string): { key: string; label: string }[] {
   const options = list(q.config, 'options')
   switch (q.type) {
     case 'scale':
@@ -466,8 +486,8 @@ function optionKeys(q: Question): { key: string; label: string }[] {
       return Array.from({ length: 11 }, (_, i) => ({ key: String(i), label: String(i) }))
     case 'yesno':
       return [
-        { key: 'true', label: 'Ja' },
-        { key: 'false', label: 'Nei' },
+        { key: 'true', label: yes },
+        { key: 'false', label: no },
       ]
     default:
       return options.map((label, i) => ({ key: String(i), label }))
