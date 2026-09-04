@@ -1,0 +1,16 @@
+{
+  "tests/db/access.test.ts": 19,
+  "tests/db/administration.test.ts": 22,
+  "tests/invariants/duty-signing.test.ts": 21,
+  "tests/invariants/invariants.test.ts": 31,
+  "tests/invariants/k-surface.test.ts": 35,
+  "tests/invariants/policy-coverage.test.ts": 46,
+  "tests/invariants/report-composition.test.ts": 23,
+  "tests/invariants/report-rls.test.ts": 31,
+  "tests/invariants/token-lifecycle.test.ts": 14,
+  "tests/unit/engagement.test.ts": 12,
+  "tests/unit/i18n-overlay.test.ts": 5,
+  "tests/unit/import.test.ts": 11,
+  "tests/unit/quality.test.ts": 22,
+  "tests/unit/results-present.test.ts": 15
+}

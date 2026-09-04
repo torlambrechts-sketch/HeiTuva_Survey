@@ -159,23 +159,66 @@ describe('reports — the table mutation M2 proved was untested', () => {
   })
 })
 
-describe('soft delete means invisible, to everyone', () => {
-  // Pinned behaviour, not an inference: restoration is an explicit admin action
-  // through a dedicated path. Anything else means "deleted" is really "hidden
-  // from some roles".
+describe('a deleted report or survey is gone, for everyone', () => {
+  /**
+   * Named for the guarantee, not for the clause that implements it.
+   *
+   * "INSERT has no USING" is true and reads like an oversight to whoever sees
+   * it next — USING does not apply to INSERT, WITH CHECK does. A test named
+   * after the behaviour survives that misreading, and survives the policy being
+   * reimplemented some other way.
+   */
   for (const role of ['administrator', 'redaktor', 'leser'] as const) {
-    test(`a soft-deleted report is invisible to a ${role}`, async () => {
+    test(`a ${role} cannot see a deleted report anywhere`, async () => {
       expect(await visible(fx[role].client, 'reports', fx.deletedReport.id)).toBe(0)
     })
 
-    test(`a soft-deleted survey is invisible to a ${role}`, async () => {
+    test(`a ${role} cannot see a deleted survey anywhere`, async () => {
       expect(await visible(fx[role].client, 'surveys', fx.deletedSurvey.id)).toBe(0)
     })
   }
 
-  test('POSITIVE CONTROL: the live report and survey are still visible', async () => {
+  test('a deleted report cannot be restored by an ordinary update', async () => {
+    // The reason UPDATE carries the same filter as SELECT. Without it, clearing
+    // deleted_at through the normal edit path would undelete a report silently
+    // — restoration by accident rather than by decision.
+    await fx.administrator.client
+      .from('reports').update({ deleted_at: null }).eq('id', fx.deletedReport.id)
+    const { data } = await admin()
+      .from('reports').select('deleted_at').eq('id', fx.deletedReport.id).single()
+    expect(data?.deleted_at, 'an ordinary update undeleted the report').not.toBeNull()
+  })
+
+  test('a deleted report cannot be edited at all', async () => {
+    await fx.administrator.client
+      .from('reports').update({ title: 'redigert etter sletting' }).eq('id', fx.deletedReport.id)
+    const { data } = await admin()
+      .from('reports').select('title').eq('id', fx.deletedReport.id).single()
+    expect(data?.title).not.toBe('redigert etter sletting')
+  })
+
+  test('a deleted report cannot be hard-deleted through the normal path', async () => {
+    // Not a security property so much as an evidence one: duty_versions points
+    // at reports, and a statutory archive must not lose the document it
+    // archived because someone cleaned up a list.
+    await fx.administrator.client.from('reports').delete().eq('id', fx.deletedReport.id)
+    const { count } = await admin()
+      .from('reports').select('*', { count: 'exact', head: true }).eq('id', fx.deletedReport.id)
+    expect(count).toBe(1)
+  })
+
+  test('a live report and survey are still fully visible', async () => {
     expect(await visible(fx.administrator.client, 'reports', fx.report.id)).toBe(1)
     expect(await visible(fx.administrator.client, 'surveys', fx.survey.id)).toBe(1)
+  })
+
+  test('a live report can still be edited and deleted by a redaktør', async () => {
+    // The counterweight: the filter must not have frozen live reports too.
+    const { error } = await fx.redaktor.client
+      .from('reports').update({ title: 'fortsatt redigerbar' }).eq('id', fx.report.id)
+    expect(error).toBeNull()
+    const { data } = await admin().from('reports').select('title').eq('id', fx.report.id).single()
+    expect(data?.title).toBe('fortsatt redigerbar')
   })
 })
 
