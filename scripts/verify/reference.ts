@@ -33,6 +33,13 @@ const SCREENS: Screen[] = [
   { name: 'bibliotek', state: { screen: 'library' } },
   { name: 'bibliotek-bank', state: { screen: 'library', libTab: 'bank' } },
   { name: 'rapporter', state: { screen: 'reports' } },
+  // Phase 5 built three states of this screen that had no rendered baseline,
+  // so nothing could be compared against the design for them.
+  { name: 'rapporter-standard', state: { screen: 'reports', repTab: 'standard' } },
+  { name: 'rapporter-mine', state: { screen: 'reports', repTab: 'mine' } },
+  { name: 'rapport-editor', state: { screen: 'reports', repEditing: true } },
+  { name: 'rapport-editor-filter', state: { screen: 'reports', repEditing: true, repSide: 'filter' } },
+  { name: 'rapport-editor-del', state: { screen: 'reports', repEditing: true, repSide: 'del' } },
   { name: 'builder', state: { screen: 'build' } },
   { name: 'send', state: { screen: 'send' } },
   { name: 'resultater', state: { screen: 'results' } },
