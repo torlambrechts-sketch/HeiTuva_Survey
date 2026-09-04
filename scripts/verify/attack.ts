@@ -158,6 +158,22 @@ async function main() {
     const r = await anon.rpc('survey_response_counts', { p_org: orgA })
     report('anon calls survey_response_counts', ['DENIED'], classify(r.error, null))
   }
+  // Phase 4's result RPCs. Supabase grants EXECUTE to `anon` at CREATE time, so
+  // each one is revoked explicitly in the migration — and this is the probe that
+  // says the revoke is real, rather than that the function happens to return
+  // 'forbidden' at runtime.
+  for (const [fn, args] of [
+    ['get_heatmap', { p_org: orgA }],
+    ['dashboard_summary', { p_org: orgA }],
+    ['results_summary', { p_survey: surveyA }],
+    ['get_trends', { p_survey: surveyA }],
+    ['get_themes', { p_survey: surveyA }],
+    ['get_benchmarks', { p_survey: surveyA }],
+    ['snapshot_results', { p_survey: surveyA }],
+  ] as const) {
+    const r = await anon.rpc(fn as 'aggregate_results', args as never)
+    report(`anon calls ${fn}`, ['DENIED'], classify(r.error, null))
+  }
   for (const table of ['surveys', 'org_members', 'organizations', 'audit_events'] as const) {
     const r = await anon.from(table).select('id')
     report(`anon selects ${table}`, ['EMPTY', 'DENIED'], classify(r.error, r.data))

@@ -140,7 +140,7 @@ export async function DashboardScreen({
         })}
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-[15px] sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <div key={s.key} className="rounded-2xl border border-line bg-sf px-5 py-[18px]">
             <div className="text-[11px] uppercase tracking-[.1em] text-mut">{s.label}</div>

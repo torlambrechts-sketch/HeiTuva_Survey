@@ -71,21 +71,31 @@ export async function createOrg(
 }
 
 /**
- * The auth user behind a persona, created once and reused afterwards.
+ * Find an auth user by address, paging through the admin list.
  *
- * `listUsers()` pages at 50 by default, so a single unpaged call stopped
- * finding the demo personas the moment the local stack accumulated more test
- * users than that — and the seed then failed with "already been registered"
- * for a user it had itself created. Page until the address is found.
+ * `listUsers()` returns the FIRST PAGE ONLY — 50 users by default — so an
+ * unpaged call silently stops finding the demo personas the moment the local
+ * stack accumulates more test users than that. The seed then failed with
+ * "already been registered" for a user it had itself created, and the i18n
+ * verifier with "administrator persona not found". Both were the same missing
+ * loop, written twice; this is the one copy.
  */
-async function findOrCreateUser(svc: Client, email: string): Promise<string> {
-  for (let page = 1; page <= 40; page++) {
-    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 200 })
+export async function findUserByEmail(svc: Client, email: string): Promise<string | null> {
+  const perPage = 200
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await svc.auth.admin.listUsers({ page, perPage })
     if (error) throw new Error(`listUsers(${email}): ${error.message}`)
     const hit = data.users.find((u) => u.email === email)
     if (hit) return hit.id
-    if (data.users.length < 200) break
+    if (data.users.length < perPage) break
   }
+  return null
+}
+
+/** The auth user behind a persona, created once and reused afterwards. */
+async function findOrCreateUser(svc: Client, email: string): Promise<string> {
+  const existing = await findUserByEmail(svc, email)
+  if (existing) return existing
 
   const { data, error } = await svc.auth.admin.createUser({
     email,

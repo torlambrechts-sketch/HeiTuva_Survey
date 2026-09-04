@@ -502,9 +502,20 @@ export const ROUTES: RouteSpec[] = [
         name: 'default',
         setup: async (page) => {
           const base = page.url().replace(/\/undersokelser.*$/, '')
+          // Search for the seeded draft by name rather than taking the first
+          // "Fortsett å bygge" on the page: other verifiers leave drafts of
+          // their own in the demo org, and an empty one has no question and so
+          // no "Lagre til banken" button at all.
+          await page.getByLabel('Søk i undersøkelser…').fill('Utkast uten svar')
+          await page.waitForURL((u) => (u.searchParams.get('sok') ?? '').length > 0)
           await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          await page.getByRole('button', { name: 'Lagre til banken' }).first().click()
+          // Idempotent: an earlier verifier in the same run may already have
+          // saved this question, and then the button reads "I banken ✓" and
+          // waiting for "Lagre til banken" times out on a state that is in fact
+          // already reached.
+          const save = page.getByRole('button', { name: 'Lagre til banken' }).first()
+          if (await save.count()) await save.click()
           await page.getByRole('button', { name: 'I banken ✓' }).first().waitFor({ timeout: 15_000 })
           await page.goto(`${base}/bibliotek?fane=bank`, { waitUntil: 'domcontentloaded' })
           await page.getByText('Egen', { exact: true }).first().waitFor({ timeout: 15_000 })

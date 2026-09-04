@@ -151,7 +151,7 @@ export async function ResultsScreen({
 
       {/* RESPONSIVE.md: the four stat cards keep their design size and reflow
           to two columns below xl and one below md. */}
-      <div className="grid grid-cols-1 gap-[15px] sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <div
             key={s.key}

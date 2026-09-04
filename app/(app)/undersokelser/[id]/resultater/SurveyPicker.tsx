@@ -28,12 +28,17 @@ export function SurveyPicker({
     )
 
   return (
-    <label className="flex items-center gap-[9px] text-[12.5px] text-mut">
+    // RESPONSIVE.md rule 1: a select's intrinsic width comes from its longest
+    // option, so at 320px this row was 26px wider than the viewport. The label
+    // wraps above the control and the control fills the row — the same two
+    // elements in the same order, which is the reflow the spec allows, not a
+    // substituted control.
+    <label className="flex max-w-full flex-wrap items-center gap-[9px] text-[12.5px] text-mut">
       {label}
       <select
         value={current}
         onChange={(e) => router.push(`/undersokelser/${e.target.value}/resultater`)}
-        className="touch-44-field max-w-[300px] rounded-[10px] border border-line bg-sf px-[13px] py-[10px] text-[13px] text-ink outline-none"
+        className="touch-44-field w-full min-w-0 rounded-[10px] border border-line bg-sf px-[13px] py-[10px] text-[13px] text-ink outline-none md:w-auto md:max-w-[300px]"
       >
         {surveys.map((s) => (
           <option key={s.id} value={s.id}>

@@ -23,6 +23,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { BASE_URL, ensureServer } from './server'
 import { signIn } from '../../tests/helpers/session'
 import { serviceClient } from '../../tests/db/clients'
+import { findUserByEmail } from '../../tests/db/factories'
 import { PERSONAS } from '../../tests/db/personas'
 import { ROUTES } from '../../tests/routes.manifest'
 import no from '../../messages/no.json'
@@ -88,9 +89,11 @@ async function main() {
   const svc = serviceClient()
   await mkdir(OUT, { recursive: true })
 
-  const { data: user } = await svc.auth.admin.listUsers()
-  const persona = user.users.find((u) => u.email === PERSONAS.administrator.email)
-  if (!persona) throw new Error('administrator persona not found')
+  // Paged lookup: `listUsers()` returns only the first page, so this stopped
+  // finding the persona once the local stack held more than fifty users.
+  const personaId = await findUserByEmail(svc, PERSONAS.administrator.email)
+  if (!personaId) throw new Error('administrator persona not found')
+  const persona = { id: personaId }
 
   const { data: before } = await svc
     .from('profiles')

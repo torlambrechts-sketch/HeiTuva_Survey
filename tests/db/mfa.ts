@@ -86,15 +86,16 @@ export async function setAdminMfaRequired(enabled: boolean): Promise<void> {
  */
 export async function clearMfaFactors(email: string): Promise<void> {
   const { serviceClient } = await import('./clients')
+  const { findUserByEmail } = await import('./factories')
   const svc = serviceClient()
-  const { data: users, error } = await svc.auth.admin.listUsers()
-  if (error) throw new Error(`could not list users: ${error.message}`)
-  const user = users.users.find((u) => u.email === email)
-  if (!user) throw new Error(`no user ${email}`)
-  const { data, error: listError } = await svc.auth.admin.mfa.listFactors({ userId: user.id })
+  // Paged: `listUsers()` returns only its first page, and this lookup used to
+  // stop finding the persona once the local stack held more than fifty users.
+  const userId = await findUserByEmail(svc, email)
+  if (!userId) throw new Error(`no user ${email}`)
+  const { data, error: listError } = await svc.auth.admin.mfa.listFactors({ userId })
   if (listError) throw new Error(`could not list factors: ${listError.message}`)
   for (const f of data?.factors ?? []) {
-    const { error: delError } = await svc.auth.admin.mfa.deleteFactor({ id: f.id, userId: user.id })
+    const { error: delError } = await svc.auth.admin.mfa.deleteFactor({ id: f.id, userId })
     if (delError) throw new Error(`could not delete factor ${f.id}: ${delError.message}`)
   }
 }
