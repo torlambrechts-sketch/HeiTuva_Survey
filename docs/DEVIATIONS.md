@@ -29,7 +29,7 @@ must never be what silently settles an open question.
 | D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
 | D25 | Brukere keeps its row and its inline controls below `md` | **Resolved** — spec corrected; implementation unchanged | docs/RESPONSIVE.md § Data tables |
 | D26 | Question bank adds to the most recent draft | Accepted | see entry below |
-| D27 | DECISIONS Q14 (administrator TOTP) suspended behind the `admin_mfa` flag | **Suspended** — Tor's call, 2026-09-03; enforcement code intact | DECISIONS Q14 |
+| D27 | DECISIONS Q14 (administrator TOTP) — enforcement removed, not suspended | **Deferred** — Tor's call, 2026-09-04; code and flag deleted, re-enable trigger recorded | DECISIONS Q14 |
 | D28 | Wizard reports the number of questions it will actually create | Accepted | see entry below |
 | D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
 | D30 | Builder spacing grows below `md` so 44px hit areas stop overlapping | Accepted | docs/RESPONSIVE.md rules 2-3 |
@@ -394,43 +394,47 @@ design gives no title for it.
 Revisit when the Builder lands in this phase: if the builder holds an explicit
 "current draft", this should follow it instead.
 
-### D27 — administrator MFA is a flag, and it is currently off
-DECISIONS Q14 makes TOTP mandatory for `administrator`. Tor suspended the
-requirement on 2026-09-03: App Authenticator was not enabled in GoTrue on
-`heituva-prod`, so the first administrator was held at `/sikkerhet` on a screen
-whose enrol call could not succeed — the gate locked out the only person who
-could unlock it.
+### D27 — administrator MFA is deferred, and the enforcement is gone
+**Superseded 2026-09-04.** This entry first recorded a *suspension*: Q14 still
+made TOTP mandatory for `administrator`, and `feature_flags.admin_mfa` decided
+whether the mandatory thing ran. DECISIONS Q14 has since changed to a
+**deferral** — "do not build or enforce TOTP" — so the flag and the code it
+gated are both removed, on Tor's instruction, to cut development friction while
+there are no customers and no real data.
 
-The enforcement was not removed. It moved behind `feature_flags.admin_mfa`
-(global row, `enabled = false`), read by `adminMfaRequired()` in
-`lib/auth/mfa.ts`. Restoring Q14 is one row:
+What was deleted: `lib/auth/mfa.ts`, the `/sikkerhet` enrolment and challenge
+screens, the assurance-level redirect in `app/(app)/layout.tsx`, the
+Administrasjon write gate's MFA check, `scripts/seed-mfa.ts`, `tests/db/mfa.ts`,
+`satisfyMfa()` in the Playwright session helper, the pinned `sikkerhet.png`
+baselines, and the `admin_mfa` flag row and its key
+(`supabase/migrations/20260904000009_drop_admin_mfa_flag.sql`).
 
-    update public.feature_flags set enabled = true
-    where key = 'admin_mfa' and org_id is null;
+Supabase Auth's MFA capability itself is untouched. It is available; it is
+simply not required at login.
 
-Three things were deliberate:
+Three things about the shape of this:
 
-- **One definition.** The flag is checked inside `adminMfaSatisfied()`, not at
-  each call site, so the layout redirect and the Administrasjon write gate
-  cannot drift apart. Suspending the requirement cannot be half-applied.
-- **The read fails ON.** `isFlagEnabled('admin_mfa', orgId, true)` — an
-  unreadable or unseeded flag resolves to *required*, so a database hiccup
-  cannot silently drop a security gate. Every other flag fails OFF, because for
-  those OFF is the safe direction.
-- **The gate is still tested.** `tests/visual/screens.spec.ts` turns the flag on
-  for its own describe block and back off afterwards. A flagged-off invariant
-  that also stops being tested is how a suspension becomes permanent by
-  accident.
+- **The flag went with the code.** A row reading `admin_mfa = true` over a tree
+  that no longer reads it is the worst state a security flag can be in: the
+  register says the control is on and nothing enforces it. Deleting the row
+  means re-enabling Q14 is visibly a code change, not a switch someone believes
+  they already flipped.
+- **The `fails ON` rule survives the flag it was written for.** `lib/flags.ts`
+  still makes `fallback` the caller's to state rather than defaulting to
+  `false`, and still says why: a flag whose OFF position *removes* a control
+  must fail ON. Every key that remains gates optional capability, so every
+  current caller is safe with OFF.
+- **The absence is tested.** `tests/visual/screens.spec.ts` replaces the gate's
+  describe block with the opposite assertion — an administrator reaches
+  `/administrasjon` straight after signing in. A deferral that nothing checks
+  is how a half-removed gate strands the next administrator at a route that no
+  longer exists.
 
-`feature_flags` rather than an env var because the column shape already carries
-what this needs next: `org_id` NULL is the global default and a per-org row
-overrides it, and "require MFA for our administrators" is a per-tenant policy.
-Both gate call sites already pass `viewer.orgId`, so a per-org override works
-the day someone writes the row.
-
-Revisit: as soon as App Authenticator is enabled on `heituva-prod` and Tor has
-enrolled, flip the row back to `true`. This is a suspension, not a decision that
-Q14 was wrong.
+**Re-enable trigger (DECISIONS Q14):** before the first real organisation is
+onboarded, or before prod holds any real respondent data — whichever comes
+first. `AUTHORIZE.md` lists it beside leaked-password protection, which is off
+for the same window, so the two are re-enabled as one task rather than two
+forgotten ones.
 
 ### D28 — the wizard counts the questions it will actually create
 The prototype's count slider runs 2-7 and slices the chosen pack

@@ -715,11 +715,6 @@
     "sendLink": "Send innloggingslenke",
     "linkSent": "Sjekk innboksen din — vi har sendt deg en lenke.",
     "invalid": "Feil e-post eller passord.",
-    "mfaTitle": "Tofaktor",
-    "mfaSub": "Skriv inn koden fra autentiseringsappen din.",
-    "mfaCode": "Kode",
-    "mfaVerify": "Bekreft",
-    "mfaRequired": "Administratorer må bruke tofaktor. Sett det opp for å fortsette.",
     "signOutEverywhere": "Logg ut overalt"
   },
   "lang": {
@@ -748,19 +743,6 @@
     "failed": "Kunne ikke opprette. Prøv igjen.",
     "already": "Du er allerede knyttet til en bedrift.",
     "note": "Du blir administrator og kan invitere resten av teamet etterpå."
-  },
-  "mfa": {
-    "enrollTitle": "Slå på tofaktor",
-    "enrollSub": "Skann QR-koden med autentiseringsappen din, eller skriv inn nøkkelen manuelt.",
-    "verifyTitle": "Bekreft med autentiseringsappen",
-    "verifySub": "Skriv inn den sekssifrede koden fra appen din.",
-    "secretLabel": "Nøkkel",
-    "codeLabel": "Sekssifret kode",
-    "verify": "Bekreft",
-    "invalidCode": "Feil kode. Prøv igjen.",
-    "enrollFailed": "Kunne ikke slå på tofaktor. Prøv igjen.",
-    "whyAdmin": "Tofaktor kreves for administratorer fordi rollen styrer personvern og forespørsler fra registrerte.",
-    "unavailable": "Tofaktor er ikke slått på for dette prosjektet. Kontakt den som satte det opp."
   },
   "qtype": {
     "scale": "Skala",

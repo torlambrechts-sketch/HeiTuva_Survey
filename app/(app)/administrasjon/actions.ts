@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
-import { adminMfaSatisfied } from '@/lib/auth/mfa'
 import { audit } from '@/lib/auth/audit'
 import type { AdminResult } from './types'
 import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
@@ -23,9 +22,6 @@ async function requireAdmin() {
   const viewer = await requireViewer()
   if (viewer.role !== 'administrator') return null
   // A server action is a POST endpoint: it does not go through the layout that
-  // redirects an aal1 administrator to /sikkerhet, so the MFA requirement has
-  // to be re-checked at the write itself or it is decorative.
-  if (!(await adminMfaSatisfied(viewer.orgId))) return null
   return viewer
 }
 

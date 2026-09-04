@@ -71,18 +71,9 @@ insert into public.duty_definitions (key, title, law, basis, default_interval_mo
  '[{"key":"k1","label":"Undersøkelse gjennomført"},{"key":"k2","label":"Varslingsrutine kjent"},{"key":"k3","label":"Funn håndtert"},{"key":"k4","label":"Ansvarlig oppnevnt"}]',
  '[{"key":"hr","label":"HR-ansvarlig","role":"Eier varslingsrutinen"}]');
 
--- Report section registry -----------------------------------------------------
-insert into public.report_section_types (key, label, description, supports_group_filter) values
-('summary','Sammendrag','Tre hovedfunn i klartekst',false),
-('trend','Utvikling over tid','Snitt per runde som stolper',false),
-('heatmap','Heatmap team × spørsmål','Farget rutenett, terskel på fem svar',true),
-('drivers','Høyest og lavest','Tre høyeste og tre laveste spørsmål',true),
-('teams','Resultat per team','Snitt per gruppe, aldri under fem svar',false),
-('themes','Temaer i frisvarene','Automatisk gruppering av frisvar',true),
-('quotes','Utvalgte sitater','Anonymiserte sitater',false),
-('actions','Tiltak og ansvarlig','Hva dere gjør, hvem som eier det, frist',false),
-('participation','Deltakelse og svarprosent','Hvem ble spurt, hvor mange svarte',false),
-('method','Metode og spørsmål','Undersøkelser og spørsmål i utvalget',false);
+-- Report section registry: NOT here. It is a registry that migration
+-- 20260904000006 validates its templates against, and a migration cannot depend
+-- on a seed that runs after it. The rows are inserted there.
 
 -- Question quality rules (design heuristics) ------------------------------------
 insert into public.quality_rules (key, lang, pattern, rule, message) values
@@ -104,13 +95,10 @@ insert into public.benchmarks (industry, metric_key, value, source) values
 insert into public.feature_flags (key, org_id, enabled) values
 ('sms_channel', null, false), ('entra_sync', null, false), ('google_sync', null, false),
 ('hr_sync', null, false), ('ai_insights', null, false), ('ai_translate', null, false),
-('pptx_export', null, false), ('stripe_billing', null, false),
--- DECISIONS Q14 suspended 2026-09-03 (docs/DEVIATIONS.md D27). true restores it.
-('admin_mfa', null, false)
--- Migration 20260903000001 seeds admin_mfa for databases that already existed,
--- and migrations run before this file on a reset. Keeping the full list here is
--- what makes the global defaults readable in one place, so absorb the overlap
--- rather than splitting the list across two files.
+('pptx_export', null, false), ('stripe_billing', null, false)
+-- No admin_mfa row: DECISIONS Q14 defers administrator MFA and migration
+-- 20260904000009 removed both the flag and the enforcement it gated. Seeding it
+-- again would re-create a switch that nothing reads.
 on conflict (key, org_id) do nothing;
 
 -- Respondent-chrome UI messages (verbatim from the design's RS object).

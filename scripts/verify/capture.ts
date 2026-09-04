@@ -46,7 +46,7 @@ type LogEntry = {
  *
  * A missing key is invisible to every other check: the page renders, nothing
  * logs, no request fails, and the harness calls it "ok" while the screen shows
- * `mfa.verifyTitle` where a heading should be. That is exactly what happened
+ * `reports.title` where a heading should be. That is exactly what happened
  * after two namespaces were added to messages/*.json but never seeded.
  */
 const MESSAGE_KEYS: string[] = Object.entries(

@@ -25,6 +25,29 @@ create policy rtpl_sel on public.report_templates for select
   using ((select auth.role()) = 'authenticated');
 grant select on public.report_templates to authenticated;
 
+-- The section registry this table's rows point at.
+--
+-- These lived in supabase/seed.sql, which runs AFTER every migration, so the
+-- referential guard at the bottom of this file could never see them on a fresh
+-- `supabase db reset` — it passed only on a database that had already been
+-- seeded once, which is exactly the database nobody starts from in CI. A
+-- migration may not depend on the seed for rows it validates against, so the
+-- registry moves here (data-not-code puts registries in migrations; the seed is
+-- for demo data). Idempotent, because a database seeded under the old order
+-- already has them.
+insert into public.report_section_types (key, label, description, supports_group_filter) values
+('summary','Sammendrag','Tre hovedfunn i klartekst',false),
+('trend','Utvikling over tid','Snitt per runde som stolper',false),
+('heatmap','Heatmap team × spørsmål','Farget rutenett, terskel på fem svar',true),
+('drivers','Høyest og lavest','Tre høyeste og tre laveste spørsmål',true),
+('teams','Resultat per team','Snitt per gruppe, aldri under fem svar',false),
+('themes','Temaer i frisvarene','Automatisk gruppering av frisvar',true),
+('quotes','Utvalgte sitater','Anonymiserte sitater',false),
+('actions','Tiltak og ansvarlig','Hva dere gjør, hvem som eier det, frist',false),
+('participation','Deltakelse og svarprosent','Hvem ble spurt, hvor mange svarte',false),
+('method','Metode og spørsmål','Undersøkelser og spørsmål i utvalget',false)
+on conflict (key) do nothing;
+
 insert into public.report_templates (key, tag, title, description, sections, sort_order) values
 ('ledergruppe','Ledelse','Ledergruppe — sammendrag',
  'Én side med hovedfunn, trend og tiltak. Den vanligste rapporten før ledermøtet.',

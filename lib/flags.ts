@@ -17,19 +17,18 @@ export type FlagKey =
   | 'ai_translate'
   | 'pptx_export'
   | 'stripe_billing'
-  | 'admin_mfa'
 
 /**
  * Read through the anon client so RLS applies: `flags_sel` exposes the global
  * rows to everyone and an org's rows only to its members, so a caller can never
  * see another tenant's overrides.
  *
- * `fallback` is what an unreadable flag resolves to, and it is not always
- * `false`. For flags that gate optional capability, OFF is the safe answer. For
- * `admin_mfa` it is the opposite: OFF means "MFA not required", so a failed read
- * must resolve to ON or a database hiccup would silently drop a security gate.
- * Callers state the safe direction rather than inheriting a default that is only
- * right most of the time.
+ * `fallback` is what an unreadable flag resolves to, and callers state it
+ * rather than inheriting one. Every key here gates optional capability, so OFF
+ * is the safe answer for all of them today — but the direction is the caller's
+ * to state, because a flag whose OFF position REMOVES a control (a security
+ * gate expressed as "required: yes/no") must fail ON, and inheriting `false`
+ * would silently drop it.
  */
 export const isFlagEnabled = cache(
   async (key: FlagKey, orgId?: string, fallback = false): Promise<boolean> => {

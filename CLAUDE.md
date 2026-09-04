@@ -49,6 +49,60 @@ Question types, template packs, statutory duties, report sections, quality-flag 
 
 Definition of done per screen: pixel-diff pass, all states from the design reachable (incl. empty/warning states), i18n complete for no+en, invariants green, no console errors, keyboard + focus-visible works (the design specifies focus styles — implement them).
 
+## Operating authority
+You are authorised to run this project end to end without asking for permission per action.
+Ask only where this file says to ask.
+
+**Run freely, no confirmation needed:**
+- Any local command: install, build, dev server, tests, Playwright, linters, scripts.
+- Local database: `supabase start/stop/reset/db push/db lint`, psql, seeds, fixtures — the
+  local stack is disposable, reset it whenever it helps.
+- Remote database (prod project): apply migrations (`supabase db push`), run the seed
+  script, execute read queries, call RPCs, read logs and advisors, enable extensions,
+  schedule cron jobs. Keeping prod in step with `supabase/migrations/` is your job, not
+  something to hand back.
+- Supabase MCP: any tool it exposes, including `apply_migration`, `execute_sql`,
+  `list_tables`, `get_advisors`, `deploy_edge_function`.
+- Vercel: link the project, set and read env vars, trigger builds, deploy previews,
+  inspect deployment logs.
+- Git and GitHub: branch, commit, push, open PRs, read and re-run CI.
+- Web search and fetching documentation when a CLI flag or API has changed.
+
+**Stop and ask first (destructive or irreversible):**
+- Dropping or truncating a table, or deleting rows in bulk on the remote project.
+- Anything that weakens a security invariant: disabling RLS, adding a select policy to
+  `responses`/`answers`, lowering `app.k_threshold()`, removing the anonymity CHECK.
+- Deploying to **production** (previews are yours; production is a decision).
+- Rotating keys, changing auth providers, altering billing, deleting a project or branch.
+- Force-pushing, rewriting history, or deleting a branch that is not your own working branch.
+
+**Secrets:** read them from the environment or the local keychain. Never print a full
+secret to the terminal, never write one into a file that git tracks, never put one in a
+commit message or PR body. If a required credential is missing, say exactly which one and
+how to provide it — do not work around it by weakening a control.
+
+**When a tool is unauthorised:** say which tool, which command failed, and what the human
+must click. Do not silently fall back to a manual instruction and carry on — an
+unapplied migration that everyone believes is applied is worse than a stopped session.
+
+## Immutability triggers must permit referential maintenance
+An append-only or freeze trigger written as "reject any UPDATE or DELETE" will collide
+with PostgreSQL's own FK maintenance — `ON DELETE SET NULL` and cascades are UPDATEs and
+DELETEs the database issues on your behalf — and the symptom is a parent row that cannot
+be deleted, discovered far from the trigger. Write the rule as *"nobody may change this
+content"*: compare the columns that carry meaning and reject only when they differ,
+allowing FK-driven nulling of reference columns through. Decide the cascade behaviour
+deliberately when the trigger is written, not when a delete fails. This has now been
+rediscovered four separate times (D50, D51, D57, and the duty-archive case).
+
+## Control substitution
+The design's control is authoritative. Substituting a different control for layout or
+convenience is restyling and is forbidden. The single exception: where the prototype's
+control cannot express a real schema constraint — a free-text field standing in for a
+foreign key, because the mock had no database behind it. Then use the real control,
+styled exactly as that control class is styled elsewhere in the bundle, and log it as a
+deviation with the constraint named (see D56).
+
 ## Never fabricate data in the UI
 If a value does not exist in the schema, do not render a placeholder that looks like data
 (a hard-coded `v1`, an invented count, a 0% derived from an unknown denominator). Render
@@ -58,21 +112,6 @@ survives into screenshots and demos as though it were true.
 
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.
-
-## Standing permissions (granted by Tor)
-- **The MCP servers are authorised for everything, always — no need to ask.** This
-  covers the Supabase MCP against `heituva-prod` (ref `jmhhszsnjfqgclxzhciq`,
-  eu-central-1) as well as the GitHub, Google Drive and Claude Code Remote
-  servers. Apply migrations, run queries, read advisors, deploy functions.
-- **Run SQL directly — always allowed.** Local stack and production alike. Do not
-  hand over a `.sql` file to paste when a connection exists; run it.
-- Two things this permission does not remove:
-  - A destructive production statement (`drop`, `truncate`, `delete` without a
-    `where`, a migration that drops a column) still gets one sentence of warning
-    first. Permission to run SQL is not permission to lose data.
-  - `success: true` is not evidence. After a migration, select the thing it
-    changed and show the rows — VERIFY.md's rule that a claim without output is
-    not a result applies to production writes too.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.

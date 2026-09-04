@@ -715,11 +715,6 @@
     "sendLink": "Send sign-in link",
     "linkSent": "Check your inbox — we have sent you a link.",
     "invalid": "Wrong email or password.",
-    "mfaTitle": "Two-factor",
-    "mfaSub": "Enter the code from your authenticator app.",
-    "mfaCode": "Code",
-    "mfaVerify": "Verify",
-    "mfaRequired": "Administrators must use two-factor. Set it up to continue.",
     "signOutEverywhere": "Sign out everywhere"
   },
   "lang": {
@@ -748,19 +743,6 @@
     "failed": "Could not create. Try again.",
     "already": "You already belong to a company.",
     "note": "You become the administrator and can invite the rest of the team afterwards."
-  },
-  "mfa": {
-    "enrollTitle": "Turn on two-factor",
-    "enrollSub": "Scan the QR code with your authenticator app, or enter the key manually.",
-    "verifyTitle": "Confirm with your authenticator app",
-    "verifySub": "Enter the six-digit code from your app.",
-    "secretLabel": "Key",
-    "codeLabel": "Six-digit code",
-    "verify": "Confirm",
-    "invalidCode": "Wrong code. Try again.",
-    "enrollFailed": "Could not turn on two-factor. Try again.",
-    "whyAdmin": "Two-factor is required for administrators because the role controls privacy settings and data-subject requests.",
-    "unavailable": "Two-factor is not enabled for this project. Contact whoever set it up."
   },
   "qtype": {
     "scale": "Scale",

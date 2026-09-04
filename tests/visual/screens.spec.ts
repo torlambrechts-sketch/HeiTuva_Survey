@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { BASE_URL } from '../../playwright.config'
 import { gotoRoute, signIn } from '../helpers/session'
-import { clearMfaFactors, setAdminMfaRequired } from '../db/mfa'
 
 /**
  * Screenshot regression for the screens whose pixels are a function of code
@@ -103,49 +102,19 @@ test.describe('focus is visible', () => {
   })
 })
 
-test.describe('administrator MFA gate', () => {
-  // Q14 is a feature flag now (admin_mfa, docs/DEVIATIONS.md D27) and its
-  // seeded default is OFF, so this block turns it on for itself and puts it
-  // back afterwards. Leaving it to the seed would mean the gate silently
-  // stopped being tested the day it was suspended.
-  test.beforeAll(async () => {
-    // The baseline pins the not-enrolled screen, so clear whatever an earlier
-    // run left enrolled — otherwise the shot is of `verifyTitle` and the diff
-    // reports a change nobody made.
-    await clearMfaFactors('admin@nordiskstudio.test')
-    await setAdminMfaRequired(true)
-  })
-  test.afterAll(async () => {
-    await setAdminMfaRequired(false)
-    await clearMfaFactors('admin@nordiskstudio.test')
-  })
-
-  // The gate itself has no org data on it, so it is stable enough to pin.
-  test('an administrator is held at /sikkerhet until TOTP is confirmed', async ({ page }) => {
-    await page.goto(`${BASE_URL}/logg-inn`, { waitUntil: 'domcontentloaded' })
-    await page.fill('input[name="email"]', 'admin@nordiskstudio.test')
-    await page.fill('input[name="password"]', 'heituva-dev-password-1!')
-    await Promise.all([
-      page.waitForURL((u) => !u.pathname.startsWith('/logg-inn'), { timeout: 20_000 }),
-      page.getByRole('button', { name: /^Logg inn$/ }).click(),
-    ])
-    // The app redirects this request to /sikkerhet, and that redirect is the
-    // assertion. WebKit rejects a goto interrupted by another navigation where
-    // Chromium resolves it, so the interruption is caught and the landing URL
-    // is what gets asserted — the same check, stated as the outcome rather than
-    // as a side effect of goto resolving.
-    await page
-      .goto(`${BASE_URL}/administrasjon`, { waitUntil: 'domcontentloaded' })
-      .catch(() => {})
-    await page.waitForURL((u) => u.pathname === '/sikkerhet', { timeout: 15_000 })
+test.describe('no second factor is required (DECISIONS Q14)', () => {
+  // Q14 defers administrator MFA: the enrollment screen and the login-time
+  // challenge are gone, not merely switched off. This is the guard that they
+  // stay gone — a reintroduced gate would strand every administrator at a
+  // route that no longer exists, and password login is the whole flow.
+  test('an administrator reaches /administrasjon straight after signing in', async ({ page }) => {
+    await signIn(page, 'administrator', BASE_URL)
+    await page.goto(`${BASE_URL}/administrasjon`, { waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('load')
-
-    expect(new URL(page.url()).pathname).toBe('/sikkerhet')
-    await page.evaluate(() => document.fonts.ready)
-    await expect(page).toHaveScreenshot('sikkerhet.png', TOLERANCE)
+    expect(new URL(page.url()).pathname).toBe('/administrasjon')
   })
 
-  test('a leser is never asked for TOTP', async ({ page }) => {
+  test('a leser reaches /profil straight after signing in', async ({ page }) => {
     await signIn(page, 'leser', BASE_URL)
     await gotoRoute(page, '/profil', 'leser', BASE_URL)
     expect(new URL(page.url()).pathname).toBe('/profil')
