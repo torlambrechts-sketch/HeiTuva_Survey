@@ -107,6 +107,7 @@ export async function ReportEditor({
             responded: t('participationResponded'),
             themeMentions: t('themeMentions', { label: '{label}', count: '{count}' }),
             quotesFallback: t('quotesFallback'),
+            summaryEmpty: t('summaryEmpty'),
             quotesPicked: t('quotesPicked'),
             quotesWithheld: t('quotesWithheld', { count: 0 }).replace('0', '{count}'),
             frozen: doc.frozen_at

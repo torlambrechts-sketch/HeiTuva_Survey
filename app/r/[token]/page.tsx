@@ -75,6 +75,7 @@ export default async function SharedReportPage({
         invited: t('participationInvited'),
         responded: t('participationResponded'),
         completion: t('participationCompletion'),
+        summaryEmpty: t('summaryEmpty'),
       }}
     />
   )

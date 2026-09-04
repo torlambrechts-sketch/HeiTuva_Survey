@@ -687,7 +687,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'standardmaler',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Standardmaler' }).click()
+          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Maler' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'standard')
           await page.waitForLoadState('load')
         },
@@ -695,7 +695,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'mine-rapporter',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.waitForLoadState('load')
         },
@@ -714,7 +714,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'innhold',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('button', { name: 'Ny rapport' }).click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
@@ -724,7 +724,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'filter',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
@@ -735,7 +735,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'del',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))

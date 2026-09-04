@@ -230,7 +230,11 @@ export async function DashboardScreen({
             <div className="mt-[14px] flex flex-wrap gap-2">
               {themes.map((theme) => (
                 <span key={theme.key} className="rounded-full bg-sbg px-[14px] py-2 text-[13px]">
-                  {tr('themeMentions', { label: theme.label, count: theme.mentions })}
+                  {/* The dashboard's own wording, not Resultater's: the
+                      design writes "tid · nevnt 19 ganger" on both screens
+                      (HeiTuva.dc.html:1466), and the short form here read as a
+                      count of something unnamed. */}
+                  {t('themeMentions', { label: theme.label, count: theme.mentions })}
                 </span>
               ))}
             </div>

@@ -197,7 +197,15 @@ export async function ResultsScreen({
               <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={t('insufficient')} />
             ) : (
               <div className="mt-[15px] flex flex-col gap-[10px]">
-                {questionBars(result, optionKeys(q, tResp('yes'), tResp('no'))).map((b) => (
+                {questionBars(
+                  result,
+                  optionKeys(q, tResp('yes'), tResp('no'), {
+                    low: tResp('scaleLowDefault'),
+                    high: tResp('scaleHighDefault'),
+                    enpsLow: tResp('enpsLowDefault'),
+                    enpsHigh: tResp('enpsHighDefault'),
+                  }),
+                ).map((b) => (
                   <div key={b.key} className="flex items-center gap-3">
                     <span className="w-[126px] flex-none text-right text-[13px] text-mut">
                       {b.label}
@@ -463,19 +471,27 @@ export async function ResultsScreen({
 /**
  * The option keys a distribution is drawn against, per question type.
  *
- * `yes`/`no` are the only labels this function does not get from the question's
- * own config, so they come from next-intl — the same two messages the
- * respondent surface renders the buttons from, rather than a second Norwegian
- * literal that would not follow a language switch.
+ * The labels this function does not get from the question's own config come
+ * from next-intl — the same messages the respondent surface renders, rather
+ * than a second Norwegian literal that would not follow a language switch.
+ * That is `yes`/`no`, and the scale anchors: the design supplies those as a
+ * default PER TYPE (HeiTuva.dc.html:2902-2903), and a question that names its
+ * own overrides them. Reading them off the question alone is what made this
+ * screen render "1 — 1" and "5 — 5" on every seeded survey.
  */
-function optionKeys(q: Question, yes: string, no: string): { key: string; label: string }[] {
+function optionKeys(
+  q: Question,
+  yes: string,
+  no: string,
+  anchors: { low: string; high: string; enpsLow: string; enpsHigh: string },
+): { key: string; label: string }[] {
   const options = list(q.config, 'options')
   switch (q.type) {
     case 'scale':
       return scaleKeys(
         num(q.config, 'points', 5),
-        str(q.config, 'low_label') ?? '1',
-        str(q.config, 'high_label') ?? String(num(q.config, 'points', 5)),
+        str(q.config, 'low_label') || anchors.low,
+        str(q.config, 'high_label') || anchors.high,
       )
     case 'likert':
     case 'smiley': {
@@ -483,7 +499,12 @@ function optionKeys(q: Question, yes: string, no: string): { key: string; label:
       return labels.map((label, i) => ({ key: String(i + 1), label }))
     }
     case 'enps':
-      return Array.from({ length: 11 }, (_, i) => ({ key: String(i), label: String(i) }))
+      // 0-10, with the design's own eNPS pair on the ends.
+      return Array.from({ length: 11 }, (_, i) => ({
+        key: String(i),
+        label:
+          i === 0 ? `0 — ${anchors.enpsLow}` : i === 10 ? `10 — ${anchors.enpsHigh}` : String(i),
+      }))
     case 'yesno':
       return [
         { key: 'true', label: yes },

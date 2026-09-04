@@ -67,6 +67,7 @@ export async function GET(
     invited: t('participationInvited'),
     responded: t('participationResponded'),
     completion: t('participationCompletion'),
+    summaryEmpty: t('summaryEmpty'),
     sectionLabels: Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label])),
   })
 

@@ -53,4 +53,6 @@ export type SavedReport = {
   status: string
   base: string | null
   createdAt: string
+  /** What "Del" mints the link at — the report's own audience, not a guess. */
+  shareScope: 'ledelse' | 'ledere_eget_team' | 'alle_ansatte'
 }

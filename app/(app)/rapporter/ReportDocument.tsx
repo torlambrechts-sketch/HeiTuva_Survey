@@ -32,6 +32,7 @@ type Labels = {
   quotesFallback: string
   quotesPicked: string
   quotesWithheld: string
+  summaryEmpty: string
   /** Set only when the document came from a published report's frozen copy. */
   frozen: string | null
   notes: Record<string, string>
@@ -347,38 +348,53 @@ function SectionBody({ section, labels }: { section: ComposedSection | undefined
     )
   }
 
+  /*
+    Sammendrag is PROSE — "Tre hovedfunn i klartekst", as its own registry
+    description says, and as the design writes it (HeiTuva.dc.html:1105-1120:
+    five sentences, no numbers in a column).
+
+    It arrives carrying `cells` as well as findings, because the composition
+    needs them: the cross-section residual pass gates a scalar `n` against them,
+    and a published report freezes them as the snapshot's `questions`. They are
+    working data for the gate, not content for the reader — rendering them put a
+    question-by-question table under a section whose whole point is that
+    somebody already read the table for you.
+  */
+  if (section.key === 'summary') {
+    const findings = (extra?.findings ?? []).filter((f) => f.text)
+    if (findings.length === 0) {
+      return <p className="mt-2 text-[13px] text-mut">{labels.summaryEmpty}</p>
+    }
+    return (
+      <div className="mt-2 flex flex-col gap-[6px]">
+        {findings.map((f, i) => (
+          <p key={i} className="text-[13.5px] leading-[1.65]">
+            {f.text}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
   if (section.cells) {
     if (section.cells.length === 0) return null
     return (
-      <>
-        {extra?.findings?.length ? (
-          <div className="mt-2 flex flex-col gap-[6px]">
-            {extra.findings
-              .filter((f) => f.text)
-              .map((f, i) => (
-                <p key={i} className="text-[13.5px] leading-[1.65]">
-                  {f.text}
-                </p>
-              ))}
+      <div className="mt-2 flex flex-col gap-[6px]">
+        {section.cells.map((cell) => (
+          <div key={cell.question_id} className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 flex-1 text-[13.5px] leading-[1.65]">{cell.text}</span>
+            <span className="flex-none text-[13.5px] font-semibold">
+              {cell.insufficient_data || cell.n === null ? (
+                <span className="text-[11.5px] font-normal text-mut">{labels.insufficient}</span>
+              ) : cell.avg !== null ? (
+                cell.avg.toFixed(1)
+              ) : (
+                `n=${cell.n}`
+              )}
+            </span>
           </div>
-        ) : null}
-        <div className="mt-2 flex flex-col gap-[6px]">
-          {section.cells.map((cell) => (
-            <div key={cell.question_id} className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 flex-1 text-[13.5px] leading-[1.65]">{cell.text}</span>
-              <span className="flex-none text-[13.5px] font-semibold">
-                {cell.insufficient_data || cell.n === null ? (
-                  <span className="text-[11.5px] font-normal text-mut">{labels.insufficient}</span>
-                ) : cell.avg !== null ? (
-                  cell.avg.toFixed(1)
-                ) : (
-                  `n=${cell.n}`
-                )}
-              </span>
-            </div>
-          ))}
-        </div>
-      </>
+        ))}
+      </div>
     )
   }
 

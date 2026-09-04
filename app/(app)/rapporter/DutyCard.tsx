@@ -152,7 +152,34 @@ export async function DutyCard({
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-[12.5px] text-mut">{t('noLinkedSurveys')}</p>
+          /*
+            The empty state is a ROW of the same shape, not a sentence
+            (HeiTuva.dc.html:3172-3174): a "Mangler" chip, the title, the reason
+            it matters, and a Start. Rendering it as a muted line lost the one
+            thing the design uses this box for — telling a reader with no data
+            what to do about it — and made the box look like a section that
+            simply had nothing in it.
+          */
+          <div className="mt-2 flex flex-wrap items-center gap-[11px] py-[9px]">
+            <span
+              className="flex-none whitespace-nowrap rounded-full px-[11px] py-[5px] text-[11.5px] font-bold"
+              style={OPEN}
+            >
+              {t('statusMissing')}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold">{t('noLinkedSurveys')}</span>
+              <span className="mt-[1px] block text-[11.5px] text-mut">{t('noLinkedSurveysHint')}</span>
+            </span>
+            {canEdit ? (
+              <Link
+                href="/bibliotek?fane=maler"
+                className="touch-44 flex-none whitespace-nowrap rounded-[9px] border border-line px-[13px] py-[7px] text-xs font-semibold text-ink no-underline"
+              >
+                {t('linkedStartCta')}
+              </Link>
+            ) : null}
+          </div>
         )}
 
         <DutySettings

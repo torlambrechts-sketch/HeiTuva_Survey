@@ -65,9 +65,13 @@ export function DutyChecklist({
           >
             <span
               className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-[7px] text-xs font-bold"
+              // The design's own pair (HeiTuva.dc.html:3149): a ticked box is
+              // --ac2 on --ac2, not --ac on --ink. Yellow is the primary-action
+              // colour everywhere else in this product, so a yellow tick read as
+              // a button rather than as a completed item.
               style={{
-                border: `1.5px solid ${on ? 'var(--ink)' : 'var(--line)'}`,
-                background: on ? 'var(--ac)' : 'transparent',
+                border: `1.5px solid ${on ? 'var(--ac2)' : 'var(--line)'}`,
+                background: on ? 'var(--ac2)' : 'transparent',
               }}
             >
               {on ? '✓' : ''}

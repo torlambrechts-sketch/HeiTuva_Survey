@@ -37,6 +37,7 @@ export type PrintLabels = {
   invited: string
   responded: string
   completion: string
+  summaryEmpty: string
   sectionLabels: Record<string, string>
 }
 
@@ -168,6 +169,15 @@ function sectionHtml(section: ComposedSection, labels: PrintLabels): string {
         .map(([l, v]) => `<div class="cell"><span>${esc(l)}</span><span>${esc(v)}</span></div>`)
         .join('\n'),
     )
+  }
+
+  // Sammendrag prints as prose — see the note in ReportDocument. The export
+  // must be able to say exactly what the reader was allowed to see, and that
+  // reader saw sentences.
+  if (section.key === 'summary') {
+    const findings = (extra?.findings ?? []).filter((f) => f.text)
+    if (findings.length === 0) return wrap(`<p class="note">${esc(labels.summaryEmpty)}</p>`)
+    return wrap(findings.map((f) => `<p>${esc(f.text)}</p>`).join('\n'))
   }
 
   if (section.rows) {

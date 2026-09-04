@@ -54,8 +54,20 @@ export function QuestionInput({
     case 'enps': {
       const points = question.type === 'enps' ? 11 : num(c, 'points', 5)
       const from = question.type === 'enps' ? 0 : 1
-      const low = str(c, 'low_label')
-      const high = str(c, 'high_label')
+      /*
+        The design's anchors are a DEFAULT PER TYPE, not per-question data:
+        `lowLabel: q.type === "enps" ? "Svært lite sannsynlig" : (q.lowLabel ||
+        "Ikke i det hele tatt")` (HeiTuva.dc.html:2902-2903). A question that
+        carries its own anchors overrides them; one that does not still gets the
+        pair the prototype shows, which is why the scale under the buttons was
+        blank on every seeded survey — no question in the seed sets them.
+
+        The wording is a message, not a literal: it is copy, and it has to
+        follow the respondent's language like every other string here.
+      */
+      const isEnps = question.type === 'enps'
+      const low = str(c, 'low_label') || t(isEnps ? 'enpsLowDefault' : 'scaleLowDefault')
+      const high = str(c, 'high_label') || t(isEnps ? 'enpsHighDefault' : 'scaleHighDefault')
       return (
         <div className="mt-5">
           <div className="flex flex-wrap gap-2.5">

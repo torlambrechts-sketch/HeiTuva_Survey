@@ -112,6 +112,19 @@ describe('scaleKeys', () => {
     expect(scaleKeys(0, 'lav', 'høy')).toHaveLength(2)
     expect(scaleKeys(99, 'lav', 'høy')).toHaveLength(10)
   })
+
+  it('leaves an unlabelled end as a bare number, never "1 — 1"', () => {
+    // The old fallback passed the digit in AS the anchor, so a question whose
+    // author never typed one rendered "1 — 1" and "5 — 5" down the whole
+    // Resultater screen. An unlabelled scale is a normal thing; a scale that
+    // labels itself with its own number is a broken template.
+    expect(scaleKeys(5, null, null).map((k) => k.label)).toEqual(['1', '2', '3', '4', '5'])
+    expect(scaleKeys(5, '', '   ').map((k) => k.label)).toEqual(['1', '2', '3', '4', '5'])
+  })
+
+  it('labels one end when only one anchor was written', () => {
+    expect(scaleKeys(3, 'lav', null).map((k) => k.label)).toEqual(['1 — lav', '2', '3'])
+  })
 })
 
 describe('questionBars', () => {

@@ -455,7 +455,11 @@
     "pickRound": "Runde",
     "gatedCell": "n<5",
     "gatedTitle": "For få svar til å vise",
-    "unavailable": "Resultatene kunne ikke hentes akkurat nå. Prøv igjen om litt."
+    "unavailable": "Resultatene kunne ikke hentes akkurat nå. Prøv igjen om litt.",
+    "scaleLowDefault": "Ikke i det hele tatt",
+    "scaleHighDefault": "Helt enig",
+    "enpsLowDefault": "Svært lite sannsynlig",
+    "enpsHighDefault": "Svært sannsynlig"
   },
   "reports": {
     "title": "Rapporter",
@@ -483,16 +487,16 @@
     "groupThreshold": "Grupper med færre enn fem svar vises aldri nedbrutt, uavhengig av filter.",
     "leaderScopeNote": "Ledere som får lenken ser bare sitt eget team. Alle ansatte ser samlet uten nedbryting.",
     "tabLov": "Lovpålagte",
-    "tabStandard": "Standardmaler",
-    "tabMine": "Mine rapporter",
-    "counts": "{lov} lovpålagte · {mine} egne",
+    "tabStandard": "Maler",
+    "tabMine": "Rapporter",
+    "counts": "{lov} lovpålagte · {maler} standardmaler · {mine} lagrede",
     "dutyThreshold": "Lovpålagte rapporter bygges på de samme svarene som resten av HeiTuva — med samme terskel på fem svar. Ingen plikt kan dokumenteres med tall som kan spores tilbake til en enkeltperson.",
     "statusMissing": "Mangler",
     "statusInProgress": "Underveis",
     "statusReady": "Klar",
     "statusPublished": "Publisert",
     "progress": "{done} av {total} punkter",
-    "noLinkedSurveys": "Ingen undersøkelse er knyttet til plikten ennå",
+    "noLinkedSurveys": "Ingen undersøkelse startet ennå",
     "linkedCta": "Resultater",
     "settingsOpen": "Innstillinger",
     "settingsClose": "Skjul innstillinger",
@@ -597,7 +601,16 @@
     "quotesPicked": "Sitater valgt av HR. Anonymiserte.",
     "quotesFallback": "Ingen sitater valgt ennå — de tre første vises. Velg under Innhold.",
     "quotesWithheld": "{count} valgte sitater vises ikke: spørsmålet de kom fra har nå for få svar.",
-    "frozenAt": "Frosne tall fra publiseringen {date}. Rapporten viser det som ble signert."
+    "frozenAt": "Frosne tall fra publiseringen {date}. Rapporten viser det som ble signert.",
+    "shared": "Delt ✓",
+    "shareFailed": "Kunne ikke dele",
+    "statusPublisert": "Publisert",
+    "statusKlar": "Klar",
+    "statusUtkast": "Utkast",
+    "noLinkedSurveysHint": "Start én for å få tall inn i rapporten",
+    "linkedStartCta": "Start",
+    "summaryEmpty": "Ingen hovedfunn ennå — de skrives når det er nok svar til å si noe.",
+    "tabsLabel": "Rapportfaner"
   },
   "admin": {
     "title": "Administrasjon",
@@ -898,7 +911,11 @@
     "failed": "Kunne ikke sende inn svaret. Prøv igjen.",
     "peerTitle": "Slik svarte kollegene dine",
     "peerNote": "{n, plural, one {# svar så langt} other {# svar så langt}}",
-    "peerBelowK": "Resultatene vises fra {k} svar — det beskytter anonymiteten"
+    "peerBelowK": "Resultatene vises fra {k} svar — det beskytter anonymiteten",
+    "scaleLowDefault": "Ikke i det hele tatt",
+    "scaleHighDefault": "Helt enig",
+    "enpsLowDefault": "Svært lite sannsynlig",
+    "enpsHighDefault": "Svært sannsynlig"
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",
@@ -969,7 +986,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "filterLine": "{surveys} · {responses} svar · {group}",
+    "filterLine": "{surveys, plural, one {# undersøkelse} other {# undersøkelser}} · {responses} svar · {group}",
     "allGroups": "alle grupper",
     "updatedNow": "oppdatert nå",
     "periodLast": "Siste runde",
@@ -1001,6 +1018,7 @@
     "pinnedOn": "I rapporten ✓",
     "pinnedOff": "Legg i rapport",
     "openPinned": "Åpne rapport",
-    "pinnedReportTitle": "Fra dashboard — {date}"
+    "pinnedReportTitle": "Fra dashboard — {date}",
+    "themeMentions": "{label} · nevnt {count} ganger"
   }
 }

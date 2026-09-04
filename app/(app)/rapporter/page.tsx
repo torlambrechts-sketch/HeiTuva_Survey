@@ -71,11 +71,13 @@ export default async function ReportsPage({
     // no aggregate RPC is called beside it, so there is no second path with
     // different gating rules.
     // The editor keeps the screen's header, so it needs the same counts.
-    const [{ count: dutyCount }, { count: mineCount }] = await Promise.all([
-      supabase.from('duty_definitions').select('key', { count: 'exact', head: true }),
-      supabase.from('reports').select('id', { count: 'exact', head: true })
-        .eq('org_id', viewer.orgId).eq('kind', 'egen').is('deleted_at', null),
-    ])
+    const [{ count: dutyCount }, { count: templateCount }, { count: mineCount }] =
+      await Promise.all([
+        supabase.from('duty_definitions').select('key', { count: 'exact', head: true }),
+        supabase.from('report_templates').select('key', { count: 'exact', head: true }),
+        supabase.from('reports').select('id', { count: 'exact', head: true })
+          .eq('org_id', viewer.orgId).is('deleted_at', null),
+      ])
 
     const { data: composed } = await supabase.rpc('compose_report', { p_report: row.id })
     const doc = (composed ?? {}) as ComposedDocument
@@ -146,7 +148,11 @@ export default async function ReportsPage({
           orgName: viewer.orgName,
         }}
         sectionLabels={Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label]))}
-        counts={t('counts', { lov: dutyCount ?? 0, mine: mineCount ?? 0 })}
+        counts={t('counts', {
+          lov: dutyCount ?? 0,
+          maler: templateCount ?? 0,
+          mine: mineCount ?? 0,
+        })}
         pptxEnabled={await isFlagEnabled('pptx_export', viewer.orgId)}
         quotePicks={quotePicks}
         quotesChosen={(filters.quotes ?? []) as string[]}
@@ -206,7 +212,7 @@ export default async function ReportsPage({
 
   const { data: reports } = await supabase
     .from('reports')
-    .select('id, title, kind, status, base_template, duty_id, created_at')
+    .select('id, title, kind, status, base_template, duty_id, created_at, share_scope')
     .eq('org_id', viewer.orgId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -262,8 +268,17 @@ export default async function ReportsPage({
         status: r.status,
         base: r.base_template,
         createdAt: r.created_at,
+        shareScope: r.share_scope,
       }))}
-      counts={{ lov: cards.length, mine: (reports ?? []).filter((r) => r.kind === 'egen').length }}
+      /* The design's line names all three collections
+         (HeiTuva.dc.html:3070): statutory duties, standard templates, saved
+         reports. "lagrede" counts every saved report, not just the own-made
+         ones — a published statutory report is saved too. */
+      counts={{
+        lov: cards.length,
+        maler: (templates ?? []).length,
+        mine: (reports ?? []).length,
+      }}
       thresholdNote={t('dutyThreshold')}
       sectionLabels={Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label]))}
     />

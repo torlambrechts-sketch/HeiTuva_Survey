@@ -455,7 +455,11 @@
     "pickRound": "Round",
     "gatedCell": "n<5",
     "gatedTitle": "Too few responses to show",
-    "unavailable": "Results could not be loaded right now. Try again in a moment."
+    "unavailable": "Results could not be loaded right now. Try again in a moment.",
+    "scaleLowDefault": "Not at all",
+    "scaleHighDefault": "Completely agree",
+    "enpsLowDefault": "Very unlikely",
+    "enpsHighDefault": "Very likely"
   },
   "reports": {
     "title": "Reports",
@@ -483,16 +487,16 @@
     "groupThreshold": "Groups with fewer than five answers are never broken out, regardless of filters.",
     "leaderScopeNote": "Managers who get the link only see their own team. All employees see totals with no breakdowns.",
     "tabLov": "Statutory",
-    "tabStandard": "Standard templates",
-    "tabMine": "My reports",
-    "counts": "{lov} statutory · {mine} own",
+    "tabStandard": "Templates",
+    "tabMine": "Reports",
+    "counts": "{lov} statutory · {maler} standard templates · {mine} saved",
     "dutyThreshold": "Statutory reports are built from the same answers as the rest of HeiTuva — with the same threshold of five responses. No duty can be documented with figures that could be traced back to an individual.",
     "statusMissing": "Missing",
     "statusInProgress": "In progress",
     "statusReady": "Ready",
     "statusPublished": "Published",
     "progress": "{done} of {total} items",
-    "noLinkedSurveys": "No survey is linked to this duty yet",
+    "noLinkedSurveys": "No survey started yet",
     "linkedCta": "Results",
     "settingsOpen": "Settings",
     "settingsClose": "Hide settings",
@@ -597,7 +601,16 @@
     "quotesPicked": "Quotes chosen by HR. Anonymised.",
     "quotesFallback": "No quotes chosen yet — the first three are shown. Choose under Content.",
     "quotesWithheld": "{count} chosen quotes are not shown: their question now has too few answers.",
-    "frozenAt": "Frozen figures from publication on {date}. The report shows what was signed."
+    "frozenAt": "Frozen figures from publication on {date}. The report shows what was signed.",
+    "shared": "Shared ✓",
+    "shareFailed": "Could not share",
+    "statusPublisert": "Published",
+    "statusKlar": "Ready",
+    "statusUtkast": "Draft",
+    "noLinkedSurveysHint": "Start one to get figures into the report",
+    "linkedStartCta": "Start",
+    "summaryEmpty": "No key findings yet — they are written once there are enough answers to say something.",
+    "tabsLabel": "Report tabs"
   },
   "admin": {
     "title": "Administration",
@@ -898,7 +911,11 @@
     "failed": "Could not submit your answer. Please try again.",
     "peerTitle": "How your colleagues answered",
     "peerNote": "{n, plural, one {# answer so far} other {# answers so far}}",
-    "peerBelowK": "Results are shown from {k} answers — that protects anonymity"
+    "peerBelowK": "Results are shown from {k} answers — that protects anonymity",
+    "scaleLowDefault": "Not at all",
+    "scaleHighDefault": "Completely agree",
+    "enpsLowDefault": "Very unlikely",
+    "enpsHighDefault": "Very likely"
   },
   "surveyNav": {
     "back": "Back to surveys",
@@ -969,7 +986,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "filterLine": "{surveys} · {responses} responses · {group}",
+    "filterLine": "{surveys, plural, one {# survey} other {# surveys}} · {responses} responses · {group}",
     "allGroups": "all groups",
     "updatedNow": "updated now",
     "periodLast": "Latest round",
@@ -1001,6 +1018,7 @@
     "pinnedOn": "In the report ✓",
     "pinnedOff": "Add to report",
     "openPinned": "Open report",
-    "pinnedReportTitle": "From dashboard — {date}"
+    "pinnedReportTitle": "From dashboard — {date}",
+    "themeMentions": "{label} · mentioned {count} times"
   }
 }

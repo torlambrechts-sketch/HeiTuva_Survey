@@ -98,20 +98,28 @@ export function questionBars(
 /**
  * A scale question's option keys and labels — HeiTuva.dc.html:2739.
  *
- * `points` defaults to 5 because that is the design's default scale; the end
- * labels come from the question's own config and fall back to the bundle's
- * wording, which is seeded as UI copy rather than hard-coded here.
+ * `points` defaults to 5 because that is the design's default scale. The end
+ * labels are the QUESTION's own anchors ("Ikke i det hele tatt" → "Helt
+ * enig"), typed in the Builder and stored on `config`.
+ *
+ * A question with no anchors gets a bare number, not "1 — 1". The previous
+ * fallback passed the digit in as the label and produced exactly that, which
+ * reads as a broken template rather than as an unlabelled scale — and an
+ * invented default ("Helt uenig") would be worse: it would put words in the
+ * question author's mouth on a screen a whole company reads.
  */
 export function scaleKeys(
   points: number,
-  lowLabel: string,
-  highLabel: string,
+  lowLabel: string | null,
+  highLabel: string | null,
 ): { key: string; label: string }[] {
   const n = Math.max(2, Math.min(10, Math.round(points)))
+  const anchor = (value: string, label: string | null) =>
+    label && label.trim() ? `${value} — ${label.trim()}` : value
   return Array.from({ length: n }, (_, i) => {
     const value = String(i + 1)
-    if (i === 0) return { key: value, label: `1 — ${lowLabel}` }
-    if (i === n - 1) return { key: value, label: `${n} — ${highLabel}` }
+    if (i === 0) return { key: value, label: anchor(value, lowLabel) }
+    if (i === n - 1) return { key: value, label: anchor(value, highLabel) }
     return { key: value, label: value }
   })
 }

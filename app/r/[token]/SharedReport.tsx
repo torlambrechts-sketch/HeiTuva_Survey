@@ -13,6 +13,7 @@ type Labels = {
   invited: string
   responded: string
   completion: string
+  summaryEmpty: string
 }
 
 /**
@@ -153,6 +154,26 @@ function SectionBody({ section, labels }: { section: ComposedSection; labels: La
             <div className="text-[11px] uppercase tracking-[.1em] text-mut">{label}</div>
             <div className="mt-1 font-display text-[26px] font-bold leading-none">{value}</div>
           </div>
+        ))}
+      </div>
+    )
+  }
+
+  /* Sammendrag is prose here too — see the note in ReportDocument. Rendering
+     `cells` in the share and print paths while the editor rendered findings
+     meant the reader of a shared report saw a different Sammendrag from the
+     person who wrote it. */
+  if (section.key === 'summary') {
+    const findings = (extra?.findings ?? []).filter((f) => f.text)
+    if (findings.length === 0) {
+      return <p className="mt-2 text-[13px] text-mut">{labels.summaryEmpty}</p>
+    }
+    return (
+      <div className="mt-2 flex flex-col gap-[6px]">
+        {findings.map((f, i) => (
+          <p key={i} className="text-[13.5px] leading-[1.65]">
+            {f.text}
+          </p>
         ))}
       </div>
     )

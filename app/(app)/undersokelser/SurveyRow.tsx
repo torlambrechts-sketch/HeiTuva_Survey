@@ -99,8 +99,14 @@ export function SurveyRow({
   /**
    * A percentage needs a denominator. `target` is null until Send chooses
    * recipients, and a 0 % derived from an unknown denominator is a fabricated
-   * number — it reads as "nobody answered" when six people did. So the bar is
-   * hidden entirely until the denominator exists.
+   * number — it reads as "nobody answered" when six people did.
+   *
+   * What follows from that is that the FILL is withheld, not the track. Hiding
+   * the whole bar was the first fix and it went one step too far: it removed a
+   * piece of the design's row (HeiTuva.dc.html:766-801) to avoid stating a
+   * number, when the track states nothing on its own. An empty track beside
+   * "6 svar" is the honest shape — the row still looks like every other row,
+   * and nothing claims a proportion nobody knows.
    */
   const hasTarget = Boolean(survey.target && survey.target > 0)
   const pct = hasTarget
@@ -170,24 +176,30 @@ export function SurveyRow({
       </div>
 
       <div className="mt-[14px] flex items-center gap-[14px]">
-        {pct === null ? null : (
-          <span
-            className="block h-[9px] flex-1 overflow-hidden rounded-full"
-            style={{ background: 'var(--sf2)' }}
-            role="progressbar"
-            aria-valuenow={pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={labels.responses}
-          >
-            <span className="block h-full rounded-full bg-ac" style={{ width: `${pct}%` }} />
-          </span>
-        )}
+        {/*
+          `role="progressbar"` only where there is a value to announce. A
+          progressbar with no `aria-valuenow` is worse than a plain box: a
+          screen reader announces a progress control and then has nothing to
+          say about its progress.
+        */}
         <span
-          className={`whitespace-nowrap text-[13px] text-mut${pct === null ? ' flex-1' : ''}`}
+          className="block h-[9px] flex-1 overflow-hidden rounded-full"
+          style={{ background: 'var(--sf2)' }}
+          {...(pct === null
+            ? { 'aria-hidden': true }
+            : {
+                role: 'progressbar',
+                'aria-valuenow': pct,
+                'aria-valuemin': 0,
+                'aria-valuemax': 100,
+                'aria-label': labels.responses,
+              })}
         >
-          {labels.responses}
+          {pct === null ? null : (
+            <span className="block h-full rounded-full bg-ac" style={{ width: `${pct}%` }} />
+          )}
         </span>
+        <span className="whitespace-nowrap text-[13px] text-mut">{labels.responses}</span>
       </div>
 
       {failed ? (

@@ -1,8 +1,20 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { DutyCard } from './DutyCard'
-import { DeleteReportButton, NewReportButton } from './ReportRowActions'
+import { DeleteReportButton, NewReportButton, ShareReportButton } from './ReportRowActions'
 import type { DutyCardData, ReportTemplate, SavedReport } from './types'
+
+/**
+ * Status pill colours, verbatim from the design's map (HeiTuva.dc.html:3028).
+ * `#E4F2E0` / `#2F5D2A` are the same literal green pair the survey status pills
+ * use — the bundle quotes hexes there too, so they are quoted rather than
+ * approximated with a token.
+ */
+const STATUS_PILL: Record<string, { bg: string; fg: string; key: string }> = {
+  publisert: { bg: '#E4F2E0', fg: '#2F5D2A', key: 'statusPublisert' },
+  klar: { bg: 'var(--sbg)', fg: 'var(--ink)', key: 'statusKlar' },
+  utkast: { bg: 'var(--sf2)', fg: 'var(--ink)', key: 'statusUtkast' },
+}
 
 const TAB_KEYS = [
   ['lov', 'tabLov'],
@@ -30,7 +42,7 @@ export async function ReportsScreen({
   templates: ReportTemplate[]
   members: { id: string; name: string }[]
   reports: SavedReport[]
-  counts: { lov: number; mine: number }
+  counts: { lov: number; maler: number; mine: number }
   thresholdNote: string
   /**
    * Section names come from `report_section_types`, not from next-intl.
@@ -58,7 +70,14 @@ export async function ReportsScreen({
             the 44px hit areas apart — 13px is the minimum that does it. The
             horizontal gap stays the bundle's 3px, and so does the row gap at
             xl, where the rail never wraps. */}
-        <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-full bg-sf2 p-1 xl:gap-y-[3px]">
+        {/* Named, because two of the three tabs now share their text with the
+            top navigation ("Rapporter") and with a Bibliotek tab ("Maler").
+            The rail is a navigation landmark either way; giving it a name is
+            what lets a screen reader — and a test — say WHICH "Rapporter". */}
+        <nav
+          aria-label={t('tabsLabel')}
+          className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-full bg-sf2 p-1 xl:gap-y-[3px]"
+        >
           {TAB_KEYS.map(([key, label]) => {
             const active = key === tab
             return (
@@ -76,7 +95,7 @@ export async function ReportsScreen({
               </Link>
             )
           })}
-        </div>
+        </nav>
       </div>
 
       {tab === 'lov' ? (
@@ -102,12 +121,27 @@ export async function ReportsScreen({
             <div
               key={tpl.key}
               className="flex flex-col rounded-[18px] border border-line p-6"
-              // The design tints the five cards from the accent set, positionally.
-              style={{ background: ['var(--sbg2)', 'var(--sf)', 'var(--sbg2)', 'var(--sf)', 'var(--sbg2)'][i % 5] }}
+              /*
+                The design tints the cards POSITIONALLY, cycling five literal
+                hexes (HeiTuva.dc.html:3066):
+
+                  ["#FFFDF6","#FBEBBE","#CFE7E4","#FBD5C4","#F3E7DB"][i % 5]
+
+                Two of the five have no theme token — #CFE7E4 is a lighter
+                --ac2 and #F3E7DB a warmer --sf2 — so they are quoted verbatim
+                here for the same reason the status pill colours are quoted in
+                undersokelser/keys.ts: substituting the nearest token would be
+                restyling, and the earlier alternation of two tokens rendered
+                all five cards in the same cream.
+              */
+              style={{ background: ['#FFFDF6', '#FBEBBE', '#CFE7E4', '#FBD5C4', '#F3E7DB'][i % 5] }}
             >
               <div className="mb-[14px] flex flex-col gap-[5px] rounded-xl border border-line bg-sf p-3">
                 <span className="block h-[6px] w-[46%] rounded-[3px] bg-ink opacity-80" />
-                {tpl.sections.slice(0, 3).map((s) => (
+                {/* Every section, as `r.thumb` maps them — the thumbnail is a
+                    picture of the report's shape, so truncating it drew the
+                    wrong shape. */}
+                {tpl.sections.map((s) => (
                   <span key={s} className="mt-[3px] flex items-center gap-1">
                     <span className="block h-1 w-[22%] rounded-[2px] bg-mut opacity-45" />
                     <span
@@ -173,23 +207,50 @@ export async function ReportsScreen({
               {reports.map((r) => (
                 <div
                   key={r.id}
-                  className="flex flex-wrap items-center gap-[11px] border-b border-line py-[11px]"
+                  className="flex flex-wrap items-center gap-[14px] border-b border-line py-[14px]"
                 >
-                  <span className="whitespace-nowrap rounded-full bg-sf2 px-[11px] py-[5px] text-[11.5px] font-bold">
+                  {/* Kind and status are PILLS, and their colours are the
+                      design's own map (HeiTuva.dc.html:3027-3029): lovpålagt is
+                      --ac3, egen --sf2; publisert is the same green pair the
+                      survey status pills use, klar is --sbg, utkast --sf2.
+                      Rendering the raw enum as muted text lost both the shape
+                      and the meaning — "publisert" read like a footnote. */}
+                  <span
+                    className="flex-none whitespace-nowrap rounded-full px-[11px] py-[5px] text-[11.5px] font-bold"
+                    style={{ background: r.kind === 'lov' ? 'var(--ac3)' : 'var(--sf2)' }}
+                  >
                     {r.kind === 'lov' ? t('kindLov') : t('kindEgen')}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold">{r.title}</span>
-                    <span className="mt-[1px] block text-[11.5px] text-mut">
+                    <span className="block text-[14.5px] font-semibold">{r.title}</span>
+                    <span className="mt-[2px] block text-[12.5px] text-mut">
                       {[r.base, new Date(r.createdAt).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })]
                         .filter(Boolean)
                         .join(' · ')}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap text-[12px] text-mut">{r.status}</span>
+                  <span
+                    className="flex-none whitespace-nowrap rounded-full px-[11px] py-[5px] text-[11.5px] font-bold"
+                    style={{
+                      background: STATUS_PILL[r.status]?.bg ?? 'var(--sf2)',
+                      color: STATUS_PILL[r.status]?.fg ?? 'var(--ink)',
+                    }}
+                  >
+                    {t(STATUS_PILL[r.status]?.key ?? 'statusUtkast')}
+                  </span>
                   {/* RESPONSIVE.md § Row actions: the group wraps to its own
                       line below md rather than shrinking the 44px targets. */}
-                  <span className="flex flex-wrap gap-2">
+                  <span className="flex flex-wrap items-center gap-2">
+                    {canEdit ? (
+                      <ShareReportButton
+                        reportId={r.id}
+                        scope={r.shareScope}
+                        label={t('share')}
+                        sharedLabel={t('shared')}
+                        failedLabel={t('shareFailed')}
+                        className="touch-44 cursor-pointer whitespace-nowrap rounded-[9px] border border-line bg-transparent px-[14px] py-[9px] text-[12px] font-semibold text-ink"
+                      />
+                    ) : null}
                     <a
                       href={`/rapporter/${r.id}/pdf`}
                       className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-[14px] py-[9px] text-[12px] font-semibold text-ink no-underline"

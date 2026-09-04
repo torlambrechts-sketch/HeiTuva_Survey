@@ -65,6 +65,7 @@ export function PreviewPane({
   questions: DraftQuestion[]
 }) {
   const t = useTranslations('builder')
+  const tr = useTranslations('respondent')
 
   return (
     <div
@@ -109,9 +110,12 @@ export function PreviewPane({
                   ))}
                 </div>
                 {q.type === 'scale' || q.type === 'slider' ? (
+                  // The same per-type default the respondent surface applies
+                  // (HeiTuva.dc.html:2902-2903), so the preview shows what the
+                  // respondent will actually see rather than two blanks.
                   <div className="mt-[6px] flex justify-between text-[11px] text-mut">
-                    <span>{q.config.low_label ?? ''}</span>
-                    <span>{q.config.high_label ?? ''}</span>
+                    <span>{q.config.low_label || tr('scaleLowDefault')}</span>
+                    <span>{q.config.high_label || tr('scaleHighDefault')}</span>
                   </div>
                 ) : null}
               </div>
