@@ -1864,6 +1864,46 @@ export type Database = {
         }
         Returns: Json
       }
+      send_round: {
+        Args: {
+          p_anonymity?: string
+          p_cadence?: string
+          p_channels: string[]
+          p_closes_at?: string
+          p_group_ids?: string[]
+          p_recipients?: Json
+          p_reminder_days?: number
+          p_rotate?: boolean
+          p_runs?: number
+          p_survey: string
+          p_test_only?: boolean
+        }
+        Returns: Json
+      }
+      close_round: {
+        Args: { p_round: string }
+        Returns: Json
+      }
+      get_peer_results: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      mail_outbox_read: {
+        Args: { p_batch?: number; p_visibility?: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
+      mail_outbox_delete: {
+        Args: { p_msg_id: number }
+        Returns: boolean
+      }
+      mail_outbox_archive: {
+        Args: { p_msg_id: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -41,8 +41,11 @@ must never be what silently settles an open question.
 | D37 | Supabase's PERFORMANCE advisors are deferred to the Phase 6 hardening pass | **Deferred** — Tor's call, 2026-09-03 | see entry below |
 | D38 | The respondent surface has a closed/expired screen the design does not draw | Accepted | see entry below |
 | D39 | Image-choice options render a tinted panel, not a photo | Accepted | see entry below |
-| D40 | The thank-you screen has no peer-results panel yet | **Open** — Phase 3 remainder | see entry below |
+| D40 | The thank-you screen has no peer-results panel yet | **Resolved** — built with a token-scoped, k-gated RPC (migration 0011) | see entry below |
 | D41 | Scale buttons keep a 44px floor and wrap rather than shrink | Accepted | docs/RESPONSIVE.md |
+| D42 | A reminder rotates the invitation token, invalidating the first link | **Needs Tor's review** | see entry below |
+| D43 | Send has no "Sendes" scheduling picker and no reminder chips | Accepted | see entry below |
+| D44 | Directory-sync imports render but do not import | Accepted | see entry below |
 
 ## Entries
 
@@ -722,7 +725,33 @@ stock photo standing in for the customer's own, the card renders the design's
 tinted panel with the option's label under it — the layout is right and nothing
 pretends to be a picture that was never uploaded.
 
-### D40 — the thank-you screen has no peer-results panel
+### D40 — the thank-you screen's peer-results panel (RESOLVED)
+
+Built in migration 0011 as `public.get_peer_results(p_token)`, deliberately not
+by opening `aggregate_results` to `anon`. What makes it narrow enough to be a
+public surface:
+
+- **Token-scoped.** The caller proves possession of a token for that round.
+  There is no survey id parameter, so there is nothing to walk.
+- **One question.** The first numeric question of the round — the one the design
+  charts. No question picker means no way to sweep the survey.
+- **k-enforced in the same function**, using `app.k_threshold()` rather than a
+  literal, so it moves with every other aggregate. Below the threshold it
+  returns `insufficient_data` and *no counts at all* — not even `n`, because "4
+  people have answered" is itself information about who, on a small team.
+- **Opt-in.** Nothing is returned unless the survey's own `engage.reveal_results`
+  is on.
+- **Counts only.** No free text, no group breakdown. `get_quotes` stays
+  authenticated-only and is unreachable from here.
+
+It is fetched after submitting, never before: showing a respondent the
+distribution first is how a survey ends up measuring conformity.
+
+Verified in both directions — `verify:respondent` asserts real buckets above the
+threshold, `insufficient_data` with no leaked count below it, and `not_found`
+for an unknown token.
+
+### D40 (original entry) — why it was deferred
 
 The design's thank-you shows "Slik svarte kollegene dine" — a bar chart of the
 first scale question, with the k-anonymity floor stated below it
@@ -751,3 +780,62 @@ screen — the same rule gives 18px targets. `min-width: 44px` is added so those
 wrap into two rows instead, which is RESPONSIVE.md's floor and the only rule
 that governs below 1280px. A 5-point scale is unaffected, so the design's own
 case is untouched.
+
+
+### D42 — a reminder rotates the invitation token
+
+Tokens are hashed at rest (CLAUDE.md invariant 5), so the original link cannot
+be reconstructed to put in a reminder: the database holds `sha256(token)` and
+nothing else. Three options existed — rotate the token, store the raw one
+encrypted, or send a reminder with no link. Migration 0010 rotates.
+
+The cost is bounded but real. Reminders only go to invitations with
+`responded_at is null`, so the link being invalidated is one nobody has
+submitted through. The person it can bite is someone who opened the invitation,
+left it in a browser tab, and returns after the reminder: they see the closed
+screen and must use the newer email.
+
+The alternative is holding a decryptable copy of every live respondent
+credential, which is a materially worse thing to have breached in a product
+whose entire proposition is that answers cannot be traced back.
+
+**This one wants a decision rather than an acceptance.** If the tab case matters
+more than the storage risk, the shape to consider is a short-lived
+re-issue page ("this link has expired — send me a new one") rather than
+encrypted storage.
+
+### D43 — Send has no scheduling picker and no reminder chips
+
+The design's Levering panel has a "Sendes" select (Med en gang / Mandag 09:00 /
+Fredag 15:00) and, below the reminder select, two chips ("Påminnelse dag 2",
+"Ny påminnelse dag 5").
+
+Neither is built:
+
+- **The "Sendes" picker** would have to defer the send. `send_round` opens the
+  round in the same transaction that mints the tokens, so "Mandag 09:00" would
+  need a scheduled-round state that does not exist yet (`survey_rounds.status`
+  has a `scheduled` value, but nothing enqueues one). A picker that silently
+  sent immediately would be worse than none — the user would believe they had
+  scheduled something.
+- **The reminder chips** duplicate the reminder select in the design; both set
+  the same thing. The select is the substantive control and it writes
+  `schedules.reminder_after_days`, whose CHECK constrains it to 0, 2 or 5 —
+  exactly the three options offered.
+
+The scheduled send belongs with the `scheduled` round status, which is a small
+piece of work once someone decides what a scheduled round should look like on
+the Undersøkelser list.
+
+### D44 — the three directory-sync imports render but do not import
+
+The design offers six import sources. Three are parsing problems and are built
+(CSV, Excel, paste — `lib/send/import.ts`, eleven unit tests). Three are
+integrations with their own OAuth flows and admin consent: Entra ID, Google
+Workspace and HR systems. They are flagged off (`entra_sync`, `google_sync`,
+`hr_sync`) and land in Phase 6 alongside Entra SSO.
+
+Their cards still render, because the design draws six and hiding three would
+misrepresent what the product does. Selecting one shows the design's own
+explanation of what the sync does plus one line saying it is not available yet —
+rather than a button that fails, or a card that silently does nothing.

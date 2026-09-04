@@ -66,3 +66,50 @@ export async function submitResponse(input: unknown): Promise<SubmitResult> {
 
   return { ok: true }
 }
+
+/**
+ * Peer results for the thank-you screen (migration 0011).
+ *
+ * The token is the authorisation and the RPC enforces the k-anonymity floor
+ * itself, so this action only shapes the payload. It is a server action rather
+ * than a client fetch so the token stays out of a browser network call that a
+ * shared screen or an extension could read.
+ */
+export type PeerResults =
+  | { hidden: true }
+  | { insufficientData: true; k: number; question: string }
+  | { question: string; n: number; buckets: { value: number; count: number }[] }
+
+export async function peerResults(token: unknown): Promise<PeerResults> {
+  const parsed = z.string().min(16).max(512).safeParse(token)
+  if (!parsed.success) return { hidden: true }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+
+  const { data, error } = await supabase.rpc('get_peer_results', { p_token: parsed.data })
+  if (error) {
+    console.error(`get_peer_results failed: ${error.code ?? 'unknown'}`)
+    return { hidden: true }
+  }
+
+  const r = (data ?? {}) as {
+    error?: string
+    hidden?: boolean
+    insufficient_data?: boolean
+    k?: number
+    question?: string
+    n?: number
+    buckets?: { value: number; count: number }[]
+  }
+  // A refusal and a not-found both render as nothing: the thank-you screen is
+  // not the place to explain why an aggregate is unavailable.
+  if (r.error || r.hidden) return { hidden: true }
+  if (r.insufficient_data) {
+    return { insufficientData: true, k: r.k ?? 5, question: r.question ?? '' }
+  }
+  return { question: r.question ?? '', n: r.n ?? 0, buckets: r.buckets ?? [] }
+}

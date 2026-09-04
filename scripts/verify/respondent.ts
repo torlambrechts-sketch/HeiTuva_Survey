@@ -12,7 +12,12 @@ import { config } from 'dotenv'
 import { createHash, randomBytes } from 'node:crypto'
 import { BASE_URL, ensureServer } from './server'
 import { serviceClient } from '../../tests/db/clients'
-import { DEMO_SHARE_TOKEN } from '../../tests/db/personas'
+import { DEMO_SHARE_TOKEN, ORG_PRIMARY } from '../../tests/db/personas'
+import { createRound, createShareLink, createSurvey, submitResponses } from '../../tests/db/factories'
+
+/** A share token for the below-k fixture this script creates for itself. */
+const BELOW_K_TOKEN = 'verify-below-k-share-token-local-only'
+const ORG_ID: { current: string | null } = { current: null }
 
 config({ path: '.env.local', quiet: true })
 
@@ -36,6 +41,13 @@ async function main() {
       .limit(1)
       .single()
     if (!round) throw new Error('no open round seeded')
+
+    const { data: org } = await svc
+      .from('organizations')
+      .select('id')
+      .eq('name', ORG_PRIMARY)
+      .single()
+    ORG_ID.current = org!.id
 
     const survey = round.surveys as unknown as { title: string; anonymity: string }
     const questions = (round.question_snapshot ?? []) as { id: string; type: string; text: string }[]
@@ -195,6 +207,54 @@ async function main() {
         'no raw message key leaks on the respondent page',
         !/respondent\.[a-zA-Z]/.test(body),
         body.match(/respondent\.[a-zA-Z]+/)?.[0] ?? 'none',
+      )
+    }
+
+    // --- peer results on the thank-you screen ------------------------------
+    // The k-gate is the thing under test, so it is exercised in both
+    // directions rather than only the passing one.
+    {
+      const { data: below } = await svc.rpc('get_peer_results', { p_token: DEMO_SHARE_TOKEN })
+      const b = (below ?? {}) as { n?: number; insufficient_data?: boolean; buckets?: unknown[] }
+      check(
+        'peer results are returned above the k threshold',
+        (b.n ?? 0) >= 5 && Array.isArray(b.buckets),
+        `n=${b.n} buckets=${(b.buckets as unknown[])?.length}`,
+      )
+
+      // A round of its OWN, with four responses. The first cut deleted
+      // responses from the seeded round to drop it below k — which worked, and
+      // then broke the suite's "a survey above the threshold returns real data"
+      // test on the next run. A verification script must not leave the database
+      // in a state that fails the tests.
+      const belowSurvey = await createSurvey(
+        ORG_ID.current!,
+        `k-gate probe ${Date.now()}`,
+        [{ type: 'scale', text: 'Hvordan går det?' }],
+        { audience: 'Probe' },
+      )
+      const belowRound = await createRound(belowSurvey, 4)
+      await createShareLink(belowRound.id, BELOW_K_TOKEN)
+      await submitResponses(
+        belowRound.tokens,
+        (i) => ({ [belowSurvey.questions[0]!.id]: { value: 3 + (i % 2) } }),
+        4, // one short of k
+      )
+
+      const { data: gated } = await svc.rpc('get_peer_results', { p_token: BELOW_K_TOKEN })
+      const g = (gated ?? {}) as { insufficient_data?: boolean; n?: number; buckets?: unknown }
+      check('below k the aggregate is refused', g.insufficient_data === true, JSON.stringify(g))
+      check(
+        'a refused aggregate leaks no count at all',
+        g.n === undefined && g.buckets === undefined,
+        `n=${g.n} buckets=${g.buckets}`,
+      )
+
+      const { data: unknownTok } = await svc.rpc('get_peer_results', { p_token: 'not-a-real-token' })
+      check(
+        'peer results refuse an unknown token',
+        ((unknownTok ?? {}) as { error?: string }).error === 'not_found',
+        JSON.stringify(unknownTok),
       )
     }
 

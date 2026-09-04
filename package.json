@@ -20,10 +20,12 @@
     "verify:interaction": "tsx scripts/verify/interaction.ts --local",
     "verify:i18n": "tsx scripts/verify/i18n.ts --local",
     "verify:respondent": "tsx scripts/verify/respondent.ts --local",
+    "verify:send": "tsx scripts/verify/send.ts --local",
+    "mail:worker": "tsx scripts/mail-worker.ts",
     "verify:browser": "tsx scripts/verify/capture.ts --local",
     "verify:reference": "tsx scripts/verify/reference.ts",
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
-    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:attack && npm run verify:roundtrip && npm run verify:hermetic && npm run verify:interaction && npm run verify:i18n && npm run verify:respondent && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
+    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:attack && npm run verify:roundtrip && npm run verify:hermetic && npm run verify:interaction && npm run verify:i18n && npm run verify:respondent && npm run verify:send && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
     "seed:mfa": "tsx scripts/seed-mfa.ts --local",
     "verify:visual": "tsx scripts/verify/visual.ts --local",
     "verify:responsive": "tsx scripts/verify/responsive.ts --local"

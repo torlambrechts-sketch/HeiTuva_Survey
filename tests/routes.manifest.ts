@@ -332,6 +332,56 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // Send (HeiTuva.dc.html:1686-1912). Reached through the survey list, like
+    // the Builder, because the route needs a real survey id.
+    //
+    // None of these states presses "Send undersøkelsen": sending flips the
+    // draft to `aktiv` and opens a round, so a capture that sent would leave
+    // the next run without a draft to photograph. The sent confirmation is
+    // covered by verify:send, which drives the whole pipeline.
+    route: '/undersokelser',
+    label: 'send',
+    as: 'administrator',
+    phase: 'phase-3',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('link', { name: 'Videre til utsending' }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/send'))
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'import-open',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('link', { name: 'Videre til utsending' }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/send'))
+          await page.getByRole('button', { name: 'Importer mottakere' }).click()
+          await page.waitForTimeout(150)
+        },
+      },
+      {
+        name: 'recurring',
+        setup: async (page) => {
+          // The cadence panel's recurring branch — rounds, rotation and the
+          // plan chips only exist once a cadence other than "Én gang" is
+          // picked, so the default capture never sees them.
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('link', { name: 'Videre til utsending' }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/send'))
+          await page.getByRole('button', { name: /Hver uke/ }).click()
+          await page.waitForTimeout(150)
+        },
+      },
+    ],
+  },
+  {
     route: '/bibliotek',
     label: 'bibliotek-maler',
     as: 'administrator',
@@ -494,7 +544,6 @@ export const ROUTES: RouteSpec[] = [
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
-  { route: '/undersokelser/[id]/send', phase: 'phase-3', note: 'Send screen (channels, import)' },
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
   { route: '/undersokelser/[id]/resultater', phase: 'phase-4', note: 'Resultater for one survey' },
   { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },

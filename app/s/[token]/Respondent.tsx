@@ -13,6 +13,7 @@ import {
 import { Shell } from './Shell'
 import { QuestionInput } from './QuestionInput'
 import { submitResponse } from './actions'
+import { PeerResults } from './PeerResults'
 
 /** The design's promise: 90 seconds, counted down live (HeiTuva.dc.html:3298). */
 const PROMISED_SECONDS = 90
@@ -123,7 +124,7 @@ export function Respondent({
     return e.audience === 'kunder' ? t('anonCustomer') : t('anon')
   }, [anonymity, e.audience, t])
 
-  if (done) return <ThankYou thankYou={e.thank_you} />
+  if (done) return <ThankYou thankYou={e.thank_you} token={token} />
 
   const isLast = !oneAtATime || step === total - 1
   const pct = total ? Math.round(((step + 1) / total) * 100) : 0
@@ -303,21 +304,21 @@ export function Respondent({
 }
 
 /**
- * The thank-you (HeiTuva.dc.html:2117-2135).
+ * The thank-you (HeiTuva.dc.html:2117-2135), with the design's peer-results
+ * panel below it.
  *
- * The design's peer-results panel is not here: it needs an aggregate a
- * respondent can read, and every aggregate RPC is `authenticated`-only by
- * design. Exposing one to token holders is a k-anonymity surface that wants its
- * own decision, not a side effect of building this screen.
- * docs/DEVIATIONS.md D40.
+ * The panel renders only when the survey opted in AND the round is at or above
+ * the k threshold — both decided by `get_peer_results` (migration 0011), not
+ * here. A client that lies about either gets nothing back.
  */
-function ThankYou({ thankYou }: { thankYou?: string }) {
+function ThankYou({ thankYou, token }: { thankYou?: string; token: string }) {
   const t = useTranslations('respondent')
   return (
     <Shell>
       <div className="rounded-2xl border border-line bg-sf px-8 py-[50px] text-center">
         <div className="font-display text-[40px] font-medium leading-none">{t('thanks')}</div>
         <p className="mt-2 text-sm text-mut">{thankYou?.trim() || t('thanksSub')}</p>
+        <PeerResults token={token} />
       </div>
     </Shell>
   )
