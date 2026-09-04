@@ -51,11 +51,17 @@ export default class CensusReporter implements Reporter {
 
     const problems: string[] = []
 
+    // A partial run is legitimate — `verify:db` runs tests/invariants and
+    // tests/db and never touches tests/unit. So a directory none of whose files
+    // ran was not part of this run; a directory where SOME ran and one did not
+    // is a file that stopped collecting, which is the case worth failing on.
+    const dirsInRun = new Set([...seen.keys()].map(dirOf))
+
     for (const [file, want] of Object.entries(expected)) {
       if (!seen.has(file)) {
-        // Only a problem when the run should have included it. A targeted
-        // `vitest run one.test.ts` legitimately runs one file.
-        if (seen.size > 1) problems.push(`${file}: expected ${want} tests, the file did not run at all`)
+        if (dirsInRun.has(dirOf(file))) {
+          problems.push(`${file}: expected ${want} tests, the file did not run at all`)
+        }
         continue
       }
       const got = seen.get(file)!
@@ -79,6 +85,8 @@ export default class CensusReporter implements Reporter {
     }
   }
 }
+
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'))
 
 /** Tests in a file, counting nested suites and INCLUDING skipped ones: a test
  *  skipped by a failing hook still exists, and counting it as absent would hide
