@@ -43,18 +43,7 @@ export async function createOrg(
 
   const created: { memberId: string; userId: string; email: string; role: string }[] = []
   for (const m of members) {
-    // Reuse the auth user if a previous seed already made it.
-    const { data: list } = await svc.auth.admin.listUsers()
-    let userId = list?.users.find((u) => u.email === m.email)?.id
-    if (!userId) {
-      const { data, error: uErr } = await svc.auth.admin.createUser({
-        email: m.email,
-        password: process.env.DEMO_PASSWORD ?? 'heituva-dev-password-1!',
-        email_confirm: true,
-      })
-      if (uErr) throw new Error(`createUser(${m.email}): ${uErr.message}`)
-      userId = data.user!.id
-    }
+    const userId = await findOrCreateUser(svc, m.email)
 
     const { data: member, error: mErr } = await svc
       .from('org_members')
@@ -79,6 +68,32 @@ export async function createOrg(
   }
 
   return { id: org.id, name: org.name, groupId, members: created }
+}
+
+/**
+ * The auth user behind a persona, created once and reused afterwards.
+ *
+ * `listUsers()` pages at 50 by default, so a single unpaged call stopped
+ * finding the demo personas the moment the local stack accumulated more test
+ * users than that — and the seed then failed with "already been registered"
+ * for a user it had itself created. Page until the address is found.
+ */
+async function findOrCreateUser(svc: Client, email: string): Promise<string> {
+  for (let page = 1; page <= 40; page++) {
+    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) throw new Error(`listUsers(${email}): ${error.message}`)
+    const hit = data.users.find((u) => u.email === email)
+    if (hit) return hit.id
+    if (data.users.length < 200) break
+  }
+
+  const { data, error } = await svc.auth.admin.createUser({
+    email,
+    password: process.env.DEMO_PASSWORD ?? 'heituva-dev-password-1!',
+    email_confirm: true,
+  })
+  if (error) throw new Error(`createUser(${email}): ${error.message}`)
+  return data.user!.id
 }
 
 export async function createSurvey(
@@ -140,7 +155,7 @@ export async function createSurvey(
 export async function createRound(
   survey: { id: string; questions: { id: string; type: string; text: string }[] },
   invitations: number,
-  opts: { groupId?: string | null; svc?: Client } = {},
+  opts: { groupId?: string | null; roundNo?: number; svc?: Client } = {},
 ) {
   const svc = opts.svc ?? serviceClient()
 
@@ -148,7 +163,9 @@ export async function createRound(
     .from('survey_rounds')
     .insert({
       survey_id: survey.id,
-      round_no: 1,
+      // `round_no` is unique per survey, so a fixture that wants a trend line
+      // has to say which round it is building rather than making a second one.
+      round_no: opts.roundNo ?? 1,
       status: 'open',
       question_snapshot: survey.questions as never,
     })
@@ -156,21 +173,38 @@ export async function createRound(
     .single()
   if (error) throw new Error(`createRound: ${error.message}`)
 
+  const tokens = await inviteTo(round.id, invitations, opts.groupId ?? null, svc)
+  return { id: round.id, tokens }
+}
+
+/**
+ * More invitations on an existing round, optionally for a different group.
+ *
+ * A round's recipients are not all one team — that is the whole point of a
+ * heatmap — so a fixture that only ever puts a round in one group cannot
+ * produce the case the k gate exists for: one team above the threshold beside
+ * one below it.
+ */
+export async function inviteTo(
+  roundId: string,
+  count: number,
+  groupId: string | null = null,
+  svc: Client = serviceClient(),
+) {
   const tokens: string[] = []
-  for (let i = 0; i < invitations; i++) {
+  for (let i = 0; i < count; i++) {
     const raw = `${randomUUID()}`
     tokens.push(raw)
-    const { error: iErr } = await svc.from('survey_invitations').insert({
-      round_id: round.id,
-      email: `respondent-${i}@example.test`,
+    const { error } = await svc.from('survey_invitations').insert({
+      round_id: roundId,
+      email: `respondent-${raw.slice(0, 8)}@example.test`,
       token_hash: hashToken(raw),
-      group_id: opts.groupId ?? null,
+      group_id: groupId,
       channel: 'email',
     })
-    if (iErr) throw new Error(`createInvitation(${i}): ${iErr.message}`)
+    if (error) throw new Error(`createInvitation(${i}): ${error.message}`)
   }
-
-  return { id: round.id, tokens }
+  return tokens
 }
 
 /**
@@ -237,8 +271,14 @@ export async function submitResponses(
 /** Removes seeded demo data so a re-seed is idempotent. Service role by
  *  necessity — nothing else can delete across orgs. */
 export async function dropOrg(name: string, svc: Client = serviceClient()) {
-  const { data } = await svc.from('organizations').select('id').eq('name', name)
+  const { data, error } = await svc.from('organizations').select('id').eq('name', name)
+  if (error) throw new Error(`dropOrg(${name}) lookup: ${error.message}`)
   for (const org of data ?? []) {
-    await svc.from('organizations').delete().eq('id', org.id)
+    // The error was swallowed here, and that is how the seed spent weeks
+    // claiming to be idempotent while an append-only trigger silently blocked
+    // every cascade (migration 20260904000002). A seed that cannot replace its
+    // own data must say so.
+    const { error: delErr } = await svc.from('organizations').delete().eq('id', org.id)
+    if (delErr) throw new Error(`dropOrg(${name}): ${delErr.message}`)
   }
 }

@@ -111,7 +111,7 @@ allowlist when the CI gate requires advisors to be clean:
 |---|---|---|
 | `rls_enabled_no_policy` (INFO) | `responses`, `answers` | This *is* security invariant #1. RLS on with no policy = default deny for every client role. Adding a policy here would be the bug. |
 | `anon_security_definer_function_executable` (WARN) | `get_survey_for_token`, `submit_response`, `get_peer_results` | The respondent flow at `/s/[token]` is unauthenticated by design. All three are token-validated, and `get_peer_results` is k-gated on top (D40). |
-| `authenticated_security_definer_function_executable` (WARN) | `aggregate_results`, `get_quotes`, `survey_response_counts`, `claim_membership`, `get_survey_for_token`, `submit_response`, `get_peer_results`, `send_round`, `close_round` | SECURITY DEFINER RPCs are the *only* read path to `responses`/`answers`; that is the k-anonymity architecture, not an accident. `send_round` and `close_round` are DEFINER to reach `app.hash_token` and pgmq, and assert `app.can_edit_survey` themselves rather than relying on the definer's rights. |
+| `authenticated_security_definer_function_executable` (WARN) | `aggregate_results`, `get_quotes`, `survey_response_counts`, `claim_membership`, `get_survey_for_token`, `submit_response`, `get_peer_results`, `send_round`, `close_round`, and Phase 4's `get_heatmap`, `get_trends`, `get_themes`, `get_benchmarks`, `results_summary`, `dashboard_summary`, `snapshot_results` | SECURITY DEFINER RPCs are the *only* read path to `responses`/`answers`; that is the k-anonymity architecture, not an accident. `send_round` and `close_round` are DEFINER to reach `app.hash_token` and pgmq, and assert `app.can_edit_survey` themselves rather than relying on the definer's rights. |
 | `auth_leaked_password_protection` (WARN) | Auth | **Not accepted — genuinely open.** A project-settings toggle (Auth → Passwords → check against HaveIBeenPwned), so it is Tor's to flip, not a code change. |
 
 NOT on this list, and deliberately: `mail_outbox_read`, `mail_outbox_delete` and
@@ -122,6 +122,13 @@ grants are right, since the raw invitation tokens live in those messages.
 Anything outside this table appearing in a future advisor run is a regression.
 Re-read against prod on 2026-09-04 after migrations 0008-0011: 15 findings, all
 matching the rows above.
+
+Phase 4 adds seven RPCs to the third row for the same reason the first nine are
+there: they are the only read path to `responses`/`answers`, and each one
+applies the k gate per cell before anything leaves the database.
+`snapshot_results` is DEFINER to reach `aggregate_results` and to write
+`result_snapshots`, and asserts `app.can_edit_survey` itself rather than
+relying on the definer's rights — the same pattern as `send_round`.
 
 ## Phase 0
 
@@ -888,3 +895,101 @@ Their cards still render, because the design draws six and hiding three would
 misrepresent what the product does. Selecting one shows the design's own
 explanation of what the sync does plus one line saying it is not available yet —
 rather than a button that fails, or a card that silently does nothing.
+
+### D45 — the quote attribution says nothing rather than "Anonym"
+
+The design prints every free-text quote with an author line — `— {{ t.who }}`,
+which in the prototype is the literal string "Anonym" for an anonymous survey
+and a person's name otherwise (HeiTuva.dc.html:2189, 2740).
+
+`get_quotes` returns no author, no group label and no timestamp, and it never
+will: that is invariant 1 and invariant 7, and a quote carrying a name would be
+an individual answer in a panel that exists to show aggregates.
+
+So the line renders as `— Anonym` when the survey's anonymity mode actually is
+`anonymous`, and is omitted entirely otherwise. Printing "Anonym" beside a quote
+from a named survey would be a claim the data does not support — the reader
+would take it as a promise that the answer cannot be traced, when the schema
+says it can.
+
+### D46 — the Dashboard has no panel pins and no "Åpne rapport"
+
+Each Dashboard panel in the design carries a "Legg i rapport" pin, and the
+header carries "Åpne rapport (n)" which opens the report editor with the pinned
+sections pre-selected (HeiTuva.dc.html:3051-3056).
+
+The report editor is Phase 5 and there is no table for a pin. A pin built now
+would store nothing and open nothing, and the count in the button would be a
+number about a report that does not exist — the fabricated-state case CLAUDE.md
+rules out. Both arrive with Rapporter in Phase 5, where the pinned set has
+somewhere to go.
+
+Everything else on the panel — its data, its filters, its note — is built.
+
+### D47 — the benchmark footnote cites the seed, not "214 virksomheter"
+
+The design's "Mot bransjen" panel ends with "Sammenlignet med 214 norske
+virksomheter i samme bransje og størrelsesgruppe siste 12 måneder"
+(HeiTuva.dc.html:3658).
+
+There is no such panel. `benchmarks` is a static seed of reference values whose
+own `source` column reads "Seed — erstatt med kildeført referanse" (DECISIONS
+Q8), and cross-tenant aggregation is explicitly a later product decision that
+needs DPA language first. Printing the design's sentence would attribute our
+seeded constants to a survey of 214 companies that nobody ran.
+
+The panel therefore prints the row's own `source`. When Q8 is answered with real
+sourced values, the footnote becomes true by changing the data — which is the
+point of keeping it in a column.
+
+The industry chips are the industries the table actually holds, for the same
+reason: the design lists five, the seed has two, and seeding three more would be
+inventing three datasets.
+
+### D48 — the previous-round average is the previous round
+
+The design's trend card shows `prevAvg` as `avgScore - 0.3` and its chip as the
+constant string "+0,3 mot forrige runde" (HeiTuva.dc.html:3700-3701). Those are
+placeholders in a prototype with no rounds.
+
+Rounds are real here, so both numbers come from `get_trends`: the last two
+points on the line, each independently k-gated. When there is no earlier round
+the chip says so ("ingen tidligere runde") rather than inventing a delta, and
+when the previous round is below the threshold the average shows as "—".
+
+The same reasoning applies to the Dashboard's period selector. The prototype's
+selector slices the SURVEY list while its own panel note says "snitt per runde";
+here it selects rounds, and every RPC in the phase takes the resulting id set.
+
+### D49 — eNPS is drawn on its own scale
+
+The design's third benchmark row ("Anbefaler arbeidsplassen") renders on the
+same 1–5 bar as the average score, against a hard-coded 4,3. The seeded
+benchmark for that metric is `enps = 12`, which is an eNPS score on −100…100.
+
+`get_benchmarks` returns the metric's `scale` alongside its value and the panel
+draws the bar over the right range. Squeezing an eNPS score onto a 1–5 axis
+would make "12" render as off-the-scale, and rebasing it to a 1–5 number would
+be a figure nothing in the schema holds.
+
+### D50 — two integrity triggers blocked their own cascade
+
+Not a design deviation — a defect found while seeding this phase, recorded here
+because it changes behaviour two earlier phases relied on.
+
+`audit_events` is append-only, enforced by a trigger that raised on any DELETE.
+`audit_events.org_id` cascades from `organizations`, so deleting an organisation
+fired the trigger and rolled the whole delete back. `dropOrg` swallowed the
+error, so the demo seed had been re-seeding on top of stale data rather than
+replacing it. The same shape sat in D31's freeze: a sent survey's questions
+could not be deleted even when the survey itself was being deleted.
+
+Both now permit a DELETE only when the parent row is already gone — which during
+a cascade it is, because PostgreSQL deletes the referenced row first. A direct
+`delete from audit_events` against a live organisation still raises, and a
+Builder edit to a sent survey's questions still raises; both halves are asserted
+in `tests/invariants/invariants.test.ts`.
+
+This matters beyond the harness: "sletting" is one of the four DSR types the
+Personvern tab offers under GDPR art. 17, and an organisation that cannot be
+deleted cannot honour it.

@@ -1,8 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createHash, randomBytes } from 'node:crypto'
 import { anonClient, serviceClient } from '../db/clients'
-import { createRound, createSurvey } from '../db/factories'
-import { ORG_PRIMARY } from '../db/personas'
+import { createOrg, createRound, createSurvey } from '../db/factories'
 
 /**
  * D42 — the rotated-token grace window, and the constraint that comes with it.
@@ -18,6 +17,17 @@ import { ORG_PRIMARY } from '../db/personas'
 
 const svc = serviceClient()
 const anon = anonClient()
+
+/**
+ * This suite's own organisation.
+ *
+ * It used to build its fixtures inside the seeded demo org, and the surveys it
+ * left behind then turned up on the Dashboard — fourteen "token-lifecycle …"
+ * chips beside the two real ones, in a screenshot meant to show what the
+ * product looks like. A test that leaves data in the demo org is a test that
+ * edits the demo.
+ */
+let orgId: string
 const hash = (raw: string) => createHash('sha256').update(raw).digest('hex')
 const token = () => `t-${randomBytes(24).toString('hex')}`
 
@@ -28,9 +38,8 @@ type Fixture = { surveyId: string; roundId: string; invitationId: string; curren
  * `current` is what a reminder replaced it with.
  */
 async function rotatedInvitation(opts: { graceHours?: number } = {}): Promise<Fixture> {
-  const { data: org } = await svc.from('organizations').select('id').eq('name', ORG_PRIMARY).single()
   const survey = await createSurvey(
-    org!.id,
+    orgId,
     `token-lifecycle ${randomBytes(4).toString('hex')}`,
     [{ type: 'scale', text: 'Hvordan går det?' }],
     { status: 'aktiv' },
@@ -70,6 +79,11 @@ async function submit(raw: string, questionId: string) {
   })
   return (data ?? {}) as { ok?: boolean; error?: string }
 }
+
+beforeAll(async () => {
+  const org = await createOrg(`Token Lifecycle ${randomBytes(4).toString('hex')}`)
+  orgId = org.id
+}, 60_000)
 
 describe('D42 — the rotated-token grace window', () => {
   let f: Fixture
@@ -224,9 +238,8 @@ describe('D42 — what is actually stored', () => {
   })
 
   it('a real rotation through enqueue_reminders leaves exactly one previous hash', async () => {
-    const { data: org } = await svc.from('organizations').select('id').eq('name', ORG_PRIMARY).single()
     const survey = await createSurvey(
-      org!.id,
+      orgId,
       `rotation ${randomBytes(4).toString('hex')}`,
       [{ type: 'scale', text: 'Puls?' }],
       { status: 'aktiv' },

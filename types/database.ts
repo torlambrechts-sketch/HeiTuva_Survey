@@ -118,6 +118,30 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_rules: {
+        Row: {
+          key: string
+          label: string
+          lang: string
+          ord: number
+          pattern: string
+        }
+        Insert: {
+          key: string
+          label: string
+          lang: string
+          ord?: number
+          pattern: string
+        }
+        Update: {
+          key?: string
+          label?: string
+          lang?: string
+          ord?: number
+          pattern?: string
+        }
+        Relationships: []
+      }
       dsr_requests: {
         Row: {
           created_at: string
@@ -1835,6 +1859,34 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      dashboard_summary: {
+        Args: { p_group?: string; p_org: string; p_rounds?: string[]; p_surveys?: string[] }
+        Returns: Json
+      }
+      get_benchmarks: {
+        Args: { p_group?: string; p_industry?: string; p_round?: string; p_survey: string }
+        Returns: Json
+      }
+      get_heatmap: {
+        Args: { p_group?: string; p_org: string; p_rounds?: string[]; p_surveys?: string[] }
+        Returns: Json
+      }
+      get_themes: {
+        Args: { p_group?: string; p_lang?: string; p_rounds?: string[]; p_survey: string }
+        Returns: Json
+      }
+      get_trends: {
+        Args: { p_group?: string; p_survey: string }
+        Returns: Json
+      }
+      results_summary: {
+        Args: { p_group?: string; p_round?: string; p_survey: string }
+        Returns: Json
+      }
+      snapshot_results: {
+        Args: { p_group?: string; p_round?: string; p_survey: string }
+        Returns: Json
+      }
       claim_membership: {
         Args: Record<string, never>
         Returns: string | null
@@ -1851,9 +1903,11 @@ export type Database = {
       get_quotes: {
         Args: {
           p_group?: string
+          p_lang?: string
           p_limit?: number
           p_question: string
           p_survey: string
+          p_theme?: string
         }
         Returns: Json
       }

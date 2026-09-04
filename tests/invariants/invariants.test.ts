@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { admin, anon } from '../helpers'
+import { admin, anon, uniq } from '../helpers'
 import { buildFixture, type Fixture } from './fixture'
 
 /**
@@ -323,5 +323,73 @@ describe('(g) D31 — a sent survey\'s questions are frozen in the database', ()
       .eq('id', f.scaleQ.id)
     expect(error).not.toBeNull()
     expect(error?.message).toMatch(/frozen/i)
+  })
+})
+
+/**
+ * Migration 20260904000002 — two integrity triggers that also blocked the
+ * cascade they were never meant to touch.
+ *
+ * Both fixes hinge on the same discriminator (the parent row is already gone),
+ * so both need the negative half asserted: the guard must still refuse a direct
+ * edit against a live parent, or the fix has simply removed the control.
+ */
+describe('integrity triggers survive their own cascade', () => {
+  it('an audit row still cannot be deleted while its organisation exists', async () => {
+    const a = admin()
+    const { data: org } = await a
+      .from('organizations')
+      .insert({ name: uniq('Audit Live') })
+      .select('id')
+      .single()
+    const { data: row } = await a
+      .from('audit_events')
+      .insert({ org_id: org!.id, action: 'test.event', actor_user_id: null })
+      .select('id')
+      .single()
+
+    const { error } = await a.from('audit_events').delete().eq('id', row!.id)
+    expect(error?.message ?? '').toMatch(/append-only/)
+
+    // ...and it goes when the organisation does, which is what erasure needs.
+    const { error: dropErr } = await a.from('organizations').delete().eq('id', org!.id)
+    expect(dropErr).toBeNull()
+    const { data: after } = await a.from('audit_events').select('id').eq('id', row!.id)
+    expect(after ?? []).toHaveLength(0)
+  })
+
+  it('a sent survey is still frozen against question edits, but deletable whole', async () => {
+    const a = admin()
+    const { data: org } = await a
+      .from('organizations')
+      .insert({ name: uniq('Freeze Live') })
+      .select('id')
+      .single()
+    const { data: survey } = await a
+      .from('surveys')
+      .insert({ org_id: org!.id, title: uniq('Sendt'), status: 'aktiv' })
+      .select('id')
+      .single()
+    const { data: q } = await a
+      .from('survey_questions')
+      .insert({ survey_id: survey!.id, position: 1, type: 'scale', text: 'Frosset' })
+      .select('id')
+      .single()
+    await a.from('survey_rounds').insert({
+      survey_id: survey!.id,
+      round_no: 1,
+      status: 'open',
+      question_snapshot: [{ id: q!.id, type: 'scale', text: 'Frosset' }],
+    })
+
+    const { error } = await a.from('survey_questions').delete().eq('id', q!.id)
+    expect(error?.message ?? '').toMatch(/frozen/)
+
+    const { error: dropErr } = await a.from('surveys').delete().eq('id', survey!.id)
+    expect(dropErr).toBeNull()
+    const { data: after } = await a.from('survey_questions').select('id').eq('id', q!.id)
+    expect(after ?? []).toHaveLength(0)
+
+    await a.from('organizations').delete().eq('id', org!.id)
   })
 })

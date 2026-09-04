@@ -44,6 +44,36 @@ async function openBuilderPane(page: Page, tab: 'Legg til' | 'Innstillinger' | '
   else await page.getByRole('tab', { name: tab, exact: true }).click()
 }
 
+/**
+ * Pick a survey through the Resultater screen's own "Bytt undersøkelse" select.
+ *
+ * The route needs a real survey id, and the survey list's rows are ordered by
+ * creation time, so addressing a row by position would silently photograph a
+ * different survey the moment the seed changes. The picker addresses it by
+ * name, and exercises the control while it is at it.
+ */
+async function pickSurvey(page: Page, title: string) {
+  await page.getByRole('link', { name: 'Se svar' }).first().click()
+  await page.waitForURL((u) => u.pathname.endsWith('/resultater'))
+  // Addressed by its label, not by position: at desktop the header's own
+  // language switcher is the first combobox on the page, so `.first()` picked
+  // that instead — and only at desktop, because RESPONSIVE.md moves the
+  // switcher into the slide-over panel below md.
+  const select = page.getByLabel('Bytt undersøkelse')
+  // `<option>` elements are not visible in Playwright's sense, so a text filter
+  // on them never resolves. Read the option list off the element instead.
+  const value = await select.evaluate(
+    (el, wanted) =>
+      [...(el as HTMLSelectElement).options].find((o) => o.text.startsWith(wanted))?.value ?? '',
+    title,
+  )
+  if (!value) throw new Error(`pickSurvey: no option for "${title}"`)
+  await select.selectOption(value)
+  await page.waitForURL((u) => u.pathname.endsWith('/resultater'))
+  await page.waitForLoadState('load')
+  await page.getByRole('heading', { name: 'Resultater', level: 1 }).waitFor()
+}
+
 export const ROUTES: RouteSpec[] = [
   {
     route: '/logg-inn',
@@ -539,15 +569,89 @@ export const ROUTES: RouteSpec[] = [
       await page.waitForURL((u) => u.pathname.startsWith('/logg-inn'), { timeout: 15_000 })
     } }],
   },
+  {
+    // Resultater (HeiTuva.dc.html:2136-2298). Reached through the survey list
+    // because the route needs a real survey id, then re-pointed with the
+    // screen's own picker so each state names the survey it wants.
+    route: '/undersokelser',
+    label: 'resultater',
+    as: 'administrator',
+    phase: 'phase-4',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+        },
+      },
+      {
+        // Every panel's insufficient-data treatment at once: three responses,
+        // so the aggregate, the themes and our side of the benchmark all refuse.
+        name: 'for-fa-svar',
+        setup: async (page) => {
+          await pickSurvey(page, 'Psykososial kartlegging')
+        },
+      },
+      {
+        name: 'ikke-sendt',
+        setup: async (page) => {
+          await pickSurvey(page, 'Utkast uten svar')
+        },
+      },
+      {
+        name: 'tema-valgt',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+          await page.getByRole('link', { name: /^tid · / }).click()
+          await page.waitForURL((u) => u.searchParams.get('tema') === 'tid')
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'bransje-valgt',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+          await page.getByRole('link', { name: 'Teknologi og IT' }).click()
+          await page.waitForURL((u) => u.searchParams.get('bransje') === 'Teknologi og IT')
+          await page.waitForLoadState('load')
+        },
+      },
+    ],
+  },
+  {
+    route: '/dashboard',
+    label: 'dashboard',
+    as: 'administrator',
+    phase: 'phase-4',
+    states: [
+      { name: 'default' },
+      {
+        // The seeded second team never reaches five, so every cell of its
+        // heatmap row must render as n<5 rather than as a number.
+        name: 'gruppe-under-terskel',
+        setup: async (page) => {
+          await page.getByLabel('Gruppe').selectOption({ label: 'Utvikling' })
+          await page.waitForURL((u) => u.searchParams.has('gruppe'))
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'siste-runde',
+        setup: async (page) => {
+          await page.getByLabel('Periode').selectOption('q')
+          await page.waitForURL((u) => u.searchParams.get('periode') === 'q')
+          await page.waitForLoadState('load')
+        },
+      },
+    ],
+  },
 ]
 
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
-  { route: '/undersokelser/[id]/resultater', phase: 'phase-4', note: 'Resultater for one survey' },
   { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },
-  { route: '/dashboard', phase: 'phase-4', note: 'Dashboard (heatmap, trends)' },
   { route: '/rapporter', phase: 'phase-5', note: 'Rapporter' },
 ]
 

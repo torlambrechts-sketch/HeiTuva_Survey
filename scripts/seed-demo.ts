@@ -12,9 +12,18 @@ import {
   createShareLink,
   createSurvey,
   dropOrg,
+  inviteTo,
   submitResponses,
 } from '../tests/db/factories'
-import { DEMO_SHARE_TOKEN, GROUP_PRIMARY, ORG_OTHER, ORG_PRIMARY, PERSONAS } from '../tests/db/personas'
+import { serviceClient } from '../tests/db/clients'
+import {
+  DEMO_SHARE_TOKEN,
+  GROUP_PRIMARY,
+  GROUP_SECONDARY,
+  ORG_OTHER,
+  ORG_PRIMARY,
+  PERSONAS,
+} from '../tests/db/personas'
 
 if (!process.argv.includes('--local')) config({ path: '.env.local' })
 
@@ -44,18 +53,74 @@ async function main() {
 
   // One survey above the k threshold and one below, so screens can be captured
   // in both their real-data and insufficient-data states.
+  // A second team, so the heatmap and the team rows have the case the k gate
+  // exists for: one group above the threshold beside one below it. A seed with
+  // a single group can only ever photograph the happy path.
+  const svc = serviceClient()
+  const { data: secondGroup } = await svc
+    .from('groups')
+    .insert({ org_id: org.id, name: GROUP_SECONDARY })
+    .select('id')
+    .single()
+
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
   ], { audience: 'Hele selskapet', langs: ['no', 'en'] })
+
+  // Free text that the seeded theme rules actually match, so the themes panel
+  // and the theme-filtered quote list have something real to show. Six people
+  // write about "tid", which clears the contributor threshold; two write about
+  // "møter", which does not — and must therefore never appear.
+  const freeText = [
+    'Vi trenger mer sammenhengende tid til dypt arbeid',
+    'For lite tid mellom leveransene',
+    'Tid til å tenke ville hjulpet mest',
+    'Mer tid til fagarbeid, mindre kontekstbytte',
+    'Vi mangler tid i kalenderen til å planlegge',
+    'Tid er den største flaskehalsen akkurat nå',
+  ]
+
   const aboveRound = await createRound(above, 8, { groupId: org.groupId })
   await submitResponses(
     aboveRound.tokens,
     (i) => ({
       [above.questions[0]!.id]: { value: 3 + (i % 3) },
-      [above.questions[1]!.id]: { value: `Frisvar nummer ${i + 1}` },
+      [above.questions[1]!.id]: { value: freeText[i] ?? freeText[0]! },
     }),
     6, // > k = 5
+  )
+
+  // The second team answers the same round and stays at four: every cell of its
+  // heatmap row must come back gated while the first team's shows real numbers.
+  const secondTeamText = [
+    'For mange møter — møtekulturen må endres',
+    'Møtene spiser opp dagen',
+    'Færre og kortere møter, takk',
+    'Vi bruker for mye av uka i møter',
+  ]
+  const secondTeamTokens = await inviteTo(aboveRound.id, 5, secondGroup?.id ?? null)
+  await submitResponses(
+    secondTeamTokens,
+    (i) => ({
+      // Low scores on purpose: they pull the question's average under 3,6 so the
+      // insight panel has a real finding to show rather than an empty box.
+      [above.questions[0]!.id]: { value: 1 + (i % 2) },
+      [above.questions[1]!.id]: { value: secondTeamText[i] ?? secondTeamText[0]! },
+    }),
+    4, // < k = 5
+  )
+
+  // A second round, so "Mot forrige runde" and the trend panel compare two real
+  // numbers rather than the prototype's placeholder `avg - 0.3`.
+  const aboveRound2 = await createRound(above, 8, { groupId: org.groupId, roundNo: 2 })
+  await submitResponses(
+    aboveRound2.tokens,
+    (i) => ({
+      [above.questions[0]!.id]: { value: 4 + (i % 2) },
+      [above.questions[1]!.id]: { value: freeText[(i + 2) % freeText.length]! },
+    }),
+    6,
   )
 
   const below = await createSurvey(org.id, 'Psykososial kartlegging', [

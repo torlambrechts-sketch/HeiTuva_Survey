@@ -20,6 +20,9 @@ export type PersonaName = keyof typeof PERSONAS
 export const ORG_PRIMARY = 'Nordisk Studio'
 export const ORG_OTHER = 'Annen Bedrift AS'
 export const GROUP_PRIMARY = 'Ledelse'
+/** A second team, kept below the k threshold on purpose: without it the seeded
+ *  heatmap has one row and no screen ever shows a gated cell. */
+export const GROUP_SECONDARY = 'Utvikling'
 
 /**
  * The raw token behind the seeded share link, so the harness can open

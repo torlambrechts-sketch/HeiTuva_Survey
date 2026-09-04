@@ -8,6 +8,7 @@
  * throwing a hydration error or 404-ing a request is not done, and a reviewer
  * reading a PNG alone cannot see that.
  */
+import { execFileSync } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { chromium, devices, type Browser, type Page } from '@playwright/test'
@@ -56,9 +57,50 @@ async function findUntranslatedKeys(page: Page): Promise<string[]> {
   return MESSAGE_KEYS.filter((k) => text.includes(k))
 }
 
+/**
+ * Block until nothing on the page is still animating.
+ *
+ * Every app screen enters with the theme's .25s fade-and-rise, and a screenshot
+ * taken inside it photographs a half-transparent page that is also still
+ * growing — so the image is both washed out and cut off at the bottom. It looks
+ * exactly like a rendering bug, which is worse than a flake that merely fails.
+ *
+ * `animations: 'disabled'` on the screenshot call is not enough on its own for
+ * a full-page capture, which scrolls the page and can restart what it froze.
+ * Waiting for `getAnimations()` to drain is the deterministic version, and it
+ * costs nothing on a settled page.
+ */
+async function settleAnimations(page: Page) {
+  await page
+    .waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .every((a) => a.playState === 'finished' || a.playState === 'idle'),
+      undefined,
+      { timeout: 5_000 },
+    )
+    .catch(() => {
+      // An indefinite animation (a spinner) must not fail a capture; the
+      // screenshot's own `animations: 'disabled'` handles that case.
+    })
+}
+
 async function main() {
   const only = process.argv.find((a) => a.startsWith('--phase='))?.split('=')[1]
   const routes = only ? ROUTES.filter((r) => r.phase === only) : ROUTES
+
+  // Re-seed before capturing, locally.
+  //
+  // Earlier verification steps write to the demo org on purpose — verify:send
+  // sends the draft, the administration suite invites users — and the invariant
+  // suites used to leave surveys behind. None of that shows up until a screen
+  // reads ACROSS surveys, and then the Dashboard photographs fourteen fixture
+  // surveys beside the two real ones. A capture has to start from the seed it
+  // documents, and `dropOrg` can finally replace it (migration 20260904000002).
+  if (process.argv.includes('--local')) {
+    execFileSync('npx', ['tsx', 'scripts/seed-demo.ts', '--local'], { stdio: 'inherit' })
+  }
 
   const server = await ensureServer()
   const browser: Browser = await chromium.launch()
@@ -153,7 +195,13 @@ async function main() {
 
             const base = join(OUT, spec.phase, `${spec.label}.${state.name}.${project.name}`)
             await mkdir(dirname(base), { recursive: true })
-            await page.screenshot({ path: `${base}.png`, fullPage: true })
+            await settleAnimations(page)
+            // `animations: 'disabled'` finishes CSS animations and freezes them at
+            // their end state. Without it a screenshot can land inside the
+            // theme's .25s entry fade and photograph a half-transparent page
+            // that is also still growing — which is exactly what the first
+            // Resultater capture caught, and it is a flake, not a finding.
+            await page.screenshot({ path: `${base}.png`, fullPage: true, animations: 'disabled' })
             await writeFile(`${base}.log.json`, JSON.stringify(log, null, 2))
 
             const bad =
@@ -170,7 +218,7 @@ async function main() {
               // green run cannot be diagnosed at all — which is exactly what
               // happened to one capture during Gate 7.
               await writeFile(`${base}.FAIL.log.json`, JSON.stringify({ ...log, url: page.url() }, null, 2))
-              await page.screenshot({ path: `${base}.FAIL.png`, fullPage: true })
+              await page.screenshot({ path: `${base}.FAIL.png`, fullPage: true, animations: 'disabled' })
               console.log(`  FAIL ${spec.label}/${state.name}/${project.name} — ${bad} console/network problem(s)`)
               for (const e of [
                 ...log.pageErrors,
@@ -194,7 +242,8 @@ async function main() {
             try {
               const base = join(OUT, spec.phase, `${spec.label}.${state.name}.${project.name}.ERROR`)
               await mkdir(dirname(base), { recursive: true })
-              await page.screenshot({ path: `${base}.png`, fullPage: true })
+              await settleAnimations(page)
+              await page.screenshot({ path: `${base}.png`, fullPage: true, animations: 'disabled' })
               await writeFile(
                 `${base}.log.json`,
                 JSON.stringify({ ...log, url: page.url(), error: String(e) }, null, 2),
