@@ -105,7 +105,10 @@ export default async function RespondentPage({
     const messages = await getMergedMessages(SOURCE_LOCALE)
     return (
       <NextIntlClientProvider locale={SOURCE_LOCALE} messages={messages}>
-        <Closed />
+        {/* `replaced` is the one case worth distinguishing: a reminder rotated
+            this token and its 72-hour grace window has passed (D42). Everything
+            else — unknown, closed, bounced, expired — stays one screen. */}
+        <Closed reason={survey.error === 'replaced' ? 'replaced' : 'closed'} />
       </NextIntlClientProvider>
     )
   }

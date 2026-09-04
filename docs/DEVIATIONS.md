@@ -43,8 +43,8 @@ must never be what silently settles an open question.
 | D39 | Image-choice options render a tinted panel, not a photo | Accepted | see entry below |
 | D40 | The thank-you screen has no peer-results panel yet | **Resolved** — built with a token-scoped, k-gated RPC (migration 0011) | see entry below |
 | D41 | Scale buttons keep a 44px floor and wrap rather than shrink | Accepted | docs/RESPONSIVE.md |
-| D42 | A reminder rotates the invitation token, invalidating the first link | **Needs Tor's review** | see entry below |
-| D43 | Send has no "Sendes" scheduling picker and no reminder chips | Accepted | see entry below |
+| D42 | A reminder rotates the invitation token, with a 72-hour grace window on the previous hash | **Resolved** — Tor's call, 2026-09-04; migration 0012 | see entry below |
+| D43 | Send has no "Sendes" scheduling picker and no reminder chips | **Scheduled — Phase 6**, with the recurring-round work | see entry below |
 | D44 | Directory-sync imports render but do not import | Accepted | see entry below |
 
 ## Entries
@@ -790,7 +790,46 @@ that governs below 1280px. A 5-point scale is unaffected, so the design's own
 case is untouched.
 
 
-### D42 — a reminder rotates the invitation token
+### D42 — rotation with a grace window (RESOLVED)
+
+**Tor's decision, 2026-09-04:** keep rotation, add a 72-hour grace window on the
+previous hash. Both values stay one-way, so a database breach still yields no
+usable link — this accepts two hashes for a window, it does not store a
+credential. Implemented in migration 0012.
+
+**Rejected for the record so it does not resurface:** an HMAC-derived token
+regenerated on demand from a server secret. One secret compromise mints every
+live respondent link — the same blast radius as encrypted storage, with fewer
+moving parts to notice it happening.
+
+**The constraint that came with it — rotation is incidental, not revocation.**
+Closing a survey, closing a round or bouncing an invitation must invalidate BOTH
+hashes immediately, or the grace window becomes a way for a closed survey to
+keep taking answers. Making that true surfaced two defects, neither caused by
+the grace window:
+
+1. **Closing a survey did not close its rounds.** `closeSurvey` set
+   `surveys.status = 'lukket'`; `submit_response` only ever read
+   `survey_rounds.status`. A closed survey kept accepting answers — reproduced
+   against the local database before the migration was written. Now a trigger on
+   `surveys`, so every path that closes a survey closes its rounds, not just the
+   button the UI happens to call.
+2. **A bounced invitation still resolved.** `bounced_at` was written by the mail
+   worker and read by nothing.
+
+Both were possible because token resolution was copy-pasted into three RPCs.
+There is now one `app.resolve_token`, and the three call it; that is why
+`bounced_at` was missing from all three at once.
+
+Covered by 14 negative tests in `tests/invariants/token-lifecycle.test.ts` —
+closing the round, closing the survey, bouncing, expiry and answering each
+assert that BOTH hashes are refused, and that a closed survey cannot be answered
+through either. A replaced-but-in-window token opens the survey; past the window
+it reports `replaced` and gets the "Denne lenken er erstattet" screen, which is
+the one case worth distinguishing because the reader already holds a real link
+and needs telling to look for the newer email.
+
+### D42 (original entry) — why rotation was necessary at all
 
 Tokens are hashed at rest (CLAUDE.md invariant 5), so the original link cannot
 be reconstructed to put in a reminder: the database holds `sha256(token)` and
@@ -831,9 +870,11 @@ Neither is built:
   `schedules.reminder_after_days`, whose CHECK constrains it to 0, 2 or 5 —
   exactly the three options offered.
 
-The scheduled send belongs with the `scheduled` round status, which is a small
-piece of work once someone decides what a scheduled round should look like on
-the Undersøkelser list.
+**Scheduled for Phase 6**, alongside the recurring-round work — not deferred
+indefinitely. The `schedules` table and the `scheduled` value on
+`survey_rounds.status` already exist, so this is small once there is a reason to
+be in that area again; what it still needs is a decision about how a scheduled
+round appears on the Undersøkelser list before it is sent.
 
 ### D44 — the three directory-sync imports render but do not import
 

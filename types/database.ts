@@ -1445,6 +1445,8 @@ export type Database = {
           identity_provider: string | null
           lang: string
           name: string | null
+          previous_token_expires_at: string | null
+          previous_token_hash: string | null
           reminded_at: string[] | null
           responded_at: string | null
           round_id: string
@@ -1462,6 +1464,8 @@ export type Database = {
           identity_provider?: string | null
           lang?: string
           name?: string | null
+          previous_token_expires_at?: string | null
+          previous_token_hash?: string | null
           reminded_at?: string[] | null
           responded_at?: string | null
           round_id: string
@@ -1479,6 +1483,8 @@ export type Database = {
           identity_provider?: string | null
           lang?: string
           name?: string | null
+          previous_token_expires_at?: string | null
+          previous_token_hash?: string | null
           reminded_at?: string[] | null
           responded_at?: string | null
           round_id?: string

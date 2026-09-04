@@ -12,13 +12,23 @@ import { Shell } from './Shell'
  * — the prototype's link always works — so this is the minimal consistent one
  * (docs/DEVIATIONS.md D38).
  */
-export function Closed() {
+export function Closed({ reason = 'closed' }: { reason?: 'closed' | 'replaced' }) {
   const t = useTranslations('respondent')
+  // "Replaced" is a DIFFERENT message on purpose (D42): the reader holds a real
+  // link that a reminder superseded, and telling them to look for the newer
+  // email is the whole point of keeping the old hash past its window. It says
+  // nothing a holder of that link did not already know, so it is not the oracle
+  // the shared closed screen exists to avoid.
+  const replaced = reason === 'replaced'
   return (
     <Shell>
       <div className="rounded-2xl border border-line bg-sf px-8 py-12 text-center">
-        <h1 className="font-display text-[28px] font-medium leading-tight">{t('closedTitle')}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-mut">{t('closedBody')}</p>
+        <h1 className="font-display text-[28px] font-medium leading-tight">
+          {replaced ? t('replacedTitle') : t('closedTitle')}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-mut">
+          {replaced ? t('replacedBody') : t('closedBody')}
+        </p>
       </div>
     </Shell>
   )

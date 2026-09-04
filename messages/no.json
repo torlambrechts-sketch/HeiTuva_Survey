@@ -699,6 +699,8 @@
     "showMyName": "Svar med navnet mitt",
     "closedTitle": "Denne undersøkelsen er lukket",
     "closedBody": "Lenken er utløpt, eller undersøkelsen tar ikke imot flere svar.",
+    "replacedTitle": "Denne lenken er erstattet",
+    "replacedBody": "Vi sendte deg en påminnelse med en ny lenke — bruk den nyeste e-posten fra oss. Den gamle lenken sluttet å virke etter tre dager.",
     "alreadyTitle": "Du har allerede svart",
     "alreadyBody": "Takk! Svaret ditt er registrert, og det kan ikke endres.",
     "failed": "Kunne ikke sende inn svaret. Prøv igjen.",
