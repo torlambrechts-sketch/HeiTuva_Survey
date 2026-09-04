@@ -15,7 +15,7 @@ import {
   inviteTo,
   submitResponses,
 } from '../tests/db/factories'
-import { serviceClient } from '../tests/db/clients'
+import { personaClient, serviceClient } from '../tests/db/clients'
 import {
   DEMO_SHARE_TOKEN,
   GROUP_PRIMARY,
@@ -66,7 +66,7 @@ async function main() {
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
-  ], { audience: 'Hele selskapet', langs: ['no', 'en'] })
+  ], { audience: 'Hele selskapet', langs: ['no', 'en'], templatePackKey: 'arbeidsmiljo-manedlig' })
 
   // Free text that the seeded theme rules actually match, so the themes panel
   // and the theme-filtered quote list have something real to show. Six people
@@ -125,7 +125,7 @@ async function main() {
 
   const below = await createSurvey(org.id, 'Psykososial kartlegging', [
     { type: 'likert', text: 'Jeg vet hva som forventes av meg i jobben min' },
-  ], { audience: 'Alle ansatte · årlig' })
+  ], { audience: 'Alle ansatte · årlig', templatePackKey: 'psykososial-kartlegging' })
   const belowRound = await createRound(below, 6, { groupId: org.groupId })
   await submitResponses(
     belowRound.tokens,
@@ -141,6 +141,83 @@ async function main() {
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
   ], { status: 'utkast', audience: 'Hele selskapet' })
+
+  // --- Phase 5: the duty engine, in every state the card can be in ----------
+  // Four cards, four different states, so a capture shows the ladder rather
+  // than four copies of "Mangler". `apenhet` goes all the way to a published
+  // archive entry, which is the only state that proves signing works end to
+  // end — and it is signed through the RPC as a real signed-in persona,
+  // because the trigger refuses any other path (migration 20260904000004).
+  const { data: adminMember } = await svc
+    .from('org_members')
+    .select('id')
+    .eq('org_id', org.id)
+    .eq('email', PERSONAS.administrator.email)
+    .single()
+
+  async function seedDuty(key: string, ticks: number) {
+    const { data: def } = await svc
+      .from('duty_definitions')
+      .select('default_interval_months, checks, signer_roles, title')
+      .eq('key', key)
+      .single()
+
+    const { data: duty } = await svc
+      .from('duties')
+      .insert({
+        org_id: org.id,
+        definition_key: key,
+        owner_member_id: adminMember!.id,
+        interval_months: def!.default_interval_months,
+        // A deadline in the near future, so the Oversikt chips have something
+        // real to count down to rather than a null.
+        next_due_at: new Date(Date.now() + 45 * 86_400_000).toISOString().slice(0, 10),
+      })
+      .select('id')
+      .single()
+
+    const checks = (def!.checks ?? []) as { key: string }[]
+    await svc.from('duty_checks').insert(
+      checks.map((c, i) => ({ duty_id: duty!.id, key: c.key, done: i < ticks })),
+    )
+
+    const roles = (def!.signer_roles ?? []) as { key: string; label: string }[]
+    await svc.from('duty_signers').insert(
+      roles.map((r) => ({
+        duty_id: duty!.id,
+        role_key: r.key,
+        label: r.label,
+        // Everything is assigned to the one administrator persona, so the seed
+        // can sign as them. A real org spreads these across people.
+        member_id: adminMember!.id,
+      })),
+    )
+    return { id: duty!.id, roles, title: def!.title as string }
+  }
+
+  const apenhet = await seedDuty('apenhet', 4)
+  await seedDuty('arbeidsmiljo', 2)
+
+  await svc.from('reports').insert({
+    org_id: org.id,
+    title: `${apenhet.title} ${new Date().getFullYear()}`,
+    kind: 'lov',
+    status: 'klar',
+    base_template: 'styresak',
+    duty_id: apenhet.id,
+    sections: ['method', 'participation', 'summary', 'actions'],
+  })
+
+  // Sign and publish through the real path, as the assigned signer.
+  const asAdmin = await personaClient('administrator')
+  for (const r of apenhet.roles) {
+    const { data } = await asAdmin.rpc('sign_duty', { p_duty: apenhet.id, p_role_key: r.key })
+    const signed = data as { ok?: boolean; error?: string }
+    if (signed?.error) throw new Error(`seed sign_duty(${r.key}): ${signed.error}`)
+  }
+  const { data: publishResult } = await asAdmin.rpc('publish_duty', { p_duty: apenhet.id })
+  const published = publishResult as { ok?: boolean; error?: string }
+  if (published?.error) throw new Error(`seed publish_duty: ${published.error}`)
 
   console.log(`seeded:
   ${ORG_PRIMARY} (${org.id}) — ${org.members.length} members, group ${GROUP_PRIMARY}

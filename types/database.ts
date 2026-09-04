@@ -205,6 +205,8 @@ export type Database = {
           next_due_at: string | null
           org_id: string
           owner_member_id: string | null
+          publish: boolean | null
+          reminder_weeks: number
         }
         Insert: {
           created_at?: string
@@ -214,6 +216,8 @@ export type Database = {
           next_due_at?: string | null
           org_id: string
           owner_member_id?: string | null
+          publish?: boolean | null
+          reminder_weeks?: number
         }
         Update: {
           created_at?: string
@@ -223,6 +227,8 @@ export type Database = {
           next_due_at?: string | null
           org_id?: string
           owner_member_id?: string | null
+          publish?: boolean | null
+          reminder_weeks?: number
         }
         Relationships: [
           {
@@ -1111,6 +1117,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      report_templates: {
+        Row: {
+          description: string
+          key: string
+          sections: Json
+          sort_order: number
+          tag: string
+          title: string
+        }
+        Insert: {
+          description: string
+          key: string
+          sections: Json
+          sort_order?: number
+          tag: string
+          title: string
+        }
+        Update: {
+          description?: string
+          key?: string
+          sections?: Json
+          sort_order?: number
+          tag?: string
+          title?: string
+        }
+        Relationships: []
       }
       reports: {
         Row: {

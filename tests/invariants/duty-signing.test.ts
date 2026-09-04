@@ -348,6 +348,51 @@ describe('publish_duty — the archive entry is the legal artefact', () => {
 })
 
 describe('the archive is append-only', () => {
+  it('the content is frozen but a cascade may release its references', async () => {
+    // The distinction this pins down: `report_id` and `archived_by` are ON
+    // DELETE SET NULL, so deleting a report or a member makes PostgreSQL issue
+    // an UPDATE against the archive. A trigger that refuses every UPDATE blocks
+    // the database's own key maintenance and makes the organisation
+    // undeletable — which is exactly what happened (D57).
+    const { data: version } = await ctx.svc
+      .from('duty_versions')
+      .select('id, report_id, label, content_hash')
+      .eq('duty_id', ctx.duty.id)
+      .limit(1)
+      .single()
+    expect(version!.report_id).toBe(ctx.report.id)
+
+    const { error } = await ctx.svc.from('reports').delete().eq('id', ctx.report.id)
+    expect(error).toBeNull()
+
+    const { data: after } = await ctx.svc
+      .from('duty_versions')
+      .select('report_id, label, content_hash')
+      .eq('id', version!.id)
+      .single()
+    // The reference is released; what the archive SAYS is untouched.
+    expect(after!.report_id).toBeNull()
+    expect(after!.label).toBe(version!.label)
+    expect(after!.content_hash).toBe(version!.content_hash)
+  })
+
+  it('nulling a reference by hand is still refused while the target exists', async () => {
+    const { data: version } = await ctx.svc
+      .from('duty_versions')
+      .select('id')
+      .eq('duty_id', ctx.duty.id)
+      .limit(1)
+      .single()
+    // archived_by still points at a live member, so this is an edit, not a
+    // cascade, and the trigger must say so.
+    const { error } = await ctx.svc
+      .from('duty_versions')
+      .update({ archived_by: null })
+      .eq('id', version!.id)
+      .select('id')
+    expect(error?.message ?? '').toMatch(/append-only/)
+  })
+
   it('a published version cannot be edited or deleted', async () => {
     const { data: version } = await ctx.svc
       .from('duty_versions')

@@ -1088,3 +1088,64 @@ correctly from the bundle. The UI is right either way; what is no longer caught
 is the seeding gap itself, which matters only to the translation editor. If that
 becomes a problem, the check belongs in `scripts/seed-i18n.ts` as a diff, not in
 a screenshot.
+
+### D56 — "Ansvarlig" on a duty is a member picker, not a free-text field
+
+The design's duty settings panel types the owner's name into a text input
+(HeiTuva.dc.html:1057).
+
+`duties.owner_member_id` is a reference to a real member, and it has to be: the
+owner is who the deadline chip chases, who the reminder is addressed to, and
+who an inspector is pointed at. A typed name that resolves to nobody is a label
+pretending to be an assignment — it would look identical in a screenshot and do
+nothing.
+
+So the control is a `<select>` of the organisation's active members, with
+"Ingen valgt" as the empty state. Same row, same position, same label.
+
+### D57 — the archive trigger must not block the foreign key's own bookkeeping
+
+Fourth in the family of D50/D51, and this one was mine.
+
+The append-only trigger added in `20260904000004` refused every UPDATE on
+`duty_versions`. But `report_id` and `archived_by` are ON DELETE SET NULL, so
+deleting an organisation cascades into `reports` and `org_members` and each of
+those issues an UPDATE against the archive to release the reference — the
+trigger raised, and the whole delete rolled back. The demo seed failed on its
+own cleanup, which is how it surfaced.
+
+The distinction the trigger was missing: the archive's CONTENT is immutable, but
+a foreign key going null because its target no longer exists is the database
+maintaining its own keys, not somebody editing the record. `duty_id`, `label`,
+`content_hash` and `published_at` can now never change; the two references may
+be nulled only when the row they point at is genuinely gone. Nulling one by hand
+while the target still exists is still refused, and both halves are asserted.
+
+**The pattern is now four for four**, and worth stating once: every integrity
+trigger written against "nobody may change this" has collided with PostgreSQL's
+own referential maintenance. The next one should be written as "nobody may
+change this CONTENT" from the start, with the cascade case handled deliberately
+rather than discovered.
+
+### D58 — a published duty is not told to start a survey
+
+The prototype's primary-action ladder tests "has a linked survey" first
+(HeiTuva.dc.html:3190-3201). That is right while the duty is being worked and
+wrong once it is finished: a redegjørelse marked **Publisert**, with an archive
+entry underneath it and both signatures in place, was still showing "Start
+undersøkelse".
+
+A duty that is published, whose checklist is complete and whose signatures still
+cover the current content has no next step, so it is offered none. The deadline
+line already says when it comes round again.
+
+### D59 — a leser is shown every duty's state and none of its calls to action
+
+Reading the duties is the whole point of the `leser` role, so the cards, the
+checklists, the signing state and the archive all render. What is removed is the
+primary button for rungs a leser cannot climb — starting a survey, finishing the
+documentation, creating a report, signing, publishing. "Følg opp svar" stays,
+because reading results is exactly what the role is for.
+
+The controls that remain are disabled rather than hidden, so the screen still
+shows what exists; the database refuses a leser's write regardless.

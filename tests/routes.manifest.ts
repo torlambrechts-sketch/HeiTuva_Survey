@@ -656,6 +656,50 @@ export const ROUTES: RouteSpec[] = [
       },
     ],
   },
+  {
+    // Rapporter (HeiTuva.dc.html:911-1330). Three tabs; the Lovpålagte one is
+    // the duty engine, and the seed puts its four cards in four different
+    // states so the ladder is visible rather than four copies of "Mangler".
+    route: '/rapporter',
+    label: 'rapporter',
+    as: 'administrator',
+    phase: 'phase-5',
+    states: [
+      { name: 'lovpalagte' },
+      {
+        name: 'plikt-innstillinger',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Innstillinger' }).first().click()
+          await page.getByLabel('Publiser rapporten offentlig').first().waitFor()
+        },
+      },
+      {
+        name: 'standardmaler',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Standardmaler' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'standard')
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'mine-rapporter',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Mine rapporter' }).click()
+          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await page.waitForLoadState('load')
+        },
+      },
+    ],
+  },
+  {
+    // The same screen as a leser: every control is present but inert, and the
+    // signing buttons are absent because none of the slots is theirs.
+    route: '/rapporter',
+    label: 'rapporter-leser',
+    as: 'leser',
+    phase: 'phase-5',
+    states: [{ name: 'lovpalagte' }],
+  },
 ]
 
 /** Routes not yet built. Listed so the gap is visible rather than forgotten;
@@ -663,7 +707,6 @@ export const ROUTES: RouteSpec[] = [
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
   { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
   { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },
-  { route: '/rapporter', phase: 'phase-5', note: 'Rapporter' },
 ]
 
 /**

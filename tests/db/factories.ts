@@ -121,6 +121,13 @@ export async function createSurvey(
      * questions in a language nobody wrote them in.
      */
     langs?: string[]
+    /**
+     * Which template pack the survey came from. The duty engine links a survey
+     * to a statutory duty through this key (duty_definitions.pack_key), so a
+     * fixture that omits it produces a duty card that can never find its own
+     * survey.
+     */
+    templatePackKey?: string
     svc?: Client
   } = {},
 ) {
@@ -135,6 +142,7 @@ export async function createSurvey(
       langs: opts.langs ?? ['no'],
       anonymity: opts.anonymity ?? 'anonymous',
       status: opts.status ?? 'aktiv',
+      template_pack_key: opts.templatePackKey ?? null,
     })
     .select('id, title')
     .single()
