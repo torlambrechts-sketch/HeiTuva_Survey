@@ -1059,3 +1059,32 @@ here, the button goes to Send, which is where the survey's real respondent links
 live (the shareable link and the test send). The label is the design's.
 
 When `/test` is built, this button points at it and the deviation closes.
+
+### D55 — the build no longer needs a database, and CI can be green
+
+Not a design deviation. CI had failed on every run since Phase 0, so CLAUDE.md's
+"CI must be green to merge" had never actually been satisfiable.
+
+`next build` prerenders `/_not-found`, which renders the app shell, which reads
+UI copy through `getMergedMessages`. That threw on a failed read, so a build with
+no Supabase reachable died with `ui_messages read failed: fetch failed` — which
+is every CI run, because the `static` job has no database.
+
+The fix is a correction of which side is the source. `ui_messages` is SEEDED
+FROM `/messages/*.json`; the table is an editable overlay for the Phase 6
+translation editor, not the whole truth. So the bundled set is the base, the
+table lays over it per key, and an unreachable or unseeded table degrades to the
+shipped copy instead of taking the page down. That is also the right runtime
+behaviour: a Supabase blip should not turn every route into an error page when
+the messages are compiled into the build already.
+
+Reproduced against the exact failing condition before and after:
+`NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:59999 npx next build` now completes.
+
+**One check is genuinely weaker as a result**, and it is worth knowing: a key
+added to `/messages/*.json` but never seeded into `ui_messages` used to render
+as a raw `namespace.key` and be caught by the capture harness. It now renders
+correctly from the bundle. The UI is right either way; what is no longer caught
+is the seeding gap itself, which matters only to the translation editor. If that
+becomes a problem, the check belongs in `scripts/seed-i18n.ts` as a diff, not in
+a screenshot.
