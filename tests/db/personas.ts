@@ -20,3 +20,10 @@ export type PersonaName = keyof typeof PERSONAS
 export const ORG_PRIMARY = 'Nordisk Studio'
 export const ORG_OTHER = 'Annen Bedrift AS'
 export const GROUP_PRIMARY = 'Ledelse'
+
+/**
+ * The raw token behind the seeded share link, so the harness can open
+ * /s/<token> without minting one. Dev/CI only, like DEMO_PASSWORD — tokens are
+ * stored hashed, so a fixed plaintext is the only way a test can hold one.
+ */
+export const DEMO_SHARE_TOKEN = 'demo-share-link-token-for-local-verification'

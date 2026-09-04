@@ -39,6 +39,10 @@ must never be what silently settles an open question.
 | D35 | The selected survey row carries no ink border | Accepted | see entry below |
 | D36 | The wizard's slider is themed, where the prototype leaves it unstyled | Accepted | see entry below |
 | D37 | Supabase's PERFORMANCE advisors are deferred to the Phase 6 hardening pass | **Deferred** — Tor's call, 2026-09-03 | see entry below |
+| D38 | The respondent surface has a closed/expired screen the design does not draw | Accepted | see entry below |
+| D39 | Image-choice options render a tinted panel, not a photo | Accepted | see entry below |
+| D40 | The thank-you screen has no peer-results panel yet | **Open** — Phase 3 remainder | see entry below |
+| D41 | Scale buttons keep a 44px floor and wrap rather than shrink | Accepted | docs/RESPONSIVE.md |
 
 ## Entries
 
@@ -668,6 +672,14 @@ covered by this deferral and still fails the gate.
 
 ### The SECURITY advisors, and why they are not on that list
 
+D4 already set this allowlist during bootstrap; this is the same list re-read
+against the synced schema on 2026-09-04, confirming that migrations 0002-0007
+added nothing to it. Two things D4 does not cover: the exact object list has
+grown by `claim_membership` and `survey_response_counts` (both added later,
+both the same SECURITY DEFINER pattern D4 accepts), and there is one finding
+that is NOT on D4's allowlist and is genuinely open — leaked-password
+protection, last row below.
+
 They are not "clean" in the sense of empty, and it is worth being precise about
 what the eleven findings are, because most of them are the security invariants
 working:
@@ -687,3 +699,55 @@ working:
 - `auth_leaked_password_protection` disabled (WARN) — the one genuine item. It
   is a project-settings toggle (Auth → Passwords → check against
   HaveIBeenPwned), not a code change, and it is Tor's to flip.
+
+
+### D38 — the respondent flow has a screen the design does not
+
+The prototype's link always resolves, so it draws no state for a token that
+does not. The real surface needs one: links expire, rounds close, and people
+paste URLs wrong.
+
+An unknown token and a closed round render the SAME screen, deliberately. Two
+different messages would answer the question "is this a real token?" for
+someone trying them in bulk, which is the one question a public URL keyed by a
+secret must not answer. It returns HTTP 200 for the same reason — a 404 is
+equally an answer.
+
+### D39 — image choices render a tinted panel
+
+`image` questions carry option labels but no image URLs: the Builder's upload
+slots have no storage path behind them yet (Phase 3 ships the respondent flow;
+uploads land with the Send/Storage work). Rather than a broken `<img>` or a
+stock photo standing in for the customer's own, the card renders the design's
+tinted panel with the option's label under it — the layout is right and nothing
+pretends to be a picture that was never uploaded.
+
+### D40 — the thank-you screen has no peer-results panel
+
+The design's thank-you shows "Slik svarte kollegene dine" — a bar chart of the
+first scale question, with the k-anonymity floor stated below it
+(HeiTuva.dc.html:2117-2135).
+
+It is not built, and the reason is a decision rather than time. Every aggregate
+RPC is `authenticated`-only; showing peer results to a respondent means a
+k-gated aggregate readable by anyone holding a token. That is a new public
+surface on the most sensitive data in the product, and it should be designed as
+one — token-scoped, round-scoped, k-enforced in the same SECURITY DEFINER
+function — not added as a side effect of building a screen. Tracked as Phase 3
+remaining work, not as a deviation to accept.
+
+Until then the thank-you screen shows the survey's own `engage.thank_you` text,
+which is real data the Builder collects, and nothing else. It does not render
+an empty chart or a "results coming soon" placeholder.
+
+### D41 — scale buttons keep their 44px floor
+
+The design gives a scale's buttons `flex: 1 1 0` (HeiTuva.dc.html:2927) — equal
+widths, one row, no minimum. At the 5 points the prototype shows, that is one
+comfortable row at 390px and the implementation matches it exactly.
+
+At 11 points — an eNPS question, which the prototype never renders on this
+screen — the same rule gives 18px targets. `min-width: 44px` is added so those
+wrap into two rows instead, which is RESPONSIVE.md's floor and the only rule
+that governs below 1280px. A 5-point scale is unaffected, so the design's own
+case is untouched.

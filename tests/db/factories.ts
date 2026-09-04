@@ -90,6 +90,12 @@ export async function createSurvey(
     status?: 'utkast' | 'aktiv' | 'lukket'
     /** The design's meta line starts with who the survey is for. */
     audience?: string
+    /**
+     * Which languages the survey was BUILT in. The respondent locale chain
+     * only offers a language listed here — otherwise a `?lang=` would render
+     * questions in a language nobody wrote them in.
+     */
+    langs?: string[]
     svc?: Client
   } = {},
 ) {
@@ -101,6 +107,7 @@ export async function createSurvey(
       org_id: orgId,
       title,
       audience_label: opts.audience ?? null,
+      langs: opts.langs ?? ['no'],
       anonymity: opts.anonymity ?? 'anonymous',
       status: opts.status ?? 'aktiv',
     })
@@ -164,6 +171,35 @@ export async function createRound(
   }
 
   return { id: round.id, tokens }
+}
+
+/**
+ * A reusable share link on a round, with a token the caller chose.
+ *
+ * The capture and responsive sweeps need a respondent URL that survives being
+ * visited over and over. An invitation token cannot do that — it is single-use
+ * by design, and the second visit correctly shows the thank-you screen. A share
+ * link has no `responded_at` to set, so it stays answerable, which is exactly
+ * what "delbar lenke" means in the design.
+ *
+ * Only ever called from the local seed. The raw token is a fixed string there
+ * for the same reason DEMO_PASSWORD is: a harness cannot look up a value that
+ * is only stored hashed.
+ */
+export async function createShareLink(
+  roundId: string,
+  rawToken: string,
+  opts: { kind?: 'link' | 'qr'; svc?: Client } = {},
+) {
+  const svc = opts.svc ?? serviceClient()
+  const { error } = await svc.from('share_links').insert({
+    round_id: roundId,
+    kind: opts.kind ?? 'link',
+    token_hash: hashToken(rawToken),
+    active: true,
+  })
+  if (error) throw new Error(`createShareLink: ${error.message}`)
+  return { token: rawToken }
 }
 
 /**

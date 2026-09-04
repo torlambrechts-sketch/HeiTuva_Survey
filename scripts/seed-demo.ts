@@ -9,11 +9,12 @@ import { config } from 'dotenv'
 import {
   createOrg,
   createRound,
+  createShareLink,
   createSurvey,
   dropOrg,
   submitResponses,
 } from '../tests/db/factories'
-import { GROUP_PRIMARY, ORG_OTHER, ORG_PRIMARY, PERSONAS } from '../tests/db/personas'
+import { DEMO_SHARE_TOKEN, GROUP_PRIMARY, ORG_OTHER, ORG_PRIMARY, PERSONAS } from '../tests/db/personas'
 
 if (!process.argv.includes('--local')) config({ path: '.env.local' })
 
@@ -46,7 +47,7 @@ async function main() {
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
-  ], { audience: 'Hele selskapet' })
+  ], { audience: 'Hele selskapet', langs: ['no', 'en'] })
   const aboveRound = await createRound(above, 8, { groupId: org.groupId })
   await submitResponses(
     aboveRound.tokens,
@@ -67,6 +68,11 @@ async function main() {
     3, // < k = 5, so aggregates must report insufficient_data
   )
 
+  // A reusable respondent URL for the harness: /s/<DEMO_SHARE_TOKEN>. An
+  // invitation token would answer once and then show the thank-you screen for
+  // every later capture.
+  await createShareLink(aboveRound.id, DEMO_SHARE_TOKEN)
+
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
   ], { status: 'utkast', audience: 'Hele selskapet' })
@@ -76,7 +82,7 @@ async function main() {
   ${ORG_OTHER} (${other.id}) — cross-org isolation fixture
   "${above.title}" 6 responses (above k=5)
   "${below.title}" 3 responses (below k=5)
-  "${draft.title}" draft, no round`)
+  "${draft.title}" draft, no round\n  share link /s/${DEMO_SHARE_TOKEN}`)
 }
 
 main().catch((e) => {

@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { DEMO_SHARE_TOKEN } from './db/personas'
 
 /**
  * The routes the harness captures, and the states each must be seen in.
@@ -439,6 +440,44 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
+    // The respondent surface (HeiTuva.dc.html:1936-2130). `anon` on purpose:
+    // a respondent has no account, and a capture signed in as an administrator
+    // would prove nothing about the screen real people see.
+    route: `/s/${DEMO_SHARE_TOKEN}`,
+    label: 'respondent',
+    as: 'anon',
+    phase: 'phase-3',
+    states: [
+      { name: 'default' },
+      {
+        name: 'answered',
+        setup: async (page) => {
+          // A share link stays answerable, so the follow-up and comment boxes
+          // that only appear after a low score are reachable here — the design
+          // states that the capture sweep would otherwise never see.
+          await page.locator('section button[aria-pressed]').first().click()
+          await page.waitForTimeout(150)
+        },
+      },
+      {
+        name: 'required-blocked',
+        setup: async (page) => {
+          // Pressing Neste with nothing answered must surface the required
+          // notice rather than advancing.
+          await page.getByRole('button', { name: 'Neste' }).click()
+          await page.waitForTimeout(200)
+        },
+      },
+    ],
+  },
+  {
+    route: '/s/ugyldig-token-finnes-ikke',
+    label: 'respondent-closed',
+    as: 'anon',
+    phase: 'phase-3',
+    states: [{ name: 'default' }],
+  },
+  {
     route: '/logg-inn',
     label: 'kom-i-gang-redirects-anon',
     as: 'anon',
@@ -461,7 +500,6 @@ export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = 
   { route: '/undersokelser/[id]/rapport', phase: 'phase-5', note: 'Report editor for one survey' },
   { route: '/dashboard', phase: 'phase-4', note: 'Dashboard (heatmap, trends)' },
   { route: '/rapporter', phase: 'phase-5', note: 'Rapporter' },
-  { route: '/s/[token]', phase: 'phase-3', note: 'Respondent flow (mobile-first)' },
 ]
 
 /**
