@@ -1153,3 +1153,61 @@ because reading results is exactly what the role is for.
 
 The controls that remain are disabled rather than hidden, so the screen still
 shows what exists; the database refuses a leser's write regardless.
+
+### D60 — composing a report is gated separately from reading a cell
+The k-gate has always been per cell: `aggregate_results` returns
+`insufficient_data` for anything below five, carrying no `n` and no `avg`. A
+report is not a cell. It is a set of cells chosen by an editor, rendered
+together, and read by someone who may not be the editor — and three disclosures
+exist only at that moment. `public.compose_report(p_report, p_token)` is now the
+single read path for a composed document, and it decides all three:
+
+- **Differencing.** Show a per-group breakdown beside a total and the suppressed
+  group is arithmetic. With groups of 12 and 3, gating the 3 changes nothing:
+  15 − 12 = 3. `app.suppress_partition` applies the per-cell gate and then
+  **complementary suppression** — while exactly one row is hidden, hide the
+  smallest visible one too, so the residual always spans at least two groups.
+- **A different reader.** A share link is read by someone who is not a member,
+  so the reader is resolved at render time (token hash or membership) and the
+  document is composed under *their* scope. A token narrows the report and can
+  never widen it: a report already filtered to one group stays there however the
+  link was cut.
+- **A frozen scope.** `result_snapshots.scope` exists for a reason. A snapshot
+  taken across all groups is true about all groups and false about any one of
+  them, so a section may read a snapshot only when its scope matches exactly —
+  otherwise it recomputes live, and says which it did (`source`, `snapshot_id`).
+
+Two things the per-section rules do not cover, handled explicitly:
+
+- **A sub-k residual across sections.** Complementary suppression is satisfied by
+  two hidden rows, but 12 visible out of a total of 14 still discloses that two
+  people sit behind the hidden rows. A cross-section pass withholds any scalar
+  `n` whose residual against the visible rows would fall below k. It counts each
+  group once, not each row — a document with both a `teams` and a `heatmap`
+  section lists the same group twice, and double-counting would make the
+  residual look negative and the check pass when it should not.
+- **A hand-edited filter.** `reports.filters` is editor-supplied jsonb, not a
+  foreign key, and the function is SECURITY DEFINER. Every survey id in the
+  filter is checked against the report's own org, and one foreign id refuses the
+  whole composition rather than the offending section.
+
+**The tests were written first, and the mutation run is why they are trusted.**
+All 17 failed against the absent function, and each of seven mutations of the
+finished one was killed:
+
+| Mutation | Killed by |
+|---|---|
+| M1 no complementary suppression | 2 tests |
+| M2 pinned snapshot used whatever its scope or owner | 2 tests |
+| M3 any token accepted, expiry ignored | 2 tests |
+| M4 no cross-section residual check | 1 test |
+| M5 filter survey ids trusted | 2 tests |
+| M6 membership not checked | 2 tests |
+| M7 token scope replaces the report's | 1 test |
+
+M4 and M5 initially **survived** — the suite passed with the protection removed.
+Both gaps were real, not theoretical: M4's is the two-tiny-groups residual above,
+M5's is a cross-tenant read. Tests were added until both died. A negative test
+that has never seen its defect is a decoration, and the only way to know which
+ones those are is to break the code on purpose.
+
