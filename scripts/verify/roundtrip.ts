@@ -257,6 +257,68 @@ async function main() {
       show('logic_rules', (data?.length ?? 0) > 0, error ? { error: error.message } : (data?.[0] ?? { count: 0 }))
     }
 
+    console.log('\n== Phase 4 ==')
+
+    // result_snapshots is the only table this phase writes to, and
+    // `snapshot_results` is the only path to it. Freeze the seeded survey's
+    // aggregates and read the row back — including proof that what was frozen
+    // is the GATED payload, since a snapshot outlives the raw answers.
+    {
+      const { data: seeded } = await svc
+        .from('surveys')
+        .select('id')
+        .eq('title', 'Arbeidsmiljø — månedlig')
+        .maybeSingle()
+
+      // Scoped to the team that never reaches five, on purpose: an unfiltered
+      // snapshot of this survey has no gated cell, so "gated rows carry no n"
+      // would be true of an empty set and prove nothing. This one has gated
+      // cells to check.
+      const { data: group } = await svc
+        .from('groups')
+        .select('id')
+        .eq('name', 'Utvikling')
+        .limit(1)
+        .maybeSingle()
+
+      const { data: made, error: rpcErr } = await admin.rpc('snapshot_results', {
+        p_survey: seeded!.id,
+        p_group: group?.id ?? undefined,
+      })
+      const payload = (made ?? {}) as { snapshot_id?: string; content_hash?: string; error?: string }
+
+      const { data: row, error } = await admin
+        .from('result_snapshots')
+        .select('id, survey_id, content_hash, aggregates, created_at')
+        .eq('id', payload.snapshot_id ?? '')
+        .maybeSingle()
+
+      const questions =
+        (row?.aggregates as { questions?: { insufficient_data?: boolean; n: number | null }[] })
+          ?.questions ?? []
+      const gatedCarryNoCount = questions
+        .filter((q) => q.insufficient_data)
+        .every((q) => q.n === null)
+
+      show(
+        'result_snapshots',
+        !rpcErr &&
+          !error &&
+          Boolean(row) &&
+          gatedCarryNoCount &&
+          questions.some((q) => q.insufficient_data),
+        rpcErr || error
+          ? { error: (rpcErr ?? error)!.message }
+          : {
+              id: row?.id,
+              content_hash: `${String(row?.content_hash).slice(0, 16)}…`,
+              questions: questions.length,
+              gated: questions.filter((q) => q.insufficient_data).length,
+              gated_rows_carry_no_n: gatedCarryNoCount,
+            },
+      )
+    }
+
     await ctx.close()
   } finally {
     await browser.close()
