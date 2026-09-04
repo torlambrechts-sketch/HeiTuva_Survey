@@ -219,6 +219,72 @@ async function main() {
   const published = publishResult as { ok?: boolean; error?: string }
   if (published?.error) throw new Error(`seed publish_duty: ${published.error}`)
 
+  // ---------------------------------------------------------------------
+  // Surfaces Gate 5a3 could not prove
+  // ---------------------------------------------------------------------
+  // policy-coverage.ts measures protection by attempting a cross-org read. An
+  // EMPTY table passes that trivially — the fixture, not the policy, does the
+  // work — so it reports those surfaces as PROTECTED BUT UNPROVEN. Each row
+  // below comes from the surface's REAL producer wherever one exists, so the
+  // fixture doubles as a check that the producing path still works.
+
+  // result_snapshots — produced by snapshot_results, the only writer.
+  const { data: snapResult } = await asAdmin.rpc('snapshot_results', { p_survey: above.id })
+  const snapped = snapResult as { snapshot_id?: string; error?: string }
+  if (snapped?.error) throw new Error(`seed snapshot_results: ${snapped.error}`)
+
+  // question_translations — produced by the builder's language tab, written by
+  // a member so `qt_cud` is what admits it. It has to be the DRAFT survey: D31
+  // freezes translations once a survey has a round, and it refused this on the
+  // sent survey exactly as designed.
+  const { data: draftQuestion } = await svc
+    .from('survey_questions').select('id').eq('survey_id', draft.id).order('position').limit(1).single()
+  if (draftQuestion) {
+    const { error: trError } = await asAdmin.from('question_translations').insert({
+      question_id: draftQuestion.id, lang: 'en', text: 'How has the week been?',
+    })
+    if (trError) throw new Error(`seed question_translations: ${trError.message}`)
+  }
+
+  // schedules — produced by send_round when a cadence is asked for. After the
+  // translation above, because sending gives the survey a round and freezes it.
+  const { data: schedResult } = await asAdmin.rpc('send_round', {
+    p_survey: draft.id,
+    p_channels: ['link'],
+    p_recipients: [],
+    p_cadence: 'monthly',
+    p_runs: 3,
+    p_test_only: true,
+  })
+  const scheduled = schedResult as { error?: string }
+  if (scheduled?.error) throw new Error(`seed send_round(schedule): ${scheduled.error}`)
+
+  // survey_editors — produced by sharing a survey with a colleague. Written
+  // through a member client so `editors_cud` is what admits it, not the service
+  // role. The ADMINISTRATOR does it: `can_edit_survey` admits the creator, an
+  // existing editor, or an administrator, and the redaktør is none of those for
+  // this survey — the policy refused them, correctly, on the first attempt.
+  const leserMember = org.members.find((m) => m.role === 'leser')
+  if (leserMember) {
+    const { error: editorError } = await asAdmin
+      .from('survey_editors')
+      .insert({ survey_id: above.id, member_id: leserMember.memberId })
+    if (editorError) throw new Error(`seed survey_editors: ${editorError.message}`)
+  }
+
+  // dsr_requests has no producer yet, so this is a direct row — and it is made
+  // UNMISTAKABLY SYNTHETIC on purpose. A realistic-looking data-subject request
+  // is the row that later gets counted in a compliance report or answered by
+  // someone who believes it. The test is about access, never about content.
+  await svc.from('dsr_requests').insert({
+    org_id: org.id,
+    type: 'innsyn',
+    status: 'mottatt',
+    subject_email: 'dsr-fixture@example.invalid',
+    resolution: 'SYNTHETIC FIXTURE — not a real data-subject request. Exists only '
+      + 'so Gate 5a3 can prove the dsr_requests policy refuses a cross-org read.',
+  })
+
   console.log(`seeded:
   ${ORG_PRIMARY} (${org.id}) — ${org.members.length} members, group ${GROUP_PRIMARY}
   ${ORG_OTHER} (${other.id}) — cross-org isolation fixture
