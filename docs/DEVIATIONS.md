@@ -110,10 +110,18 @@ allowlist when the CI gate requires advisors to be clean:
 | Finding | Objects | Why accepted |
 |---|---|---|
 | `rls_enabled_no_policy` (INFO) | `responses`, `answers` | This *is* security invariant #1. RLS on with no policy = default deny for every client role. Adding a policy here would be the bug. |
-| `anon_security_definer_function_executable` (WARN) | `get_survey_for_token`, `submit_response` | The respondent flow at `/s/[token]` is unauthenticated by design. Both are token-validated. |
-| `authenticated_security_definer_function_executable` (WARN) | all four RPCs | SECURITY DEFINER RPCs are the *only* read path to `responses`/`answers`; that is the k-anonymity architecture, not an accident. |
+| `anon_security_definer_function_executable` (WARN) | `get_survey_for_token`, `submit_response`, `get_peer_results` | The respondent flow at `/s/[token]` is unauthenticated by design. All three are token-validated, and `get_peer_results` is k-gated on top (D40). |
+| `authenticated_security_definer_function_executable` (WARN) | `aggregate_results`, `get_quotes`, `survey_response_counts`, `claim_membership`, `get_survey_for_token`, `submit_response`, `get_peer_results`, `send_round`, `close_round` | SECURITY DEFINER RPCs are the *only* read path to `responses`/`answers`; that is the k-anonymity architecture, not an accident. `send_round` and `close_round` are DEFINER to reach `app.hash_token` and pgmq, and assert `app.can_edit_survey` themselves rather than relying on the definer's rights. |
+| `auth_leaked_password_protection` (WARN) | Auth | **Not accepted — genuinely open.** A project-settings toggle (Auth → Passwords → check against HaveIBeenPwned), so it is Tor's to flip, not a code change. |
+
+NOT on this list, and deliberately: `mail_outbox_read`, `mail_outbox_delete` and
+`mail_outbox_archive`. They are SECURITY DEFINER too, but granted to
+`service_role` only, so no advisor reports them — which is the check that the
+grants are right, since the raw invitation tokens live in those messages.
 
 Anything outside this table appearing in a future advisor run is a regression.
+Re-read against prod on 2026-09-04 after migrations 0008-0011: 15 findings, all
+matching the rows above.
 
 ## Phase 0
 
