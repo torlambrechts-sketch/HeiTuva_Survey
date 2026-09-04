@@ -626,8 +626,10 @@ itself.
 ### D37 — the performance advisors are deferred to Phase 6
 
 CLAUDE.md's testing gate asks for `supabase db lint` and the advisors clean.
-The SECURITY advisors are clean. The PERFORMANCE advisors are not, and the four
-findings below are deferred to the Phase 6 hardening pass rather than fixed now:
+`db lint` is clean. The PERFORMANCE advisors are not, and the findings below are
+deferred to the Phase 6 hardening pass rather than fixed now. Counts re-read
+from `heituva-prod` on 2026-09-04, after migrations 0005 and 0006 were applied —
+135 findings, none of them introduced by those two:
 
 | advisor | count | what it is |
 | --- | --- | --- |
@@ -635,6 +637,7 @@ findings below are deferred to the Phase 6 hardening pass rather than fixed now:
 | `multiple_permissive_policies` | 75 | two or more permissive policies on the same table and action, so both are evaluated |
 | `unused_index` | 6 | an index nothing has used yet |
 | `auth_rls_initplan` | 7 | `auth.uid()` called per row instead of once per statement |
+| `no_primary_key` | 1 | `feature_flags` has none |
 
 Deferred, not dismissed, and deliberately in that order:
 
@@ -652,7 +655,35 @@ Deferred, not dismissed, and deliberately in that order:
   reads fast), and that decision wants the whole policy surface in front of it,
   which Phase 5 completes.
 
-The Phase 6 pass owns all four, against a database with representative data and
+- `no_primary_key` on `feature_flags` cannot be fixed as stated. The table is
+  keyed `UNIQUE NULLS NOT DISTINCT (key, org_id)` because a NULL `org_id` means
+  "global flag", and a primary key's columns must be NOT NULL. Closing it means
+  a surrogate `id` or a sentinel org, which is a modelling change, not a tuning
+  one.
+
+The Phase 6 pass owns these, against a database with representative data and
 the full query set. Until then the advisor output is expected to be non-empty
 and is read with this entry beside it. A new SECURITY advisor finding is not
 covered by this deferral and still fails the gate.
+
+### The SECURITY advisors, and why they are not on that list
+
+They are not "clean" in the sense of empty, and it is worth being precise about
+what the eleven findings are, because most of them are the security invariants
+working:
+
+- `rls_enabled_no_policy` on `responses` and `answers` (INFO) — CLAUDE.md
+  invariant 1. Clients never select from those tables; the absence of a select
+  policy is the enforcement, not a gap. Adding one to silence the advisor would
+  break the invariant.
+- `anon_security_definer_function_executable` on `get_survey_for_token` and
+  `submit_response` (WARN) — invariant 2. The respondent flow is anonymous and
+  token-authenticated by design; these two are the only path in, and they are
+  SECURITY DEFINER precisely so the caller needs no table rights.
+- `authenticated_security_definer_function_executable` on `aggregate_results`,
+  `get_quotes`, `survey_response_counts` and `claim_membership` (WARN) —
+  invariant 1 again. These are the k-anonymity gate. They must read tables the
+  caller cannot, which is what SECURITY DEFINER is for.
+- `auth_leaked_password_protection` disabled (WARN) — the one genuine item. It
+  is a project-settings toggle (Auth → Passwords → check against
+  HaveIBeenPwned), not a code change, and it is Tor's to flip.
