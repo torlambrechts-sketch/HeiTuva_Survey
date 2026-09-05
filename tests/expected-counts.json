@@ -2,7 +2,7 @@
   "tests/db/access.test.ts": 19,
   "tests/db/administration.test.ts": 22,
   "tests/invariants/duty-signing.test.ts": 21,
-  "tests/invariants/invariants.test.ts": 31,
+  "tests/invariants/invariants.test.ts": 36,
   "tests/invariants/k-surface.test.ts": 35,
   "tests/invariants/policy-coverage.test.ts": 54,
   "tests/invariants/report-composition.test.ts": 37,

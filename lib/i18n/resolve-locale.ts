@@ -1,11 +1,14 @@
 import 'server-only'
 
+import { cookies } from 'next/headers'
+
 import { createClient } from '@/lib/supabase/server'
-import { SOURCE_LOCALE, isLocale, type Locale } from './locales'
+import { LANG_COOKIE, SOURCE_LOCALE, isLocale, type Locale } from './locales'
 
 /**
  * Resolves the locale for a request: the signed-in user's profile `lang`, then
- * their org's `default_lang`, then `no`.
+ * their org's `default_lang`, then `no` — and for a visitor with no session,
+ * the language cookie the splash's picker sets.
  *
  * This project has no locale routing (no /no/... prefix), so next-intl's
  * `requestLocale` is always undefined — nothing would ever set a locale unless
@@ -21,7 +24,12 @@ export async function resolveLocale(): Promise<Locale> {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return SOURCE_LOCALE
+    if (!user) {
+      // A visitor has no profile, so the language they picked on the splash is
+      // the only preference there is (set from `?lang=` by the middleware).
+      const chosen = (await cookies()).get(LANG_COOKIE)?.value
+      return isLocale(chosen) ? chosen : SOURCE_LOCALE
+    }
 
     const { data: profile } = await supabase
       .from('profiles')

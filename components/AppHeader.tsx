@@ -17,7 +17,7 @@ import type { Locale } from '@/lib/i18n/locales'
  * were 505px wider than a 390px viewport, which is D12. Desktop is untouched.
  */
 const NAV = [
-  { href: '/', key: 'dash' },
+  { href: '/oversikt', key: 'dash' },
   { href: '/undersokelser', key: 'surveys' },
   { href: '/dashboard', key: 'dashboard' },
   { href: '/bibliotek', key: 'library' },
@@ -29,7 +29,10 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
 
   return (
     <header className="mx-5 mt-4 flex items-center justify-between gap-4 rounded-[16px] border border-line bg-sf px-[26px] py-4 md:gap-0">
-      <Link href="/" className="touch-44 flex items-center gap-[9px] text-ink no-underline">
+      {/* The logo goes to Oversikt, not to `/` — `/` is the public splash now,
+          and a signed-in user clicking their own product's wordmark should not
+          land on the marketing page. */}
+      <Link href="/oversikt" className="touch-44 flex items-center gap-[9px] text-ink no-underline">
         <Logo />
         <Wordmark />
       </Link>

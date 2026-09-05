@@ -13,6 +13,10 @@ export const SOURCE_LOCALE: Locale = 'no'
  *  rendered disabled with a "kommer" badge per the design. */
 export const ACTIVE_LOCALES: readonly Locale[] = ['no', 'en']
 
+/** Where a visitor's chosen language lives when there is no profile to hold it.
+ *  Set by the middleware from `?lang=`, read by `resolveLocale`. */
+export const LANG_COOKIE = 'heituva-lang'
+
 export function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value)
 }

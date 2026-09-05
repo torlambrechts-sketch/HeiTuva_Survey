@@ -1,10 +1,28 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ACTIVE_LOCALES, LANG_COOKIE, isLocale } from '@/lib/i18n/locales'
 import type { Database } from '@/types/database'
 
 /** Refreshes the auth cookie on every request and gates the app surface.
  *  Returns the response so cookies set here reach the browser. */
 export async function updateSession(request: NextRequest) {
+  /*
+    `?lang=` on a public page, carried into a cookie.
+
+    A visitor has no profile to read a language off, so `resolveLocale` would
+    always answer `no` and the splash's picker changed nothing. Setting the
+    cookie on the REQUEST as well as the response is what makes the switch take
+    effect on this render rather than the next one; a signed-in user's profile
+    still wins, so this only ever speaks for someone who has no preference
+    stored anywhere.
+  */
+  const asked = request.nextUrl.searchParams.get('lang')
+  // ACTIVE, not merely valid: sv and da are seeded but not served, so
+  // `?lang=sv` must not hand a visitor a page that is half Norwegian.
+  const wanted = isLocale(asked) && ACTIVE_LOCALES.includes(asked) ? asked : null
+
+  if (wanted) request.cookies.set(LANG_COOKIE, wanted)
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient<Database>(
@@ -37,6 +55,11 @@ export async function updateSession(request: NextRequest) {
     // credential (DECISIONS). compose_report authorises the token itself, so
     // redirecting here would send every recipient to a login they do not have.
     path.startsWith('/r/') ||
+    // The splash. `/` is the marketing page for a visitor with no session and
+    // the product's front door for everyone else — a signed-in user is sent on
+    // to Oversikt below rather than reading a pitch for something they already
+    // bought.
+    path === '/' ||
     path.startsWith('/_next') ||
     path === '/favicon.ico'
 
@@ -47,11 +70,19 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && path.startsWith('/logg-inn')) {
+  if (user && (path.startsWith('/logg-inn') || path === '/')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/oversikt'
     url.search = ''
     return NextResponse.redirect(url)
+  }
+
+  if (wanted) {
+    response.cookies.set(LANG_COOKIE, wanted, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    })
   }
 
   return response

@@ -69,7 +69,10 @@ async function isSeededContent(value: string): Promise<boolean> {
   // annethvert år"; the phrase on the page is part of that value, so an exact
   // match said "not seeded" and accused the scope label instead.
   const like = `%${value}%`
-  const [packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc] =
+  const [
+    packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
+    dutyTitle, dutyLaw,
+  ] =
     await Promise.all([
       svc.from('template_packs').select('id').ilike('title', like).limit(1),
       svc.from('template_packs').select('id').ilike('audience', like).limit(1),
@@ -88,9 +91,18 @@ async function isSeededContent(value: string): Promise<boolean> {
       // through the database.
       svc.from('report_section_types').select('key').ilike('label', like).limit(1),
       svc.from('report_section_types').select('key').ilike('description', like).limit(1),
+      // `duty_definitions` is the same kind of registry: a statutory duty is a
+      // seeded row, and the name of a Norwegian statute stays Norwegian on the
+      // English page because it is the statute's name, not a translation of
+      // one. The splash quotes the same four laws in its `splash.duties*` keys,
+      // which is how these first surfaced — as message values that happen to
+      // equal seeded content.
+      svc.from('duty_definitions').select('key').ilike('title', like).limit(1),
+      svc.from('duty_definitions').select('key').ilike('law', like).limit(1),
     ])
   const found = [
     packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
+    dutyTitle, dutyLaw,
   ].some((r) => (r.data?.length ?? 0) > 0)
   seededCache.set(value, found)
   return found
@@ -258,6 +270,20 @@ async function main() {
     }
 
     await ctx.close()
+
+    /**
+     * The splash, which the loop above cannot reach twice over: it is `anon`,
+     * and for a signed-in visitor `/` redirects to `/oversikt`. Its language is
+     * carried on the URL rather than on `profiles.lang` — a public page has no
+     * profile to read — so `?lang=en` is the whole switch.
+     */
+    const anonCtx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'en-GB' })
+    const anonPage = await anonCtx.newPage()
+    await anonPage.goto(`${BASE_URL}/?lang=en`, { waitUntil: 'domcontentloaded' })
+    await anonPage.waitForLoadState('load')
+    await anonPage.waitForTimeout(250)
+    failures += await checkPage(anonPage, 'splash')
+    await anonCtx.close()
   } finally {
     await svc.from('profiles').update({ lang: before?.lang ?? 'no' }).eq('user_id', persona.id)
     console.log(`  restored profiles.lang -> ${before?.lang ?? 'no'}`)
@@ -271,7 +297,7 @@ async function main() {
   )
   console.log(
     failures === 0
-      ? `\nEnglish renders clean across every administrator route (${NORWEGIAN_ONLY.length} messages checked)`
+      ? `\nEnglish renders clean across every administrator route and the splash (${NORWEGIAN_ONLY.length} messages checked)`
       : `\n${failures} route/state(s) still show Norwegian or a raw key`,
   )
   process.exit(failures === 0 ? 0 : 1)

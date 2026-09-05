@@ -118,7 +118,7 @@ async function main() {
     ok('duty_signers (seeded unsigned)', (signers ?? []).length > 0, signers?.[0] ?? null)
 
     // ------------------------------------------------------------ loop_actions
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('load')
     const loopText = `Gate2a tiltak ${Date.now()}`
     await page.getByRole('button', { name: 'Legg til tiltak' }).click()

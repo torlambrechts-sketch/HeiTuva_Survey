@@ -19,12 +19,24 @@ import { chromium, type Page } from '@playwright/test'
 import { serveCdnFromCache } from './cdn-cache'
 
 const DESIGN = 'design-reference/heituva-survey-app-design/project/HeiTuva.dc.html'
+/**
+ * The splash is a SECOND prototype file. It shares the DCLogic base and the
+ * fiber trick, but nothing else — its own state shape, its own copy object,
+ * and no `screen` key at all — so it is named per screen rather than assumed.
+ */
+const SPLASH = 'design-reference/heituva-survey-app-design/project/HeiTuva Splash.dc.html'
 const OUT = 'artifacts/reference'
 const WIDTH = 1440
 
 /** Screens, keyed by the prototype's own `screen` state value. Extra state is
  *  merged in for screens that need a sub-tab or a specific condition. */
-type Screen = { name: string; state: Record<string, unknown>; width?: number }
+type Screen = {
+  name: string
+  state: Record<string, unknown>
+  width?: number
+  /** Which prototype file this screen lives in. Defaults to the app bundle. */
+  source?: string
+}
 
 const SCREENS: Screen[] = [
   { name: 'oversikt', state: { screen: 'dash' } },
@@ -53,6 +65,13 @@ const SCREENS: Screen[] = [
   { name: 'respondent', state: { screen: 'respond' }, width: 390 },
   { name: 'respondent-takk', state: { screen: 'respond', thanked: true }, width: 390 },
   { name: 'wizard', state: { screen: 'dash', wizOpen: true } },
+
+  // Phase 6's splash. Three states, because two of its controls change the
+  // page rather than a detail: the billing toggle changes every price, and the
+  // auth tab changes which form is on the page.
+  { name: 'splash', state: {}, source: SPLASH },
+  { name: 'splash-priser-manedlig', state: { billing: 'mnd' }, source: SPLASH },
+  { name: 'splash-logg-inn', state: { mode: 'login' }, source: SPLASH },
 ]
 
 /** Reaches the prototype's logic instance through the React fiber and merges a
@@ -81,7 +100,6 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
 
 async function main() {
   await mkdir(OUT, { recursive: true })
-  const url = pathToFileURL(resolve(DESIGN)).href
   const browser = await chromium.launch()
   let captured = 0
   let failed = 0
@@ -101,16 +119,18 @@ async function main() {
 
       try {
         await serveCdnFromCache(page)
-        await page.goto(url, { waitUntil: 'domcontentloaded' })
+        await page.goto(pathToFileURL(resolve(s.source ?? DESIGN)).href, {
+          waitUntil: 'domcontentloaded',
+        })
 
         // Wait for hydration: until the fiber is reachable the page is still
-        // showing literal {{ }} templates.
+        // showing literal {{ }} templates. The app bundle proves it through a
+        // nav button; the splash has no `nav button`, so both files are checked
+        // the same way instead — no `{{` left anywhere in the body.
         await page.waitForFunction(
           () => {
-            for (const el of Array.from(document.querySelectorAll('nav button'))) {
-              if (el.textContent && !el.textContent.includes('{{')) return true
-            }
-            return false
+            const text = document.body.innerText
+            return text.length > 0 && !text.includes('{{')
           },
           { timeout: 30_000 },
         )
@@ -135,7 +155,7 @@ async function main() {
         }
         hashes.set(hash, s.name)
         captured++
-        console.log(`  ok   ${s.name.padEnd(20)} ${width}px  screen=${applied.screen}`)
+        console.log(`  ok   ${s.name.padEnd(22)} ${width}px  ${applied.screen ? `screen=${applied.screen}` : 'splash prototype (no screen state)'}`)
         if (errors.length) console.log(`       note: ${errors.length} page error(s): ${errors[0]?.slice(0, 90)}`)
       } catch (e) {
         failed++

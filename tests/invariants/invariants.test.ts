@@ -64,6 +64,57 @@ describe('(b) responses and answers are default-deny', () => {
   })
 })
 
+describe('(b2) demo_requests is default-deny, and only request_demo writes it', () => {
+  /**
+   * The splash is public, so `request_demo` is one of the very few functions
+   * `anon` may execute. The table behind it has no policy at all — the same
+   * shape as responses/answers — because these are people who are not
+   * customers yet: the rows belong to no organisation, so no organisation's
+   * members may read them.
+   */
+  it('anon cannot select from demo_requests', async () => {
+    const { data } = await anon().from('demo_requests').select('id')
+    expect(data ?? []).toEqual([])
+  })
+
+  it('an administrator cannot select from demo_requests either', async () => {
+    const { data } = await f.adminA.client.from('demo_requests').select('id')
+    expect(data ?? []).toEqual([])
+  })
+
+  it('anon cannot insert into demo_requests directly', async () => {
+    const { error } = await anon()
+      .from('demo_requests')
+      .insert({ name: 'X', company: 'Y', email: 'x@y.test' })
+    expect(error).toBeTruthy()
+  })
+
+  it('anon CAN file one through request_demo, and gets no row handle back', async () => {
+    const email = `${uniq('demo')}@annenbedrift.test`
+    const { data, error } = await anon().rpc('request_demo', {
+      p_name: 'Tomas Ruud', p_company: 'Annen Bedrift AS', p_email: email, p_plan: 'team',
+    })
+    expect(error).toBeNull()
+    expect(data).toEqual({ ok: true })
+
+    const { data: rows } = await admin().from('demo_requests').select('id, plan').eq('email', email)
+    expect(rows).toHaveLength(1)
+    expect(rows![0]!.plan).toBe('team')
+  })
+
+  it('request_demo validates its own input rather than trusting the caller', async () => {
+    for (const bad of [
+      { p_name: '  ', p_company: 'Y', p_email: 'a@b.test' },
+      { p_name: 'X', p_company: '', p_email: 'a@b.test' },
+      { p_name: 'X', p_company: 'Y', p_email: 'not-an-address' },
+      { p_name: 'X'.repeat(121), p_company: 'Y', p_email: 'a@b.test' },
+    ]) {
+      const { data } = await anon().rpc('request_demo', bad)
+      expect(data).toEqual({ error: 'invalid' })
+    }
+  })
+})
+
 describe('(c) anonymity is structural', () => {
   it('an anonymous response with an invitation_id violates the CHECK', async () => {
     const a = admin()

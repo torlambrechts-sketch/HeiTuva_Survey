@@ -59,6 +59,8 @@ const ANON_BY_DESIGN: Record<string, string> = {
   get_survey_for_token: 'renders /s/[token]; token-validated',
   get_peer_results: 'thank-you peer results; token-validated and k-gated',
   compose_report: 'a share link has no session; token or membership checked inside',
+  request_demo:
+    'the splash is public; validates its own input, writes a table no role can read, returns no row handle',
 }
 
 function sql(query: string): string[][] {

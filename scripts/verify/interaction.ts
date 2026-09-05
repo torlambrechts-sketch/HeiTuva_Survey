@@ -166,7 +166,7 @@ async function main() {
 
     for (const [label, path] of [
       ['logg-inn', '/logg-inn'],
-      ['oversikt', '/'],
+      ['oversikt', '/oversikt'],
       ['profil', '/profil'],
       ['administrasjon', '/administrasjon'],
       ['bibliotek', '/bibliotek'],

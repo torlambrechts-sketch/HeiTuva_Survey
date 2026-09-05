@@ -76,6 +76,44 @@ async function pickSurvey(page: Page, title: string) {
 
 export const ROUTES: RouteSpec[] = [
   {
+    /*
+      The splash (HeiTuva Splash.dc.html). Signed out by definition — it is the
+      only public surface in the product that writes rows, so the states worth
+      photographing are the panel's three modes rather than the marketing
+      sections, which have no state.
+
+      `demo` has no counterpart in the prototype: the design's panel toggles
+      between sign-up and login only, and the paid plans' CTAs had nowhere to
+      go because there is no billing engine (D75).
+    */
+    route: '/',
+    label: 'splash',
+    as: 'anon',
+    phase: 'phase-6',
+    states: [
+      { name: 'default' },
+      {
+        name: 'priser-manedlig',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Månedlig' }).click()
+        },
+      },
+      {
+        name: 'logg-inn',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Logg inn', exact: true }).first().click()
+        },
+      },
+      {
+        name: 'demo',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Ta en prat med oss' }).first().click()
+          await page.getByRole('button', { name: 'Be om en gjennomgang' }).waitFor()
+        },
+      },
+    ],
+  },
+  {
     route: '/logg-inn',
     label: 'logg-inn',
     as: 'anon',
@@ -96,7 +134,7 @@ export const ROUTES: RouteSpec[] = [
   {
     // Oversikt (HeiTuva.dc.html:218-317). Built last in Phase 5 because it
     // aggregates every other screen; the phase tag moves with it.
-    route: '/',
+    route: '/oversikt',
     label: 'oversikt',
     as: 'administrator',
     phase: 'phase-5',
@@ -153,7 +191,7 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
-    route: '/',
+    route: '/oversikt',
     label: 'oversikt-leser',
     as: 'leser',
     phase: 'phase-1',

@@ -219,7 +219,7 @@ async function main() {
 
     // ------------------------------------------------------------------ Oversikt
     console.log('\n== Oversikt ==')
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('load')
     {
       await page.getByRole('button', { name: 'Legg til tiltak' }).click()
@@ -260,7 +260,7 @@ async function main() {
     // ------------------------------------------------------------- focus (3d)
     console.log('\n== keyboard and focus ==')
     for (const [label, url] of [
-      ['oversikt', `${BASE_URL}/`],
+      ['oversikt', `${BASE_URL}/oversikt`],
       ['rapporter', `${BASE_URL}/rapporter`],
       ['rapport-editor', `${BASE_URL}/rapporter?rapport=${rid}`],
     ] as const) {

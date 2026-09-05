@@ -448,7 +448,7 @@ export async function ResultsScreen({
           {t('addAnswer')}
         </Link>
         <Link
-          href="/"
+          href="/oversikt"
           className="touch-44 cursor-pointer rounded-[10px] border border-line px-[22px] py-[13px] text-sm font-semibold text-ink no-underline"
         >
           {t('backToOverview')}

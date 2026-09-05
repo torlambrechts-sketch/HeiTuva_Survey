@@ -1374,3 +1374,61 @@ they may see. The design has no concept of either, because it has no snapshots.
 A report with no survey behind it publishes without a snapshot rather than being
 refused: a statutory report can be entirely narrative, and there is nothing to
 freeze.
+
+### D73 — the splash offers two languages, not four
+The design's language picker lists Norsk, Svenska, Dansk and English, its hero
+badge reads "Norsk, svensk, dansk og engelsk · data i Norge og EØS", and its
+footer repeats the four. `sv` and `da` are seeded but not served (see
+`ACTIVE_LOCALES`, and the Språk tab's own "kommer" badges), so the public page
+now offers `no` and `en` and says so: the badge reads "Norsk og engelsk · data i
+Norge og EØS" and the footer "Norsk og engelsk".
+
+A marketing page is a promise. Listing a language the product cannot render
+would be the one kind of fabrication the splash is most exposed to, because a
+visitor cannot check it before signing up. The picker becomes four entries again
+by activating the locales, not by editing this page: it renders `ACTIVE_LOCALES`.
+`?lang=` is honoured only for an active locale, for the same reason.
+
+### D74 — the auth panel has a third mode the prototype does not
+The design's panel toggles between "Prøv gratis" and "Logg inn". Pricing is shown
+with the design's own numbers, but there is no billing engine (DECISIONS Q10), so
+both paid plans' CTAs and "Få en gjennomgang på 20 minutter" have nowhere to post.
+They open the same panel in a `demo` mode — same card, same tab rail, same field
+styling, three fields instead of four — which files a `demo_requests` row through
+`rpc.request_demo`.
+
+The alternative was a CTA that does nothing, or a mailto:. The panel already
+exists, is already the page's one form surface, and already carries the
+confirmation treatment; a third mode of it is a smaller invention than a second
+form.
+
+### D75 — the mini-heatmap's column headers may shrink and wrap
+The prototype gives the illustration's four column headers `flex:1`, whose
+automatic minimum size is the min-content width — so a one-word label like
+"Anbefale" refuses to shrink. Below roughly 1100px the header row broke out of
+its card and stopped lining up with the cells under it, and at 320px it pushed
+the page into horizontal scroll (RESPONSIVE.md rule 1). They carry `min-w-0` and
+`break-words` here. Nothing changes at the design's own width; below it the
+headers stay aligned with their columns instead of overflowing.
+
+### D76 — form controls use the product's typeface, so they are 2–6px taller
+The prototype has no CSS reset, and `<input>`, `<button>` and `<select>` do not
+inherit `font-family` — so every form control in both design bundles renders in
+**Arial** at the browser's default line-height, while the surrounding page is DM
+Sans. The implementation styles them in DM Sans like everything else, which is
+what the design plainly intends and what the rest of the product already does.
+
+DM Sans's `normal` line height is taller than Arial's, so a field measures 46px
+against the prototype's 44 and the panel's submit button 50 against 47 — about
+30px accumulated over the sign-up panel. Line-height is otherwise matched
+exactly (`leading-[normal]`, not Tailwind's inherited 1.5, which would have added
+another 6px per control), and `touch-44-field` is deliberately NOT applied to
+these fields: at 44px they already clear the touch minimum, and applying it made
+them taller still.
+
+### D77 — the panel's SSO buttons render disabled
+"Entra ID" and "Google Workspace" are drawn exactly as the design draws them and
+are disabled. Entra SSO is Phase 6's own item and is not wired; Google Workspace
+is not in v1 at all. This is the treatment D71 already gives the PowerPoint
+button and the Administrasjon screen gives its Entra toggle — the control is
+present and honest about being unavailable, rather than absent or posting nowhere.

@@ -15,7 +15,7 @@ import { OnboardingForm } from './OnboardingForm'
  */
 export default async function OnboardingPage() {
   const viewer = await getViewer()
-  if (viewer) redirect('/')
+  if (viewer) redirect('/oversikt')
 
   const t = await getTranslations('onboarding')
   const supabase = await createClient()

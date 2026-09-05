@@ -140,18 +140,21 @@ export type Database = {
       dashboard_pins: {
         Row: {
           created_at: string
+          id: string
           org_id: string
           panel_key: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          id?: string
           org_id: string
           panel_key: string
           user_id: string
         }
         Update: {
           created_at?: string
+          id?: string
           org_id?: string
           panel_key?: string
           user_id?: string
@@ -172,6 +175,36 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      demo_requests: {
+        Row: {
+          company: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          plan: string | null
+          status: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          plan?: string | null
+          status?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          plan?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       dsr_requests: {
         Row: {
@@ -2042,6 +2075,15 @@ export type Database = {
         Returns: Json
       }
       report_for_share_token: { Args: { p_token: string }; Returns: string }
+      request_demo: {
+        Args: {
+          p_company: string
+          p_email: string
+          p_name: string
+          p_plan?: string
+        }
+        Returns: Json
+      }
       results_summary: {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json

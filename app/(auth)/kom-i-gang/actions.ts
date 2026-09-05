@@ -95,5 +95,5 @@ export async function createOrganization(
     .upsert({ user_id: user.id, display_name: parsed.data.name }, { onConflict: 'user_id' })
 
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect('/oversikt')
 }

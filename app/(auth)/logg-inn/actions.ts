@@ -30,7 +30,7 @@ export async function signInWithPassword(
   // password" tells an attacker which work emails exist.
   if (error) return { error: 'invalid' }
 
-  redirect('/')
+  redirect('/oversikt')
 }
 
 export async function sendMagicLink(_prev: AuthState, formData: FormData): Promise<AuthState> {
