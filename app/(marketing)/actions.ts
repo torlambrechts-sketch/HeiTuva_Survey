@@ -2,7 +2,9 @@
 
 import { headers } from 'next/headers'
 import { z } from 'zod'
+import { clientKey, rateLimited } from '@/lib/ratelimit'
 import { createClient } from '@/lib/supabase/server'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 /**
  * The splash's two write paths: create an account, and ask for a walkthrough.
@@ -13,7 +15,27 @@ import { createClient } from '@/lib/supabase/server'
  * (amended): rate limiting and Turnstile on this endpoint are launch blockers,
  * not Phase 6 polish, precisely because it is public.
  */
-export type SplashState = { error?: 'invalid' | 'weak' | 'freemail' | 'failed'; sent?: boolean }
+export type SplashState = {
+  error?: 'invalid' | 'weak' | 'freemail' | 'failed' | 'too_many' | 'robot'
+  sent?: boolean
+}
+
+/** Sign-ups and demo requests per IP per hour. Generous for a person, tight for a script. */
+const SIGNUPS_PER_HOUR = 5
+const DEMOS_PER_HOUR = 5
+
+/**
+ * The two controls every public action runs first, in this order: the limiter
+ * is free and answers before the network is touched; Turnstile is a round trip
+ * to Cloudflare and only worth making for a caller still inside their budget.
+ */
+async function guard(formData: FormData, limit: number, scope: string): Promise<SplashState | null> {
+  const h = await headers()
+  const ip = clientKey(h.get('x-forwarded-for'))
+  if (rateLimited(`${scope}:${ip}`, limit)) return { error: 'too_many' }
+  if (!(await verifyTurnstile(formData.get('cf-turnstile-response'), ip))) return { error: 'robot' }
+  return null
+}
 
 /**
  * A work e-mail is the product's unit of identity — an organisation's members
@@ -38,6 +60,9 @@ export async function signUpFromSplash(
   _prev: SplashState,
   formData: FormData,
 ): Promise<SplashState> {
+  const refused = await guard(formData, SIGNUPS_PER_HOUR, 'signup')
+  if (refused) return refused
+
   const parsed = SignUp.safeParse({
     name: formData.get('name'),
     company: formData.get('company'),
@@ -98,6 +123,9 @@ const Demo = z.object({
  * INSERT policy on a tenant-adjacent table is a spam sink with an RLS blessing.
  */
 export async function requestDemo(_prev: SplashState, formData: FormData): Promise<SplashState> {
+  const refused = await guard(formData, DEMOS_PER_HOUR, 'demo')
+  if (refused) return refused
+
   const parsed = Demo.safeParse({
     name: formData.get('name'),
     company: formData.get('company'),

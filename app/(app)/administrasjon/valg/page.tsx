@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
+import { entraAvailable } from '@/lib/auth/entra'
 import { OptionsPanel } from '../OptionsPanel'
 import { OPTION_KEYS, type OptionKey } from '../keys'
 
@@ -25,6 +26,7 @@ export default async function OptionsTab() {
     <OptionsPanel
       options={options}
       defaultLang={org?.default_lang === 'en' ? 'en' : 'no'}
+      entra={await entraAvailable()}
     />
   )
 }

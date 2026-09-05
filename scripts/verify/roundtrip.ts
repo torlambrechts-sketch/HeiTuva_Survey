@@ -420,6 +420,74 @@ async function main() {
       await page.close()
     }
 
+    /*
+      Entra ID SSO (Phase 6). Auth has no Entra provider on the local stack, so
+      the two things provable here are the two that matter without one: the
+      switch cannot be turned on (nobody could sign in afterwards), and when the
+      option IS on, a password session is ended rather than served.
+
+      Last in the file on purpose: the enforcement signs this context out.
+    */
+    {
+      const page = await ctx.newPage()
+      await page.goto(`${BASE_URL}/administrasjon/valg`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const sso = page.getByRole('switch', { name: 'Pålogging med Entra ID (SSO)' })
+      show(
+        'options.sso (switch)',
+        (await sso.isDisabled()) && (await page.getByText('ikke satt opp ennå').count()) > 0,
+        { disabled_without_provider: await sso.isDisabled() },
+      )
+
+      await svc.from('organizations').update({ options: { reminders: true, weekly_digest: true, allow_self_serve: false, sso: true, brand_mail: true } }).eq('id', orgId)
+      const res = await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const landed = new URL(page.url())
+      const notice = await page.locator('[role="alert"]').first().innerText().catch(() => '')
+      const again = await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
+      const stillOut = new URL(page.url()).pathname.startsWith('/logg-inn')
+      show(
+        'options.sso (enforced)',
+        res?.status() === 200 &&
+          landed.pathname === '/logg-inn' && landed.searchParams.get('feil') === 'sso' &&
+          notice.includes('Entra ID') && stillOut,
+        { landed: `${landed.pathname}?${landed.searchParams}`, told: notice.slice(0, 60), session_ended: stillOut, second: again?.status() },
+      )
+      await svc.from('organizations').update({ options: { reminders: true, weekly_digest: true, allow_self_serve: false, sso: false, brand_mail: true } }).eq('id', orgId)
+      await page.close()
+    }
+
+    /*
+      Every option change is audited (Gate 4 finding, Phase 6): the switch is
+      flipped through the UI and the audit row is read back. Runs on a fresh
+      page because the SSO block above ended the context's session.
+    */
+    {
+      const page = await ctx.newPage()
+      await signIn(page, 'administrator', BASE_URL)
+      await page.goto(`${BASE_URL}/administrasjon/valg`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const before = new Date().toISOString()
+      await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
+      await page.waitForTimeout(800)
+      const { data: rows } = await admin
+        .from('audit_events')
+        .select('action, target, meta')
+        .eq('org_id', orgId)
+        .eq('action', 'option.change')
+        .gt('created_at', before)
+      const row = rows?.[0] as { action: string; target: string; meta: { from?: boolean; to?: boolean } } | undefined
+      show(
+        'audit_events (option.change)',
+        row?.target === 'weekly_digest' && typeof row?.meta?.to === 'boolean' && row.meta.from !== row.meta.to,
+        row ?? { count: rows?.length ?? 0 },
+      )
+      // Put it back the way the seed had it.
+      await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
+      await page.waitForTimeout(400)
+      await page.close()
+    }
+
     await ctx.close()
   } finally {
     await browser.close()

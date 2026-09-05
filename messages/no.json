@@ -793,7 +793,10 @@
     "langArea_surveyNav": "Undersøkelsesmeny",
     "langArea_surveys": "Undersøkelser",
     "langArea_wizard": "Veiviser",
-    "langShowSource": "Vis norsk kilde"
+    "langShowSource": "Vis norsk kilde",
+    "oSsoNotConfigured": "ikke satt opp ennå",
+    "errSsoUnavailable": "Entra ID er ikke satt opp for HeiTuva ennå, så pålogging kan ikke kreve det.",
+    "errSsoSelf": "Logg inn med Entra ID selv først — ellers ville du blitt logget ut i neste øyeblikk."
   },
   "profile": {
     "aboutMe": "Om meg",
@@ -882,7 +885,10 @@
     "sendLink": "Send innloggingslenke",
     "linkSent": "Sjekk innboksen din — vi har sendt deg en lenke.",
     "invalid": "Feil e-post eller passord.",
-    "signOutEverywhere": "Logg ut overalt"
+    "signOutEverywhere": "Logg ut overalt",
+    "signInEntra": "Logg inn med Entra ID",
+    "ssoRequired": "Virksomheten din bruker Entra ID for pålogging. Bruk «Logg inn med Entra ID».",
+    "ssoStartFailed": "Kunne ikke starte Entra ID-pålogging. Prøv igjen."
   },
   "lang": {
     "no": "Norsk",
@@ -1300,6 +1306,50 @@
     "demoSub": "Vi ringer eller sender en lenke — 20 minutter, ingen forpliktelse.",
     "demoSubPlan": "Om {plan} — 20 minutter, ingen forpliktelse.",
     "demoCta": "Be om en gjennomgang",
-    "demoFine": "Vi bruker kontaktopplysningene bare til å svare deg. Ingen betalingskort, ingen konto opprettes."
+    "demoFine": "Vi bruker kontaktopplysningene bare til å svare deg. Ingen betalingskort, ingen konto opprettes.",
+    "noteTooMany": "For mange forsøk herfra akkurat nå. Prøv igjen om en time, eller send oss en e-post.",
+    "noteRobot": "Vi fikk ikke bekreftet at du er et menneske. Last siden på nytt og prøv igjen."
+  },
+  "legal": {
+    "updated": "Sist oppdatert 5. september 2026",
+    "back": "← Tilbake til forsiden",
+    "privacyTitle": "Personvernerklæring",
+    "privacySections": "8",
+    "privacy1H": "Hvem vi er",
+    "privacy1P": "HeiTuva leveres av Nordisk Studio AS, Storgata 12, 0155 Oslo (org.nr. i Brønnøysundregistrene). For virksomheter som bruker HeiTuva til å spørre sine ansatte, er virksomheten behandlingsansvarlig og Nordisk Studio AS databehandler. Denne erklæringen forklarer hva vi gjør med opplysninger i begge roller.",
+    "privacy2H": "Hva vi behandler om deg som administrerer HeiTuva",
+    "privacy2P": "Når du oppretter en konto lagrer vi navn, jobb-e-post, virksomhetens navn og din rolle. Vi lagrer også en logg over handlinger som endrer innstillinger, roller og personvernvalg (revisjonsloggen), slik at virksomheten kan dokumentere hvem som gjorde hva. Vi lagrer ikke IP-adresser eller nettleserinformasjon knyttet til deg.\n\nGrunnlaget er avtalen med virksomheten din (GDPR art. 6 nr. 1 b) og vår berettigede interesse i å sikre tjenesten (art. 6 nr. 1 f).",
+    "privacy3H": "Hva vi behandler om deg som svarer på en undersøkelse",
+    "privacy3P": "Når du svarer anonymt lagres svaret uten kobling til deg: ingen invitasjons-ID, ingen bruker, ingen IP-adresse, og tidspunktet avrundes til nærmeste time. Databasen har en teknisk sperre som hindrer at et anonymt svar noen gang kan knyttes til en person. Virksomheten ser resultater først når minst fem har svart i samme gruppe, og fritekst vises aldri sammen med gruppe når gruppen er mindre enn fem.\n\nNår en undersøkelse er satt til «med navn», ser du det tydelig før du svarer, og svaret ditt lagres med navnet ditt. Invitasjonslenken din er personlig og lagres bare som en hash; den kan ikke gjenskapes fra databasen.",
+    "privacy4H": "Hvor opplysningene er",
+    "privacy4P": "Alle data lagres i EU/EØS: databasen hos Supabase i Frankfurt (eu-central-1), applikasjonen hos Vercel med EU-regioner, e-post via Amazon SES i Stockholm (eu-north-1), SMS via LINK Mobility (Norden), feilrapportering via Sentry i EU. Ingen persondata overføres til land utenfor EØS.",
+    "privacy5H": "Hvor lenge",
+    "privacy5P": "Svar slettes etter virksomhetens valgte oppbevaringstid (standard 24 måneder) av en automatisk jobb. Kontoopplysninger slettes når virksomheten avslutter avtalen, etter en karensperiode på 30 dager. Revisjonsloggen beholdes så lenge avtalen løper, fordi den er virksomhetens dokumentasjon.",
+    "privacy6H": "Dine rettigheter",
+    "privacy6P": "Du har rett til innsyn, retting, sletting og dataportabilitet, og til å protestere mot behandling basert på berettiget interesse. For opplysninger virksomheten din behandler om deg, retter du deg til virksomheten; vi hjelper dem å svare innen fristene. For opplysninger vi behandler som behandlingsansvarlig, kontakt oss på personvern@heituva.no. Du kan klage til Datatilsynet.\n\nAnonyme svar kan vi ikke finne igjen for deg — det er hele poenget med at de er anonyme.",
+    "privacy7H": "Underleverandører",
+    "privacy7P": "Supabase (database, innlogging, lagring — Frankfurt), Vercel (drift — EU), Amazon Web Services (e-post — Stockholm), LINK Mobility (SMS — Norge), Cloudflare (bot-beskyttelse på forsiden), Sentry (feilrapportering — EU). Fullstendig liste med formål finnes i databehandleravtalen.",
+    "privacy8H": "Kontakt",
+    "privacy8P": "Nordisk Studio AS, Storgata 12, 0155 Oslo. personvern@heituva.no.",
+    "dpaTitle": "Databehandleravtale",
+    "dpaSections": "9",
+    "dpa1H": "Parter og formål",
+    "dpa1P": "Denne avtalen inngås mellom virksomheten som bruker HeiTuva (behandlingsansvarlig) og Nordisk Studio AS (databehandler), og gjelder all behandling databehandler gjør på vegne av behandlingsansvarlig i HeiTuva. Formålet er gjennomføring av medarbeiderundersøkelser og lovpålagt dokumentasjon etter arbeidsmiljøloven, åpenhetsloven og likestillings- og diskrimineringsloven.",
+    "dpa2H": "Behandlingens art og kategorier",
+    "dpa2P": "Kategorier av registrerte: ansatte og andre virksomheten inviterer. Kategorier av opplysninger: navn, e-post, mobilnummer, gruppetilhørighet, svar på undersøkelser (anonyme eller med navn etter virksomhetens valg), og fritekst. Særlige kategorier kan forekomme i fritekst; databehandler behandler dem kun som en del av svaret og ikke for egne formål.",
+    "dpa3H": "Instruks",
+    "dpa3P": "Databehandler behandler opplysningene bare etter dokumentert instruks fra behandlingsansvarlig. Innstillingene i HeiTuva (anonymitet, oppbevaringstid, hvem som får tilgang) er en slik instruks. Databehandler varsler uten opphold dersom en instruks etter databehandlers syn strider mot personvernregelverket.",
+    "dpa4H": "Konfidensialitet og sikkerhet",
+    "dpa4P": "Personer som behandler opplysninger hos databehandler er underlagt taushetsplikt. Tekniske tiltak omfatter: radnivåsikkerhet i databasen som skiller virksomhetene fra hverandre; terskel på fem svar før noe resultat vises, håndhevet i databasen; anonyme svar lagres uten kobling til person, håndhevet av en databasesperre; invitasjonslenker lagres kun som hash; kryptering under transport og i hvile; revisjonslogg som ikke kan endres; daglige sikkerhetskopier med mulighet for gjenoppretting til et tidspunkt.",
+    "dpa5H": "Underleverandører",
+    "dpa5P": "Behandlingsansvarlig gir generell godkjenning til bruk av underleverandørene i personvernerklæringens liste: Supabase Inc. (database, innlogging, lagring — Frankfurt, EU), Vercel Inc. (applikasjonsdrift — EU-regioner), Amazon Web Services EMEA SARL (e-postutsending — Stockholm), LINK Mobility AS (SMS — Oslo), Cloudflare Inc. (bot-beskyttelse på forsiden, ingen svardata), Functional Software Inc. / Sentry (feilrapportering — EU, uten fritekst). Databehandler varsler om nye underleverandører 30 dager før de tas i bruk; behandlingsansvarlig kan protestere innen fristen.",
+    "dpa6H": "Overføring utenfor EØS",
+    "dpa6P": "Opplysninger lagres og behandles i EU/EØS. Ingen overføring til tredjeland finner sted som ledd i tjenesten.",
+    "dpa7H": "Bistand og sikkerhetsbrudd",
+    "dpa7P": "Databehandler bistår behandlingsansvarlig med å oppfylle de registrertes rettigheter (innsyn, retting, sletting, portabilitet) gjennom verktøyene under Administrasjon → Personvern og GDPR, og ved forespørsel. Ved brudd på personopplysningssikkerheten varsler databehandler behandlingsansvarlig uten ugrunnet opphold og senest innen 24 timer etter at bruddet ble kjent, med den informasjonen artikkel 33 nr. 3 krever, om nødvendig i flere omganger.",
+    "dpa8H": "Revisjon",
+    "dpa8P": "Behandlingsansvarlig kan be om dokumentasjon på at forpliktelsene overholdes, og kan én gang per år, med 30 dagers varsel, gjennomføre eller la en uavhengig tredjepart gjennomføre revisjon.",
+    "dpa9H": "Varighet, sletting og signering",
+    "dpa9P": "Avtalen gjelder så lenge kundeavtalen løper. Ved opphør slettes alle personopplysninger senest 30 dager etter at behandlingsansvarlig har fått eksportert dem, med mindre lov krever lengre oppbevaring. En signert versjon av denne avtalen med virksomhetens navn og dato utstedes ved avtaleinngåelse og finnes under Administrasjon → Personvern og GDPR → Dokumentasjon."
   }
 }

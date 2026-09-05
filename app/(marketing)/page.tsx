@@ -25,6 +25,7 @@ export default async function SplashPage() {
 
   return (
     <Splash
+      turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
       copy={{
         langLabel: t('langLabel'),
         locale,
@@ -151,6 +152,8 @@ export default async function SplashPage() {
         noteWeak: t('noteWeak'),
         noteFreemail: t('noteFreemail'),
         noteFailed: t('noteFailed'),
+        noteTooMany: t('noteTooMany'),
+        noteRobot: t('noteRobot'),
         fineUp: t('fineUp'),
         fineIn: t('fineIn'),
         footLegal: t('footLegal'),

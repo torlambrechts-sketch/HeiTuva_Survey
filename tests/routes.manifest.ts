@@ -114,6 +114,21 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // The two public documents the splash's footer links to (D83).
+    route: '/personvern',
+    label: 'personvern',
+    as: 'anon',
+    phase: 'phase-6',
+    states: [{ name: 'default' }],
+  },
+  {
+    route: '/databehandleravtale',
+    label: 'databehandleravtale',
+    as: 'anon',
+    phase: 'phase-6',
+    states: [{ name: 'default' }],
+  },
+  {
     route: '/logg-inn',
     label: 'logg-inn',
     as: 'anon',
@@ -127,6 +142,18 @@ export const ROUTES: RouteSpec[] = [
           await page.fill('input[name="password"]', 'feil-passord')
           await page.getByRole('button', { name: /^Logg inn$/ }).click()
           await page.getByRole('alert').waitFor({ state: 'visible', timeout: 10_000 })
+        },
+      },
+      {
+        // Phase 6: what a password session sees after its organisation turned
+        // on "Pålogging med Entra ID" (docs/DEVIATIONS.md D82).
+        name: 'sso-required',
+        setup: async (page) => {
+          await page.goto(`${page.url().split('?')[0]}?feil=sso`, { waitUntil: 'domcontentloaded' })
+          // `p[role="alert"]`, not getByRole('alert'): Next's route announcer
+          // carries the same role and made the strict locator ambiguous — the
+          // same trap the `error` state above already documents.
+          await page.locator('p[role="alert"]').first().waitFor({ state: 'visible', timeout: 10_000 })
         },
       },
     ],

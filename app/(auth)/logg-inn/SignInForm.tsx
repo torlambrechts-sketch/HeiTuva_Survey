@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { sendMagicLink, signInWithPassword, type AuthState } from './actions'
+import { sendMagicLink, signInWithEntra, signInWithPassword, type AuthState } from './actions'
 
 type Labels = {
   email: string
@@ -10,13 +10,14 @@ type Labels = {
   sendLink: string
   linkSent: string
   invalid: string
+  entra: string
 }
 
 const field =
   'mt-1.5 box-border w-full rounded-[10px] border border-line bg-bg px-[13px] py-[11px] text-[14px] text-ink outline-none'
 const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
 
-export function SignInForm({ labels }: { labels: Labels }) {
+export function SignInForm({ labels, entra }: { labels: Labels; entra: boolean }) {
   const [pwState, pwAction, pwPending] = useActionState<AuthState, FormData>(
     signInWithPassword,
     {},
@@ -76,6 +77,19 @@ export function SignInForm({ labels }: { labels: Labels }) {
       >
         {labels.sendLink}
       </button>
+
+      {/* Present only when Auth reports the provider as configured — the same
+          bordered secondary control the splash's panel draws for "Entra ID"
+          (HeiTuva Splash.dc.html:107). formNoValidate: no fields are needed. */}
+      {entra ? (
+        <button
+          formAction={signInWithEntra}
+          formNoValidate
+          className="cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-3 text-[13px] font-semibold text-ink"
+        >
+          {labels.entra}
+        </button>
+      ) : null}
     </form>
   )
 }

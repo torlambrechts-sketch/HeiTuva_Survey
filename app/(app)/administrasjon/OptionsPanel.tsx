@@ -20,6 +20,7 @@ const LABEL: Record<OptionKey, [string, string]> = {
   reminders: ['oReminders', 'oRemindersDesc'],
   weekly_digest: ['oWeeklyDigest', 'oWeeklyDigestDesc'],
   allow_self_serve: ['oAllowSelfServe', 'oAllowSelfServeDesc'],
+  sso: ['oSso', 'oSsoDesc'],
   brand_mail: ['oBrandMail', 'oBrandMailDesc'],
 }
 
@@ -33,9 +34,12 @@ const LABEL: Record<OptionKey, [string, string]> = {
 export function OptionsPanel({
   options,
   defaultLang,
+  entra,
 }: {
   options: Record<OptionKey, boolean>
   defaultLang: 'no' | 'en'
+  /** Whether Auth reports Entra ID as configured (lib/auth/entra.ts). */
+  entra: boolean
 }) {
   const t = useTranslations('admin')
   const [saved, setSaved] = useState(options)
@@ -64,15 +68,17 @@ export function OptionsPanel({
 
       <div className="mt-4 flex flex-col gap-3.5">
         {ROW_ORDER.map((key) => {
-          // SSO keeps the design's fourth position rather than being pushed to
-          // the end because it is disabled — the order is part of the layout.
-          if (key === 'sso') {
+          // SSO keeps the design's fourth position. Until Auth has an Entra
+          // provider configured the switch is drawn disabled and says so — a
+          // switch that could be turned on would lock everybody out, which
+          // is also why the action refuses it (docs/DEVIATIONS.md D82).
+          if (key === 'sso' && !entra) {
             return (
               <div key="sso" className="flex items-center gap-3.5">
                 <span className="flex-1">
                   <span className="block text-[14px] font-semibold">{t('oSso')}</span>
                   <span className="mt-0.5 block text-[13px] text-mut">
-                    {t('oSsoDesc')} — {t('comingSoon')}
+                    {t('oSsoDesc')} — {t('oSsoNotConfigured')}
                   </span>
                 </span>
                 <button

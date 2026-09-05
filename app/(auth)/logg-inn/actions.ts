@@ -48,6 +48,27 @@ export async function sendMagicLink(_prev: AuthState, formData: FormData): Promi
   return { sent: true }
 }
 
+/**
+ * "Logg inn med Entra ID". Supabase builds the authorisation URL; the browser is
+ * sent there and comes back through /auth/callback with a PKCE code, the same
+ * path an invite or a magic link takes. Only rendered when Auth reports the
+ * provider as configured (lib/auth/entra.ts), so this cannot start a flow the
+ * server will refuse.
+ */
+export async function signInWithEntra() {
+  const origin = (await headers()).get('origin') ?? ''
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'openid profile email',
+      redirectTo: `${origin}/auth/callback?neste=/oversikt`,
+    },
+  })
+  if (error || !data.url) redirect('/logg-inn?feil=sso-start')
+  redirect(data.url)
+}
+
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut({ scope: 'global' })

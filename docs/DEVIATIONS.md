@@ -1512,3 +1512,38 @@ pass, not a vulnerability the product can reach.
 
 Long sections paginate: a partition with thirty groups is three slides with the
 same title, not one slide with rows off the bottom.
+
+### D82 — Entra ID SSO: where the switch may be turned on, and where it bites
+The design draws "Pålogging med Entra ID (SSO) — Deaktiverer passordpålogging"
+as one switch. Two rules sit behind it that the prototype could not have:
+
+- It can only be turned ON when Auth actually accepts Entra sign-ins
+  (`/auth/v1/settings` reports `external.azure`), and only by an administrator
+  who is themselves signed in through Entra. Otherwise the first request after
+  saving would sign out the person who just saved. Turning it OFF is always
+  allowed — whoever can reach the screen can undo it. Until the provider is
+  configured the switch is drawn disabled and reads "ikke satt opp ennå".
+- "Deaktiverer passordpålogging" is enforced AFTER credentials are accepted,
+  in `requireViewer`, not in the sign-in action. An action that refused before
+  checking the password would tell anyone which addresses belong to an SSO
+  organisation; here the session is real and simply not allowed to continue,
+  so nothing is learned that the person did not already have the password for.
+  They land on `/logg-inn?feil=sso` with the reason and the Entra button.
+
+The login screen (itself invented, D8) gains one control: "Logg inn med Entra
+ID", drawn as the bordered secondary button the splash's panel uses for the
+same thing, and present only when the provider is configured. Enabling the
+provider on production is an operator action — an Entra app registration and
+the Azure provider in Supabase Auth — and is outside what this branch can do.
+
+### D83 — `/personvern` and `/databehandleravtale` are invented pages
+The splash's footer links to a privacy notice and a data processing agreement
+the bundle does not draw. They are set in the product's own type on the
+splash's ground, at reading width, with a heading, sections and a way back —
+nothing more. Their content is the product's actual practice as built
+(anonymity by constraint, k=5 in the database, EU/EØS residency, the
+sub-processor list, 24-hour breach notification), not boilerplate; it lives in
+the `legal` message namespace so wording is editable like everything else.
+The Cloudflare Turnstile widget on the splash's two forms is likewise not in
+the design: it renders only when a site key is configured, so the design's
+form is what a visitor sees until the pre-launch gate turns it on.

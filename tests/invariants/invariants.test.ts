@@ -202,6 +202,53 @@ describe('(b3) ui_messages overrides belong to one org and never to all of them'
   })
 })
 
+describe('(b4) Phase 6 constraints refuse what they exist to refuse', () => {
+  /**
+   * Gate 2d, constraint proof: attempt the violation each CHECK/UNIQUE is
+   * meant to prevent and show the database rejecting it. A constraint that is
+   * never asked to refuse is indistinguishable from one that is not there.
+   */
+  it('an invitation with neither an email nor a phone is refused', async () => {
+    const { data: round } = await admin()
+      .from('survey_rounds').select('id').eq('survey_id', f.surveyA.id).limit(1).single()
+    const { error } = await admin().from('survey_invitations').insert({
+      round_id: round!.id, lang: 'no', channel: 'sms', token_hash: uniq('hash'),
+    })
+    expect(error?.message ?? '').toMatch(/invitations_reachable_check/)
+  })
+
+  it('a phone-only invitation is accepted, an email-only one too', async () => {
+    const { data: round } = await admin()
+      .from('survey_rounds').select('id').eq('survey_id', f.surveyA.id).limit(1).single()
+    const byPhone = await admin().from('survey_invitations').insert({
+      round_id: round!.id, phone: '+4791827364', lang: 'no', channel: 'sms', token_hash: uniq('hash'),
+    })
+    const byMail = await admin().from('survey_invitations').insert({
+      round_id: round!.id, email: `${uniq('x')}@example.test`, lang: 'no', token_hash: uniq('hash'),
+    })
+    expect(byPhone.error).toBeNull()
+    expect(byMail.error).toBeNull()
+  })
+
+  it('one shipped default per message: a second global row for the same key is refused', async () => {
+    const first = await admin().from('ui_messages')
+      .insert({ namespace: 'zz_test', key: 'dup', lang: 'no', value: 'a' })
+    const second = await admin().from('ui_messages')
+      .insert({ namespace: 'zz_test', key: 'dup', lang: 'no', value: 'b' })
+    expect(first.error).toBeNull()
+    expect(second.error?.message ?? '').toMatch(/ui_messages_scope_uk/)
+    await admin().from('ui_messages').delete().eq('namespace', 'zz_test')
+  })
+
+  it('but an org may hold its own copy of that same key', async () => {
+    await admin().from('ui_messages').insert({ namespace: 'zz_test2', key: 'k', lang: 'no', value: 'shipped' })
+    const own = await admin().from('ui_messages')
+      .insert({ namespace: 'zz_test2', key: 'k', lang: 'no', value: 'mine', org_id: f.orgA.id })
+    expect(own.error).toBeNull()
+    await admin().from('ui_messages').delete().eq('namespace', 'zz_test2')
+  })
+})
+
 describe('(c) anonymity is structural', () => {
   it('an anonymous response with an invitation_id violates the CHECK', async () => {
     const a = admin()

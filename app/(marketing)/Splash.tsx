@@ -106,6 +106,8 @@ export type SplashCopy = {
   noteWeak: string
   noteFreemail: string
   noteFailed: string
+  noteTooMany: string
+  noteRobot: string
   fineUp: string
   fineIn: string
   footLegal: string
@@ -147,7 +149,15 @@ const CASE_TINTS = ['#FBEBBE', '#FFFDF6', '#CFE7E4', '#FBD5C4', '#FFFDF6', '#F3E
 */
 const SECTION = 'mx-auto w-full max-w-[1328px] px-6 md:px-11'
 
-export function Splash({ copy }: { copy: SplashCopy }) {
+export function Splash({
+  copy,
+  turnstileSiteKey,
+}: {
+  copy: SplashCopy
+  /** Cloudflare Turnstile. Null locally and in CI; the server-side check is
+   *  skipped in step with it (lib/turnstile.ts). */
+  turnstileSiteKey: string | null
+}) {
   /*
     Three modes behind the design's two tabs.
 
@@ -202,7 +212,11 @@ export function Splash({ copy }: { copy: SplashCopy }) {
           ? copy.noteMissing
           : active.error === 'failed'
             ? copy.noteFailed
-            : ''
+            : active.error === 'too_many'
+              ? copy.noteTooMany
+              : active.error === 'robot'
+                ? copy.noteRobot
+                : ''
 
   /*
     `leading-[normal]`, and no `touch-44-field`.
@@ -413,6 +427,7 @@ export function Splash({ copy }: { copy: SplashCopy }) {
                     className={field} style={{ borderColor: LINE, background: BG, color: INK }} />
                 </label>
               </div>
+              <Turnstile siteKey={turnstileSiteKey} />
               <button type="submit" disabled={demoPending}
                 className="touch-44 mt-[18px] w-full cursor-pointer rounded-xl border-none p-[15px] text-[15px] font-bold leading-[normal]"
                 style={{ background: INK, color: SF }}>
@@ -444,6 +459,7 @@ export function Splash({ copy }: { copy: SplashCopy }) {
                     className={field} style={{ borderColor: LINE, background: BG, color: INK }} />
                 </label>
               </div>
+              <Turnstile siteKey={turnstileSiteKey} />
               <button
                 type="submit"
                 disabled={signingUp}
@@ -833,6 +849,22 @@ function LangSelect({ label, locale }: { label: string; locale: string }) {
       <span className="pointer-events-none absolute right-3 text-[10px]" style={{ color: MUT }}>
         ▾
       </span>
+    </>
+  )
+}
+
+/**
+ * The Turnstile widget: Cloudflare's script renders into the div and writes
+ * the response token into a hidden `cf-turnstile-response` field inside the
+ * form. Rendered only with a site key — no key, no script, no field, and the
+ * server skips the check to match.
+ */
+function Turnstile({ siteKey }: { siteKey: string | null }) {
+  if (!siteKey) return null
+  return (
+    <>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+      <div className="cf-turnstile mt-3" data-sitekey={siteKey} data-theme="light" />
     </>
   )
 }

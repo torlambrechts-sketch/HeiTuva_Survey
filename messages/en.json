@@ -793,7 +793,10 @@
     "langArea_surveyNav": "Survey menu",
     "langArea_surveys": "Surveys",
     "langArea_wizard": "Wizard",
-    "langShowSource": "Show Norwegian source"
+    "langShowSource": "Show Norwegian source",
+    "oSsoNotConfigured": "not set up yet",
+    "errSsoUnavailable": "Entra ID is not set up for HeiTuva yet, so sign-in cannot require it.",
+    "errSsoSelf": "Sign in with Entra ID yourself first — otherwise you would be signed out on the next request."
   },
   "profile": {
     "aboutMe": "About me",
@@ -882,7 +885,10 @@
     "sendLink": "Send sign-in link",
     "linkSent": "Check your inbox — we have sent you a link.",
     "invalid": "Wrong email or password.",
-    "signOutEverywhere": "Sign out everywhere"
+    "signOutEverywhere": "Sign out everywhere",
+    "signInEntra": "Sign in with Entra ID",
+    "ssoRequired": "Your organisation signs in with Entra ID. Use “Sign in with Entra ID”.",
+    "ssoStartFailed": "Could not start Entra ID sign-in. Try again."
   },
   "lang": {
     "no": "Norsk",
@@ -1300,6 +1306,50 @@
     "demoSub": "We call or send a link — 20 minutes, no commitment.",
     "demoSubPlan": "About {plan} — 20 minutes, no commitment.",
     "demoCta": "Request a walkthrough",
-    "demoFine": "We use your contact details only to reply. No payment card, no account is created."
+    "demoFine": "We use your contact details only to reply. No payment card, no account is created.",
+    "noteTooMany": "Too many attempts from here right now. Try again in an hour, or email us.",
+    "noteRobot": "We could not confirm you are human. Reload the page and try again."
+  },
+  "legal": {
+    "updated": "Last updated 5 September 2026",
+    "back": "← Back to the front page",
+    "privacyTitle": "Privacy notice",
+    "privacySections": "8",
+    "privacy1H": "Who we are",
+    "privacy1P": "HeiTuva is provided by Nordisk Studio AS, Storgata 12, 0155 Oslo, Norway. For organisations that use HeiTuva to ask their employees, the organisation is the controller and Nordisk Studio AS is the processor. This notice explains what we do with data in both roles.",
+    "privacy2H": "What we process about you as someone who administers HeiTuva",
+    "privacy2P": "When you create an account we store your name, work email, your organisation's name and your role. We also keep a log of actions that change settings, roles and privacy choices (the audit log), so the organisation can document who did what. We do not store IP addresses or browser information tied to you.\n\nThe basis is the agreement with your organisation (GDPR art. 6(1)(b)) and our legitimate interest in securing the service (art. 6(1)(f)).",
+    "privacy3H": "What we process about you as someone answering a survey",
+    "privacy3P": "When you answer anonymously the answer is stored without any link to you: no invitation ID, no user, no IP address, and the time is rounded to the hour. The database has a technical constraint that prevents an anonymous answer from ever being tied to a person. The organisation sees results only once at least five people in the same group have answered, and free text is never shown together with a group smaller than five.\n\nWhen a survey is set to “with name”, you see that clearly before answering, and your answer is stored with your name. Your invitation link is personal and stored only as a hash; it cannot be reconstructed from the database.",
+    "privacy4H": "Where the data is",
+    "privacy4P": "All data is stored in the EU/EEA: the database with Supabase in Frankfurt (eu-central-1), the application with Vercel in EU regions, email via Amazon SES in Stockholm (eu-north-1), SMS via LINK Mobility (Nordics), error reporting via Sentry in the EU. No personal data is transferred outside the EEA.",
+    "privacy5H": "For how long",
+    "privacy5P": "Answers are deleted after the organisation's chosen retention period (24 months by default) by an automatic job. Account data is deleted when the organisation ends the agreement, after a 30-day grace period. The audit log is kept for the life of the agreement, because it is the organisation's documentation.",
+    "privacy6H": "Your rights",
+    "privacy6P": "You have the right of access, rectification, erasure and data portability, and to object to processing based on legitimate interest. For data your organisation processes about you, contact the organisation; we help them answer within the deadlines. For data we process as controller, contact personvern@heituva.no. You may complain to Datatilsynet.\n\nAnonymous answers cannot be found for you — that is the whole point of their being anonymous.",
+    "privacy7H": "Sub-processors",
+    "privacy7P": "Supabase (database, sign-in, storage — Frankfurt), Vercel (hosting — EU), Amazon Web Services (email — Stockholm), LINK Mobility (SMS — Norway), Cloudflare (bot protection on the front page), Sentry (error reporting — EU). The full list with purposes is in the data processing agreement.",
+    "privacy8H": "Contact",
+    "privacy8P": "Nordisk Studio AS, Storgata 12, 0155 Oslo, Norway. personvern@heituva.no.",
+    "dpaTitle": "Data processing agreement",
+    "dpaSections": "9",
+    "dpa1H": "Parties and purpose",
+    "dpa1P": "This agreement is between the organisation using HeiTuva (the controller) and Nordisk Studio AS (the processor), and covers all processing the processor carries out on the controller's behalf in HeiTuva. The purpose is running employee surveys and the statutory documentation under the Working Environment Act, the Transparency Act and the Equality and Anti-Discrimination Act.",
+    "dpa2H": "Nature of the processing and categories",
+    "dpa2P": "Categories of data subjects: employees and others the organisation invites. Categories of data: name, email, mobile number, group membership, survey answers (anonymous or named at the organisation's choice), and free text. Special categories may occur in free text; the processor handles them only as part of the answer and not for its own purposes.",
+    "dpa3H": "Instructions",
+    "dpa3P": "The processor processes data only on documented instructions from the controller. The settings in HeiTuva (anonymity, retention, who has access) are such instructions. The processor notifies without delay if, in its view, an instruction infringes data protection law.",
+    "dpa4H": "Confidentiality and security",
+    "dpa4P": "Persons processing data at the processor are bound by confidentiality. Technical measures include: row-level security in the database separating organisations from one another; a threshold of five answers before any result is shown, enforced in the database; anonymous answers stored without any link to a person, enforced by a database constraint; invitation links stored only as hashes; encryption in transit and at rest; an append-only audit log; daily backups with point-in-time recovery.",
+    "dpa5H": "Sub-processors",
+    "dpa5P": "The controller gives general authorisation for the sub-processors listed in the privacy notice: Supabase Inc. (database, sign-in, storage — Frankfurt, EU), Vercel Inc. (application hosting — EU regions), Amazon Web Services EMEA SARL (email delivery — Stockholm), LINK Mobility AS (SMS — Oslo), Cloudflare Inc. (bot protection on the front page, no answer data), Functional Software Inc. / Sentry (error reporting — EU, without free text). The processor gives 30 days' notice of new sub-processors; the controller may object within that period.",
+    "dpa6H": "Transfers outside the EEA",
+    "dpa6P": "Data is stored and processed in the EU/EEA. No transfer to third countries takes place as part of the service.",
+    "dpa7H": "Assistance and breaches",
+    "dpa7P": "The processor assists the controller in meeting data subjects' rights (access, rectification, erasure, portability) through the tools under Administration → Privacy and GDPR, and on request. In the event of a personal data breach the processor notifies the controller without undue delay and at the latest within 24 hours of becoming aware, with the information article 33(3) requires, in phases if necessary.",
+    "dpa8H": "Audit",
+    "dpa8P": "The controller may request documentation of compliance and may, once a year with 30 days' notice, carry out or commission an independent audit.",
+    "dpa9H": "Term, deletion and signature",
+    "dpa9P": "This agreement runs for the life of the customer agreement. On termination all personal data is deleted no later than 30 days after the controller has exported it, unless law requires longer retention. A signed version of this agreement with the organisation's name and date is issued at contract and is available under Administration → Privacy and GDPR → Documentation."
   }
 }

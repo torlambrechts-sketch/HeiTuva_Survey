@@ -60,6 +60,10 @@ export async function updateSession(request: NextRequest) {
     // to Oversikt below rather than reading a pitch for something they already
     // bought.
     path === '/' ||
+    // The two documents the splash's footer links to. Public by nature: a
+    // privacy notice nobody can read before signing up is not a notice.
+    path === '/personvern' ||
+    path === '/databehandleravtale' ||
     path.startsWith('/_next') ||
     path === '/favicon.ico'
 

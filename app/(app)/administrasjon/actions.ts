@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
+import { ENTRA_PROVIDER, entraAvailable } from '@/lib/auth/entra'
 import { audit } from '@/lib/auth/audit'
 import type { AdminResult } from './types'
 import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
@@ -140,22 +141,34 @@ export async function setRetention(months: number): Promise<AdminResult> {
   return { ok: true }
 }
 
-const OptionKey = z.enum(['reminders', 'weekly_digest', 'allow_self_serve', 'brand_mail'])
+const OptionKey = z.enum(['reminders', 'weekly_digest', 'allow_self_serve', 'brand_mail', 'sso'])
 
 export async function setOption(key: string, value: boolean): Promise<AdminResult> {
   const admin = await requireAdmin()
   if (!admin) return { ok: false, error: 'forbidden' }
 
-  // `sso` is not accepted: the toggle is rendered disabled behind DECISIONS Q5
-  // until Entra SSO ships in Phase 6. Accepting it would persist a setting
-  // nothing honours.
   const parsed = OptionKey.safeParse(key)
   if (!parsed.success || typeof value !== 'boolean') return { ok: false, error: 'invalid' }
+
+  /*
+    "Pålogging med Entra ID (SSO) — deaktiverer passordpålogging" (Phase 6).
+    Turning it ON has two preconditions, both about not stranding people:
+    Auth must actually accept Entra sign-ins, or nobody could ever get in; and
+    the administrator flipping it must themselves be signed in through Entra,
+    or the next request would sign them out of the organisation they just
+    locked. Turning it OFF is always allowed — whoever can reach this screen
+    can undo it.
+  */
+  if (parsed.data === 'sso' && value) {
+    if (!(await entraAvailable())) return { ok: false, error: 'sso_unavailable' }
+    if (admin.provider !== ENTRA_PROVIDER) return { ok: false, error: 'sso_self_lockout' }
+  }
 
   const supabase = await createClient()
   const { data: org } = await supabase.from('organizations').select('options').eq('id', admin.orgId).single()
 
   const options = { ...((org?.options as Record<string, boolean> | null) ?? {}) }
+  const previous = options[parsed.data] === true
   options[parsed.data] = value
 
   const { error } = await supabase.from('organizations').update({ options }).eq('id', admin.orgId)
@@ -163,6 +176,10 @@ export async function setOption(key: string, value: boolean): Promise<AdminResul
     console.error(`setOption(${parsed.data}) failed: ${error.message}`)
     return { ok: false, error: 'save_failed' }
   }
+
+  // Audited like the privacy toggles: `sso` changes who can get in at all, and
+  // the others change what the organisation sends and to whom.
+  await audit(admin.orgId, 'option.change', parsed.data, { from: previous, to: value })
 
   revalidatePath('/administrasjon')
   return { ok: true }

@@ -4,6 +4,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { SOURCE_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales'
+import { ENTRA_PROVIDER, providerOf } from './entra'
 
 export type MemberRole = 'administrator' | 'redaktor' | 'leser'
 
@@ -17,6 +18,10 @@ export type Viewer = {
   displayName: string
   locale: Locale
   groupId: string | null
+  /** Which identity provider this session came from: 'email' or 'azure'. */
+  provider: string
+  /** The org's "Pålogging med Entra ID (SSO)" switch — password sign-in is off. */
+  ssoRequired: boolean
 }
 
 /**
@@ -37,11 +42,11 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
  *  invitation — `cache` would otherwise hand back the null it just resolved. */
 async function readViewer(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  user: { id: string; email?: string },
+  user: { id: string; email?: string; app_metadata?: Record<string, unknown> },
 ): Promise<Viewer | null> {
   const { data: member } = await supabase
     .from('org_members')
-    .select('id, org_id, role, name, group_id, organizations(name, default_lang)')
+    .select('id, org_id, role, name, group_id, organizations(name, default_lang, options)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .limit(1)
@@ -54,7 +59,11 @@ async function readViewer(
     .eq('user_id', user.id)
     .maybeSingle()
 
-  const org = member.organizations as unknown as { name: string; default_lang: string } | null
+  const org = member.organizations as unknown as {
+    name: string
+    default_lang: string
+    options: Record<string, unknown> | null
+  } | null
 
   // Locale resolution per CLAUDE.md: profile lang, then the org default, then `no`.
   const locale: Locale = isLocale(profile?.lang)
@@ -73,6 +82,8 @@ async function readViewer(
     displayName: profile?.display_name || member.name || user.email || '',
     locale,
     groupId: member.group_id,
+    provider: providerOf(user),
+    ssoRequired: org?.options?.['sso'] === true,
   }
 }
 
@@ -88,7 +99,22 @@ async function readViewer(
  */
 export async function requireViewer(): Promise<Viewer> {
   const viewer = await getViewer()
-  if (viewer) return viewer
+  if (viewer) {
+    /*
+      "Deaktiverer passordpålogging" means exactly that. The check sits here,
+      after the credentials were accepted, rather than in the sign-in action:
+      an action that refused BEFORE checking the password would tell anyone
+      which addresses belong to an SSO organisation. Here the session is real
+      and is simply not allowed to continue, so nothing is learned that the
+      person did not already have the password for.
+    */
+    if (viewer.ssoRequired && viewer.provider !== ENTRA_PROVIDER) {
+      const supabase = await createClient()
+      await supabase.auth.signOut({ scope: 'local' })
+      redirect('/logg-inn?feil=sso')
+    }
+    return viewer
+  }
 
   const supabase = await createClient()
   const {

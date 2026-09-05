@@ -15,6 +15,10 @@ export type AdminError =
   | 'save_failed'
   | 'duplicate'
   | 'last_admin'
+  /** Entra ID is not configured in Auth, so nobody could sign in once it was required. */
+  | 'sso_unavailable'
+  /** The administrator is not themselves signed in through Entra — the next request would sign them out. */
+  | 'sso_self_lockout'
 
 export type AdminResult = { ok: true } | { ok: false; error: AdminError }
 
@@ -25,4 +29,6 @@ export const ADMIN_ERROR_KEY: Record<AdminError, string> = {
   save_failed: 'saveFailed',
   duplicate: 'errDuplicate',
   last_admin: 'errLastAdmin',
+  sso_unavailable: 'errSsoUnavailable',
+  sso_self_lockout: 'errSsoSelf',
 }

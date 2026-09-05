@@ -37,7 +37,9 @@ export function privacyToStored(key: PrivacyKey, on: boolean): boolean {
 
 /** Option toggles that are actually settable. `sso` is absent: it ships in
  *  Phase 6 (DECISIONS Q5) and the action refuses the key. */
-export const OPTION_KEYS = ['reminders', 'weekly_digest', 'allow_self_serve', 'brand_mail'] as const
+// `sso` is a real key since Phase 6 (Entra ID). Its switch is only offered when
+// Auth has the provider configured — see OptionsPanel and docs/DEVIATIONS.md D82.
+export const OPTION_KEYS = ['reminders', 'weekly_digest', 'allow_self_serve', 'sso', 'brand_mail'] as const
 export type OptionKey = (typeof OPTION_KEYS)[number]
 
 export const DSR_TYPES = ['innsyn', 'retting', 'sletting', 'portabilitet'] as const
