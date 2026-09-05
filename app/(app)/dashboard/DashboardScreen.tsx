@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
 import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/results/types'
 import { DashboardFilters } from './DashboardFilters'
@@ -36,6 +37,11 @@ export async function DashboardScreen({
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
+  const locale = await getLocale()
+  // The strictest threshold across the selected surveys, as the RPCs applied
+  // it (Q17). Null only when there is nothing to show — then no cell is gated.
+  const heatK = heatmap?.k ?? null
+  const trendK = summary?.k ?? heatK
 
   const isPinned = new Set(pinned)
   const pin = (key: string) => (
@@ -193,7 +199,7 @@ export async function DashboardScreen({
                 <BarRow
                   key={b.key}
                   label={b.label}
-                  value={b.avg === null ? tr('gatedCell') : no(b.avg)}
+                  value={b.avg === null ? tr('gatedCell', { k: trendK ?? 0 }) : no(b.avg)}
                   pct={b.avg === null ? 0 : pctOf5(b.avg)}
                   color={b.avg === null ? 'var(--sf2)' : 'var(--ac)'}
                 />
@@ -205,8 +211,12 @@ export async function DashboardScreen({
         </Panel>
 
         <div className="xl:col-span-2">
-          <Panel title={t('panelHeatmap')} note={t('heatNote')} action={pin('heatmap')}>
-            <HeatGrid heatmap={heatmap} gated={tr('gatedCell')} gatedTitle={tr('gatedTitle')} empty={t('noData')} />
+          <Panel
+            title={t('panelHeatmap')}
+            note={heatK === null ? t('heatNoteGeneric') : t('heatNote', { k: heatK, kWord: numberWord(heatK, locale) })}
+            action={pin('heatmap')}
+          >
+            <HeatGrid heatmap={heatmap} gated={tr('gatedCell', { k: heatK ?? 0 })} gatedTitle={tr('gatedTitle', { k: heatK ?? 0 })} empty={t('noData')} />
           </Panel>
         </div>
 

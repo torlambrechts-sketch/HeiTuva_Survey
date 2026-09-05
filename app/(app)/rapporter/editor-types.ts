@@ -56,7 +56,17 @@ export type SectionExtra = {
   picked?: boolean
   /** Picks the gate refused this render. Said out loud, not silently dropped. */
   withheld?: number
+  /** The method section (Q17): the threshold the document is gated at, and
+   *  every source with its own — so the reader sees what the numbers rest on. */
+  k?: number
+  sources?: ComposedSource[]
+  /** «Svar per virksomhet»: one row per organisation, from app.attributed_rows. */
+  rows?: { invitation_id: string; name: string | null; status: string; responded_at: string | null }[]
+  questions?: unknown[]
+  unattributed?: number
 }
+
+export type ComposedSource = { survey_id: string; title: string; k: number; respondent_kind: string }
 
 export type ComposedSection = {
   key: string
@@ -64,6 +74,9 @@ export type ComposedSection = {
   snapshot_id: string | null
   /** No composer yet. Says so instead of borrowing another section's numbers. */
   pending?: boolean
+  /** Refused for THIS report with a reason (per_virksomhet over person sources). */
+  unavailable?: boolean
+  reason?: string | null
   scope: { group: string | null; rounds: string[] }
   rows: ComposedRow[] | null
   cells: ComposedCell[] | null
@@ -78,6 +91,8 @@ export type ComposedDocument = {
   report_id?: string
   title?: string
   k?: number
+  /** Every source with its own threshold; `k` above is the strictest of them. */
+  sources?: ComposedSource[]
   role?: string | null
   via?: 'member' | 'share'
   share_scope?: 'ledelse' | 'ledere_eget_team' | 'alle_ansatte'
@@ -107,6 +122,6 @@ export type EditorOptions = {
   /** Every section the registry knows, in registry order — the Innhold list. */
   sectionTypes: { key: string; label: string; description: string; supportsGroupFilter: boolean }[]
   groups: { id: string; name: string }[]
-  surveys: { id: string; title: string; status: string; responses: number }[]
+  surveys: { id: string; title: string; status: string; responses: number; k: number; respondentKind: string }[]
   orgName: string
 }

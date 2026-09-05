@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { numberWord } from '@/lib/respondent/anonymity-promise'
 import {
   DASH,
   fmt,
@@ -40,6 +41,8 @@ export async function ResultsScreen({
   surveyId,
   status,
   anonymity,
+  kThreshold,
+  respondentKind,
   scopeLabel,
   sentAt,
   hasRounds,
@@ -58,6 +61,9 @@ export async function ResultsScreen({
   surveyId: string
   status: 'utkast' | 'aktiv' | 'lukket'
   anonymity: 'anonymous' | 'named' | 'optional'
+  /** The survey's own display threshold and respondent type (Q17). */
+  kThreshold: number
+  respondentKind: 'person' | 'organisation'
   scopeLabel: string
   sentAt: string | null
   hasRounds: boolean
@@ -76,6 +82,16 @@ export async function ResultsScreen({
   const t = await getTranslations('results')
   const tNav = await getTranslations('surveyNav')
   const tResp = await getTranslations('respondent')
+  const locale = await getLocale()
+
+  // The threshold this screen's numbers rest on — the same value app.k_for
+  // applies in the database. Every "for få svar" line below says which number
+  // that is; fixed copy would promise five on a survey gated at three.
+  const attributed = respondentKind === 'organisation'
+  const k = attributed ? 0 : Math.max(kThreshold, 3)
+  const kWord = numberWord(k, locale)
+  const gatedText = t('insufficient', { kWord })
+  const gatedTitle = t('insufficientTitle', { k })
 
   const byQuestion = new Map<string, QuestionResult>(
     (aggregate?.questions ?? []).map((q) => [q.question_id, q]),
@@ -144,6 +160,13 @@ export async function ResultsScreen({
         <div>
           <h1 className="font-display text-[26px] font-medium">{t('title')}</h1>
           <p className="mt-[3px] text-[12.5px] text-mut">{scopeLabel}</p>
+          <p className="mt-[3px] text-[12.5px] text-mut">
+            {attributed
+              ? t('thresholdLineAttributed')
+              : k < 5
+                ? t('thresholdLineLow', { k })
+                : t('thresholdLine', { k })}
+          </p>
           {unavailable ? (
             <p role="alert" className="mt-[3px] text-[12.5px] text-mut">
               {t('unavailable')}
@@ -185,16 +208,16 @@ export async function ResultsScreen({
           <section key={q.id} className={CARD}>
             <div className="flex items-baseline justify-between gap-[14px]">
               <h2 className="text-[15.5px] font-semibold">{q.text}</h2>
-              <span className="shrink-0 text-[13px] text-mut">
+              <span className="shrink-0 text-[13px] text-mut" title={isGated(result) ? gatedTitle : undefined}>
                 {questionMeta(q, result, quotes[q.id] ?? null)}
               </span>
             </div>
             {isGated(result) ? (
-              <p className="mt-[15px] rounded-[10px] bg-sf2 px-[15px] py-[13px] text-[13.5px] text-mut">
-                {t('insufficient')}
+              <p className="mt-[15px] rounded-[10px] bg-sf2 px-[15px] py-[13px] text-[13.5px] text-mut" title={gatedTitle}>
+                {gatedText}
               </p>
             ) : q.type === 'text' ? (
-              <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={t('insufficient')} />
+              <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={gatedText} />
             ) : (
               <div className="mt-[15px] flex flex-col gap-[10px]">
                 {questionBars(
@@ -235,7 +258,7 @@ export async function ResultsScreen({
           </div>
         ) : null}
         <p className="mt-3 text-[13px] text-mut">
-          {summary && summary.n >= (summary.k ?? 5) ? t('insightNote') : t('insightNoteWaiting')}
+          {summary && summary.n >= (summary.k ?? 5) ? t('insightNote') : t('insightNoteWaiting', { kWord })}
         </p>
         <div className="mt-[14px] flex flex-wrap gap-2 border-t border-line pt-[14px]">
           {(
@@ -251,7 +274,7 @@ export async function ResultsScreen({
               key={label}
               className="rounded-full bg-sf2 px-[13px] py-[7px] text-[13px] text-mut"
             >
-              {t(label)} · {t(meta)}
+              {t(label, { k })} · {t(meta)}
             </span>
           ))}
         </div>
@@ -378,8 +401,8 @@ export async function ResultsScreen({
                 <div key={team.group_id}>
                   <div className="flex justify-between text-[13px]">
                     <span>{team.label}</span>
-                    <span className="font-semibold">
-                      {gated ? t('gatedCell') : no(team.avg)}
+                    <span className="font-semibold" title={gated ? gatedTitle : undefined}>
+                      {gated ? t('gatedCell', { k }) : no(team.avg)}
                     </span>
                   </div>
                   <div className="mt-[5px] h-[9px] overflow-hidden rounded-full bg-sf2">
@@ -426,7 +449,7 @@ export async function ResultsScreen({
             </div>
           ) : (
             <p className="mt-[14px] text-[13px] text-mut">
-              {themes?.insufficient_data ? t('insufficient') : t('themesEmpty')}
+              {themes?.insufficient_data ? gatedText : t('themesEmpty')}
             </p>
           )}
           <p className="mt-[14px] text-[13px] leading-[1.6] text-mut">{t('themesNote')}</p>
@@ -459,7 +482,7 @@ export async function ResultsScreen({
 
   /** The right-hand meta line on a question card — HeiTuva.dc.html:2749. */
   function questionMeta(q: Question, result: QuestionResult, set: QuoteSet | null) {
-    if (isGated(result)) return t('insufficient')
+    if (isGated(result)) return gatedText
     if (q.type === 'text') return t('freeTextCount', { count: set?.n ?? result.n })
     if (result.avg !== null && result.avg !== undefined) {
       return t('avgOf', { avg: no(result.avg), max: num(q.config, 'points', 5) })

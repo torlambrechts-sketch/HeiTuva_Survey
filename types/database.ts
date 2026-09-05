@@ -845,6 +845,7 @@ export type Database = {
           contact_email: string | null
           contact_name: string | null
           created_at: string
+          default_k_threshold: number
           default_lang: string
           dpo: string | null
           id: string
@@ -862,6 +863,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
+          default_k_threshold?: number
           default_lang?: string
           dpo?: string | null
           id?: string
@@ -879,6 +881,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
+          default_k_threshold?: number
           default_lang?: string
           dpo?: string | null
           id?: string
@@ -2021,6 +2024,10 @@ export type Database = {
       }
       claim_membership: { Args: never; Returns: string }
       close_round: { Args: { p_round: string }; Returns: Json }
+      attributed_results: {
+        Args: { p_round?: string; p_survey: string }
+        Returns: Json
+      }
       compose_report: {
         Args: {
           p_as_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"

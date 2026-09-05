@@ -1618,3 +1618,66 @@ the migration (a live project seeded before this phase). The two carry the same
 law-anchored values by hand; test #4 now guards against drift, so a mismatch is
 caught rather than shipped.
 
+
+### D87 — Phase 9 stop-and-ask: the Q17 brief's new screens wait for the bundle
+The design brief (docs/Designbrief_terskel_Q17.md) describes nine surfaces that
+`/design-reference/` does not contain: the builder's «Hvem svarer og hva vises»
+panel (§1) and its two extra breach warnings (§2), the attributed-results
+table (§5), the «Svar per virksomhet» section body and the Filter-tab source
+lines as drawn (§6), the Personvern default-threshold picker and the
+redaktør-may-lower switch (§8), and all of Del B (panel library, presets, the
+event-stream panel). Building them from prose would break the do-not-invent
+rule that has held fidelity for eight phases, so — decided with Tor — Phase 9
+ships the **kernel and the copy-only surfaces** and the screens follow the
+bundle. What shipped, and where it shows:
+
+- Kernel (migration 20260904000034, tests/invariants/attributed-results.test.ts):
+  `attributed_results` (the ungated path, organisation surveys only, leser
+  refused), `organizations.default_k_threshold` (3–10) applied to NEW person
+  surveys by `apply_pack_policy`, the `privacy.redaktor_may_lower` flag read by
+  the guard, the CHECK that an organisation survey is always named, and in
+  `compose_report`: `sources[]` with each survey's own k, a composed `method`
+  section carrying the document's k, and `per_virksomhet` refused with
+  `reason: person_sources` in any report that holds a person survey.
+- Copy on existing screens, every string parameterised on the real threshold
+  (no fixed "fem" survives where a k is known): Resultater's line under the
+  title, its «for få svar» texts and hover (`title`) «Vises fra {k} svar. Nå:
+  færre.», «n<{k}»; Dashboard's heat-map note and gated-cell hover on the
+  strictest k of the selection; the Send screen's «Klar til å sendes» promise
+  row (§3) and — new — its anonymity chips disabled with the brief's §1 lock
+  copy when a pack or answers have frozen the policy, because `send_round`
+  would otherwise fail on the guard; the library card's policy line (§7); the
+  share panel's «Ledere ser bare sitt eget team, og bare der minst {k} har
+  svart.»; the report editor's Filter tab («Strengeste terskel …», «… har
+  terskel 3, men rapporten bruker 5»), its Innhold picker showing
+  «Svar per virksomhet» as unavailable with the reason, the Metode section's
+  «Resultater vises fra {N} svar …» in the editor, the PDF and the deck; and
+  Personvern's anonymity explanation rewritten as §8 asks (never a categorical
+  five), with the locked «Skjul resultater under terskelen» row stating the
+  organisation's real default.
+- Copy rewritten to stop promising five categorically, outside any screen with
+  a k of its own (logged here because the bundle's Norwegian is otherwise
+  verbatim): `reports.groupThreshold`, `reports.dutyThreshold`,
+  `admin.groupThresholdNote`. Left untouched and flagged to Tor: the splash
+  (`splash.*` "ingen tall under fem svar"), `legal.privacy3P` and
+  `legal.dpa4P` — marketing and legal texts are his call, and with a floor of
+  three they are no longer categorically true for every survey.
+- Not built, no dead code left behind: the Personvern controls for the default
+  threshold and the redaktør flag have no server actions yet — an action with
+  no caller is a lie in the codebase; both land with the §8 controls. The two
+  §2 breach warnings need the builder panel. Del B is a phase of its own.
+
+### D88 — «Svar per virksomhet»: composed and exported, table not yet drawn
+`per_virksomhet` is a registry row (data-not-code) and `compose_report`
+composes its rows through `app.attributed_rows` — the same implementation
+`attributed_results` uses, so there is one attributed path, not two. Until the
+bundle carries the attributed table (D87), the section renders in the editor,
+the PDF and the deck as a stated status line («Tabellen kommer med den
+attribuerte resultatvisningen …»), the same treatment `actions` already has
+for a section with no composer. In the Innhold picker it is offered only when
+every chosen source is an organisation survey; otherwise it is shown disabled
+with «Bare tilgjengelig når alle kildene er organisasjonsundersøkelser.» —
+visible, not hidden, as the brief asks. The refusal itself is the RPC's: a
+report row that names the section over person sources composes it as
+`unavailable` with no rows, and the test proves no organisation name leaks
+through the refused section.

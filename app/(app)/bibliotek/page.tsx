@@ -139,7 +139,7 @@ async function TemplatesTab({
   const { data, error } = await supabase
     .from('template_packs')
     .select(
-      'id, key, org_id, category, legal_ref, title, audience, questions, private, created_at, sort_order, org_members(name)',
+      'id, key, org_id, category, legal_ref, title, audience, questions, private, created_at, sort_order, policy, org_members(name)',
     )
     // The grid tints by POSITION, so the order decides which cards are
     // coloured. `sort_order` carries the design bundle's own editorial
@@ -157,6 +157,7 @@ async function TemplatesTab({
       key: p.key,
       category: p.category,
       legalRef: p.legal_ref,
+      policy: (p.policy as TemplatePack['policy']) ?? null,
       title: p.title,
       audience: p.audience,
       questionCount: questions.length,
@@ -182,6 +183,15 @@ async function TemplatesTab({
       .filter(Boolean)
       .join(' · ')
 
+  // «Anonym · terskel 5 · låst» / «Navngitt · organisasjon · attribuert» —
+  // the policy a statutory pack brings with it, visible BEFORE the choice
+  // (design brief §7). Ordinary packs carry none and show nothing.
+  const policyLineFor = (p: (typeof all)[number]) => {
+    if (!p.policy?.locked) return null
+    return p.policy.respondent_kind === 'organisation'
+      ? t('policyOrganisation')
+      : t('policyPerson', { k: p.policy.k_threshold ?? 5 })
+  }
   const labelsFor = (p: (typeof all)[number]) => ({
     eyebrow: p.isOwn
       ? p.isPrivate
@@ -213,6 +223,7 @@ async function TemplatesTab({
                 pack={p}
                 tint={ownTint(i)}
                 labels={labelsFor(p)}
+                policyLine={policyLineFor(p)}
                 typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
                 canEdit={canEdit}
                 disabledReason={readOnlyNote}
@@ -257,6 +268,7 @@ async function TemplatesTab({
               pack={p}
               tint={packTint(i)}
               labels={labelsFor(p)}
+              policyLine={policyLineFor(p)}
               typeLabels={p.questionTypes.map((ty) => tQ(ty as 'scale'))}
               canEdit={canEdit}
               disabledReason={readOnlyNote}

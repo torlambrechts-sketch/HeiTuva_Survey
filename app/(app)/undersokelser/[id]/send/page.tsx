@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { isFlagEnabled } from '@/lib/flags'
@@ -25,7 +26,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, langs')
+    .select('id, title, audience_label, status, anonymity, langs, k_threshold, respondent_kind, policy_locked, template_pack_key')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -56,6 +57,31 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
     .eq('status', 'active')
     .not('group_id', 'is', null)
 
+  // Q17 — what the survey promises, and whether the Send screen may still
+  // change it. A statutory pack locks anonymity from creation; a survey with
+  // answers is locked by the guard. Either way the chips below are disabled
+  // with the reason, instead of letting send_round fail on the trigger.
+  const t = await getTranslations('send')
+  const attributed = survey.respondent_kind === 'organisation'
+  const k = attributed ? 0 : Math.max(survey.k_threshold, 3)
+  let lockedReason: string | null = null
+  if (survey.template_pack_key) {
+    const { data: pack } = await supabase
+      .from('template_packs')
+      .select('legal_ref, title, policy')
+      .is('org_id', null)
+      .eq('key', survey.template_pack_key)
+      .maybeSingle()
+    const policy = (pack?.policy ?? null) as { locked?: boolean; k_threshold?: number } | null
+    if (policy?.locked) {
+      const legalRef = pack?.legal_ref ?? pack?.title ?? survey.template_pack_key
+      lockedReason = attributed
+        ? t('lockedByPackAttributed', { legalRef })
+        : t('lockedByPack', { legalRef, anonymity: t('lockedAnonymousWord'), k })
+    }
+  }
+  if (!lockedReason && survey.policy_locked) lockedReason = t('lockedBySent')
+
   const headcount = new Map<string, number>()
   for (const m of members ?? []) {
     if (m.group_id) headcount.set(m.group_id, (headcount.get(m.group_id) ?? 0) + 1)
@@ -74,6 +100,9 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         surveyId={survey.id}
         title={survey.title}
         anonymity={survey.anonymity}
+        kThreshold={k}
+        respondentKind={attributed ? 'organisation' : 'person'}
+        lockedReason={lockedReason}
         questionCount={questionCount ?? 0}
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}

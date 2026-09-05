@@ -37,7 +37,7 @@ const NUMBER_WORDS: Record<string, Record<number, string>> = {
   en: { 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten' },
 }
 
-function numberWord(k: number, locale: string): string {
+export function numberWord(k: number, locale: string): string {
   return NUMBER_WORDS[locale]?.[k] ?? NUMBER_WORDS.no![k] ?? String(k)
 }
 

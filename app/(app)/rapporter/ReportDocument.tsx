@@ -23,6 +23,14 @@ type Labels = {
   sourceLive: string
   pending: string
   pendingSub: string
+  /** Q17 (brief §6): the method section states the threshold; a refused
+   *  section states why; «Svar per virksomhet» says its table is not drawn yet. */
+  methodK: string
+  methodAttributed: string
+  sectionUnavailable: string
+  unavailablePersonSources: string
+  perVirksomhetPending: string
+  sourceLowerK: string
   trendRound: string
   driversHigh: string
   driversLow: string
@@ -245,8 +253,50 @@ function SectionBody({ section, labels }: { section: ComposedSection | undefined
     )
   }
 
+  // Refused for this report, with the reason — the RPC decided, the screen
+  // repeats it. Never rendered gated, never rendered empty (brief §6).
+  if (section.unavailable) {
+    return (
+      <div className="mt-2">
+        <p className="text-[13px] text-mut">{labels.sectionUnavailable}</p>
+        <p className="mt-[2px] text-[11.5px] text-mut">
+          {section.reason === 'person_sources' ? labels.unavailablePersonSources : section.reason}
+        </p>
+      </div>
+    )
+  }
+
   const extra = section.extra ?? undefined
   const note = labels.notes[section.key]
+
+  // Metode: the threshold the document rests on, and any source whose own
+  // threshold is lower than the one the report uses.
+  if (section.key === 'method' && extra && typeof extra.k === 'number') {
+    const docK = extra.k
+    return (
+      <div className="mt-2 flex flex-col gap-[6px]">
+        <p className="text-[13.5px] leading-[1.65]">
+          {docK === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(docK))}
+        </p>
+        {(extra.sources ?? [])
+          .filter((s) => s.k > 0 && s.k < docK)
+          .map((s) => (
+            <p key={s.survey_id} className="text-[12px] leading-[1.5] text-mut">
+              {labels.sourceLowerK
+                .replace('{title}', s.title)
+                .replace('{k}', String(s.k))
+                .replace('{docK}', String(docK))}
+            </p>
+          ))}
+      </div>
+    )
+  }
+
+  // The rows are composed (and exported) — the table itself waits for the
+  // design bundle's attributed view (docs/DEVIATIONS.md D87).
+  if (section.key === 'per_virksomhet') {
+    return <p className="mt-2 text-[13px] text-mut">{labels.perVirksomhetPending}</p>
+  }
 
   if (section.rows) {
     if (section.rows.length === 0) return null

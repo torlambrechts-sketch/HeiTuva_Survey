@@ -123,6 +123,18 @@ function sectionSlides(pptx: PptxGenJS, section: ComposedSection, labels: PrintL
     prose(open(), labels.pending, true)
     return
   }
+  if (section.unavailable) {
+    prose(open(), labels.unavailable, true)
+    return
+  }
+  if (section.key === 'method' && extra && typeof extra.k === 'number') {
+    prose(open(), extra.k === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(extra.k)), false)
+    return
+  }
+  if (section.key === 'per_virksomhet') {
+    prose(open(), labels.perVirksomhet, true)
+    return
+  }
 
   if (extra?.quotes) {
     if (extra.quotes.length === 0) return

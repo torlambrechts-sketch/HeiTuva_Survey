@@ -52,7 +52,7 @@ export default async function ResultsPage({
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, results_scope, created_at')
+    .select('id, title, audience_label, status, anonymity, results_scope, created_at, k_threshold, respondent_kind')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -140,6 +140,8 @@ export default async function ResultsPage({
         surveyId={survey.id}
         status={survey.status}
         anonymity={survey.anonymity}
+        kThreshold={survey.k_threshold}
+        respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}
         scopeLabel={scopeLabel}
         sentAt={latestRound?.opens_at ?? null}
         hasRounds={hasRounds}

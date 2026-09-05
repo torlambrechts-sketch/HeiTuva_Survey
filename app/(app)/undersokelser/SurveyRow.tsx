@@ -19,6 +19,9 @@ export type SurveyListItem = {
   editorCount: number
   createdAt: string
   updatedAt: string
+  /** Q17 — the share panel's «bare der minst {k} har svart» line. */
+  kThreshold: number
+  respondentKind: 'person' | 'organisation'
 }
 
 type Labels = {

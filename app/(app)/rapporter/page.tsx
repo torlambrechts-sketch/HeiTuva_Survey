@@ -56,7 +56,7 @@ export default async function ReportsPage({
         supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
         supabase
           .from('surveys')
-          .select('id, title, status')
+          .select('id, title, status, k_threshold, respondent_kind')
           .eq('org_id', viewer.orgId)
           .is('deleted_at', null)
           .order('created_at', { ascending: false }),
@@ -144,6 +144,10 @@ export default async function ReportsPage({
             title: s.title,
             status: s.status,
             responses: countBySurvey.get(s.id) ?? 0,
+            // The same reading app.k_for gives: organisation respondents carry
+            // no threshold; persons never below the floor.
+            k: s.respondent_kind === 'organisation' ? 0 : Math.max(s.k_threshold, 3),
+            respondentKind: s.respondent_kind,
           })),
           orgName: viewer.orgName,
         }}

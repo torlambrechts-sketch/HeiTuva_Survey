@@ -45,7 +45,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
   let listQuery = supabase
     .from('surveys')
     .select(
-      'id, title, audience_label, status, results_scope, target, created_at, updated_at, survey_questions(count), survey_editors(member_id)',
+      'id, title, audience_label, status, results_scope, target, created_at, updated_at, k_threshold, respondent_kind, survey_questions(count), survey_editors(member_id)',
     )
     .eq('org_id', viewer.orgId)
     .is('deleted_at', null)
@@ -84,6 +84,8 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     editorCount: r.survey_editors?.length ?? 0,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    kThreshold: r.k_threshold,
+    respondentKind: r.respondent_kind === 'organisation' ? 'organisation' : 'person',
   }))
 
   const pctOf = (s: SurveyListItem) =>
@@ -197,7 +199,13 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
             failed: t('actionFailed'),
             scopes: {
               ledelse: { label: t('scopeHrLabel'), desc: t('scopeHrDesc') },
-              ledere_eget_team: { label: t('scopeLeadLabel'), desc: t('scopeLeadDesc') },
+              ledere_eget_team: {
+                label: t('scopeLeadLabel'),
+                desc:
+                  shareFor.respondentKind === 'organisation'
+                    ? t('scopeLeadDescAttributed')
+                    : t('scopeLeadDesc', { k: Math.max(shareFor.kThreshold, 3) }),
+              },
               alle_ansatte: { label: t('scopeAllLabel'), desc: t('scopeAllDesc') },
             },
           }}

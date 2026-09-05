@@ -36,6 +36,9 @@ export function SendScreen({
   surveyId,
   title,
   anonymity: initialAnonymity,
+  kThreshold,
+  respondentKind,
+  lockedReason,
   questionCount,
   alreadyOpen,
   canSend,
@@ -48,6 +51,12 @@ export function SendScreen({
   /** For the SMS preview — the design's "{{ orgName }} spør: …". */
   orgName: string
   anonymity: AnonymityMode
+  /** Q17: the promise the survey makes — shown in «Klar til å sendes» (brief §3). */
+  kThreshold: number
+  respondentKind: 'person' | 'organisation'
+  /** Set when the policy is frozen (statutory pack, or answers exist): the
+   *  anonymity chips are disabled and this line says why (brief §1 copy). */
+  lockedReason: string | null
   questionCount: number
   alreadyOpen: boolean
   canSend: boolean
@@ -549,13 +558,16 @@ export function SendScreen({
                 <Radio
                   key={a}
                   on={anonymity === a}
-                  disabled={!canSend}
+                  disabled={!canSend || lockedReason !== null}
                   label={t(ANONYMITY_KEY[a].label as 'anonAnonymous')}
                   desc={t(ANONYMITY_KEY[a].desc as 'anonAnonymousDesc')}
                   onPick={() => setAnonymity(a)}
                 />
               ))}
             </div>
+            {lockedReason ? (
+              <p className="mt-2 text-[12.5px] leading-[1.5] text-mut">{lockedReason}</p>
+            ) : null}
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <span className="text-sm">{t('reminder')}</span>
@@ -606,6 +618,18 @@ export function SendScreen({
                 channels: channels.length,
                 anonymity: t(`anonShort${cap(anonymity)}` as 'anonShortNamed'),
               })}
+            </div>
+            {/* The promise, said out loud on the last screen before sending
+                (design brief §3): «Anonyme svar · resultater vises fra 5 svar»
+                or «Navngitte svar · attribuert til virksomhet». */}
+            <div className="mt-0.5 text-xs opacity-70">
+              {respondentKind === 'organisation'
+                ? t('policyOrganisation')
+                : anonymity === 'named'
+                  ? t('policyNamed')
+                  : anonymity === 'optional'
+                    ? t('policyOptional', { k: kThreshold })
+                    : t('policyAnonymous', { k: kThreshold })}
             </div>
             {failure ? (
               <p role="alert" className="mt-3 rounded-[10px] bg-sf px-3.5 py-2.5 text-[12.5px]">

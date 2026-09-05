@@ -24,6 +24,11 @@ type Labels = {
   allGroups: string
   surveys: string
   groupThreshold: string
+  /** Q17, brief §6: the Filter tab says which threshold the document uses. */
+  strictestK: string
+  strictestNone: string
+  sourceLowerK: string
+  unavailablePersonSources: string
   whoSees: string
   roles: { key: 'ledelse' | 'ledere_eget_team' | 'alle_ansatte'; label: string; desc: string }[]
   copyLink: string
@@ -92,6 +97,11 @@ export function ReportSidePanel({
 
   const on = new Set(report.sections)
   const chosenSurveys = new Set(report.filters.surveys)
+  // What compose_report will gate at: the strictest threshold among the chosen
+  // sources. Computed here only to SAY it — the document is gated on the server.
+  const chosen = options.surveys.filter((s) => chosenSurveys.has(s.id))
+  const allOrganisation = chosen.length > 0 && chosen.every((s) => s.respondentKind === 'organisation')
+  const strictest = chosen.reduce((m, s) => Math.max(m, s.k), 0)
   const picked = new Set(quotesChosen)
 
   const card = 'rounded-2xl border border-line bg-sf p-[18px]'
@@ -156,11 +166,16 @@ export function ReportSidePanel({
           <div className="mt-3 flex flex-col gap-[7px]">
             {options.sectionTypes.map((s) => {
               const active = on.has(s.key)
+              // «Svar per virksomhet» is shown as unavailable, with the reason,
+              // in any report that carries a person survey — never hidden
+              // (design brief §6). compose_report refuses it regardless.
+              const unavailable = s.key === 'per_virksomhet' && !allOrganisation
               return (
                 <button
                   key={s.key}
                   type="button"
-                  disabled={!canEdit || pending}
+                  disabled={!canEdit || pending || unavailable}
+                  aria-disabled={unavailable || undefined}
                   onClick={() =>
                     patch({
                       reportId: report.id,
@@ -188,7 +203,7 @@ export function ReportSidePanel({
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-semibold">{s.label}</span>
                     <span className="mt-px block text-[11.5px] leading-[1.35] text-mut">
-                      {s.description}
+                      {unavailable ? labels.unavailablePersonSources : s.description}
                     </span>
                   </span>
                 </button>
@@ -339,6 +354,21 @@ export function ReportSidePanel({
             </div>
           </div>
 
+          {chosen.length > 0 ? (
+            <p className="text-[12px] leading-[1.5] text-mut">
+              {allOrganisation ? labels.strictestNone : labels.strictestK.replace('{k}', String(strictest))}
+            </p>
+          ) : null}
+          {chosen
+            .filter((s) => s.k > 0 && s.k < strictest)
+            .map((s) => (
+              <p key={s.id} className="text-[12px] leading-[1.5] text-mut">
+                {labels.sourceLowerK
+                  .replace('{title}', s.title)
+                  .replace('{k}', String(s.k))
+                  .replace('{docK}', String(strictest))}
+              </p>
+            ))}
           <p className="text-[12px] leading-[1.5] text-mut">{labels.groupThreshold}</p>
         </div>
       ) : null}

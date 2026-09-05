@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { ReportDocument } from './ReportDocument'
 import { ReportSidePanel } from './ReportSidePanel'
 import type { ComposedDocument, EditorOptions, EditorReport, QuotePick } from './editor-types'
@@ -36,6 +37,9 @@ export async function ReportEditor({
   quotesChosen: string[]
 }) {
   const t = await getTranslations('reports')
+  // The document's threshold in words for the section notes — the strictest
+  // among its sources, as compose_report applied it (Q17).
+  const kWord = numberWord(doc.k ?? 5, await getLocale())
 
   const chosen = options.surveys.filter((s) => report.filters.surveys.includes(s.id))
   const responses = chosen.reduce((sum, s) => sum + s.responses, 0)
@@ -100,6 +104,12 @@ export async function ReportEditor({
             sourceLive: t('sourceLive'),
             pending: t('sectionPending'),
             pendingSub: t('sectionPendingSub'),
+            methodK: t('methodK', { k: 0 }).replace('0', '{k}'),
+            methodAttributed: t('methodAttributed'),
+            sectionUnavailable: t('sectionUnavailable'),
+            unavailablePersonSources: t('unavailablePersonSources'),
+            perVirksomhetPending: t('perVirksomhetPending'),
+            sourceLowerK: t('sourceLowerK', { title: '{title}', k: '{k}', docK: '{docK}' }),
             trendRound: t('trendRound', { n: 0 }).replace('0', '{n}'),
             driversHigh: t('driversHigh'),
             driversLow: t('driversLow'),
@@ -122,8 +132,8 @@ export async function ReportEditor({
             // The design puts a muted explanation under a section — it is where
             // "Ledelse har færre enn fem svar og vises ikke" lives.
             notes: {
-              teams: t('noteTeams'),
-              heatmap: t('noteTeams'),
+              teams: t('noteTeams', { kWord }),
+              heatmap: t('noteTeams', { kWord }),
               trend: t('noteTrend'),
               themes: t('noteThemes'),
             },
@@ -151,6 +161,10 @@ export async function ReportEditor({
             allGroups: t('sectionAllGroups'),
             surveys: t('surveys'),
             groupThreshold: t('groupThreshold'),
+            strictestK: t('strictestK', { k: 0 }).replace('0', '{k}'),
+            strictestNone: t('strictestNone'),
+            sourceLowerK: t('sourceLowerK', { title: '{title}', k: '{k}', docK: '{docK}' }),
+            unavailablePersonSources: t('unavailablePersonSources'),
             whoSees: t('whoSees'),
             roles: [
               { key: 'ledelse', label: t('shareHr'), desc: t('shareHrDesc') },

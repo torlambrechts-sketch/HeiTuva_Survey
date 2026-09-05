@@ -16,7 +16,7 @@ export default async function PrivacyTab() {
   const [{ data: org }, { data: dsr }] = await Promise.all([
     supabase
       .from('organizations')
-      .select('privacy, retention_months')
+      .select('privacy, retention_months, default_k_threshold')
       .eq('id', viewer.orgId)
       .single(),
     supabase
@@ -44,7 +44,7 @@ export default async function PrivacyTab() {
   return (
     <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.1fr_.9fr]">
       <div className="flex flex-col gap-[18px]">
-        <PrivacyPanel privacy={privacy} retention={org?.retention_months ?? 12} />
+        <PrivacyPanel privacy={privacy} retention={org?.retention_months ?? 12} defaultK={org?.default_k_threshold ?? 5} />
         <DsrPanel requests={(dsr ?? []) as DsrRequest[]} />
       </div>
 

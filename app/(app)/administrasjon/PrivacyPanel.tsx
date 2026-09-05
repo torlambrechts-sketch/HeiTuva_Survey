@@ -24,9 +24,12 @@ const RETENTIONS = [6, 12, 24, 0] as const
 export function PrivacyPanel({
   privacy,
   retention,
+  defaultK,
 }: {
   privacy: Record<PrivacyKey, boolean>
   retention: number
+  /** organizations.default_k_threshold — what a NEW person survey starts at (Q17). */
+  defaultK: number
 }) {
   const t = useTranslations('admin')
   const [saved, setSaved] = useState(privacy)
@@ -58,7 +61,7 @@ export function PrivacyPanel({
           <span className="flex-1">
             <span className="block text-[14px] font-semibold">{t('pMinResponses')}</span>
             <span className="mt-0.5 block text-[13px] text-mut">
-              {t('pMinResponsesDesc')} — {t('pMinResponsesLocked')}
+              {t('pMinResponsesDesc', { k: defaultK })} — {t('pMinResponsesLocked')}
             </span>
           </span>
           <span

@@ -32,6 +32,12 @@ export type PrintLabels = {
   suppressedNote: string
   insufficient: string
   pending: string
+  /** Q17: the threshold stands in the exported document (brief §6). */
+  methodK: string
+  methodAttributed: string
+  unavailable: string
+  perVirksomhet: string
+  sourceLowerK: string
   trendRound: string
   themeMentions: string
   invited: string
@@ -110,6 +116,20 @@ function sectionHtml(section: ComposedSection, labels: PrintLabels): string {
   // silently drops a section the reader chose is indistinguishable from one
   // where the section was empty.
   if (section.pending) return wrap(`<p class="note">${esc(labels.pending)}</p>`)
+  if (section.unavailable) return wrap(`<p class="note">${esc(labels.unavailable)}</p>`)
+  if (section.key === 'method' && extra && typeof extra.k === 'number') {
+    const docK = extra.k
+    const lower = (extra.sources ?? []).filter((s) => s.k > 0 && s.k < docK)
+    return wrap(
+      `<p>${esc(docK === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(docK)))}</p>` +
+        lower
+          .map((s) => `<p class="note">${esc(
+            labels.sourceLowerK.replace('{title}', s.title).replace('{k}', String(s.k)).replace('{docK}', String(docK)),
+          )}</p>`)
+          .join(''),
+    )
+  }
+  if (section.key === 'per_virksomhet') return wrap(`<p class="note">${esc(labels.perVirksomhet)}</p>`)
 
   if (extra?.quotes) {
     if (extra.quotes.length === 0) return ''
