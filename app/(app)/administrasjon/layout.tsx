@@ -60,6 +60,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: '/administrasjon/grupper', label: t('tabGrupper') },
           { href: '/administrasjon/personvern', label: t('tabPersonvern') },
           { href: '/administrasjon/valg', label: t('tabValg') },
+          // A sixth tab the design does not draw (docs/DEVIATIONS.md D79):
+          // DECISIONS Q12 puts the translation editor in the admin app, and
+          // this rail is where every other org-wide setting lives.
+          { href: '/administrasjon/sprak', label: t('tabSprak') },
         ]}
       />
 

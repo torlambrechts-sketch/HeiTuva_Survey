@@ -50,7 +50,11 @@ async function main() {
       const chunk = rows.slice(i, i + 500)
       const { error } = await supabase
         .from('ui_messages')
-        .upsert(chunk, { onConflict: 'namespace,key,lang' })
+        // `org_key` is generated, so it is the conflict TARGET but never a
+        // written column: these are the global rows (org_id NULL), and an
+        // organisation's overrides of them are written by the editor, never
+        // here. Seeding must not touch a customer's own wording.
+        .upsert(chunk, { onConflict: 'namespace,key,lang,org_key' })
       if (error) {
         console.error(`  ${lang}: ${error.message}`)
         process.exit(1)

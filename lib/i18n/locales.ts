@@ -21,6 +21,14 @@ export function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value)
 }
 
-export function i18nCacheTag(locale: Locale) {
-  return `i18n:${locale}`
+/**
+ * The cache tag for a locale, optionally narrowed to one organisation.
+ *
+ * A seed or a migration changes the shipped copy for everyone and invalidates
+ * `i18n:<locale>`. The translation editor changes one tenant's wording and
+ * invalidates `i18n:<locale>:<org>`, which is why an org's cache entry carries
+ * both: either event must reach it, and neither should evict the other's.
+ */
+export function i18nCacheTag(locale: Locale, orgId?: string) {
+  return orgId ? `i18n:${locale}:${orgId}` : `i18n:${locale}`
 }

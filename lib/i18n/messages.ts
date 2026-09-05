@@ -34,7 +34,7 @@ const BUNDLED: Record<string, Messages> = {
  * path of every page render. A sessionless client is also correct because this
  * runs inside unstable_cache, where request cookies are not available.
  */
-async function fetchMessages(locale: Locale): Promise<Messages> {
+async function fetchMessages(locale: Locale, orgId?: string): Promise<Messages> {
   const supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,10 +53,24 @@ async function fetchMessages(locale: Locale): Promise<Messages> {
   //
   // So the table is an overlay. Unreachable, and the reader sees the shipped
   // copy rather than an error page.
-  type Row = { namespace: string; key: string; value: string }
+  type Row = { namespace: string; key: string; value: string; org_id: string | null }
   let data: Row[] = []
   try {
-    const res = await supabase.from('ui_messages').select('namespace, key, value').eq('lang', locale)
+    /*
+      Both scopes in one read, ordered so the org's rows are applied last.
+
+      `org_id` NULL is the shipped default (seeded from the JSON above); a row
+      carrying an org id is that organisation's override of one message, written
+      through Administrasjon → Språk. Selecting only the two scopes that can
+      apply — rather than every row and filtering here — keeps a large tenant's
+      overrides out of another tenant's response.
+    */
+    const scope = orgId ? `org_id.is.null,org_id.eq.${orgId}` : 'org_id.is.null'
+    const res = await supabase
+      .from('ui_messages')
+      .select('namespace, key, value, org_id')
+      .eq('lang', locale)
+      .or(scope)
     if (res.error) throw new Error(res.error.message)
     data = (res.data ?? []) as Row[]
   } catch (e) {
@@ -67,32 +81,50 @@ async function fetchMessages(locale: Locale): Promise<Messages> {
     return base
   }
 
-  const fromDb: Messages = {}
+  const global: Messages = {}
+  const org: Messages = {}
   for (const row of data) {
-    ;(fromDb[row.namespace] ??= {})[row.key] = row.value
+    const into = row.org_id === null ? global : org
+    ;(into[row.namespace] ??= {})[row.key] = row.value
   }
   // An empty table is not an instruction to render nothing: before the first
   // seed there are no rows at all, and the bundle is the whole answer.
-  return overlay(base, fromDb)
+  return overlay(overlay(base, global), org)
 }
 
-export function getMessages(locale: Locale) {
-  return unstable_cache(() => fetchMessages(locale), ['ui_messages', locale], {
-    tags: [i18nCacheTag(locale)],
-    // Without an expiry this cache never lets go: after seeding new keys the
-    // running server kept serving the old set and the UI rendered raw
-    // `namespace.key` strings indefinitely. The tag still allows an immediate
-    // revalidate from the Phase 6 translation editor; this is the safety net
-    // for every other path that changes ui_messages out of band (seeds,
-    // migrations, a direct edit in Studio).
-    revalidate: 300,
-  })()
+export function getMessages(locale: Locale, orgId?: string) {
+  return unstable_cache(
+    () => fetchMessages(locale, orgId),
+    ['ui_messages', locale, orgId ?? 'global'],
+    {
+      // Two tags: the locale's, which a seed or a migration invalidates for
+      // everyone, and the org's, which the editor invalidates for one tenant
+      // without evicting every other tenant's cache entry.
+      tags: orgId ? [i18nCacheTag(locale), i18nCacheTag(locale, orgId)] : [i18nCacheTag(locale)],
+      // Without an expiry this cache never lets go: after seeding new keys the
+      // running server kept serving the old set and the UI rendered raw
+      // `namespace.key` strings indefinitely. The tags still allow an immediate
+      // revalidate from the translation editor; this is the safety net for
+      // every other path that changes ui_messages out of band (seeds,
+      // migrations, a direct edit in Studio).
+      revalidate: 300,
+    },
+  )()
 }
 
-/** Requested locale over `no`; a key missing from both renders visibly as
- *  `namespace.key` rather than silently blank, so gaps show up in review. */
-export async function getMergedMessages(locale: Locale): Promise<Messages> {
-  if (locale === SOURCE_LOCALE) return getMessages(SOURCE_LOCALE)
-  const [source, requested] = await Promise.all([getMessages(SOURCE_LOCALE), getMessages(locale)])
+/**
+ * Requested locale over `no`; a key missing from both renders visibly as
+ * `namespace.key` rather than silently blank, so gaps show up in review.
+ *
+ * `orgId` adds that organisation's own overrides on top of the shipped copy,
+ * within each locale — so an org that has rewritten one Norwegian string still
+ * falls back to the shipped English for a key it has not touched.
+ */
+export async function getMergedMessages(locale: Locale, orgId?: string): Promise<Messages> {
+  if (locale === SOURCE_LOCALE) return getMessages(SOURCE_LOCALE, orgId)
+  const [source, requested] = await Promise.all([
+    getMessages(SOURCE_LOCALE, orgId),
+    getMessages(locale, orgId),
+  ])
   return overlay(source, requested)
 }

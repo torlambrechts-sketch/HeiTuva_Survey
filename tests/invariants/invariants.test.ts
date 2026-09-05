@@ -115,6 +115,93 @@ describe('(b2) demo_requests is default-deny, and only request_demo writes it', 
   })
 })
 
+describe('(b3) ui_messages overrides belong to one org and never to all of them', () => {
+  /**
+   * The table shipped with a policy that asked whether the caller administers
+   * ANY organisation, over rows that belong to EVERY organisation. Nothing
+   * exploited it because nothing wrote here; the Phase 6 editor is that writer,
+   * so these are the tests that had to exist before it could ship.
+   */
+  const NS = 'common'
+  const KEY = 'appName'
+
+  it('the shipped default is a row with no org, and nobody may write it', async () => {
+    const { data: shipped } = await admin()
+      .from('ui_messages')
+      .select('id, value')
+      .eq('namespace', NS)
+      .eq('key', KEY)
+      .eq('lang', 'no')
+      .is('org_id', null)
+      .maybeSingle()
+    expect(shipped).toBeTruthy()
+
+    const { error } = await f.adminA.client
+      .from('ui_messages')
+      .update({ value: 'hijacked' })
+      .eq('id', shipped!.id)
+    // RLS filters rather than errors on update, so the proof is that the value
+    // did not move.
+    expect(error).toBeNull()
+    const { data: after } = await admin()
+      .from('ui_messages')
+      .select('value')
+      .eq('id', shipped!.id)
+      .single()
+    expect(after!.value).toBe(shipped!.value)
+  })
+
+  it('an administrator may write an override carrying their own org', async () => {
+    const { error } = await f.adminA.client.from('ui_messages').insert({
+      namespace: NS, key: KEY, lang: 'no', value: 'Org A sitt navn', org_id: f.orgA.id,
+    })
+    expect(error).toBeNull()
+
+    const { data } = await admin()
+      .from('ui_messages')
+      .select('value')
+      .eq('namespace', NS).eq('key', KEY).eq('lang', 'no').eq('org_id', f.orgA.id)
+      .maybeSingle()
+    expect(data?.value).toBe('Org A sitt navn')
+  })
+
+  it("an administrator cannot write an override carrying another org's id", async () => {
+    const { error } = await f.adminA.client.from('ui_messages').insert({
+      namespace: NS, key: KEY, lang: 'no', value: 'stolen', org_id: f.orgB.id,
+    })
+    expect(error).toBeTruthy()
+  })
+
+  it("and cannot delete another org's override", async () => {
+    await admin().from('ui_messages').insert({
+      namespace: NS, key: KEY, lang: 'en', value: 'Org B name', org_id: f.orgB.id,
+    })
+    await f.adminA.client
+      .from('ui_messages')
+      .delete()
+      .eq('namespace', NS).eq('key', KEY).eq('lang', 'en').eq('org_id', f.orgB.id)
+
+    const { data } = await admin()
+      .from('ui_messages')
+      .select('value')
+      .eq('namespace', NS).eq('key', KEY).eq('lang', 'en').eq('org_id', f.orgB.id)
+      .maybeSingle()
+    expect(data?.value).toBe('Org B name')
+  })
+
+  it('a leser cannot write an override at all, not even for their own org', async () => {
+    const { error } = await f.leserA.client.from('ui_messages').insert({
+      namespace: NS, key: 'search', lang: 'no', value: 'nope', org_id: f.orgA.id,
+    })
+    expect(error).toBeTruthy()
+  })
+
+  it('reads stay open, because /s/[token] has no session', async () => {
+    const { data } = await anon().from('ui_messages').select('key').eq('namespace', NS).limit(1)
+    expect((data ?? []).length).toBe(1)
+  })
+})
+
 describe('(c) anonymity is structural', () => {
   it('an anonymous response with an invitation_id violates the CHECK', async () => {
     const a = admin()

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 
 import { createClient } from '@/lib/supabase/server'
@@ -55,3 +56,39 @@ export async function resolveLocale(): Promise<Locale> {
     return SOURCE_LOCALE
   }
 }
+
+/**
+ * The organisation whose message overrides apply to this request.
+ *
+ * Separate from `resolveLocale` rather than folded into it because the two have
+ * different fallbacks — a visitor still has a language, but has no org — and
+ * because most requests need only one of them. `cache` makes the pair cost one
+ * round trip each per render, not one per call site.
+ *
+ * A respondent at /s/[token] has no session and therefore no org here: they
+ * read the shipped copy. Wiring the survey's own org through the token context
+ * is the next step for that surface (docs/DEVIATIONS.md D78).
+ */
+export const resolveOrgId = cache(async (): Promise<string | undefined> => {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return undefined
+
+    const { data: member } = await supabase
+      .from('org_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+    return member?.org_id ?? undefined
+  } catch {
+    // Same rule as the locale: a lookup must never take down the page. Without
+    // an org the reader serves the shipped copy, which is always correct — just
+    // not customised.
+    return undefined
+  }
+})

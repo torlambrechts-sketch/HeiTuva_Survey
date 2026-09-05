@@ -281,6 +281,41 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
+    /*
+      Administrasjon → Språk, the translation editor (DECISIONS Q12).
+
+      No design reference — the bundle has no such screen (docs/DEVIATIONS.md
+      D79) — so the states here are the ones the editor actually has: the list
+      as it opens, a namespace filtered by search, and a message carrying this
+      org's own override.
+    */
+    route: '/administrasjon/sprak',
+    label: 'admin-sprak',
+    as: 'administrator',
+    phase: 'phase-6',
+    states: [
+      { name: 'default' },
+      {
+        name: 'sok',
+        setup: async (page) => {
+          await page.fill('input[name="q"]', 'lagre')
+          await page.getByRole('button', { name: 'Søk' }).click()
+          await page.waitForURL((u) => u.searchParams.get('q') === 'lagre')
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'egen-tekst',
+        setup: async (page) => {
+          const first = page.locator('form').filter({ has: page.locator('textarea') }).first()
+          await first.locator('textarea').fill('Vår egen formulering')
+          await first.getByRole('button', { name: 'Lagre' }).click()
+          await page.getByText('Egen tekst').first().waitFor()
+        },
+      },
+    ],
+  },
+  {
     route: '/administrasjon',
     label: 'admin-forbidden-redaktor',
     as: 'redaktor',

@@ -1949,30 +1949,45 @@ export type Database = {
       }
       ui_messages: {
         Row: {
+          id: string
           key: string
           lang: string
           namespace: string
+          org_id: string | null
+          org_key: string
           updated_at: string
           updated_by: string | null
           value: string
         }
         Insert: {
+          id?: string
           key: string
           lang: string
           namespace: string
+          org_id?: string | null
           updated_at?: string
           updated_by?: string | null
           value: string
         }
         Update: {
+          id?: string
           key?: string
           lang?: string
           namespace?: string
+          org_id?: string | null
           updated_at?: string
           updated_by?: string | null
           value?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ui_messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

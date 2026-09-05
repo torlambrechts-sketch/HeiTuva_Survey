@@ -319,6 +319,107 @@ async function main() {
       )
     }
 
+    console.log('\n== Phase 6 ==')
+
+    /*
+      The translation editor, driven from the browser and then read back TWICE:
+      once from the table, and once from a different screen, because a row that
+      persists but never reaches a page is not a working editor.
+
+      The key edited is `nav.reports`, which the header renders on every screen
+      — so the second read is a genuine end-to-end check of the whole chain
+      (row → `ui_messages` overlay → `unstable_cache` → the rendered header),
+      including the `revalidateTag` that has to fire for the change to be
+      visible before the 300-second expiry.
+    */
+    {
+      const page = await ctx.newPage()
+      const MINE = 'Våre rapporter'
+
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.waitForLoadState('load')
+      const form = page.locator('form').filter({ has: page.locator('textarea') }).first()
+      await form.locator('textarea').fill(MINE)
+      await form.getByRole('button', { name: 'Lagre' }).click()
+      await page.getByText('Lagret ✓').first().waitFor({ timeout: 15_000 })
+
+      const { data: row, error } = await admin
+        .from('ui_messages')
+        .select('value, org_id')
+        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .maybeSingle()
+
+      await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const header = await page.locator('header').first().innerText()
+
+      show(
+        'ui_messages (override)',
+        !error && row?.value === MINE && row?.org_id === orgId && header.includes(MINE),
+        error
+          ? { error: error.message }
+          : { stored: row?.value, scoped_to_org: row?.org_id === orgId, rendered_in_header: header.includes(MINE) },
+      )
+
+      // And undone: the shipped copy has to come back, or an org could paint
+      // itself into a corner it cannot leave.
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.waitForLoadState('load')
+      await page.getByRole('button', { name: 'Tilbakestill til standard' }).first().click()
+      await page.waitForTimeout(1500)
+
+      const { data: gone } = await admin
+        .from('ui_messages')
+        .select('id')
+        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .maybeSingle()
+
+      await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const restored = await page.locator('header').first().innerText()
+
+      show(
+        'ui_messages (reset)',
+        !gone && restored.includes('Rapporter') && !restored.includes(MINE),
+        { row_removed: !gone, header_back_to_shipped: restored.includes('Rapporter') && !restored.includes(MINE) },
+      )
+
+      /*
+        The parity guard, which is the one thing standing between a wording tweak
+        and a broken screen: `admin.langShowing` is "Viser {shown} av {matched}
+        tekster", and an edit that drops a variable must be refused rather than
+        stored. next-intl throws on a message whose placeholder the caller still
+        passes, so this is a crash the editor has to prevent, not a cosmetic
+        check.
+      */
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=admin&q=langShowing`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.waitForLoadState('load')
+      const guard = page.locator('form').filter({ has: page.locator('textarea') }).first()
+      await guard.locator('textarea').fill('Viser noen tekster')
+      await guard.getByRole('button', { name: 'Lagre' }).click()
+      await page.waitForTimeout(1200)
+      const alerted = await page.locator('[role="alert"]').first().innerText().catch(() => '')
+
+      const { data: refused } = await admin
+        .from('ui_messages')
+        .select('id')
+        .eq('namespace', 'admin').eq('key', 'langShowing').eq('lang', 'no').eq('org_id', orgId)
+        .maybeSingle()
+
+      show(
+        'ui_messages (parity refused)',
+        !refused && alerted.includes('{shown}') && alerted.includes('{matched}'),
+        { nothing_stored: !refused, told_the_user: alerted.slice(0, 90) },
+      )
+      await page.close()
+    }
+
     await ctx.close()
   } finally {
     await browser.close()

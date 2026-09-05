@@ -1432,3 +1432,35 @@ are disabled. Entra SSO is Phase 6's own item and is not wired; Google Workspace
 is not in v1 at all. This is the treatment D71 already gives the PowerPoint
 button and the Administrasjon screen gives its Entra toggle — the control is
 present and honest about being unavailable, rather than absent or posting nowhere.
+
+### D78 — the respondent surface reads the shipped copy, not the org's overrides
+`ui_messages` now carries per-organisation overrides, and the app applies them:
+`resolveOrgId` finds the viewer's org and the reader lays that org's rows over
+the shipped ones. /s/[token] cannot do the same, because a respondent has no
+session — the org would have to come from the token context, and
+`get_survey_for_token` deliberately returns the org's NAME and default language
+rather than its id.
+
+So an org that rewrites a `respondent.*` string sees the change in preview
+inside the app and not on the live response form. Adding `org_id` to the token
+payload would fix it and hands an anonymous caller a tenant identifier, which is
+a trade worth making deliberately rather than in passing. Logged for the next
+phase.
+
+### D79 — Administrasjon → Språk is a sixth tab the design does not draw
+The design's only language surface is the personal picker on Profil
+(HeiTuva.dc.html:1341-1347), which chooses the language you read HeiTuva in. The
+translation editor is a different thing — it changes the wording everyone in the
+organisation reads — and DECISIONS Q12 puts it in the admin app in Phase 6.
+
+It is built from the component classes the other five tabs already use: the same
+tab rail, the same `--sf` card on `--line`, the same field styling, the same
+`--ac` primary button and `--ac2` badge. Nothing new is invented; the screen is
+an arrangement of parts the bundle already specifies.
+
+Two choices inside it are worth naming. It shows the key SEGMENT (`reports`),
+not `nav.reports`: the namespace is already the picker's value, and a screen
+that prints dotted message keys is indistinguishable — to a reader and to the
+capture gate — from one whose translations failed to load. And the namespaces
+themselves carry labels ("Bygg undersøkelse", not `builder`), because a raw code
+identifier on screen is user-facing text like any other.
