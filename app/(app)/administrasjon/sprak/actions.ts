@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { audit } from '@/lib/auth/audit'
 import { requireViewer } from '@/lib/auth/session'
@@ -113,8 +114,13 @@ export async function saveMessage(_prev: LangState, formData: FormData): Promise
   // holds it anyway. What matters for the trail is who changed which message.
   await audit(viewer.orgId, 'i18n.override', `${namespace}.${key}.${lang}`, { lang, namespace })
 
-  // No cache to invalidate: an organisation's overrides are read per request
-  // (lib/i18n/messages.ts), so the next page already shows this.
+  // The overrides themselves are read per request (lib/i18n/messages.ts), so no
+  // i18n cache tag to flush — but the editor page and the app chrome are
+  // server-rendered, and a server action does not re-run them unless the route
+  // is revalidated. This is what makes the "Egen tekst" badge appear on save
+  // and the overridden label show up across the shell.
+  revalidatePath('/administrasjon/sprak')
+  revalidatePath('/', 'layout')
   return { saved: `${namespace}.${key}` }
 }
 
@@ -151,7 +157,12 @@ export async function resetMessage(_prev: LangState, formData: FormData): Promis
   }
 
   await audit(viewer.orgId, 'i18n.reset', `${namespace}.${key}.${lang}`, { lang, namespace })
-  // No cache to invalidate: an organisation's overrides are read per request
-  // (lib/i18n/messages.ts), so the next page already shows this.
+  // The overrides themselves are read per request (lib/i18n/messages.ts), so no
+  // i18n cache tag to flush — but the editor page and the app chrome are
+  // server-rendered, and a server action does not re-run them unless the route
+  // is revalidated. This is what makes the "Egen tekst" badge appear on save
+  // and the overridden label show up across the shell.
+  revalidatePath('/administrasjon/sprak')
+  revalidatePath('/', 'layout')
   return { saved: `${namespace}.${key}` }
 }

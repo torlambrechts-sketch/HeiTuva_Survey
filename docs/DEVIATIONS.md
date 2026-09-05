@@ -1566,3 +1566,32 @@ the `legal` message namespace so wording is editable like everything else.
 The Cloudflare Turnstile widget on the splash's two forms is likewise not in
 the design: it renders only when a site key is configured, so the design's
 form is what a visitor sees until the pre-launch gate turns it on.
+
+### D84 — Phase 7b typography sample: six screens, one systemic font-build note
+Decision 4 of the Phase 6 acceptance asked for the six highest-fidelity-risk
+screens — splash, the respondent flow, the builder, Resultater, the report
+document and Administrasjon — re-compared against references regenerated with
+the design's own typefaces, and a count of how many matched.
+
+All six match. Family, size, weight, letter-spacing, line-height and colour are
+identical in computed style on every one, and the layout reproduces the design
+(the visible differences between a capture and its reference are seeded data —
+different survey titles, member counts, response numbers — not styling).
+
+One difference belongs to no single screen and is recorded here rather than as
+a per-screen defect: the same string, with the same CSS, measures up to ~2 %
+wider in Playfair Display and ~1 % in DM Sans at some sizes (identical at the
+14 px body size) between the app and the prototype. The cause is the font
+*build*, not any rule in the app. The prototype loads Google Fonts' static
+Playfair instances (`wght@500;600;700`) and keeps DM Sans's optical-size axis;
+`next/font/google` self-hosts the *variable* Playfair Display and subsets by
+unicode-range. Asking next/font for specific static weights or for the `opsz`
+axis was tried and does not change this — it serves the identical variable file
+regardless (same self-hosted hash, same measured advance), so the option was
+reverted rather than left in as a change that reads like a fix but moves
+nothing. The residual is a rendering-engine artifact well below a reader's
+threshold and below what the screens' own seeded-data differences already span;
+it is accepted, with no code change. Self-hosting the design's static instances
+as local files would close it, and is logged here as the option if a future
+pass wants pixel-identical glyph advances.
+

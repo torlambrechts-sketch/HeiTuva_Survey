@@ -16,12 +16,16 @@ repository; the settings are clicks in the Supabase and Vercel dashboards; the
 two secrets are typed once and never committed.
 
 1. **Apply the Phase 7 migrations to `heituva-prod`** — `0029_sso_break_glass`,
-   `0030_split_for_all_policies`, `0031_ui_messages_org_lang_idx`. Through the
-   Supabase MCP when it is connected (`apply_migration`, then the ledger rows in
-   `supabase_migrations.schema_migrations`), or by pasting each file into the SQL
-   editor in order. Verified by `select version from supabase_migrations.schema_migrations
-   order by 1 desc limit 3` and by the performance advisors reporting no
-   `multiple_permissive_policies` rows.
+   `0030_split_for_all_policies`, `0031_ui_messages_org_lang_idx`. **DONE on
+   2026-09-05** through the Supabase MCP (`apply_migration`), with the repo
+   versions inserted into `supabase_migrations.schema_migrations` so the ledger
+   matches. Confirmed: the performance advisors report no
+   `multiple_permissive_policies` and no `auth_rls_initplan` rows, and the
+   security advisors show only the by-design notices (no client policy on
+   `answers`/`responses`/`demo_requests`; the token-validated and aggregate
+   SECURITY DEFINER RPCs). Kept here as the record of what was applied and how
+   to reproduce it on a fresh project: apply each file in order, then
+   `insert into supabase_migrations.schema_migrations (version, name) values …`.
 2. **TOTP in Auth** — Dashboard → Authentication → Multi-factor authentication →
    TOTP enabled. BEFORE the first administrator signs in (see below).
 3. **Leaked-password protection** — Dashboard → Authentication → Passwords →
