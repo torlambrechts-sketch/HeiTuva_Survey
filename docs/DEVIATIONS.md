@@ -309,13 +309,16 @@ card's primitives (same 420px card, same field and button treatment) and creates
 the org through a service-role server action, which is unavoidable: `members_ins`
 is gated on already being a member, so nobody can write their own first row.
 
-### D22 — MFA screen is not in the design bundle
-DECISIONS Q14 requires TOTP for role=administrator, and the bundle has no
-screen for it. `/sikkerhet` reuses the login card's layout and shows one of two
-states: enrol (QR plus the shared secret) when the account has no verified
-factor, and challenge (six-digit code) when it has one but the session is still
-aal1. Enrolment is behind an explicit button rather than started on page load,
-so a GET never mutates the account's factors.
+### D22 — MFA screen is not in the design bundle (not currently built)
+DECISIONS Q14 is deferred (D27), so there is no `/sikkerhet` screen in the tree
+right now. This entry is kept as the design record for when Q14 returns: the
+bundle has no MFA screen, so `/sikkerhet` reuses the login card's layout and
+shows one of two states — enrol (QR plus the shared secret) when the account
+has no verified factor, and challenge (six-digit code) when it has one but the
+session is still aal1 — with enrolment behind an explicit button rather than
+started on page load, so a GET never mutates the account's factors. It was
+built this way in Phase 7 (7d) and removed again the same phase when Q14 went
+back to deferred.
 
 ### D23 — Firmaopplysninger saves on blur, with a status chip
 The design's Firma card has no save button (HeiTuva.dc.html:1386-1397): the
@@ -394,47 +397,39 @@ design gives no title for it.
 Revisit when the Builder lands in this phase: if the builder holds an explicit
 "current draft", this should follow it instead.
 
-### D27 — administrator MFA: deferred on 2026-09-04, re-enabled in Phase 7
-**Re-enabled in Phase 7 (Tor, Phase 6 acceptance).** DECISIONS Q14's deferral
-named its own trigger — "before the first real organisation is onboarded" —
-and Phase 7 is that point. What was deleted is back, without the flag that
-first suspended it: `lib/auth/mfa.ts`, the `/sikkerhet` enrolment and
-challenge screens (D22), the assurance-level redirect in `app/(app)/layout.tsx`,
-the MFA check in every administrator-only server action (Administrasjon and
-the translation editor), `scripts/seed-mfa.ts`, `tests/db/mfa.ts`,
-`satisfyMfa()` in the Playwright session helper and the pinned `sikkerhet.png`
-baseline. Leaked-password protection is turned on in the same gate
-(docs/OPERATIONS.md).
+### D27 — administrator MFA: deferred (driver: DECISIONS Q14)
+**Deferred.** Q14 says do not build or enforce TOTP; Supabase Auth's MFA
+capability stays available but is not required at login. Nothing in the tree
+enforces it: there is no `/sikkerhet` screen, no assurance-level redirect in
+`app/(app)/layout.tsx`, no MFA check in the administrator-only server actions
+(Administrasjon and the translation editor), and no harness TOTP seeding.
+`supabase/config.toml` leaves `[auth.mfa.totp]` enrolment on, which is the
+"capability available, not required" state Q14 asks for.
 
-Three things about the shape of it now:
+**Trail.** This control has moved three times and the register carries every
+move on purpose:
+- 2026-09-03 — *suspended* behind `feature_flags.admin_mfa` (App Authenticator
+  was not enabled on `heituva-prod`, so the first administrator was held at
+  `/sikkerhet` on a screen whose enrol call could not succeed).
+- 2026-09-04 — *deferred*: the flag and the enforcement code both removed
+  (`20260904000009`), to cut development friction while there were no customers
+  and no real data.
+- Phase 7 (7d) — *re-enabled* on the reading that Q14's trigger ("before the
+  first real organisation") had arrived: `lib/auth/mfa.ts`, the `/sikkerhet`
+  screens (D22), the layout gate, the admin-action gates, `scripts/seed-mfa.ts`,
+  `tests/db/mfa.ts`, `satisfyMfa()` and a pinned `sikkerhet.png` all came back.
+- Phase 7, same phase — *reverted to deferred* on Tor's instruction: all of the
+  above removed again, back to the 2026-09-04 state. The route is gone rather
+  than left enforcing nothing.
 
-- **No flag.** The `admin_mfa` row was removed with the code in
-  `20260904000009` and it is not reintroduced: a security requirement that a
-  row can switch off is the state D27 first warned about. Turning Q14 off again
-  is a code change the register has to record.
-- **The gate has one definition.** `adminMfaSatisfied()` reads only the
-  session's assurance level — aal2 is minted by the auth server when a
-  challenge is verified — and every call site uses it, so the layout redirect
-  and the write gates cannot drift apart.
-- **The requirement is tested, and the screen is pinned.** The visual suite
-  signs an administrator in without a factor and asserts the redirect to
-  `/sikkerhet`; the harness enrols the seeded administrator once per stack
-  (`npm run seed:mfa`) and clears the challenge on every sign-in.
-
-Entra ID sign-ins are administrators like any other: Q14 says "role =
-administrator", not "password sessions", and a session from the directory
-still enrols and confirms a factor here. If Tor wants Entra's own second factor
-to count instead, that is a decision for the register, not a quiet exception.
-
-*History.* This entry first recorded a suspension behind `feature_flags.admin_mfa`
-(2026-09-03: App Authenticator was not enabled on `heituva-prod`, so the first
-administrator was held at `/sikkerhet` on a screen whose enrol call could not
-succeed), then a deferral with the flag and the code removed (2026-09-04, to
-cut development friction while there were no customers and no real data). The
-production precondition from the first episode is now an operator step in
-OPERATIONS.md: TOTP enrolment must be enabled in Auth before the first
-administrator signs in, or the gate locks out the only person who could
-unlock it.
+**Re-enable trigger (unchanged):** before the first real organisation is
+onboarded, or before prod holds any real respondent data — whichever comes
+first. `AUTHORIZE.md` lists it beside leaked-password protection, which is off
+for the same window, so the two are re-enabled as one task. When Q14 returns,
+re-enabling is restoring the enforcement code (the 7d diff is the template),
+not flipping a row — and, on production, enabling TOTP enrolment in Auth
+*before* the first administrator signs in, or the gate locks out the only
+person who could unlock it.
 
 ### D28 — the wizard counts the questions it will actually create
 The prototype's count slider runs 2-7 and slices the chosen pack

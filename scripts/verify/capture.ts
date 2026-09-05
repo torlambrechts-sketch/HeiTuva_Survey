@@ -104,14 +104,6 @@ async function main() {
       stdio: 'inherit',
       env: { ...process.env, ...LOCAL_SUPABASE },
     })
-    // DECISIONS Q14: the administrator persona needs a TOTP factor, or every
-    // administrator screen below is a photograph of /sikkerhet. Auth users
-    // survive the re-seed, so this re-enrols the same user and rewrites the
-    // secret the sign-in helper reads.
-    execFileSync('npx', ['tsx', 'scripts/seed-mfa.ts', '--local'], {
-      stdio: 'inherit',
-      env: { ...process.env, ...LOCAL_SUPABASE },
-    })
   }
 
   const server = await ensureServer()

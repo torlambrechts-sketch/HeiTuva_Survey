@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
 import { ENTRA_PROVIDER, entraAvailable } from '@/lib/auth/entra'
-import { adminMfaSatisfied } from '@/lib/auth/mfa'
 import { audit } from '@/lib/auth/audit'
 import type { AdminError, AdminResult } from './types'
 import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
@@ -37,10 +36,6 @@ function dbError(error: { code?: string; message: string }): AdminError {
 async function requireAdmin() {
   const viewer = await requireViewer()
   if (viewer.role !== 'administrator') return null
-  // A server action is a POST endpoint: it does not go through the layout that
-  // redirects an aal1 administrator to /sikkerhet, so the MFA requirement has
-  // to be re-checked at the write itself or it is decorative (DECISIONS Q14).
-  if (!(await adminMfaSatisfied())) return null
   return viewer
 }
 

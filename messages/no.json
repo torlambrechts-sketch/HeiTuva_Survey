@@ -1356,18 +1356,5 @@
     "dpa8P": "Behandlingsansvarlig kan be om dokumentasjon på at forpliktelsene overholdes, og kan én gang per år, med 30 dagers varsel, gjennomføre eller la en uavhengig tredjepart gjennomføre revisjon.",
     "dpa9H": "Varighet, sletting og signering",
     "dpa9P": "Avtalen gjelder så lenge kundeavtalen løper. Ved opphør slettes alle personopplysninger senest 30 dager etter at behandlingsansvarlig har fått eksportert dem, med mindre lov krever lengre oppbevaring. En signert versjon av denne avtalen med virksomhetens navn og dato utstedes ved avtaleinngåelse og finnes under Administrasjon → Personvern og GDPR → Dokumentasjon."
-  },
-  "mfa": {
-    "enrollTitle": "Slå på tofaktor",
-    "enrollSub": "Skann QR-koden med autentiseringsappen din, eller skriv inn nøkkelen manuelt.",
-    "verifyTitle": "Bekreft med autentiseringsappen",
-    "verifySub": "Skriv inn den sekssifrede koden fra appen din.",
-    "secretLabel": "Nøkkel",
-    "codeLabel": "Sekssifret kode",
-    "verify": "Bekreft",
-    "invalidCode": "Feil kode. Prøv igjen.",
-    "enrollFailed": "Kunne ikke slå på tofaktor. Prøv igjen.",
-    "whyAdmin": "Tofaktor kreves for administratorer fordi rollen styrer personvern og forespørsler fra registrerte.",
-    "unavailable": "Tofaktor er ikke slått på for dette prosjektet. Kontakt den som satte det opp."
   }
 }

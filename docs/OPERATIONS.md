@@ -26,43 +26,45 @@ two secrets are typed once and never committed.
    SECURITY DEFINER RPCs). Kept here as the record of what was applied and how
    to reproduce it on a fresh project: apply each file in order, then
    `insert into supabase_migrations.schema_migrations (version, name) values …`.
-2. **TOTP in Auth** — Dashboard → Authentication → Multi-factor authentication →
-   TOTP enabled. BEFORE the first administrator signs in (see below).
-3. **Leaked-password protection** — Dashboard → Authentication → Passwords →
+2. **Leaked-password protection** — Dashboard → Authentication → Passwords →
    HaveIBeenPwned on. Verified by a sign-up attempt with `password123` being
-   refused.
-4. **Sign-up rate limit** — Dashboard → Authentication → Rate Limits: sign-ups
-   per hour per IP set (the app-side limiter is per instance and is not the
-   durable one).
-5. **Turnstile** — Cloudflare → Turnstile → new widget for the production
-   hostname; set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` on
-   Vercel (Production). With both present the splash renders the widget and the
-   two public actions verify the token; with either missing the check is
-   skipped, which is right locally and wrong in production. Verified by the
-   widget appearing on `/` after the next deploy.
-6. **`SUPABASE_SERVICE_ROLE_KEY`** — Dashboard → Project Settings → API →
-   service_role, into `.env.local` on the machine that runs the seeds (never
-   into Vercel for the app: the app does not use it at request time, only the
-   scripts do). Then `npm run seed:i18n` against production, so `ui_messages`
-   carries the Phase 6 and 7 keys. Verified by the translation editor listing
-   the `mfa` namespace and by no raw `namespace.key` on any screen.
-7. **Entra ID** — the steps under "Entra ID SSO" below: app registration,
+   refused. (No code reads this; Auth enforces it at sign-up and password change.)
+3. **`SUPABASE_SERVICE_ROLE_KEY`, then seed i18n** — Dashboard → Project
+   Settings → API → service_role, into `.env.local` on the machine that runs
+   the seeds (never into Vercel for the app: the app does not use it at request
+   time, only the scripts do). Then `npm run seed:i18n` against production, so
+   `ui_messages` carries the Phase 6 and 7 keys. Verified by no raw
+   `namespace.key` on any screen.
+4. **Turnstile + sign-up rate limit** — Cloudflare → Turnstile → new widget for
+   the production hostname; set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
+   `TURNSTILE_SECRET_KEY` on Vercel (Production). With both present the splash
+   renders the widget and the two public actions verify the token; with either
+   missing the check is skipped, which is right locally and wrong in production.
+   In the same visit set Dashboard → Authentication → Rate Limits: sign-ups per
+   hour per IP (the app-side limiter is per instance, not the durable one).
+   Verified by the widget appearing on `/` after the next deploy.
+5. **Entra ID** — the steps under "Entra ID SSO" below: app registration,
    client id + secret + tenant into Dashboard → Authentication → Providers →
    Azure. Verified by "Logg inn med Entra ID" appearing on `/logg-inn` within
    five minutes.
-8. **Production load test** — `scripts/verify/load.ts` is `--local` only
+6. **Production load test** — `scripts/verify/load.ts` is `--local` only
    because it submits real responses. Running it against production needs a
-   throwaway survey in a throwaway organisation and an explicit go-ahead; it
-   is not something to run against a live tenant. Say the word and it gets a
-   `--remote` mode that refuses to run without a survey id you name.
+   throwaway survey in a throwaway organisation and an explicit go-ahead, and
+   a window agreed first; it is not something to run against a live tenant. It
+   gets a `--remote` mode that refuses to run without a survey id you name.
+
+Administrator MFA (Q14) is deliberately NOT on this list: it is deferred
+(docs/DEVIATIONS.md D27), so there is nothing to enable and no lockout hazard —
+no "enable TOTP before the first admin signs in" step any more.
 
 ### The pre-launch gate — why (Q5, Q14)
 
-Items 2–5 above are one decision, not four: administrator MFA (Q14), leaked-
-password protection (Q14), rate limiting on the public sign-up and demo
-endpoints (Q5 amended), and Turnstile on `/` (Q5 amended). Q14's deferral
-named "before the first real organisation" as its trigger, and Phase 7 is that
-point: the app enforces MFA again (D27); the two Auth settings are what let it.
+Leaked-password protection, rate limiting on the public sign-up and demo
+endpoints (Q5 amended), and Turnstile on `/` (Q5 amended) belong to one
+decision. Administrator MFA (Q14) was part of it until Phase 7 deferred it
+again (D27); its re-enable trigger — the first real organisation, or real
+respondent data in prod — is unchanged and recorded in DECISIONS.md, so it
+rejoins this gate when the code is restored.
 
 ### Entra ID SSO (Phase 6)
 
@@ -95,36 +97,19 @@ administrator signs in with a password (or asks for a magic link), turns the
 switch off, and everyone can sign in with passwords again. Nobody at HeiTuva
 needs to touch the database.
 
-### Administrator MFA and leaked-password protection (Phase 7, DECISIONS Q14)
+### Leaked-password protection (Phase 7, DECISIONS Q14)
 
-Both were deferred until the first real organisation; Phase 7 turns them on.
-The app side is code (D27): an administrator whose session is not aal2 is held
-at `/sikkerhet` — enrol, then confirm a six-digit code — and every
-administrator-only server action re-checks the level. Two Auth settings on the
-project make that work, and the ORDER matters:
+Dashboard → Authentication → Passwords → Leaked password protection
+(HaveIBeenPwned) → on. No code reads this; Auth refuses a password that appears
+in a known breach at sign-up and at password change. Verified on production by
+attempting a sign-up with `password123` and confirming it is refused. HIBP is a
+hosted feature, so it is verified on production only.
 
-1. Supabase Dashboard → Authentication → Multi-factor authentication → enable
-   **TOTP** (App Authenticator). Do this BEFORE the first administrator signs
-   in: with enforcement in code and enrolment off in Auth, the first
-   administrator is held at `/sikkerhet` on a screen whose enrol call returns
-   422 — the lock-out D27 recorded on 2026-09-03. The screen says so
-   ("Tofaktor er ikke slått på for dette prosjektet"), but nobody can act on it
-   from inside.
-2. Supabase Dashboard → Authentication → Passwords → **Leaked password
-   protection** (HaveIBeenPwned) → on. No code reads this; Auth refuses a
-   password that appears in a known breach at sign-up and at password change.
-
-Verification: sign in as an administrator on a fresh session and confirm the
-redirect to `/sikkerhet`; enrol; confirm `/administrasjon` opens afterwards.
-Then try to sign up with `password123` and confirm Auth refuses it. On the
-local stack the harness does the first half (`npm run seed:mfa` after
-`seed:demo`, and the visual suite pins the screen); HIBP is a hosted feature
-and is verified on production only.
-
-Recovery when an administrator loses their authenticator: Supabase Dashboard →
-Authentication → Users → the user → remove the factor. Their next sign-in
-lands on `/sikkerhet` to enrol again. Record it in the audit log by hand — the
-factor removal happens outside the app.
+Administrator MFA (Q14) was to sit beside this control, but it is deferred
+again (docs/DEVIATIONS.md D27): no `/sikkerhet` gate, nothing to enable in Auth,
+and Supabase Auth's TOTP capability is left available but not required. When
+Q14 is re-enabled, this is where the "enable TOTP enrolment before the first
+administrator signs in" step returns.
 
 ### SMS via LINK Mobility (Phase 6)
 

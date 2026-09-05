@@ -24,7 +24,7 @@ page.on('response', (r) => {
 try {
   await signIn(page, 'administrator', BASE)
   // gotoRoute, not goto: the MFA redirect is issued on the next request, so a
-  // plain navigation can land on /sikkerhet instead of the page under test.
+  // plain navigation used to be able to land on /sikkerhet; that gate is gone (Q14 deferred).
   await gotoRoute(page, '/administrasjon', 'administrator', BASE)
 
   const marker = `Storgata ${Math.floor(Math.random() * 900) + 100}, 0155 Oslo`

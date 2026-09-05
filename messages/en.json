@@ -1356,18 +1356,5 @@
     "dpa8P": "The controller may request documentation of compliance and may, once a year with 30 days' notice, carry out or commission an independent audit.",
     "dpa9H": "Term, deletion and signature",
     "dpa9P": "This agreement runs for the life of the customer agreement. On termination all personal data is deleted no later than 30 days after the controller has exported it, unless law requires longer retention. A signed version of this agreement with the organisation's name and date is issued at contract and is available under Administration → Privacy and GDPR → Documentation."
-  },
-  "mfa": {
-    "enrollTitle": "Turn on two-factor",
-    "enrollSub": "Scan the QR code with your authenticator app, or enter the key manually.",
-    "verifyTitle": "Confirm with your authenticator app",
-    "verifySub": "Enter the six-digit code from your app.",
-    "secretLabel": "Key",
-    "codeLabel": "Six-digit code",
-    "verify": "Confirm",
-    "invalidCode": "Wrong code. Try again.",
-    "enrollFailed": "Could not turn on two-factor. Try again.",
-    "whyAdmin": "Two-factor is required for administrators because the role controls privacy settings and data-subject requests.",
-    "unavailable": "Two-factor is not enabled for this project. Contact whoever set it up."
   }
 }

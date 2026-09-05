@@ -13,7 +13,6 @@
     "seed:i18n": "tsx scripts/seed-i18n.ts",
     "gen:i18n": "tsx scripts/gen-i18n-types.ts",
     "seed:demo": "tsx scripts/seed-demo.ts --local",
-    "seed:mfa": "tsx scripts/seed-mfa.ts --local",
     "verify:db": "vitest run tests/invariants tests/db",
     "verify:attack": "tsx scripts/verify/attack.ts",
     "verify:roundtrip": "tsx scripts/verify/roundtrip.ts --local",

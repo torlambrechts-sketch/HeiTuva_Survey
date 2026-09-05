@@ -1,19 +1,16 @@
-import { redirect } from 'next/navigation'
 import { requireViewer } from '@/lib/auth/session'
-import { adminMfaSatisfied } from '@/lib/auth/mfa'
 import { AppHeader } from '@/components/AppHeader'
 
 /** Every route in this group is signed-in-only. requireViewer redirects to the
  *  login screen, and middleware already blocks the request before this runs —
  *  belt and braces, because a missed gate here leaks org data. */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  // DECISIONS Q14 is now a DEFERRAL: administrator MFA is not enforced, so
+  // there is no assurance-level gate here. Supabase Auth still supports TOTP —
+  // the capability is untouched — it is simply not required at login. The
+  // re-enable trigger is recorded in DECISIONS.md: the first real organisation,
+  // or any real respondent data in prod, whichever comes first.
   const viewer = await requireViewer()
-
-  // DECISIONS Q14, re-enabled in Phase 7: administrators must clear TOTP. This
-  // redirect protects the screens; the same check is repeated in the
-  // administrator-only server actions, which are reachable without ever
-  // rendering a layout.
-  if (viewer.role === 'administrator' && !(await adminMfaSatisfied())) redirect('/sikkerhet')
 
   return (
     <>
