@@ -7,9 +7,24 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
 import { ENTRA_PROVIDER, entraAvailable } from '@/lib/auth/entra'
+import { adminMfaSatisfied } from '@/lib/auth/mfa'
 import { audit } from '@/lib/auth/audit'
-import type { AdminResult } from './types'
+import type { AdminError, AdminResult } from './types'
 import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
+
+/**
+ * The break-glass rule (migration 0029) is a pair of triggers, and a trigger
+ * refuses with a message rather than a status. Reading the message here is
+ * what lets the screen say WHY rather than "Kunne ikke lagre": the rule is
+ * enforced in the database, so the same refusal can surface from any of the
+ * three writes it guards (the option, a role change, a deactivation).
+ */
+function dbError(error: { code?: string; message: string }): AdminError {
+  if (error.message.includes('sso_last_break_glass')) return 'sso_last_break_glass'
+  if (error.message.includes('sso_no_break_glass')) return 'sso_no_break_glass'
+  if (error.code === '23505') return 'duplicate'
+  return 'save_failed'
+}
 
 /**
  * Every write here is administrator-only. That is enforced by RLS in the
@@ -23,6 +38,9 @@ async function requireAdmin() {
   const viewer = await requireViewer()
   if (viewer.role !== 'administrator') return null
   // A server action is a POST endpoint: it does not go through the layout that
+  // redirects an aal1 administrator to /sikkerhet, so the MFA requirement has
+  // to be re-checked at the write itself or it is decorative (DECISIONS Q14).
+  if (!(await adminMfaSatisfied())) return null
   return viewer
 }
 
@@ -150,21 +168,36 @@ export async function setOption(key: string, value: boolean): Promise<AdminResul
   const parsed = OptionKey.safeParse(key)
   if (!parsed.success || typeof value !== 'boolean') return { ok: false, error: 'invalid' }
 
+  const supabase = await createClient()
+
   /*
     "Pålogging med Entra ID (SSO) — deaktiverer passordpålogging" (Phase 6).
-    Turning it ON has two preconditions, both about not stranding people:
-    Auth must actually accept Entra sign-ins, or nobody could ever get in; and
-    the administrator flipping it must themselves be signed in through Entra,
-    or the next request would sign them out of the organisation they just
-    locked. Turning it OFF is always allowed — whoever can reach this screen
-    can undo it.
+    Turning it ON has three preconditions, all about not stranding people:
+    Auth must actually accept Entra sign-ins, or nobody could ever get in; the
+    organisation must keep at least one active administrator who can sign in
+    WITHOUT Entra (the break-glass rule, decision 2 of the Phase 6 acceptance —
+    migration 0029 refuses the update otherwise, this check is what lets the
+    screen say so before the attempt); and the administrator flipping it must
+    either be signed in through Entra or be that exempt administrator, or the
+    next request would sign them out of the organisation they just locked.
+    Turning it OFF is always allowed — whoever can reach this screen can undo
+    it.
   */
   if (parsed.data === 'sso' && value) {
     if (!(await entraAvailable())) return { ok: false, error: 'sso_unavailable' }
-    if (admin.provider !== ENTRA_PROVIDER) return { ok: false, error: 'sso_self_lockout' }
+    const { count } = await supabase
+      .from('org_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', admin.orgId)
+      .eq('role', 'administrator')
+      .eq('status', 'active')
+      .eq('sso_exempt', true)
+    if ((count ?? 0) === 0) return { ok: false, error: 'sso_no_break_glass' }
+    if (admin.provider !== ENTRA_PROVIDER && !admin.ssoExempt) {
+      return { ok: false, error: 'sso_self_lockout' }
+    }
   }
 
-  const supabase = await createClient()
   const { data: org } = await supabase.from('organizations').select('options').eq('id', admin.orgId).single()
 
   const options = { ...((org?.options as Record<string, boolean> | null) ?? {}) }
@@ -174,7 +207,7 @@ export async function setOption(key: string, value: boolean): Promise<AdminResul
   const { error } = await supabase.from('organizations').update({ options }).eq('id', admin.orgId)
   if (error) {
     console.error(`setOption(${parsed.data}) failed: ${error.message}`)
-    return { ok: false, error: 'save_failed' }
+    return { ok: false, error: dbError(error) }
   }
 
   // Audited like the privacy toggles: `sso` changes who can get in at all, and
@@ -239,7 +272,7 @@ export async function setMemberRole(memberId: string, role: string): Promise<Adm
   const { error } = await supabase.from('org_members').update({ role: parsed.data }).eq('id', memberId)
   if (error) {
     console.error(`setMemberRole failed: ${error.message}`)
-    return { ok: false, error: 'save_failed' }
+    return { ok: false, error: dbError(error) }
   }
 
   await audit(admin.orgId, 'role.change', before?.email ?? memberId, {
@@ -274,13 +307,49 @@ export async function setMemberStatus(memberId: string, active: boolean): Promis
 
   const status = active ? 'active' : 'inactive'
   const { error } = await supabase.from('org_members').update({ status }).eq('id', memberId)
-  if (error) return { ok: false, error: 'save_failed' }
+  if (error) return { ok: false, error: dbError(error) }
 
   await audit(admin.orgId, 'member.status', before?.email ?? memberId, {
     from: before?.status,
     to: status,
   })
   revalidatePath('/administrasjon')
+  return { ok: true }
+}
+
+/**
+ * "Kan logge inn uten Entra ID" — the break-glass mark (D82, decision 2).
+ *
+ * Only an administrator's row may carry it; the exemption is how the
+ * organisation keeps a way back into its own settings, not a per-person way
+ * around the policy. Taking it off the last exempt administrator while SSO is
+ * on is refused by the database (migration 0029) and reported as such.
+ */
+export async function setSsoExempt(memberId: string, value: boolean): Promise<AdminResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+  if (!z.string().uuid().safeParse(memberId).success || typeof value !== 'boolean') {
+    return { ok: false, error: 'invalid' }
+  }
+
+  const supabase = await createClient()
+  const { data: before } = await supabase
+    .from('org_members')
+    .select('sso_exempt, email, role, org_id')
+    .eq('id', memberId)
+    .single()
+  if (!before || before.org_id !== admin.orgId) return { ok: false, error: 'invalid' }
+  if (before.role !== 'administrator') return { ok: false, error: 'invalid' }
+
+  const { error } = await supabase.from('org_members').update({ sso_exempt: value }).eq('id', memberId)
+  if (error) {
+    console.error(`setSsoExempt failed: ${error.message}`)
+    return { ok: false, error: dbError(error) }
+  }
+
+  await audit(admin.orgId, 'member.sso_exempt', before.email, { from: before.sso_exempt, to: value })
+  revalidatePath('/administrasjon')
+  revalidatePath('/', 'layout')
   return { ok: true }
 }
 

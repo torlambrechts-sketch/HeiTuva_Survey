@@ -8,34 +8,57 @@ local commands that reproduce them.
 Migrations cover schema, RLS, functions and cron. These are auth-service
 settings and have to be set on the project itself.
 
-### TOTP MFA — deferred (DECISIONS Q14)
+### The pre-launch gate — what the operator does (Phase 7c)
 
-Administrator MFA is **not enforced**: Q14 was amended to a deferral with a named
-re-enable trigger (the first real organisation, or any real respondent data in
-prod, whichever comes first). The `/sikkerhet` gate and the aal2 requirement in
-`requireAdmin()` were removed with it (migration 0009 dropped the flag). Supabase
-Auth still supports TOTP; nothing in the app requires it. When the trigger
-fires, the work is: re-add the aal2 check in `app/(app)/layout.tsx` and
-`requireAdmin()`, enable TOTP in Dashboard → Authentication → Multi-Factor
-Authentication, and turn on leaked-password protection in the same visit — the
-advisor lists it as a WARN today for the same deferral.
+Everything the app cannot do for itself, in the order to do it. Each item names
+where it is verified afterwards. The migrations are applied from this
+repository; the settings are clicks in the Supabase and Vercel dashboards; the
+two secrets are typed once and never committed.
 
-### The pre-launch gate (all four together)
+1. **Apply the Phase 7 migrations to `heituva-prod`** — `0029_sso_break_glass`,
+   `0030_split_for_all_policies`, `0031_ui_messages_org_lang_idx`. Through the
+   Supabase MCP when it is connected (`apply_migration`, then the ledger rows in
+   `supabase_migrations.schema_migrations`), or by pasting each file into the SQL
+   editor in order. Verified by `select version from supabase_migrations.schema_migrations
+   order by 1 desc limit 3` and by the performance advisors reporting no
+   `multiple_permissive_policies` rows.
+2. **TOTP in Auth** — Dashboard → Authentication → Multi-factor authentication →
+   TOTP enabled. BEFORE the first administrator signs in (see below).
+3. **Leaked-password protection** — Dashboard → Authentication → Passwords →
+   HaveIBeenPwned on. Verified by a sign-up attempt with `password123` being
+   refused.
+4. **Sign-up rate limit** — Dashboard → Authentication → Rate Limits: sign-ups
+   per hour per IP set (the app-side limiter is per instance and is not the
+   durable one).
+5. **Turnstile** — Cloudflare → Turnstile → new widget for the production
+   hostname; set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` on
+   Vercel (Production). With both present the splash renders the widget and the
+   two public actions verify the token; with either missing the check is
+   skipped, which is right locally and wrong in production. Verified by the
+   widget appearing on `/` after the next deploy.
+6. **`SUPABASE_SERVICE_ROLE_KEY`** — Dashboard → Project Settings → API →
+   service_role, into `.env.local` on the machine that runs the seeds (never
+   into Vercel for the app: the app does not use it at request time, only the
+   scripts do). Then `npm run seed:i18n` against production, so `ui_messages`
+   carries the Phase 6 and 7 keys. Verified by the translation editor listing
+   the `mfa` namespace and by no raw `namespace.key` on any screen.
+7. **Entra ID** — the steps under "Entra ID SSO" below: app registration,
+   client id + secret + tenant into Dashboard → Authentication → Providers →
+   Azure. Verified by "Logg inn med Entra ID" appearing on `/logg-inn` within
+   five minutes.
+8. **Production load test** — `scripts/verify/load.ts` is `--local` only
+   because it submits real responses. Running it against production needs a
+   throwaway survey in a throwaway organisation and an explicit go-ahead; it
+   is not something to run against a live tenant. Say the word and it gets a
+   `--remote` mode that refuses to run without a survey id you name.
 
-These are deliberately off and belong to one decision, not four:
+### The pre-launch gate — why (Q5, Q14)
 
-1. Administrator MFA (Q14, above).
-2. Leaked-password protection (Q14; Dashboard → Authentication → Passwords).
-3. Rate limiting on the public sign-up and demo endpoints (Q5 amended). The
-   app-side limiter in `lib/ratelimit.ts` runs per instance; the durable limit
-   is Supabase Auth's own (Dashboard → Authentication → Rate Limits: sign-ups
-   per hour per IP) and must be set there.
-4. Cloudflare Turnstile on `/` (Q5 amended). Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-   and `TURNSTILE_SECRET_KEY` on Vercel; with both present the splash renders
-   the widget and the two public actions verify the token server-side. With
-   either missing the widget is not rendered and the check is skipped — which
-   is the correct local behaviour and the wrong production one, so the presence
-   of both keys on Vercel is part of this gate.
+Items 2–5 above are one decision, not four: administrator MFA (Q14), leaked-
+password protection (Q14), rate limiting on the public sign-up and demo
+endpoints (Q5 amended), and Turnstile on `/` (Q5 amended). Q14's deferral
+named "before the first real organisation" as its trigger, and Phase 7 is that
+point: the app enforces MFA again (D27); the two Auth settings are what let it.
 
 ### Entra ID SSO (Phase 6)
 
@@ -51,8 +74,53 @@ admin SSO switch only when Auth reports `external.azure`. To enable it:
 3. Nothing to deploy. The button appears on the next request after the settings
    cache expires (five minutes) or a redeploy.
 
-Turning the org switch ON requires the administrator doing it to be signed in
-through Entra themselves (docs/DEVIATIONS.md D82).
+Turning the org switch ON has two preconditions the screen states when they
+fail (docs/DEVIATIONS.md D82, migration 0029):
+
+- at least one active administrator must be marked "Kan logge inn uten Entra
+  ID" on the same card — the break-glass administrator, who can still sign in
+  with a password or magic link if the directory or the app registration
+  fails. The database refuses the switch otherwise, and refuses removing,
+  demoting or deactivating the last such administrator while the switch is on;
+- the administrator flipping it must be signed in through Entra themselves, or
+  be that exempt administrator — otherwise their next request would sign them
+  out.
+
+Recovering an organisation whose Entra tenant is broken: the break-glass
+administrator signs in with a password (or asks for a magic link), turns the
+switch off, and everyone can sign in with passwords again. Nobody at HeiTuva
+needs to touch the database.
+
+### Administrator MFA and leaked-password protection (Phase 7, DECISIONS Q14)
+
+Both were deferred until the first real organisation; Phase 7 turns them on.
+The app side is code (D27): an administrator whose session is not aal2 is held
+at `/sikkerhet` — enrol, then confirm a six-digit code — and every
+administrator-only server action re-checks the level. Two Auth settings on the
+project make that work, and the ORDER matters:
+
+1. Supabase Dashboard → Authentication → Multi-factor authentication → enable
+   **TOTP** (App Authenticator). Do this BEFORE the first administrator signs
+   in: with enforcement in code and enrolment off in Auth, the first
+   administrator is held at `/sikkerhet` on a screen whose enrol call returns
+   422 — the lock-out D27 recorded on 2026-09-03. The screen says so
+   ("Tofaktor er ikke slått på for dette prosjektet"), but nobody can act on it
+   from inside.
+2. Supabase Dashboard → Authentication → Passwords → **Leaked password
+   protection** (HaveIBeenPwned) → on. No code reads this; Auth refuses a
+   password that appears in a known breach at sign-up and at password change.
+
+Verification: sign in as an administrator on a fresh session and confirm the
+redirect to `/sikkerhet`; enrol; confirm `/administrasjon` opens afterwards.
+Then try to sign up with `password123` and confirm Auth refuses it. On the
+local stack the harness does the first half (`npm run seed:mfa` after
+`seed:demo`, and the visual suite pins the screen); HIBP is a hosted feature
+and is verified on production only.
+
+Recovery when an administrator loses their authenticator: Supabase Dashboard →
+Authentication → Users → the user → remove the factor. Their next sign-in
+lands on `/sikkerhet` to enrol again. Record it in the audit log by hand — the
+factor removal happens outside the app.
 
 ### SMS via LINK Mobility (Phase 6)
 
@@ -173,15 +241,26 @@ forgot the `set search_path` every other function carries. Fixed by migration
 0028. The function touches no table; the exposure was nil, the standard is
 what mattered.
 
-## Known dependency finding
+## Known dependency findings
 
-`npm audit` reports `image-size` (via `pptxgenjs`) — GHSA-w3rx-r6r6-pgpr and
-GHSA-5p2g-fcmc-qvqq, denial of service in the ICNS/JXL/HEIF parsers, range
-`<=2.0.2` with no fixed release published at the time of writing. The vulnerable
-code is reachable only from `addImage`, which the PowerPoint renderer never
-calls; the library's own reference to `image-size` is inside a commented-out
-function. Re-check on each dependency bump; drop this note when a fixed
-`image-size` ships and the override is in place.
+**`image-size` — absent by construction.** pptxgenjs declares it and never
+loads it (its bundle's only reference is a commented-out `require('sizeof')`,
+a different name). The real package carries GHSA-w3rx-r6r6-pgpr and
+GHSA-5p2g-fcmc-qvqq (denial of service in ICNS/JXL/HEIF parsers) with no fixed
+release. Rather than argue it is unreachable, `package.json` `overrides` points
+the dependency at `stubs/image-size`, which npm resolves by omitting the package
+from the tree entirely; `tests/unit/absent-deps.test.ts` asserts it cannot be
+resolved and that a deck still renders. pptxgenjs is neither pinned nor forked.
+If a future pptxgenjs ever loads it, the require fails loudly at startup.
+
+**`postcss` `<=8.5.22` (high) under `next`, and `next` itself (moderate, via
+it)** — GHSA-qx2v-qp2m-jg93, GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp,
+GHSA-r28c-9q8g-f849: XSS through unescaped `</style>` in stringified output,
+and source-map path traversal / file read when PostCSS processes
+attacker-controlled CSS or source maps. In this product PostCSS runs at build
+time over our own stylesheets only; no user input reaches it. The only fix npm
+offers is Next 16.3.4, a major upgrade, which is a decision rather than a
+hardening chore and is recorded as open for Tor.
 
 ## Production migration ledger
 

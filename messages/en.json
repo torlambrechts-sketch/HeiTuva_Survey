@@ -796,7 +796,11 @@
     "langShowSource": "Show Norwegian source",
     "oSsoNotConfigured": "not set up yet",
     "errSsoUnavailable": "Entra ID is not set up for HeiTuva yet, so sign-in cannot require it.",
-    "errSsoSelf": "Sign in with Entra ID yourself first — otherwise you would be signed out on the next request."
+    "errSsoSelf": "Sign in with Entra ID yourself first, or mark yourself under “Can sign in without Entra ID” — otherwise you would be signed out on the next request.",
+    "oSsoBreakGlass": "Can sign in without Entra ID",
+    "oSsoBreakGlassDesc": "At least one active administrator must always be able to sign in with a password or email link, so the organisation can get back in if the directory fails.",
+    "errSsoNoBreakGlass": "First mark at least one active administrator under “Can sign in without Entra ID” — otherwise nobody could recover if Entra ID failed.",
+    "errSsoLastBreakGlass": "This is the last administrator who can sign in without Entra ID. Mark another one first, or turn off the Entra ID requirement."
   },
   "profile": {
     "aboutMe": "About me",
@@ -1311,6 +1315,7 @@
     "noteRobot": "We could not confirm you are human. Reload the page and try again."
   },
   "legal": {
+    "draftNotice": "DRAFT — this text has not yet been reviewed by a lawyer and does not apply as an agreement until it has.",
     "updated": "Last updated 5 September 2026",
     "back": "← Back to the front page",
     "privacyTitle": "Privacy notice",
@@ -1351,5 +1356,18 @@
     "dpa8P": "The controller may request documentation of compliance and may, once a year with 30 days' notice, carry out or commission an independent audit.",
     "dpa9H": "Term, deletion and signature",
     "dpa9P": "This agreement runs for the life of the customer agreement. On termination all personal data is deleted no later than 30 days after the controller has exported it, unless law requires longer retention. A signed version of this agreement with the organisation's name and date is issued at contract and is available under Administration → Privacy and GDPR → Documentation."
+  },
+  "mfa": {
+    "enrollTitle": "Turn on two-factor",
+    "enrollSub": "Scan the QR code with your authenticator app, or enter the key manually.",
+    "verifyTitle": "Confirm with your authenticator app",
+    "verifySub": "Enter the six-digit code from your app.",
+    "secretLabel": "Key",
+    "codeLabel": "Six-digit code",
+    "verify": "Confirm",
+    "invalidCode": "Wrong code. Try again.",
+    "enrollFailed": "Could not turn on two-factor. Try again.",
+    "whyAdmin": "Two-factor is required for administrators because the role controls privacy settings and data-subject requests.",
+    "unavailable": "Two-factor is not enabled for this project. Contact whoever set it up."
   }
 }

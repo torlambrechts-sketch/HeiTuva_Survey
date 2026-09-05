@@ -29,7 +29,7 @@ must never be what silently settles an open question.
 | D1–D11, D13–D24 | See the entries below | Accepted | as noted per entry |
 | D25 | Brukere keeps its row and its inline controls below `md` | **Resolved** — spec corrected; implementation unchanged | docs/RESPONSIVE.md § Data tables |
 | D26 | Question bank adds to the most recent draft | Accepted | see entry below |
-| D27 | DECISIONS Q14 (administrator TOTP) — enforcement removed, not suspended | **Deferred** — Tor's call, 2026-09-04; code and flag deleted, re-enable trigger recorded | DECISIONS Q14 |
+| D27 | DECISIONS Q14 (administrator TOTP) — deferred 2026-09-04, re-enabled in Phase 7 | **Enforced** — the deferral's trigger ("before the first real organisation") is Phase 7; no flag in front of it | DECISIONS Q14 |
 | D28 | Wizard reports the number of questions it will actually create | Accepted | see entry below |
 | D29 | Survey rows link to screens later phases will build | Accepted | see entry below |
 | D30 | Builder spacing grows below `md` so 44px hit areas stop overlapping | Accepted | docs/RESPONSIVE.md rules 2-3 |
@@ -394,47 +394,47 @@ design gives no title for it.
 Revisit when the Builder lands in this phase: if the builder holds an explicit
 "current draft", this should follow it instead.
 
-### D27 — administrator MFA is deferred, and the enforcement is gone
-**Superseded 2026-09-04.** This entry first recorded a *suspension*: Q14 still
-made TOTP mandatory for `administrator`, and `feature_flags.admin_mfa` decided
-whether the mandatory thing ran. DECISIONS Q14 has since changed to a
-**deferral** — "do not build or enforce TOTP" — so the flag and the code it
-gated are both removed, on Tor's instruction, to cut development friction while
-there are no customers and no real data.
+### D27 — administrator MFA: deferred on 2026-09-04, re-enabled in Phase 7
+**Re-enabled in Phase 7 (Tor, Phase 6 acceptance).** DECISIONS Q14's deferral
+named its own trigger — "before the first real organisation is onboarded" —
+and Phase 7 is that point. What was deleted is back, without the flag that
+first suspended it: `lib/auth/mfa.ts`, the `/sikkerhet` enrolment and
+challenge screens (D22), the assurance-level redirect in `app/(app)/layout.tsx`,
+the MFA check in every administrator-only server action (Administrasjon and
+the translation editor), `scripts/seed-mfa.ts`, `tests/db/mfa.ts`,
+`satisfyMfa()` in the Playwright session helper and the pinned `sikkerhet.png`
+baseline. Leaked-password protection is turned on in the same gate
+(docs/OPERATIONS.md).
 
-What was deleted: `lib/auth/mfa.ts`, the `/sikkerhet` enrolment and challenge
-screens, the assurance-level redirect in `app/(app)/layout.tsx`, the
-Administrasjon write gate's MFA check, `scripts/seed-mfa.ts`, `tests/db/mfa.ts`,
-`satisfyMfa()` in the Playwright session helper, the pinned `sikkerhet.png`
-baselines, and the `admin_mfa` flag row and its key
-(`supabase/migrations/20260904000009_drop_admin_mfa_flag.sql`).
+Three things about the shape of it now:
 
-Supabase Auth's MFA capability itself is untouched. It is available; it is
-simply not required at login.
+- **No flag.** The `admin_mfa` row was removed with the code in
+  `20260904000009` and it is not reintroduced: a security requirement that a
+  row can switch off is the state D27 first warned about. Turning Q14 off again
+  is a code change the register has to record.
+- **The gate has one definition.** `adminMfaSatisfied()` reads only the
+  session's assurance level — aal2 is minted by the auth server when a
+  challenge is verified — and every call site uses it, so the layout redirect
+  and the write gates cannot drift apart.
+- **The requirement is tested, and the screen is pinned.** The visual suite
+  signs an administrator in without a factor and asserts the redirect to
+  `/sikkerhet`; the harness enrols the seeded administrator once per stack
+  (`npm run seed:mfa`) and clears the challenge on every sign-in.
 
-Three things about the shape of this:
+Entra ID sign-ins are administrators like any other: Q14 says "role =
+administrator", not "password sessions", and a session from the directory
+still enrols and confirms a factor here. If Tor wants Entra's own second factor
+to count instead, that is a decision for the register, not a quiet exception.
 
-- **The flag went with the code.** A row reading `admin_mfa = true` over a tree
-  that no longer reads it is the worst state a security flag can be in: the
-  register says the control is on and nothing enforces it. Deleting the row
-  means re-enabling Q14 is visibly a code change, not a switch someone believes
-  they already flipped.
-- **The `fails ON` rule survives the flag it was written for.** `lib/flags.ts`
-  still makes `fallback` the caller's to state rather than defaulting to
-  `false`, and still says why: a flag whose OFF position *removes* a control
-  must fail ON. Every key that remains gates optional capability, so every
-  current caller is safe with OFF.
-- **The absence is tested.** `tests/visual/screens.spec.ts` replaces the gate's
-  describe block with the opposite assertion — an administrator reaches
-  `/administrasjon` straight after signing in. A deferral that nothing checks
-  is how a half-removed gate strands the next administrator at a route that no
-  longer exists.
-
-**Re-enable trigger (DECISIONS Q14):** before the first real organisation is
-onboarded, or before prod holds any real respondent data — whichever comes
-first. `AUTHORIZE.md` lists it beside leaked-password protection, which is off
-for the same window, so the two are re-enabled as one task rather than two
-forgotten ones.
+*History.* This entry first recorded a suspension behind `feature_flags.admin_mfa`
+(2026-09-03: App Authenticator was not enabled on `heituva-prod`, so the first
+administrator was held at `/sikkerhet` on a screen whose enrol call could not
+succeed), then a deferral with the flag and the code removed (2026-09-04, to
+cut development friction while there were no customers and no real data). The
+production precondition from the first episode is now an operator step in
+OPERATIONS.md: TOTP enrolment must be enabled in Auth before the first
+administrator signs in, or the gate locks out the only person who could
+unlock it.
 
 ### D28 — the wizard counts the questions it will actually create
 The prototype's count slider runs 2-7 and slices the chosen pack
@@ -1535,6 +1535,25 @@ ID", drawn as the bordered secondary button the splash's panel uses for the
 same thing, and present only when the provider is configured. Enabling the
 provider on production is an operator action — an Entra app registration and
 the Azure provider in Supabase Auth — and is outside what this branch can do.
+
+**Amended in Phase 7 (decision 2 of the Phase 6 acceptance).** Enforcement is
+org-wide, but the organisation must always retain at least one active
+administrator who can authenticate without SSO — losing the ability to
+administer your own compliance data is a worse failure than the one SSO
+enforcement prevents. `org_members.sso_exempt` carries that mark. Migration
+0029 refuses turning the switch on while no active administrator has it
+(`sso_no_break_glass`), and refuses un-exempting, demoting, deactivating or
+deleting the last one while it is on (`sso_last_break_glass`) — as data
+rules, so the service role cannot bypass them either, and written to let
+ordinary maintenance of the row (a rename, a regrouping) through.
+`requireViewer` honours the mark: an exempt administrator's password or
+magic-link session is served; everyone else's is ended as before. The Valg
+card gains a list under the SSO row — "Kan logge inn uten Entra ID", one
+switch per active administrator, drawn with the card's own switch control and
+indented under the option rather than as a card in a card. The self-lockout
+rule relaxes to match: the administrator turning enforcement on must be
+signed in through Entra OR be exempt. Every refusal is shown with its reason,
+which is what the decision asked for.
 
 ### D83 — `/personvern` and `/databehandleravtale` are invented pages
 The splash's footer links to a privacy notice and a data processing agreement

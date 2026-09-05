@@ -1,10 +1,10 @@
 'use server'
 
-import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { audit } from '@/lib/auth/audit'
 import { requireViewer } from '@/lib/auth/session'
-import { ACTIVE_LOCALES, i18nCacheTag, isLocale, type Locale } from '@/lib/i18n/locales'
+import { adminMfaSatisfied } from '@/lib/auth/mfa'
+import { ACTIVE_LOCALES, isLocale, type Locale } from '@/lib/i18n/locales'
 import { createClient } from '@/lib/supabase/server'
 
 export type LangState = {
@@ -44,7 +44,9 @@ function placeholders(value: string): Set<string> {
 
 export async function saveMessage(_prev: LangState, formData: FormData): Promise<LangState> {
   const viewer = await requireViewer()
-  if (viewer.role !== 'administrator') return { error: 'failed' }
+  // Administrator-only, and (DECISIONS Q14) only with the second factor cleared:
+  // a server action never passes through the layout that redirects to /sikkerhet.
+  if (viewer.role !== 'administrator' || !(await adminMfaSatisfied())) return { error: 'failed' }
 
   const parsed = Save.safeParse({
     namespace: formData.get('namespace'),
@@ -111,7 +113,8 @@ export async function saveMessage(_prev: LangState, formData: FormData): Promise
   // holds it anyway. What matters for the trail is who changed which message.
   await audit(viewer.orgId, 'i18n.override', `${namespace}.${key}.${lang}`, { lang, namespace })
 
-  revalidateTag(i18nCacheTag(lang, viewer.orgId))
+  // No cache to invalidate: an organisation's overrides are read per request
+  // (lib/i18n/messages.ts), so the next page already shows this.
   return { saved: `${namespace}.${key}` }
 }
 
@@ -120,7 +123,9 @@ const Reset = Save.omit({ value: true })
 /** Removes the org's override so the shipped copy applies again. */
 export async function resetMessage(_prev: LangState, formData: FormData): Promise<LangState> {
   const viewer = await requireViewer()
-  if (viewer.role !== 'administrator') return { error: 'failed' }
+  // Administrator-only, and (DECISIONS Q14) only with the second factor cleared:
+  // a server action never passes through the layout that redirects to /sikkerhet.
+  if (viewer.role !== 'administrator' || !(await adminMfaSatisfied())) return { error: 'failed' }
 
   const parsed = Reset.safeParse({
     namespace: formData.get('namespace'),
@@ -146,6 +151,7 @@ export async function resetMessage(_prev: LangState, formData: FormData): Promis
   }
 
   await audit(viewer.orgId, 'i18n.reset', `${namespace}.${key}.${lang}`, { lang, namespace })
-  revalidateTag(i18nCacheTag(lang, viewer.orgId))
+  // No cache to invalidate: an organisation's overrides are read per request
+  // (lib/i18n/messages.ts), so the next page already shows this.
   return { saved: `${namespace}.${key}` }
 }

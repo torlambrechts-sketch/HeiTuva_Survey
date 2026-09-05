@@ -249,6 +249,89 @@ describe('(b4) Phase 6 constraints refuse what they exist to refuse', () => {
   })
 })
 
+describe('(b5) SSO break-glass — the organisation can always get back in (D82, migration 0029)', () => {
+  /**
+   * Decision 2 of the Phase 6 acceptance: enforcement is org-wide, but at
+   * least one active administrator must always be able to authenticate
+   * without SSO. Runs with the service role deliberately — this is a data
+   * rule, not a permission, and if the service role could bypass it a script
+   * could lock an organisation out of its own settings.
+   */
+  let org: { id: string }
+  let first: { id: string }
+  let second: { id: string }
+  const on = { sso: true }
+  const off = { sso: false }
+
+  const member = async (row: Record<string, unknown>) => {
+    const { data, error } = await admin().from('org_members').insert(row).select('id').single()
+    if (error) throw new Error(`org_members insert: ${error.message}`)
+    return data as { id: string }
+  }
+
+  beforeAll(async () => {
+    const { data } = await admin().from('organizations').insert({ name: uniq('Org SSO') }).select('id').single()
+    org = data as { id: string }
+    first = await member({ org_id: org.id, email: `${uniq('bg1')}@example.test`, role: 'administrator', status: 'active' })
+    second = await member({ org_id: org.id, email: `${uniq('bg2')}@example.test`, role: 'administrator', status: 'active' })
+  })
+
+  it('turning SSO on while nobody is exempt is refused', async () => {
+    const { error } = await admin().from('organizations').update({ options: on }).eq('id', org.id)
+    expect(error?.message ?? '').toMatch(/sso_no_break_glass/)
+  })
+
+  it('with one exempt active administrator it is accepted', async () => {
+    const mark = await admin().from('org_members').update({ sso_exempt: true }).eq('id', first.id)
+    expect(mark.error).toBeNull()
+    const { error } = await admin().from('organizations').update({ options: on }).eq('id', org.id)
+    expect(error).toBeNull()
+  })
+
+  it('while on, the last exempt administrator cannot be un-exempted', async () => {
+    const { error } = await admin().from('org_members').update({ sso_exempt: false }).eq('id', first.id)
+    expect(error?.message ?? '').toMatch(/sso_last_break_glass/)
+  })
+
+  it('nor demoted, deactivated or deleted', async () => {
+    const demote = await admin().from('org_members').update({ role: 'leser' }).eq('id', first.id)
+    const deactivate = await admin().from('org_members').update({ status: 'inactive' }).eq('id', first.id)
+    const remove = await admin().from('org_members').delete().eq('id', first.id)
+    expect(demote.error?.message ?? '').toMatch(/sso_last_break_glass/)
+    expect(deactivate.error?.message ?? '').toMatch(/sso_last_break_glass/)
+    expect(remove.error?.message ?? '').toMatch(/sso_last_break_glass/)
+  })
+
+  it('but ordinary maintenance of that row passes — the trigger compares what carries meaning', async () => {
+    const { error } = await admin().from('org_members').update({ name: 'Renamed' }).eq('id', first.id)
+    expect(error).toBeNull()
+  })
+
+  it('a second exempt administrator releases the first, and becomes the protected one', async () => {
+    await admin().from('org_members').update({ sso_exempt: true }).eq('id', second.id)
+    const release = await admin().from('org_members').update({ sso_exempt: false }).eq('id', first.id)
+    expect(release.error).toBeNull()
+    const again = await admin().from('org_members').update({ sso_exempt: false }).eq('id', second.id)
+    expect(again.error?.message ?? '').toMatch(/sso_last_break_glass/)
+  })
+
+  it('turning SSO off releases everyone', async () => {
+    const { error: offError } = await admin().from('organizations').update({ options: off }).eq('id', org.id)
+    expect(offError).toBeNull()
+    const { error } = await admin().from('org_members').update({ sso_exempt: false }).eq('id', second.id)
+    expect(error).toBeNull()
+  })
+
+  it('an exemption on a non-administrator counts for nothing', async () => {
+    const leser = await member({
+      org_id: org.id, email: `${uniq('bg3')}@example.test`, role: 'leser', status: 'active', sso_exempt: true,
+    })
+    const { error } = await admin().from('organizations').update({ options: on }).eq('id', org.id)
+    expect(error?.message ?? '').toMatch(/sso_no_break_glass/)
+    await admin().from('org_members').delete().eq('id', leser.id)
+  })
+})
+
 describe('(c) anonymity is structural', () => {
   it('an anonymous response with an invitation_id violates the CHECK', async () => {
     const a = admin()

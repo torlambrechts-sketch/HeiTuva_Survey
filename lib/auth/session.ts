@@ -22,6 +22,14 @@ export type Viewer = {
   provider: string
   /** The org's "Pålogging med Entra ID (SSO)" switch — password sign-in is off. */
   ssoRequired: boolean
+  /**
+   * Break-glass (Phase 6 acceptance, decision 2): an active administrator
+   * marked `sso_exempt` may still sign in with a password or magic link while
+   * `ssoRequired` is on. Only administrators carry it — the exemption exists so
+   * the organisation can always reach its own settings, not as a per-person
+   * opt-out — so the flag is read as false on any other role.
+   */
+  ssoExempt: boolean
 }
 
 /**
@@ -46,7 +54,7 @@ async function readViewer(
 ): Promise<Viewer | null> {
   const { data: member } = await supabase
     .from('org_members')
-    .select('id, org_id, role, name, group_id, organizations(name, default_lang, options)')
+    .select('id, org_id, role, name, group_id, sso_exempt, organizations(name, default_lang, options)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .limit(1)
@@ -84,6 +92,7 @@ async function readViewer(
     groupId: member.group_id,
     provider: providerOf(user),
     ssoRequired: org?.options?.['sso'] === true,
+    ssoExempt: member.role === 'administrator' && member.sso_exempt === true,
   }
 }
 
@@ -107,8 +116,12 @@ export async function requireViewer(): Promise<Viewer> {
       which addresses belong to an SSO organisation. Here the session is real
       and is simply not allowed to continue, so nothing is learned that the
       person did not already have the password for.
+
+      The one exception is the break-glass administrator (`ssoExempt`): the
+      database guarantees at least one exists while the switch is on, and
+      this is where that guarantee is worth something.
     */
-    if (viewer.ssoRequired && viewer.provider !== ENTRA_PROVIDER) {
+    if (viewer.ssoRequired && viewer.provider !== ENTRA_PROVIDER && !viewer.ssoExempt) {
       const supabase = await createClient()
       await supabase.auth.signOut({ scope: 'local' })
       redirect('/logg-inn?feil=sso')

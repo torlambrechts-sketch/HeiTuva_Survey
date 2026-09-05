@@ -11,5 +11,5 @@ export default async function PrivacyPage() {
     heading: t(`privacy${i + 1}H` as 'privacy1H'),
     paragraphs: t(`privacy${i + 1}P` as 'privacy1P').split('\n\n'),
   }))
-  return <LegalPage title={t('privacyTitle')} updated={t('updated')} sections={sections} back={t('back')} />
+  return <LegalPage title={t('privacyTitle')} updated={t('updated')} sections={sections} back={t('back')} draftNotice={t('draftNotice')} />
 }

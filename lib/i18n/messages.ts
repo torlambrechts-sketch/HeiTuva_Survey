@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { SOURCE_LOCALE, i18nCacheTag, type Locale } from './locales'
@@ -25,54 +26,57 @@ const BUNDLED: Record<string, Messages> = {
 }
 
 /**
- * UI copy lives in the `ui_messages` table (data-not-code), seeded from
- * /messages/*.json.
- *
  * Read with the ANON key, not the service role. The i18n_sel policy is
  * `using (true)`, so the anon role can already read every row — using the
  * service role here bought nothing and put an RLS-bypassing client on the hot
- * path of every page render. A sessionless client is also correct because this
- * runs inside unstable_cache, where request cookies are not available.
+ * path of every page render. A sessionless client is also correct because the
+ * shipped layer is read inside unstable_cache, where request cookies are not
+ * available.
  */
-async function fetchMessages(locale: Locale, orgId?: string): Promise<Messages> {
-  const supabase = createSupabaseClient(
+function anonClient() {
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { auth: { persistSession: false } },
   )
+}
+
+type Row = { namespace: string; key: string; value: string }
+
+function intoMessages(rows: Row[]): Messages {
+  const out: Messages = {}
+  for (const row of rows) (out[row.namespace] ??= {})[row.key] = row.value
+  return out
+}
+
+/**
+ * UI copy lives in the `ui_messages` table (data-not-code), seeded from
+ * /messages/*.json. This is the SHIPPED layer: the rows with no org.
+ *
+ * A failed read must NOT throw.
+ *
+ * This ran during `next build`, which prerenders /_not-found, so a build with
+ * no database reachable died with "ui_messages read failed: fetch failed" —
+ * CI has been red since Phase 0 for exactly this reason, and the "CI green to
+ * merge" gate was therefore never satisfiable. It is also the wrong runtime
+ * behaviour: a Supabase blip should not take every page down when the
+ * messages are compiled into the build already.
+ *
+ * So the table is an overlay. Unreachable, and the reader sees the shipped
+ * copy rather than an error page.
+ */
+async function fetchShipped(locale: Locale): Promise<Messages> {
   const base = BUNDLED[locale] ?? {}
-
-  // A failed read must NOT throw.
-  //
-  // This ran during `next build`, which prerenders /_not-found, so a build with
-  // no database reachable died with "ui_messages read failed: fetch failed" —
-  // CI has been red since Phase 0 for exactly this reason, and the "CI green to
-  // merge" gate was therefore never satisfiable. It is also the wrong runtime
-  // behaviour: a Supabase blip should not take every page down when the
-  // messages are compiled into the build already.
-  //
-  // So the table is an overlay. Unreachable, and the reader sees the shipped
-  // copy rather than an error page.
-  type Row = { namespace: string; key: string; value: string; org_id: string | null }
-  let data: Row[] = []
   try {
-    /*
-      Both scopes in one read, ordered so the org's rows are applied last.
-
-      `org_id` NULL is the shipped default (seeded from the JSON above); a row
-      carrying an org id is that organisation's override of one message, written
-      through Administrasjon → Språk. Selecting only the two scopes that can
-      apply — rather than every row and filtering here — keeps a large tenant's
-      overrides out of another tenant's response.
-    */
-    const scope = orgId ? `org_id.is.null,org_id.eq.${orgId}` : 'org_id.is.null'
-    const res = await supabase
+    const res = await anonClient()
       .from('ui_messages')
-      .select('namespace, key, value, org_id')
+      .select('namespace, key, value')
       .eq('lang', locale)
-      .or(scope)
+      .is('org_id', null)
     if (res.error) throw new Error(res.error.message)
-    data = (res.data ?? []) as Row[]
+    // An empty table is not an instruction to render nothing: before the first
+    // seed there are no rows at all, and the bundle is the whole answer.
+    return overlay(base, intoMessages((res.data ?? []) as Row[]))
   } catch (e) {
     console.error(
       `ui_messages read failed for ${locale}; serving the bundled set: ` +
@@ -80,36 +84,68 @@ async function fetchMessages(locale: Locale, orgId?: string): Promise<Messages> 
     )
     return base
   }
-
-  const global: Messages = {}
-  const org: Messages = {}
-  for (const row of data) {
-    const into = row.org_id === null ? global : org
-    ;(into[row.namespace] ??= {})[row.key] = row.value
-  }
-  // An empty table is not an instruction to render nothing: before the first
-  // seed there are no rows at all, and the bundle is the whole answer.
-  return overlay(overlay(base, global), org)
 }
 
-export function getMessages(locale: Locale, orgId?: string) {
-  return unstable_cache(
-    () => fetchMessages(locale, orgId),
-    ['ui_messages', locale, orgId ?? 'global'],
-    {
-      // Two tags: the locale's, which a seed or a migration invalidates for
-      // everyone, and the org's, which the editor invalidates for one tenant
-      // without evicting every other tenant's cache entry.
-      tags: orgId ? [i18nCacheTag(locale), i18nCacheTag(locale, orgId)] : [i18nCacheTag(locale)],
-      // Without an expiry this cache never lets go: after seeding new keys the
-      // running server kept serving the old set and the UI rendered raw
-      // `namespace.key` strings indefinitely. The tags still allow an immediate
-      // revalidate from the translation editor; this is the safety net for
-      // every other path that changes ui_messages out of band (seeds,
-      // migrations, a direct edit in Studio).
-      revalidate: 300,
-    },
-  )()
+/**
+ * The shipped layer for one locale: every key in the build, and slow to change
+ * (a seed, a migration). It sits in the data cache under the locale's tag.
+ */
+function getShippedMessages(locale: Locale): Promise<Messages> {
+  return unstable_cache(() => fetchShipped(locale), ['ui_messages', locale], {
+    tags: [i18nCacheTag(locale)],
+    // Without an expiry this cache never lets go: after seeding new keys the
+    // running server kept serving the old set and the UI rendered raw
+    // `namespace.key` strings indefinitely. The tag still allows an immediate
+    // revalidate from a seed; this is the safety net for every other path that
+    // changes the shipped rows out of band (a migration, a direct edit in
+    // Studio).
+    revalidate: 300,
+  })()
+}
+
+/**
+ * One organisation's overrides — the rows Administrasjon → Språk writes — read
+ * on every request.
+ *
+ * Deliberately NOT in the data cache. `unstable_cache` answers the first read
+ * after `revalidateTag` with the stale entry and refreshes it in the
+ * background, so an administrator who pressed "Lagre" and then navigated could
+ * see the old copy once; the round-trip in scripts/verify/roundtrip.ts caught
+ * exactly that. The set is small (one row per edited message, indexed by
+ * org and language) so a read per request costs less than being wrong once.
+ * `cache` dedupes it within the request; an unreachable database yields no
+ * overrides rather than an error.
+ */
+const fetchOrgOverrides = cache(async (locale: Locale, orgId: string): Promise<Messages> => {
+  try {
+    const res = await anonClient()
+      .from('ui_messages')
+      .select('namespace, key, value')
+      .eq('lang', locale)
+      .eq('org_id', orgId)
+    if (res.error) throw new Error(res.error.message)
+    return intoMessages((res.data ?? []) as Row[])
+  } catch (e) {
+    console.error(
+      `ui_messages overrides read failed for ${locale}; serving the shipped copy: ` +
+        (e instanceof Error ? e.message : String(e)),
+    )
+    return {}
+  }
+})
+
+/**
+ * The shipped copy, then the organisation's overrides on top of it.
+ *
+ * `org_id` NULL is the shipped default (seeded from the JSON above); a row
+ * carrying an org id is that organisation's override of one message. Reading
+ * only the two scopes that can apply — rather than every row and filtering —
+ * keeps a large tenant's overrides out of another tenant's response.
+ */
+export async function getMessages(locale: Locale, orgId?: string): Promise<Messages> {
+  const shipped = await getShippedMessages(locale)
+  if (!orgId) return shipped
+  return overlay(shipped, await fetchOrgOverrides(locale, orgId))
 }
 
 /**

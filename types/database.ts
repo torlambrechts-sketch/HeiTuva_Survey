@@ -788,6 +788,7 @@ export type Database = {
           name: string | null
           org_id: string
           role: "administrator" | "redaktor" | "leser"
+          sso_exempt: boolean
           status: string
           user_id: string | null
         }
@@ -800,6 +801,7 @@ export type Database = {
           name?: string | null
           org_id: string
           role?: "administrator" | "redaktor" | "leser"
+          sso_exempt?: boolean
           status?: string
           user_id?: string | null
         }
@@ -812,6 +814,7 @@ export type Database = {
           name?: string | null
           org_id?: string
           role?: "administrator" | "redaktor" | "leser"
+          sso_exempt?: boolean
           status?: string
           user_id?: string | null
         }

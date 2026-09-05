@@ -421,10 +421,15 @@ async function main() {
     }
 
     /*
-      Entra ID SSO (Phase 6). Auth has no Entra provider on the local stack, so
-      the two things provable here are the two that matter without one: the
-      switch cannot be turned on (nobody could sign in afterwards), and when the
-      option IS on, a password session is ended rather than served.
+      Entra ID SSO (Phase 6) and the break-glass rule (Phase 6 acceptance,
+      decision 2; migration 0029). Auth has no Entra provider on the local
+      stack, so what is provable here is what matters without one: the switch
+      cannot be turned on; the option cannot be forced on in the database while
+      nobody is exempt; the break-glass list is drawn and its switch persists;
+      an exempt administrator's password session is served while the option is
+      on; the last exempt administrator cannot be un-exempted; and once
+      somebody else holds the mark, this administrator's session is ended
+      rather than served.
 
       Last in the file on purpose: the enforcement signs this context out.
     */
@@ -433,13 +438,60 @@ async function main() {
       await page.goto(`${BASE_URL}/administrasjon/valg`, { waitUntil: 'domcontentloaded' })
       await page.waitForLoadState('load')
       const sso = page.getByRole('switch', { name: 'Pålogging med Entra ID (SSO)' })
+      const mine = page.getByRole('switch', { name: `Kan logge inn uten Entra ID: ${PERSONAS.administrator.name}` })
       show(
         'options.sso (switch)',
-        (await sso.isDisabled()) && (await page.getByText('ikke satt opp ennå').count()) > 0,
-        { disabled_without_provider: await sso.isDisabled() },
+        (await sso.isDisabled()) && (await page.getByText('ikke satt opp ennå').count()) > 0 && (await mine.count()) === 1,
+        { disabled_without_provider: await sso.isDisabled(), break_glass_row_drawn: (await mine.count()) === 1 },
       )
 
-      await svc.from('organizations').update({ options: { reminders: true, weekly_digest: true, allow_self_serve: false, sso: true, brand_mail: true } }).eq('id', orgId)
+      const on = { reminders: true, weekly_digest: true, allow_self_serve: false, sso: true, brand_mail: true }
+      const off = { ...on, sso: false }
+      const { data: me } = await svc
+        .from('org_members').select('id, sso_exempt').eq('org_id', orgId).eq('email', PERSONAS.administrator.email).single()
+
+      // Nobody exempt: the database refuses the option, whoever asks.
+      await svc.from('org_members').update({ sso_exempt: false }).eq('org_id', orgId)
+      const refused = await svc.from('organizations').update({ options: on }).eq('id', orgId)
+      const { data: notOn } = await svc.from('organizations').select('options').eq('id', orgId).single()
+
+      // The break-glass switch through the UI, read back.
+      await mine.click()
+      await page.waitForFunction(() => document.querySelector('[role="alert"]') === null, undefined, { timeout: 5_000 }).catch(() => {})
+      let exempt = false
+      for (let i = 0; i < 20 && !exempt; i++) {
+        const { data } = await svc.from('org_members').select('sso_exempt').eq('id', me!.id).single()
+        exempt = data?.sso_exempt === true
+        if (!exempt) await page.waitForTimeout(250)
+      }
+      show(
+        'options.sso (break-glass required)',
+        (refused.error?.message ?? '').includes('sso_no_break_glass') &&
+          (notOn?.options as { sso?: boolean })?.sso !== true && exempt,
+        { refused: refused.error?.message?.slice(0, 40), stayed_off: (notOn?.options as { sso?: boolean })?.sso !== true, exempt_persisted: exempt },
+      )
+
+      // Exempt, and the option on: this password session is served.
+      const forced = await svc.from('organizations').update({ options: on }).eq('id', orgId)
+      const served = await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const servedPath = new URL(page.url()).pathname
+      // …and the last exempt administrator is protected while it is on.
+      const lastOne = await svc.from('org_members').update({ sso_exempt: false }).eq('id', me!.id)
+      show(
+        'options.sso (break-glass honoured)',
+        forced.error === null && served?.status() === 200 && servedPath === '/oversikt' &&
+          (lastOne.error?.message ?? '').includes('sso_last_break_glass'),
+        { forced_on: forced.error === null, served: servedPath, last_protected: lastOne.error?.message?.slice(0, 40) },
+      )
+
+      // A second exempt administrator takes over the mark; this one is now
+      // an ordinary password session, and enforcement ends it.
+      const { data: other } = await svc.from('org_members').insert({
+        org_id: orgId, email: 'breakglass@nordiskstudio.test', name: 'Break Glass',
+        role: 'administrator', status: 'active', sso_exempt: true,
+      }).select('id').single()
+      const released = await svc.from('org_members').update({ sso_exempt: false }).eq('id', me!.id)
       const res = await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
       await page.waitForLoadState('load')
       const landed = new URL(page.url())
@@ -448,12 +500,14 @@ async function main() {
       const stillOut = new URL(page.url()).pathname.startsWith('/logg-inn')
       show(
         'options.sso (enforced)',
-        res?.status() === 200 &&
+        released.error === null && res?.status() === 200 &&
           landed.pathname === '/logg-inn' && landed.searchParams.get('feil') === 'sso' &&
           notice.includes('Entra ID') && stillOut,
         { landed: `${landed.pathname}?${landed.searchParams}`, told: notice.slice(0, 60), session_ended: stillOut, second: again?.status() },
       )
-      await svc.from('organizations').update({ options: { reminders: true, weekly_digest: true, allow_self_serve: false, sso: false, brand_mail: true } }).eq('id', orgId)
+      await svc.from('organizations').update({ options: off }).eq('id', orgId)
+      if (other) await svc.from('org_members').delete().eq('id', other.id)
+      await svc.from('org_members').update({ sso_exempt: me?.sso_exempt ?? false }).eq('id', me!.id)
       await page.close()
     }
 

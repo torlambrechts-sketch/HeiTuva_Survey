@@ -19,6 +19,10 @@ export type AdminError =
   | 'sso_unavailable'
   /** The administrator is not themselves signed in through Entra — the next request would sign them out. */
   | 'sso_self_lockout'
+  /** No active administrator is marked able to sign in without SSO (break-glass, D82). */
+  | 'sso_no_break_glass'
+  /** This is the last such administrator, and SSO is on — the database refused the change. */
+  | 'sso_last_break_glass'
 
 export type AdminResult = { ok: true } | { ok: false; error: AdminError }
 
@@ -31,4 +35,6 @@ export const ADMIN_ERROR_KEY: Record<AdminError, string> = {
   last_admin: 'errLastAdmin',
   sso_unavailable: 'errSsoUnavailable',
   sso_self_lockout: 'errSsoSelf',
+  sso_no_break_glass: 'errSsoNoBreakGlass',
+  sso_last_break_glass: 'errSsoLastBreakGlass',
 }

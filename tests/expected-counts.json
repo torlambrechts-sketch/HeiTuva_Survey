@@ -2,7 +2,7 @@
   "tests/db/access.test.ts": 19,
   "tests/db/administration.test.ts": 22,
   "tests/invariants/duty-signing.test.ts": 21,
-  "tests/invariants/invariants.test.ts": 46,
+  "tests/invariants/invariants.test.ts": 54,
   "tests/invariants/k-surface.test.ts": 35,
   "tests/invariants/policy-coverage.test.ts": 54,
   "tests/invariants/report-composition.test.ts": 37,
@@ -12,5 +12,6 @@
   "tests/unit/i18n-overlay.test.ts": 5,
   "tests/unit/import.test.ts": 15,
   "tests/unit/quality.test.ts": 22,
-  "tests/unit/results-present.test.ts": 17
+  "tests/unit/results-present.test.ts": 17,
+  "tests/unit/absent-deps.test.ts": 2
 }

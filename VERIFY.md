@@ -226,3 +226,5 @@ No fixes until I've seen the list.
 - **Mutation check** — the only way to know a test suite can fail. Green tests over broken code are worse than no tests, because they buy false confidence.
 - **Model-eye visual comparison, not just pixel-diff** — your implementation's DOM differs from the prototype's, so pixel-diff against the design is noise; pixel-diff belongs against its own previous screenshots for regression.
 - **"Where your judgement is weakest"** — invites the model to surface its own uncertainty rather than smoothing over it, which is where your review time is best spent.
+- **What Gate 5a3 does NOT prove (recorded after Phase 6, no new check)** — 5a3 proves a denial test *exists* for every surface, not that the test's scope is *right*. `ui_messages` was cross-tenant from Phase 1 to Phase 6 behind a green 5a3: its policy asked "is the caller an administrator of any org" and the tests asked the same question. A gate that enumerates surfaces cannot see that a predicate is too wide; only reading the policy against the table's ownership can. The apparatus stays frozen; this is its documented limit.
+

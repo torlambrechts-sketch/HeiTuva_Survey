@@ -1,0 +1,8 @@
+{
+  "name": "image-size",
+  "version": "0.0.0-heituva-absent",
+  "description": "Deliberately empty. pptxgenjs declares image-size but never loads it; the real package carries unpatched DoS advisories in parsers this product never runs. See docs/OPERATIONS.md, 'Known dependency finding'.",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true
+}

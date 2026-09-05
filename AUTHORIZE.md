@@ -75,9 +75,9 @@ Deliberately not delegated, per CLAUDE.md:
 - Weakening any security invariant — RLS, the k threshold, the anonymity CHECK
 - Key rotation, auth provider changes, billing, project deletion
 
-## Currently disabled auth controls
-Both are off by choice and both should be on before the first real organisation is onboarded (DECISIONS Q14):
-- Administrator MFA — deferred
-- Leaked-password protection — Supabase → Authentication → Passwords → HaveIBeenPwned
+## Auth controls re-enabled in Phase 7
+Both were off by choice until the first real organisation (DECISIONS Q14); Phase 7 turns them back on:
+- Administrator MFA — enforced in code again (`/sikkerhet`, D27). Production precondition: Supabase → Authentication → Multi-factor → TOTP enabled, before the first administrator signs in.
+- Leaked-password protection — Supabase → Authentication → Passwords → HaveIBeenPwned, on.
 
-They are listed together here so re-enabling is one task rather than two forgotten ones.
+They stay listed together so a future change is one task rather than two forgotten ones.

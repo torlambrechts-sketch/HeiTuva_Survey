@@ -11,5 +11,5 @@ export default async function DpaPage() {
     heading: t(`dpa${i + 1}H` as 'dpa1H'),
     paragraphs: t(`dpa${i + 1}P` as 'dpa1P').split('\n\n'),
   }))
-  return <LegalPage title={t('dpaTitle')} updated={t('updated')} sections={sections} back={t('back')} />
+  return <LegalPage title={t('dpaTitle')} updated={t('updated')} sections={sections} back={t('back')} draftNotice={t('draftNotice')} />
 }

@@ -315,6 +315,50 @@ async function main() {
       + 'so Gate 5a3 can prove the dsr_requests policy refuses a cross-org read.',
   })
 
+  // Phase 7a: the four tables 5a3 still reported as PROTECTED BUT UNPROVEN on a
+  // freshly reset stack. Earlier runs happened to leave rows in them; a count
+  // that depends on what the previous run left behind is not a count.
+
+  // dashboard_pins — produced by togglePin, written by the member so
+  // `dashboard_pins_ins` is what admits it.
+  const adminUser = org.members.find((m) => m.role === 'administrator')
+  if (adminUser) {
+    const { error: pinError } = await asAdmin
+      .from('dashboard_pins')
+      .insert({ org_id: org.id, user_id: adminUser.userId, panel_key: 'summary' })
+    if (pinError) throw new Error(`seed dashboard_pins: ${pinError.message}`)
+  }
+
+  // loop_actions — produced by "Lukket sløyfen" on Oversikt, written by the
+  // member so `loop_cud_ins` is what admits it.
+  const { error: loopError } = await asAdmin.from('loop_actions').insert({
+    org_id: org.id,
+    survey_id: above.id,
+    text: 'Sette av tid til dypt arbeid på tirsdager',
+    owner_member_id: adminMember!.id,
+  })
+  if (loopError) throw new Error(`seed loop_actions: ${loopError.message}`)
+
+  // import_jobs and notifications have no producer that a seed can call
+  // (imports are parsed client-side, notifications are not yet emitted), so
+  // these are direct rows, and unmistakably synthetic for the same reason the
+  // DSR row is.
+  await svc.from('import_jobs').insert({
+    org_id: org.id,
+    source: 'csv',
+    status: 'done',
+    total_rows: 0,
+    ok_rows: 0,
+    error_rows: [{ note: 'SYNTHETIC FIXTURE — exists so Gate 5a3 can prove import_jobs refuses a cross-org read.' }],
+    created_by: adminMember!.id,
+  })
+  await svc.from('notifications').insert({
+    org_id: org.id,
+    member_id: adminMember!.id,
+    kind: 'fixture',
+    payload: { note: 'SYNTHETIC FIXTURE — exists so Gate 5a3 can prove notifications refuses a cross-org read.' },
+  })
+
   console.log(`seeded:
   ${ORG_PRIMARY} (${org.id}) — ${org.members.length} members, group ${GROUP_PRIMARY}
   ${ORG_OTHER} (${other.id}) — cross-org isolation fixture
