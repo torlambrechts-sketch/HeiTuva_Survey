@@ -26,6 +26,25 @@ two secrets are typed once and never committed.
    SECURITY DEFINER RPCs). Kept here as the record of what was applied and how
    to reproduce it on a fresh project: apply each file in order, then
    `insert into supabase_migrations.schema_migrations (version, name) values …`.
+   **Phase 8 and 9 — DONE on 2026-09-05, same route:** `0032_threshold_policy`,
+   `0033_survey_token_policy_fields`, `0034_attributed_and_org_policy` applied
+   through the connector, repo versions inserted, ledger reconciled. Verified on
+   prod afterwards: both statutory packs and all four duties carry their locked
+   policy (the migration's UPDATE reached them because prod's packs predate it —
+   D86), the two existing surveys sit at person / 5 / unlocked (no round had been
+   sent, so nothing was locked), `organizations.default_k_threshold` is 5,
+   `app.k_for`, `app.attributed_rows`, `attributed_results`, both survey
+   triggers and the organisation⇒named CHECK exist, `anon` cannot execute
+   `attributed_results`, and no function still references `app.k_threshold()`.
+   Advisors unchanged apart from `attributed_results` joining the by-design
+   "signed-in users can execute SECURITY DEFINER" list. The i18n reseed ran the
+   same day, also through the connector: `SUPABASE_SERVICE_ROLE_KEY` is not on
+   this machine (operator step 3 below is still open), so the exact upsert
+   `scripts/seed-i18n.ts` performs — global rows only, `on conflict (namespace,
+   key, lang, org_key)`, never an organisation's override — was issued as SQL
+   from `messages/*.json`, 1342 keys per language; prod now holds 1357 global
+   rows per language, the extra 15 being keys earlier phases removed from the
+   files, which neither route deletes.
 2. **Leaked-password protection** — Dashboard → Authentication → Passwords →
    HaveIBeenPwned on. Verified by a sign-up attempt with `password123` being
    refused. (No code reads this; Auth enforces it at sign-up and password change.)
@@ -256,6 +275,6 @@ hardening chore and is recorded as open for Tor.
 The Supabase MCP applies migrations under its own timestamps. Every migration
 applied that way has its repo version inserted into
 `supabase_migrations.schema_migrations` afterwards, so `supabase db push` sees
-the ledger the repo expects. Verified 2026-09-05: 56 repo migrations, 0 missing
-on prod. If `db push` ever lists migrations as pending that are in fact applied,
+the ledger the repo expects. Verified 2026-09-05 (after 0034): 62 repo migrations,
+0 missing on prod. If `db push` ever lists migrations as pending that are in fact applied,
 that ledger row is what is missing — do not re-run the migration.
