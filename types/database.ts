@@ -1562,13 +1562,14 @@ export type Database = {
           bounced_at: string | null
           channel: "email" | "link" | "qr" | "sms"
           created_at: string
-          email: string
+          email: string | null
           expires_at: string | null
           group_id: string | null
           id: string
           identity_provider: string | null
           lang: string
           name: string | null
+          phone: string | null
           previous_token_expires_at: string | null
           previous_token_hash: string | null
           reminded_at: string[] | null
@@ -1581,13 +1582,14 @@ export type Database = {
           bounced_at?: string | null
           channel?: "email" | "link" | "qr" | "sms"
           created_at?: string
-          email: string
+          email?: string | null
           expires_at?: string | null
           group_id?: string | null
           id?: string
           identity_provider?: string | null
           lang?: string
           name?: string | null
+          phone?: string | null
           previous_token_expires_at?: string | null
           previous_token_hash?: string | null
           reminded_at?: string[] | null
@@ -1600,13 +1602,14 @@ export type Database = {
           bounced_at?: string | null
           channel?: "email" | "link" | "qr" | "sms"
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string | null
           group_id?: string | null
           id?: string
           identity_provider?: string | null
           lang?: string
           name?: string | null
+          phone?: string | null
           previous_token_expires_at?: string | null
           previous_token_hash?: string | null
           reminded_at?: string[] | null

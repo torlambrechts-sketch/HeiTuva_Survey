@@ -121,17 +121,59 @@ async function main() {
       `${asLeser.status()} · ${leserPdf.length} bytes`,
     )
 
+    // ----------------------------------------------------------------- pptx
+    // Phase 6: the same composition, as a deck, behind feature_flags.pptx_export.
+    // The flag is a ROW for the org, so the gate is proven in both positions
+    // rather than assumed from the seed.
+    const PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    const isDeck = (b: Buffer) =>
+      b.subarray(0, 2).toString() === 'PK' && b.includes('ppt/slides/slide1.xml')
+
+    const pptxFlag = (enabled: boolean) =>
+      svc.from('feature_flags').update({ enabled }).eq('key', 'pptx_export').eq('org_id', org.id)
+    await pptxFlag(false)
+    const flagOff = await page.request.get(`${BASE_URL}/rapporter/${report.id}/pptx`)
+    check('with the flag off the deck route is not there', flagOff.status() === 404, `HTTP ${flagOff.status()}`)
+
+    await pptxFlag(true)
+    // The route reads the flag per request, but the flag reader is cached per
+    // render; a fresh request is a fresh render, so no restart is needed.
+    const asRedaktorDeck = await page.request.get(`${BASE_URL}/rapporter/${report.id}/pptx`)
+    const redaktorDeck = Buffer.from(await asRedaktorDeck.body())
+    check(
+      'with the flag on the redaktør gets a deck',
+      asRedaktorDeck.status() === 200 &&
+        asRedaktorDeck.headers()['content-type'] === PPTX &&
+        isDeck(redaktorDeck),
+      `${asRedaktorDeck.status()} · ${redaktorDeck.length} bytes`,
+    )
+    check(
+      'the deck carries the withheld marker, not a number, for the sub-k rows',
+      redaktorDeck.includes('Skjult') || redaktorDeck.includes('for f'),
+      'suppressed wording present in slide XML',
+    )
+    const asLeserDeck = await leserPage.request.get(`${BASE_URL}/rapporter/${report.id}/pptx`)
+    const leserDeck = Buffer.from(await asLeserDeck.body())
+    check(
+      'a leser gets a deck too, at their own scope',
+      asLeserDeck.status() === 200 && isDeck(leserDeck),
+      `${asLeserDeck.status()} · ${leserDeck.length} bytes`,
+    )
+
     // -------------------------------------------------------------- archived
-    // A leser cannot write to the bucket, so only the redaktør's export is
-    // archived — one row, not two.
+    // A leser cannot write to the bucket, so only the redaktør's exports are
+    // archived — one PDF and one deck, not four rows.
     const { data: exports } = await svc
       .from('report_exports')
       .select('id, format, storage_path')
       .eq('report_id', report.id)
+      .order('format')
     check(
-      'only the writing role archived an export',
-      (exports ?? []).length === 1 && exports![0]!.format === 'pdf',
-      `${(exports ?? []).length} row(s)`,
+      'only the writing role archived its exports',
+      (exports ?? []).length === 2 &&
+        exports![0]!.format === 'pdf' &&
+        exports![1]!.format === 'pptx',
+      `${(exports ?? []).map((e) => e.format).join(',')}`,
     )
     check(
       'the archived path is org-scoped',

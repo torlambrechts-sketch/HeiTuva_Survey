@@ -10,7 +10,7 @@
   "tests/invariants/token-lifecycle.test.ts": 14,
   "tests/unit/engagement.test.ts": 12,
   "tests/unit/i18n-overlay.test.ts": 5,
-  "tests/unit/import.test.ts": 11,
+  "tests/unit/import.test.ts": 15,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/results-present.test.ts": 17
 }

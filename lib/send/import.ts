@@ -13,15 +13,34 @@
  */
 
 export type ImportedRecipient = {
-  email: string
+  /** Absent for a phone-only row: the SMS channel's "skift og felt" case. */
+  email?: string
+  /** E.164 where the shape was recognisable; see `normalizePhone`. */
+  phone?: string
   name?: string
   group?: string
 }
 
 export type ImportOutcome = {
   rows: ImportedRecipient[]
-  /** Lines that looked like data but had no usable address. */
+  /** Lines that looked like data but had no way to reach the person. */
   rejected: { line: string; reason: 'no-email' | 'invalid-email' | 'duplicate' }[]
+}
+
+/**
+ * The same rule as `app.normalize_phone` in migration 0027, in the client so
+ * the import summary can count a phone-only row as reachable BEFORE the send,
+ * rather than the database quietly dropping it. The two must agree; the
+ * database's is the one that decides.
+ */
+export function normalizePhone(raw: string | undefined): string | undefined {
+  let v = (raw ?? '').replace(/[\s\-.()]/g, '')
+  if (!v) return undefined
+  if (v.startsWith('00')) v = `+${v.slice(2)}`
+  if (/^[49][0-9]{7}$/.test(v)) return `+47${v}`
+  if (/^47[49][0-9]{7}$/.test(v)) return `+${v}`
+  if (/^\+[1-9][0-9]{7,14}$/.test(v)) return v
+  return undefined
 }
 
 /**
@@ -37,6 +56,7 @@ const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
 const HEADER_EMAIL = ['e-post', 'epost', 'email', 'e-mail', 'mail', 'adresse']
 const HEADER_NAME = ['navn', 'name', 'fullt navn', 'full name']
 const HEADER_GROUP = ['gruppe', 'group', 'team', 'avdeling', 'department']
+const HEADER_PHONE = ['mobil', 'mobilnummer', 'telefon', 'tlf', 'phone', 'mobile', 'sms']
 
 /** Split one delimited line, honouring double-quoted fields. */
 function splitLine(line: string, delimiter: string): string[] {
@@ -97,33 +117,39 @@ export function parseRecipients(raw: string): ImportOutcome {
   const delimiter = detectDelimiter(lines[0] ?? '')
   const first = splitLine(lines[0] ?? '', delimiter)
   const emailCol = findColumn(first, HEADER_EMAIL)
-  // A header only counts as one if it names an email column AND has no address
-  // in it. A first row of raw addresses is data, not a header.
-  const hasHeader = emailCol >= 0 && !first.some((f) => EMAIL.test(f))
+  // A header only counts as one if it names an email or a phone column AND has
+  // no address in it. A first row of raw addresses is data, not a header.
+  const hasHeader =
+    (emailCol >= 0 || findColumn(first, HEADER_PHONE) >= 0) && !first.some((f) => EMAIL.test(f))
 
   const nameCol = hasHeader ? findColumn(first, HEADER_NAME) : -1
   const groupCol = hasHeader ? findColumn(first, HEADER_GROUP) : -1
+  const phoneCol = hasHeader ? findColumn(first, HEADER_PHONE) : -1
 
-  const add = (email: string, name?: string, group?: string, line = email) => {
+  const add = (email: string, name?: string, group?: string, line = email, phoneRaw?: string) => {
     const cleaned = email.trim().toLowerCase()
-    if (!cleaned) {
-      // A row with a name but a blank address is a row somebody meant to
-      // include. Returning silently made it vanish between the file and the
+    const phone = normalizePhone(phoneRaw)
+    if (!cleaned && !phone) {
+      // A row with a name but no address and no phone is a row somebody meant
+      // to include. Returning silently made it vanish between the file and the
       // recipient list, with the count as the only clue.
       rejected.push({ line, reason: 'no-email' })
       return
     }
-    if (!EMAIL.test(cleaned)) {
+    if (cleaned && !EMAIL.test(cleaned)) {
       rejected.push({ line, reason: 'invalid-email' })
       return
     }
-    if (seen.has(cleaned)) {
+    // One person is one address or one phone, whichever they have.
+    const identity = cleaned || phone!
+    if (seen.has(identity)) {
       rejected.push({ line, reason: 'duplicate' })
       return
     }
-    seen.add(cleaned)
+    seen.add(identity)
     rows.push({
-      email: cleaned,
+      ...(cleaned ? { email: cleaned } : {}),
+      ...(phone ? { phone } : {}),
       ...(name?.trim() ? { name: name.trim() } : {}),
       ...(group?.trim() ? { group: group.trim() } : {}),
     })
@@ -133,7 +159,13 @@ export function parseRecipients(raw: string): ImportOutcome {
     const fields = splitLine(line, delimiter)
 
     if (hasHeader) {
-      add(fields[emailCol] ?? '', fields[nameCol] ?? undefined, fields[groupCol] ?? undefined, line)
+      add(
+        fields[emailCol] ?? '',
+        fields[nameCol] ?? undefined,
+        fields[groupCol] ?? undefined,
+        line,
+        phoneCol >= 0 ? fields[phoneCol] : undefined,
+      )
       continue
     }
 

@@ -40,10 +40,13 @@ export function SendScreen({
   alreadyOpen,
   canSend,
   smsEnabled,
+  orgName,
   groups,
 }: {
   surveyId: string
   title: string
+  /** For the SMS preview — the design's "{{ orgName }} spør: …". */
+  orgName: string
   anonymity: AnonymityMode
   questionCount: number
   alreadyOpen: boolean
@@ -81,15 +84,28 @@ export function SendScreen({
   const toggle = <T,>(list: T[], value: T) =>
     list.includes(value) ? list.filter((x) => x !== value) : [...list, value]
 
+  /** One person is one address or one phone — the parser guarantees at least
+   *  one of them, and this is what chips, de-duplication and removal key on. */
+  const identity = (r: ImportedRecipient) => r.email ?? r.phone ?? ''
+
+  const merge = (incoming: ImportedRecipient[]) =>
+    setRecipients((r) => [
+      ...r,
+      ...incoming.filter((n) => !r.some((x) => identity(x) === identity(n))),
+    ])
+
   const addEmail = () => {
-    const { rows } = parseRecipients(emailDraft)
+    // The single field takes an address or a number; a bare number has no
+    // header to say which column it is, so it is given one.
+    const draft = emailDraft.trim()
+    const { rows } = parseRecipients(/^[+0-9][0-9 \-]{6,}$/.test(draft) ? `mobil\n${draft}` : draft)
     if (!rows.length) return
-    setRecipients((r) => [...r, ...rows.filter((n) => !r.some((x) => x.email === n.email))])
+    merge(rows)
     setEmailDraft('')
   }
 
   const runImport = () => {
-    setRecipients((r) => [...r, ...parsed.rows.filter((n) => !r.some((x) => x.email === n.email))])
+    merge(parsed.rows)
     setImportDraft('')
     setImportOpen(false)
   }
@@ -100,7 +116,11 @@ export function SendScreen({
       const result = await sendSurvey({
         surveyId,
         channels,
-        recipients: recipients.map((r) => ({ email: r.email, ...(r.name ? { name: r.name } : {}) })),
+        recipients: recipients.map((r) => ({
+          ...(r.email ? { email: r.email } : {}),
+          ...(r.phone ? { phone: r.phone } : {}),
+          ...(r.name ? { name: r.name } : {}),
+        })),
         groupIds: chosenGroups,
         anonymity,
         cadence,
@@ -204,7 +224,7 @@ export function SendScreen({
             </div>
           </section>
 
-          {channels.includes('email') ? (
+          {channels.includes('email') || channels.includes('sms') ? (
             <section className={CARD}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className={H2}>{t('recipients')}</h2>
@@ -319,8 +339,8 @@ export function SendScreen({
                     }
                   }}
                   disabled={!canSend}
-                  placeholder={t('emailPlaceholder')}
-                  aria-label={t('emailPlaceholder')}
+                  placeholder={channels.includes('sms') ? t('recipientPlaceholder') : t('emailPlaceholder')}
+                  aria-label={channels.includes('sms') ? t('recipientPlaceholder') : t('emailPlaceholder')}
                   className="touch-44-field flex-1 rounded-[10px] border border-line bg-bg px-3.5 py-3 text-[13.5px] text-ink outline-none disabled:opacity-60"
                 />
                 <button
@@ -337,15 +357,15 @@ export function SendScreen({
                 <div className="mt-[13px] flex flex-wrap gap-2">
                   {recipients.map((r) => (
                     <span
-                      key={r.email}
+                      key={identity(r)}
                       className="inline-flex items-center gap-[9px] rounded-full px-3 py-[7px] text-[12.5px]"
                       style={{ background: 'var(--sf2)' }}
                     >
-                      {r.email}
+                      {identity(r)}
                       <button
                         type="button"
-                        aria-label={`${t('removeRecipient')}: ${r.email}`}
-                        onClick={() => setRecipients((list) => list.filter((x) => x.email !== r.email))}
+                        aria-label={`${t('removeRecipient')}: ${identity(r)}`}
+                        onClick={() => setRecipients((list) => list.filter((x) => identity(x) !== identity(r)))}
                         className="touch-44 cursor-pointer border-none bg-transparent text-sm leading-none text-mut"
                       >
                         ×
@@ -412,6 +432,26 @@ export function SendScreen({
               <p className="mt-2.5 text-[13px] text-mut">
                 {channels.includes('link') ? t('shareNote') : t('qrNote')}
               </p>
+            </section>
+          ) : null}
+
+          {channels.includes('sms') ? (
+            // HeiTuva.dc.html:1810-1816 — the SMS card: title, one line of
+            // description, and the message as the phone will show it.
+            <section className={CARD}>
+              <h2 className={H2}>{t('smsTitle')}</h2>
+              <p className="mt-1.5 text-[13.5px] text-mut">{t('smsDesc')}</p>
+              <p className="mt-3.5 max-w-[380px] rounded-xl bg-sbg px-4 py-3.5 text-[13px] leading-[1.5]">
+                {t('smsPreview', {
+                  org: orgName,
+                  title,
+                  anon: anonymity === 'named' ? t('smsNamed') : t('smsAnonymous'),
+                  // The link does not exist until the round does, same as the
+                  // share card above: a placeholder shape, never a live URL.
+                  link: t('smsLinkPlaceholder'),
+                })}
+              </p>
+              <p className="mt-2.5 text-[13px] text-mut">{t('smsNote')}</p>
             </section>
           ) : null}
         </div>
@@ -573,7 +613,9 @@ export function SendScreen({
                   ? t('noRecipients')
                   : failure === 'no_questions'
                     ? t('noQuestions')
-                    : t('failed')}
+                    : failure === 'sms_not_enabled'
+                      ? t('errSmsNotEnabled')
+                      : t('failed')}
               </p>
             ) : null}
             <button

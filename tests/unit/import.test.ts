@@ -17,6 +17,34 @@ describe('parseRecipients', () => {
     ])
   })
 
+  it('reads a mobile column and keeps a phone-only row (the SMS case)', () => {
+    const { rows, rejected } = parseRecipients(
+      'e-post;mobil;navn\nola@nordisk.no;918 27 364;Ola\n;+47 412 34 567;Kari\n;;Ingen',
+    )
+    expect(rows).toEqual([
+      { email: 'ola@nordisk.no', phone: '+4791827364', name: 'Ola' },
+      { phone: '+4741234567', name: 'Kari' },
+    ])
+    expect(rejected).toEqual([{ line: ';;Ingen', reason: 'no-email' }])
+  })
+
+  it('accepts a sheet with a phone column and no email column at all', () => {
+    const { rows } = parseRecipients('navn,mobil\nOla,91827364\nKari,0047 41234567')
+    expect(rows.map((r) => r.phone)).toEqual(['+4791827364', '+4741234567'])
+  })
+
+  it('drops a phone it cannot read rather than sending to it', () => {
+    const { rows, rejected } = parseRecipients('e-post,mobil\na@b.no,12345\n,12345')
+    expect(rows).toEqual([{ email: 'a@b.no' }])
+    expect(rejected).toEqual([{ line: ',12345', reason: 'no-email' }])
+  })
+
+  it('treats the same phone twice as one person', () => {
+    const { rows, rejected } = parseRecipients('mobil\n91827364\n+47 918 27 364')
+    expect(rows).toHaveLength(1)
+    expect(rejected[0]?.reason).toBe('duplicate')
+  })
+
   it('strips the BOM Excel writes, so the first header still matches', () => {
     const { rows } = parseRecipients('﻿e-post;navn\nola@nordisk.no;Ola')
     expect(rows).toEqual([{ email: 'ola@nordisk.no', name: 'Ola' }])

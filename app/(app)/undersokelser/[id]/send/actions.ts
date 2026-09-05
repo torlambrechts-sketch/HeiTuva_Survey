@@ -17,10 +17,13 @@ import { ANONYMITY_MODES, CADENCES, CHANNELS } from '@/lib/send/registry'
  */
 
 const Recipient = z.object({
-  email: z.string().trim().toLowerCase().email().max(320),
+  email: z.string().trim().toLowerCase().email().max(320).optional(),
+  // Loosely shaped here; `app.normalize_phone` in the RPC is what decides
+  // whether it is a number, and a recipient it cannot read is skipped there.
+  phone: z.string().trim().min(8).max(20).optional(),
   name: z.string().trim().max(200).optional(),
   lang: z.enum(['no', 'en', 'sv', 'da']).optional(),
-})
+}).refine((r) => Boolean(r.email || r.phone), { message: 'unreachable' })
 
 const SendInput = z.object({
   surveyId: z.string().uuid(),
@@ -40,7 +43,14 @@ export type SendResult =
   | { ok: true; roundId: string; invited: number; shareToken: string | null }
   | {
       ok: false
-      error: 'invalid' | 'forbidden' | 'not_found' | 'no_questions' | 'no_recipients' | 'failed'
+      error:
+        | 'invalid'
+        | 'forbidden'
+        | 'not_found'
+        | 'no_questions'
+        | 'no_recipients'
+        | 'sms_not_enabled'
+        | 'failed'
     }
 
 export async function sendSurvey(input: unknown): Promise<SendResult> {
@@ -93,6 +103,7 @@ export async function sendSurvey(input: unknown): Promise<SendResult> {
   if (result.error === 'forbidden') return { ok: false, error: 'forbidden' }
   if (result.error === 'not_found') return { ok: false, error: 'not_found' }
   if (result.error === 'no_questions') return { ok: false, error: 'no_questions' }
+  if (result.error === 'sms_not_enabled') return { ok: false, error: 'sms_not_enabled' }
   if (!result.ok) return { ok: false, error: 'failed' }
 
   revalidatePath('/undersokelser')

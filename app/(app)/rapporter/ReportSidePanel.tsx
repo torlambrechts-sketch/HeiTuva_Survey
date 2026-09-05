@@ -408,17 +408,28 @@ export function ReportSidePanel({
             >
               {labels.exportPdf}
             </a>
-            {/* Rendered but disabled behind feature_flags.pptx_export (Phase 5
-                scope 5). The flag decides, not a hardcoded `disabled` — that is
-                what makes turning it on in Phase 6 a row rather than a deploy. */}
-            <button
-              type="button"
-              disabled={!pptxEnabled}
-              title={labels.exportPptx}
-              className="touch-44 flex-1 rounded-[10px] border border-line bg-transparent p-[11px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {labels.exportPptx}
-            </button>
+            {/* Behind feature_flags.pptx_export. The flag decides, not a
+                hardcoded `disabled` — turning it on is a row, not a deploy.
+                Enabled, it is the same kind of link the PDF button is; the
+                route enforces the flag again, so the button is a convenience
+                and not the permission. */}
+            {pptxEnabled ? (
+              <a
+                href={`/rapporter/${report.id}/pptx`}
+                className="touch-44 flex-1 cursor-pointer rounded-[10px] border border-line bg-transparent p-[11px] text-center text-[12.5px] font-semibold text-ink no-underline"
+              >
+                {labels.exportPptx}
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title={labels.exportPptx}
+                className="touch-44 flex-1 rounded-[10px] border border-line bg-transparent p-[11px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {labels.exportPptx}
+              </button>
+            )}
           </div>
 
           <p className="text-[12px] leading-[1.5] text-mut">{labels.leaderScopeNote}</p>

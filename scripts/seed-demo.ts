@@ -57,6 +57,16 @@ async function main() {
   // exists for: one group above the threshold beside one below it. A seed with
   // a single group can only ever photograph the happy path.
   const svc = serviceClient()
+
+  // Phase 6: the demo organisation has SMS and PowerPoint switched on, so the
+  // captures photograph the channel card enabled and the export as a link.
+  // Rows for THIS org, not the global defaults, which stay off (seed.sql): the
+  // gates that prove the flags turn the rows off and on again.
+  await svc.from('feature_flags').insert([
+    { key: 'sms_channel', org_id: org.id, enabled: true },
+    { key: 'pptx_export', org_id: org.id, enabled: true },
+  ])
+
   const { data: secondGroup } = await svc
     .from('groups')
     .insert({ org_id: org.id, name: GROUP_SECONDARY })

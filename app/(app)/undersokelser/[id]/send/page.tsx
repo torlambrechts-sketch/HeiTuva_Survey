@@ -78,6 +78,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}
         smsEnabled={await isFlagEnabled('sms_channel', viewer.orgId)}
+        orgName={viewer.orgName}
         groups={(groups ?? []).map((g) => ({
           id: g.id,
           name: g.name,

@@ -480,6 +480,19 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        // Phase 6: the SMS card (HeiTuva.dc.html:1810-1816), reachable because
+        // the seed switches `sms_channel` on for the demo org.
+        name: 'sms',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('link', { name: 'Videre til utsending' }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/send'))
+          await page.getByRole('button', { name: /^SMS/ }).first().click()
+          await page.getByRole('heading', { name: 'SMS', exact: true }).waitFor()
+        },
+      },
+      {
         name: 'recurring',
         setup: async (page) => {
           // The cadence panel's recurring branch — rounds, rotation and the

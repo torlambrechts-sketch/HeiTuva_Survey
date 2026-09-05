@@ -1464,3 +1464,51 @@ that prints dotted message keys is indistinguishable — to a reader and to the
 capture gate — from one whose translations failed to load. And the namespaces
 themselves carry labels ("Bygg undersøkelse", not `builder`), because a raw code
 identifier on screen is user-facing text like any other.
+
+### D80 — SMS: who gets a text, and what it says
+The design's fourth channel card, "SMS · For skift og felt", is people with a
+phone and often no work inbox — so a recipient may now carry a phone and no
+address at all (`survey_invitations.email` is nullable; an invitation has an
+email or a phone or both, never neither). The import parser reads a `mobil`
+column, the single field takes a number as well as an address, and Norwegian
+shapes ("918 27 364", "+47 918 27 364", "0047…") normalise to E.164 in the
+client AND in the database (`app.normalize_phone`); the database's answer is
+the one that decides.
+
+What decides the channel of one invitation is not drawn anywhere, so it is the
+minimal rule: email when it can be, SMS when it must be. Someone with an address
+gets email when email is selected; someone with only a phone gets SMS when SMS
+is selected; someone with both gets email, because it carries the fuller message
+and costs nothing per send. Nobody is reached twice. Whole groups are reached by
+email only: an `org_members` row has an address and no phone, and a member of
+the organisation has a work inbox by definition.
+
+Two things the prototype shows that the product renders differently:
+
+- The message preview's link. The design prints `heituva.no/s/<id>`; the real
+  link does not exist until the round does (it is a token, and minting one for a
+  preview would leave live URLs behind every visit), so the preview shows the
+  link's SHAPE — "heituva.no/s/…" — the same treatment the share-link card gives.
+- "med kortlenke". There is no URL shortener; the respondent link is the
+  full `/s/<token>` and the message is trimmed to fit one 160-character segment
+  with the link and the anonymity promise intact — the title is what gives.
+  Adding a shortener would be a second token per invitation to expire and
+  revoke, and a redirect hop the anonymity story would have to account for.
+
+The flag is enforced in `send_round`, not only in the screen: an org without
+`sms_channel` gets `sms_not_enabled` back, whatever a caller posts.
+
+### D81 — the PowerPoint export is text and rectangles
+`renderReportPptx` mirrors `renderReportHtml` branch for branch and takes the
+same input — `compose_report`'s output and nothing else — so a deck can only
+show what the reader was allowed to see. Bars are shapes, not chart objects and
+not images: pptxgenjs sizes images with `image-size`, which carries an unpatched
+denial-of-service advisory for exotic formats (ICNS/JXL/HEIF; GHSA-w3rx-r6r6-pgpr,
+GHSA-5p2g-fcmc-qvqq, range `<=2.0.2` with no fixed release published). Nothing
+here calls `addImage`, and the only reference to `image-size` in the library's
+bundle is inside a commented-out function — the flagged code is never executed.
+`npm audit` still reports it; that line is a known finding for the hardening
+pass, not a vulnerability the product can reach.
+
+Long sections paginate: a partition with thirty groups is three slides with the
+same title, not one slide with rows off the bottom.

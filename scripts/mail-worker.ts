@@ -17,6 +17,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 import { invitationMessage, mailProvider } from '../lib/mail'
+import { invitationSms, smsProvider } from '../lib/sms'
 import { LOCAL_SUPABASE } from './verify/local-env'
 
 const useLocal = process.argv.includes('--local')
@@ -42,10 +43,13 @@ const MAX_ATTEMPTS = 5
 
 type Job = {
   kind: 'invitation' | 'test' | 'reminder'
+  /** Absent on jobs queued before migration 0027; those are email. */
+  channel?: 'email' | 'sms'
   round_id: string
   survey_id: string
   org_id: string
-  email: string
+  email?: string | null
+  phone?: string | null
   name?: string | null
   lang: string
   token: string
@@ -54,6 +58,9 @@ type Job = {
 
 const svc = createClient(url, key, { auth: { persistSession: false } })
 const provider = mailProvider()
+// Built lazily: a deployment that sends no SMS never reads the gateway's
+// variables, and never fails for lack of them.
+let sms: ReturnType<typeof smsProvider> | null = null
 
 async function drain(): Promise<number> {
   const { data, error } = await svc.rpc('mail_outbox_read', {
@@ -90,34 +97,55 @@ async function drain(): Promise<number> {
       continue
     }
 
-    const { subject, text } = invitationMessage({
-      orgName: orgName.get(job.org_id) ?? 'HeiTuva',
-      surveyTitle: job.survey_title,
-      name: job.name,
-      lang: job.lang,
-      url: `${appUrl}/s/${job.token}`,
-      anonymous: anonymity.get(job.survey_id) !== 'named',
-    })
+    const url = `${appUrl}/s/${job.token}`
+    const anonymous = anonymity.get(job.survey_id) !== 'named'
+    const org = orgName.get(job.org_id) ?? 'HeiTuva'
+    // One person is one address or one phone; the key follows whichever it is.
+    const reachedBy = job.channel === 'sms' ? job.phone : job.email
 
-    const result = await provider.send({
-      to: { email: job.email, name: job.name },
-      subject,
-      text,
-      // Derived from the invitation, not the attempt: a retry after a crash
-      // must be the same message to the provider, not a second one.
-      idempotencyKey: `${job.round_id}:${job.email}`,
-    })
+    let result
+    if (job.channel === 'sms') {
+      if (!job.phone) {
+        // A malformed job, not a transient: archive it as evidence.
+        await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
+        console.error(`  archived msg ${m.msg_id}: sms job without a phone`)
+        continue
+      }
+      sms ??= smsProvider()
+      result = await sms.send({
+        to: job.phone,
+        text: invitationSms({ orgName: org, surveyTitle: job.survey_title, lang: job.lang, url, anonymous }),
+        idempotencyKey: `${job.round_id}:${job.phone}`,
+      })
+    } else {
+      if (!job.email) {
+        await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
+        console.error(`  archived msg ${m.msg_id}: email job without an address`)
+        continue
+      }
+      const { subject, text } = invitationMessage({
+        orgName: org, surveyTitle: job.survey_title, name: job.name, lang: job.lang, url, anonymous,
+      })
+      result = await provider.send({
+        to: { email: job.email, name: job.name },
+        subject,
+        text,
+        // Derived from the invitation, not the attempt: a retry after a crash
+        // must be the same message to the provider, not a second one.
+        idempotencyKey: `${job.round_id}:${job.email}`,
+      })
+    }
 
     if (result.ok) {
-      await svc
+      const mark = svc
         .from('survey_invitations')
         .update({ sent_at: new Date().toISOString() })
         .eq('round_id', job.round_id)
-        .eq('email', job.email)
+      await (job.channel === 'sms' ? mark.eq('phone', job.phone!) : mark.eq('email', job.email!))
       await svc.rpc('mail_outbox_delete', { p_msg_id: m.msg_id })
       sent++
-      // The address is logged, the token is not — the token is the credential.
-      console.log(`  sent ${job.kind} -> ${job.email}`)
+      // The address or number is logged, the token is not — the token is the credential.
+      console.log(`  sent ${job.kind} by ${job.channel ?? 'email'} -> ${reachedBy}`)
     } else if (result.retryable) {
       // Left on the queue: the visibility timeout returns it by itself.
       console.error(`  retrying msg ${m.msg_id}: ${result.error}`)
@@ -130,7 +158,7 @@ async function drain(): Promise<number> {
 }
 
 async function main() {
-  console.log(`mail worker: provider=${provider.name} target=${useLocal ? 'local' : 'prod'}`)
+  console.log(`mail worker: mail=${provider.name} sms=${process.env.SMS_PROVIDER ?? 'link-mobility'} target=${useLocal ? 'local' : 'prod'}`)
   if (once) {
     const n = await drain()
     console.log(`drained ${n} message(s)`)
