@@ -258,6 +258,53 @@ async function main() {
       )
     }
 
+    // --- the promise is derived from the threshold, not fixed copy (Q17) ---
+    // The whole risk of the threshold-policy change is a banner that promises
+    // more than the setting holds. Proving that from SQL says nothing about
+    // what the respondent is actually shown, so it is proven here, rendered,
+    // as a change case: the same banner slot must say "fem" at k=5 and "tre"
+    // at k=3, and only the low threshold carries the small-group caveat.
+    {
+      async function bannerForThreshold(k: number): Promise<string> {
+        const s = await createSurvey(
+          ORG_ID.current!,
+          `promise probe k=${k} ${Date.now()}`,
+          [{ type: 'scale', text: 'Hvordan går det?' }],
+          { audience: 'Probe', anonymity: 'anonymous' },
+        )
+        // Fresh and unlocked, so the policy guard permits the threshold move;
+        // service role runs as backend (auth.uid() null), skipping the
+        // redaktor/audit branch. Set before any round exists — send_round is
+        // what locks a survey, and this survey never gets one.
+        const { error: setErr } = await svc.from('surveys').update({ k_threshold: k }).eq('id', s.id)
+        if (setErr) throw new Error(`set k_threshold=${k}: ${setErr.message}`)
+        const probeToken = `verify-promise-k${k}-${randomBytes(8).toString('hex')}`
+        await createShareLink((await createRound(s, 1)).id, probeToken)
+        await page.goto(`${BASE_URL}/s/${probeToken}`, { waitUntil: 'domcontentloaded' })
+        await page.waitForLoadState('load')
+        return page.locator('body').innerText()
+      }
+
+      const atFive = await bannerForThreshold(5)
+      const atThree = await bannerForThreshold(3)
+
+      check(
+        'k=5 banner promises the threshold in words ("fem")',
+        /minst fem/i.test(atFive) && !/små grupper/i.test(atFive),
+        atFive.split('\n').find((l) => /minst/i.test(l))?.slice(0, 70) ?? '',
+      )
+      check(
+        'k=3 banner tracks the changed threshold ("tre")',
+        /minst tre/i.test(atThree) && !/minst fem/i.test(atThree),
+        atThree.split('\n').find((l) => /minst/i.test(l))?.slice(0, 70) ?? '',
+      )
+      check(
+        'the low threshold adds the small-group caveat',
+        /små grupper/i.test(atThree),
+        atThree.split('\n').find((l) => /gjenkjennelig/i.test(l))?.slice(0, 70) ?? '',
+      )
+    }
+
     // --- the token is single-use for an invited respondent -----------------
     {
       await page.goto(`${BASE_URL}/s/${raw}`, { waitUntil: 'domcontentloaded' })

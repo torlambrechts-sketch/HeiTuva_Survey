@@ -71,6 +71,25 @@ insert into public.duty_definitions (key, title, law, basis, default_interval_mo
  '[{"key":"k1","label":"Undersøkelse gjennomført"},{"key":"k2","label":"Varslingsrutine kjent"},{"key":"k3","label":"Funn håndtert"},{"key":"k4","label":"Ansvarlig oppnevnt"}]',
  '[{"key":"hr","label":"HR-ansvarlig","role":"Eier varslingsrutinen"}]');
 
+-- Q17 threshold policy on the statutory packs and duties (docs/Q17_terskel_forslag.md,
+-- the law-anchored table). This is DATA and belongs with the pack rows it governs.
+-- Migration 20260904000032 carries the SAME values, but it runs before this seed —
+-- a migration cannot reach rows a later-running seed inserts — so its UPDATE hits
+-- zero rows on a fresh reset and only serves a database whose packs predate it.
+-- The pack, not the customer, decides these; the guard reads template_packs.policy.
+update public.template_packs set policy = jsonb_build_object(
+    'anonymity','anonymous','respondent_kind','person','k_threshold',5,'locked',true)
+  where org_id is null and key = 'psykososial-kartlegging';
+update public.template_packs set policy = jsonb_build_object(
+    'anonymity','named','respondent_kind','organisation','k_threshold',0,'locked',true)
+  where org_id is null and key = 'leverandor-apenhetsloven';
+update public.duty_definitions set policy = jsonb_build_object(
+    'anonymity','anonymous','respondent_kind','person','k_threshold',5,'locked',true)
+  where key in ('arbeidsmiljo','likestilling','trakassering');
+update public.duty_definitions set policy = jsonb_build_object(
+    'anonymity','named','respondent_kind','organisation','k_threshold',0,'locked',true)
+  where key = 'apenhet';
+
 -- Report section registry: NOT here. It is a registry that migration
 -- 20260904000006 validates its templates against, and a migration cannot depend
 -- on a seed that runs after it. The rows are inserted there.

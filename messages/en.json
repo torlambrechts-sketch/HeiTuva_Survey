@@ -977,7 +977,11 @@
     "scaleLowDefault": "Not at all",
     "scaleHighDefault": "Completely agree",
     "enpsLowDefault": "Very unlikely",
-    "enpsHighDefault": "Very likely"
+    "enpsHighDefault": "Very likely",
+    "promiseAnonymous": "Answers are anonymous. Results appear once at least {kWord} people have answered.",
+    "promiseAnonymousLow": "Answers are anonymous. Results appear once at least {kWord} people have answered. In small groups answers may still be recognisable.",
+    "promiseNamed": "Your answer is shown with your name.",
+    "promiseOrganisation": "You are answering on behalf of {virksomhet}. Your answer is shown with the organisation’s name and may be made publicly available."
   },
   "surveyNav": {
     "back": "Back to surveys",

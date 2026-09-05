@@ -1590,3 +1590,31 @@ it is accepted, with no code change. Self-hosting the design's static instances
 as local files would close it, and is logged here as the option if a future
 pass wants pixel-identical glyph advances.
 
+### D85 — respondent promise is derived; "optional" keeps its per-choice UI
+Q17 makes the respondent banner on /s/[token] a function of the survey's
+settings (lib/respondent/anonymity-promise.ts): anonymous surveys show the
+threshold ("minst fem" / "minst tre" with the small-group caveat below 5),
+named surveys show "vises med navnet ditt", organisation surveys show the
+attributed promise. `optional` still shows today's invitation-to-choose banner
+and its two choice chips; the design brief's refinement — the consequence text
+under each option also derived from the threshold — is not built here, because
+this phase is the policy model only, not the respondent-flow redesign. The
+promise texts live in ui_messages (`respondent.promise*`), editable like all
+copy; the number word is spelled per locale by the derivation.
+
+### D86 — statutory pack policy lives in seed.sql, not only the migration
+Q17's kernel (migration 20260904000032) sets `template_packs.policy` /
+`duty_definitions.policy` on the statutory packs with an UPDATE. But the global
+packs (org_id NULL) are seeded in `supabase/seed.sql`, which `supabase db reset`
+runs *after* every migration — so on a fresh database the migration's UPDATE
+matches zero rows and the packs land with `policy` NULL, leaving a statutory
+survey unlocked. This was caught by the phase's verification pass: the negative
+test proving a psykososial survey refuses even an administrator (threshold-policy
+#4) passed against the accumulated dev volume but failed on a clean reset. The
+fix follows the existing `sort_order` precedent (migration 20260903000005):
+the value is written in seed.sql where the pack rows are created, and the
+migration keeps its UPDATE as the backfill for a database whose packs predate
+the migration (a live project seeded before this phase). The two carry the same
+law-anchored values by hand; test #4 now guards against drift, so a mismatch is
+caught rather than shipped.
+

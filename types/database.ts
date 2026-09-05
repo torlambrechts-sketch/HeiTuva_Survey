@@ -365,6 +365,7 @@ export type Database = {
           key: string
           law: string
           pack_key: string
+          policy: Json | null
           publish: boolean
           signer_roles: Json
           title: string
@@ -376,6 +377,7 @@ export type Database = {
           key: string
           law: string
           pack_key: string
+          policy: Json | null
           publish?: boolean
           signer_roles: Json
           title: string
@@ -387,6 +389,7 @@ export type Database = {
           key?: string
           law?: string
           pack_key?: string
+          policy?: Json | null
           publish?: boolean
           signer_roles?: Json
           title?: string
@@ -1771,6 +1774,9 @@ export type Database = {
       surveys: {
         Row: {
           anonymity: "anonymous" | "named" | "optional"
+          k_threshold: number
+          policy_locked: boolean
+          respondent_kind: string
           audience_label: string | null
           created_at: string
           created_by: string | null
@@ -1789,6 +1795,9 @@ export type Database = {
         }
         Insert: {
           anonymity?: "anonymous" | "named" | "optional"
+          k_threshold?: number
+          policy_locked?: boolean
+          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
@@ -1807,6 +1816,9 @@ export type Database = {
         }
         Update: {
           anonymity?: "anonymous" | "named" | "optional"
+          k_threshold?: number
+          policy_locked?: boolean
+          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
@@ -1879,6 +1891,7 @@ export type Database = {
           key: string
           legal_ref: string | null
           org_id: string | null
+          policy: Json | null
           private: boolean
           questions: Json
           sort_order: number
@@ -1893,6 +1906,7 @@ export type Database = {
           key: string
           legal_ref?: string | null
           org_id?: string | null
+          policy?: Json | null
           private?: boolean
           questions: Json
           sort_order?: number
@@ -1907,6 +1921,7 @@ export type Database = {
           key?: string
           legal_ref?: string | null
           org_id?: string | null
+          policy?: Json | null
           private?: boolean
           questions?: Json
           sort_order?: number

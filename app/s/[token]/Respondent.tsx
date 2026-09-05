@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import type { Locale } from '@/lib/i18n/locales'
+import { anonymityPromise } from '@/lib/respondent/anonymity-promise'
 import {
   isAnswered,
   isLowScore,
@@ -33,6 +34,8 @@ export function Respondent({
   orgName,
   title,
   anonymity,
+  kThreshold,
+  respondentKind,
   engage,
   alreadyResponded,
   questions,
@@ -43,6 +46,8 @@ export function Respondent({
   orgName: string
   title: string
   anonymity: 'anonymous' | 'named' | 'optional'
+  kThreshold: number
+  respondentKind: 'person' | 'organisation'
   engage: Record<string, unknown>
   alreadyResponded: boolean
   questions: RespondentQuestion[]
@@ -118,11 +123,16 @@ export function Respondent({
   }
 
   const secondsLeft = Math.max(0, PROMISED_SECONDS - elapsed)
+  // The promise is generated from the survey's settings (Q17), never fixed
+  // copy: the banner must change with the threshold, or it lies. `optional`
+  // keeps today's per-choice UI below; its banner stays the invitation to
+  // choose (the per-option consequence text is a design-brief refinement,
+  // docs/DEVIATIONS.md D85).
   const anonBanner = useMemo(() => {
-    if (anonymity === 'named') return t('named')
     if (anonymity === 'optional') return t('choose')
-    return e.audience === 'kunder' ? t('anonCustomer') : t('anon')
-  }, [anonymity, e.audience, t])
+    const p = anonymityPromise({ anonymity, kThreshold, respondentKind }, locale)
+    return t(p.key, { kWord: p.values?.kWord ?? '', virksomhet: orgName })
+  }, [anonymity, kThreshold, respondentKind, locale, orgName, t])
 
   if (done) return <ThankYou thankYou={e.thank_you} token={token} />
 

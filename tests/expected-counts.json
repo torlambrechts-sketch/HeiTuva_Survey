@@ -13,5 +13,7 @@
   "tests/unit/import.test.ts": 15,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/results-present.test.ts": 17,
-  "tests/unit/absent-deps.test.ts": 2
+  "tests/unit/absent-deps.test.ts": 2,
+  "tests/invariants/threshold-policy.test.ts": 11,
+  "tests/unit/anonymity-promise.test.ts": 6
 }

@@ -34,6 +34,8 @@ type TokenSurvey = {
   org_default_lang: string | null
   invitation_lang: string | null
   anonymity: 'anonymous' | 'named' | 'optional'
+  k_threshold?: number
+  respondent_kind?: string
   engage: Record<string, unknown> | null
   langs: string[] | null
   already_responded: boolean
@@ -125,6 +127,8 @@ export default async function RespondentPage({
         orgName={survey.org_name ?? ''}
         title={survey.title}
         anonymity={survey.anonymity}
+        kThreshold={typeof survey.k_threshold === 'number' ? survey.k_threshold : 5}
+        respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}
         engage={survey.engage ?? {}}
         alreadyResponded={survey.already_responded}
         questions={Array.isArray(survey.questions) ? survey.questions : []}

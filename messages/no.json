@@ -977,7 +977,11 @@
     "scaleLowDefault": "Ikke i det hele tatt",
     "scaleHighDefault": "Helt enig",
     "enpsLowDefault": "Svært lite sannsynlig",
-    "enpsHighDefault": "Svært sannsynlig"
+    "enpsHighDefault": "Svært sannsynlig",
+    "promiseAnonymous": "Svarene er anonyme. Resultater vises først når minst {kWord} har svart.",
+    "promiseAnonymousLow": "Svarene er anonyme. Resultater vises først når minst {kWord} har svart. I små grupper kan svar likevel være gjenkjennelige.",
+    "promiseNamed": "Svaret vises med navnet ditt.",
+    "promiseOrganisation": "Du svarer på vegne av {virksomhet}. Svaret vises med virksomhetens navn og kan bli gjort offentlig tilgjengelig."
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",

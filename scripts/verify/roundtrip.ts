@@ -420,6 +420,92 @@ async function main() {
       await page.close()
     }
 
+    console.log('\n== Phase 8 (Q17) ==')
+
+    /*
+      The threshold-policy action, exercised at the level a real administrator
+      session hits it — the DB write setSurveyPolicy performs, under the guard
+      trigger (migration 0032), with auth.uid() populated. Three contracts:
+      an administrator may lower the threshold and the change is audited; a
+      redaktør (even one who is a survey editor, so RLS is not what stops them)
+      may not; and once the real send path locks the survey, no one may — not
+      even the administrator who could a moment ago. The isolated DB test proves
+      the trigger; this proves the trigger under an authenticated app session,
+      end to end through send_round's lock.
+    */
+    {
+      const redaktor = await personaClient('redaktor')
+      const { data: redMember } = await svc
+        .from('org_members')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('role', 'redaktor')
+        .limit(1)
+        .single()
+
+      // A fresh administrator-owned survey, unlocked, defaulting to k=5/person.
+      const { data: made, error: mkErr } = await admin
+        .from('surveys')
+        .insert({ org_id: orgId, title: `Q17 terskel ${Date.now()}`, anonymity: 'anonymous' })
+        .select('id, k_threshold, respondent_kind, policy_locked')
+        .single()
+      const q17Id = made?.id ?? ''
+      await admin
+        .from('survey_questions')
+        .insert({ survey_id: q17Id, position: 1, type: 'scale', text: 'Q17' })
+      show(
+        'surveys default policy (k=5, person, unlocked)',
+        !mkErr && made?.k_threshold === 5 && made?.respondent_kind === 'person' && made?.policy_locked === false,
+        mkErr ? { error: mkErr.message } : made,
+      )
+
+      // 1. The administrator lowers it — and the change is audited.
+      const lower = await admin.from('surveys').update({ k_threshold: 3 }).eq('id', q17Id).select('k_threshold').single()
+      const { data: auditRow } = await svc
+        .from('audit_events')
+        .select('action, target, meta')
+        .eq('org_id', orgId)
+        .eq('action', 'threshold.change')
+        .eq('target', q17Id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      show(
+        'administrator may lower the threshold, audited',
+        !lower.error && lower.data?.k_threshold === 3 &&
+          auditRow?.action === 'threshold.change' &&
+          (auditRow?.meta as { from?: number; to?: number })?.to === 3,
+        lower.error ? { error: lower.error.message } : { k: lower.data?.k_threshold, audit: auditRow?.meta ?? null },
+      )
+
+      // 2. A redaktør — made an editor first, so the refusal is the policy
+      //    guard, not the survey RLS — cannot.
+      await svc.from('survey_editors').insert({ survey_id: q17Id, member_id: redMember!.id })
+      const byRed = await redaktor.from('surveys').update({ k_threshold: 5 }).eq('id', q17Id).select('id')
+      const { data: afterRed } = await svc.from('surveys').select('k_threshold').eq('id', q17Id).single()
+      show(
+        'redaktør may not change the threshold',
+        (byRed.error != null || (byRed.data?.length ?? 0) === 0) && afterRed?.k_threshold === 3,
+        { refused: byRed.error?.message ?? `rows=${byRed.data?.length ?? 0}`, k_unchanged: afterRed?.k_threshold },
+      )
+
+      // 3. The real send path locks the policy; the administrator who could
+      //    change it a moment ago now cannot.
+      const sent = await admin.rpc('send_round', { p_survey: q17Id, p_channels: ['link'] })
+      const { data: locked } = await svc.from('surveys').select('policy_locked').eq('id', q17Id).single()
+      const afterLock = await admin.from('surveys').update({ k_threshold: 4 }).eq('id', q17Id).select('id')
+      const { data: finalK } = await svc.from('surveys').select('k_threshold').eq('id', q17Id).single()
+      show(
+        'sending locks the policy against even an administrator',
+        !sent.error && locked?.policy_locked === true &&
+          afterLock.error != null && /policy_locked/.test(afterLock.error?.message ?? '') &&
+          finalK?.k_threshold === 3,
+        sent.error
+          ? { error: sent.error.message }
+          : { locked: locked?.policy_locked, refused: afterLock.error?.message?.slice(0, 60), k_unchanged: finalK?.k_threshold },
+      )
+    }
+
     /*
       Entra ID SSO (Phase 6) and the break-glass rule (Phase 6 acceptance,
       decision 2; migration 0029). Auth has no Entra provider on the local

@@ -124,7 +124,7 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
 phase, not built. Two numbers carry forward and may only move up: **54 of 70 surfaces
-actively checked** by 5a3, and **15 files / 360 tests** in the census manifest.
+actively checked** by 5a3, and **17 files / 377 tests** in the census manifest.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.

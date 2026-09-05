@@ -334,3 +334,52 @@ export async function saveSurveyAsTemplate(input: unknown): Promise<BuilderResul
   revalidatePath('/bibliotek')
   return { ok: true, ids: { template: pack.id } }
 }
+
+/**
+ * Q17 — set the survey's display threshold and respondent type.
+ *
+ * Administrator-only: the threshold is a personvern decision, so it does not
+ * sit with the redaktør who may otherwise edit the survey. The database is the
+ * real enforcement — `app.guard_survey_policy` refuses a non-administrator,
+ * refuses any change once the policy is locked (sent, or set by a statutory
+ * pack), and writes the audit row — so this action surfaces those refusals to
+ * the UI rather than re-implementing them. The threshold UI (the design brief's
+ * "Hvem svarer og hva vises" panel) is a later phase; this is the control it
+ * will call.
+ */
+const PolicyInput = z.object({
+  surveyId: z.string().uuid(),
+  kThreshold: z.number().int().min(3).max(50),
+  respondentKind: z.enum(['person', 'organisation']),
+})
+
+export type PolicyResult =
+  | { ok: true }
+  | { ok: false; error: 'forbidden' | 'invalid' | 'locked' | 'failed' }
+
+export async function setSurveyPolicy(input: unknown): Promise<PolicyResult> {
+  const viewer = await requireViewer()
+  if (viewer.role !== 'administrator') return { ok: false, error: 'forbidden' }
+
+  const parsed = PolicyInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+  const { surveyId, kThreshold, respondentKind } = parsed.data
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('surveys')
+    .update({ k_threshold: kThreshold, respondent_kind: respondentKind })
+    .eq('id', surveyId)
+    .eq('org_id', viewer.orgId)
+  if (error) {
+    // The guard raises 'policy_locked' / 'threshold_admin_only'; a locked or
+    // pack-governed survey is the common, expected refusal.
+    if (/policy_locked|statutory|pack/i.test(error.message)) return { ok: false, error: 'locked' }
+    if (/admin/i.test(error.message)) return { ok: false, error: 'forbidden' }
+    console.error(`setSurveyPolicy failed: ${error.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath(`/undersokelser/${surveyId}/bygg`)
+  return { ok: true }
+}
