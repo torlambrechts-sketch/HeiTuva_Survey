@@ -574,4 +574,45 @@ describe('an aggregate cell is a number or a refusal, never a null wearing a num
       expect(typeof p.avg, `avg on round ${p.round_no}`).toBe('number')
     }
   })
+  it('get_heatmap and get_benchmarks too — the sweep, not just the crash site', async () => {
+    // 0041 fixed the two functions the crash came through. This asserts the two
+    // its catalogue sweep found (migration 0042): fixing a defect without
+    // looking for its siblings is how the second one is found by a customer.
+    const survey = await surveyWith('Feie-sveip', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+    await insert(ctx.a, 'groups', { org_id: ctx.org.id, name: uniq('Ingen svar heatmap') })
+
+    const { data: heat } = await ctx.adminU.client.rpc('get_heatmap', {
+      p_org: ctx.org.id,
+      p_surveys: [survey.survey.id],
+      p_group: null,
+      p_rounds: null,
+    })
+    const rows = (heat as { k: number; rows: { label: string; cells: Record<string, unknown>[] }[] })
+    expect(rows.k, 'a heatmap over organisation surveys alone runs at k = 0').toBe(0)
+    const cells = rows.rows.flatMap((r) => r.cells)
+    expect(cells.length, 'there must be a cell to inspect').toBeGreaterThan(0)
+    for (const c of cells) {
+      if (c.insufficient_data === true) continue
+      expect(typeof c.n, 'n').toBe('number')
+      expect(typeof c.avg, 'avg').toBe('number')
+    }
+
+    const { data: bench } = await ctx.adminU.client.rpc('get_benchmarks', {
+      p_survey: survey.survey.id,
+      p_industry: 'Alle bransjer',
+      p_round: null,
+      p_group: null,
+    })
+    const b = bench as { k: number; rows: Record<string, unknown>[] }
+    expect(b.k).toBe(0)
+    for (const row of b.rows) {
+      if (row.insufficient_data === true) continue
+      // `mine` is this survey's own value; `bench` is the seeded reference. A
+      // row that claims to have compared must have both.
+      if ('mine' in row) expect(row.mine, `mine on ${row.metric_key}`).not.toBeNull()
+    }
+  })
 })

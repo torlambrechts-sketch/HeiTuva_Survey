@@ -1078,7 +1078,8 @@
     "promiseChoose": "Du velger selv om du vil være anonym. Anonyme svar vises først når minst {kWord} har svart.",
     "promiseChooseLow": "Du velger selv om du vil være anonym. Anonyme svar vises først når minst {kWord} har svart. I små grupper kan svar likevel være gjenkjennelige.",
     "promiseNamed": "Svaret vises med navnet ditt.",
-    "promiseOrganisation": "Du svarer på vegne av {virksomhet}. Svaret vises med virksomhetens navn og kan bli gjort offentlig tilgjengelig."
+    "promiseOrganisation": "Du svarer på vegne av {virksomhet}. Svaret vises med virksomhetens navn og kan bli gjort offentlig tilgjengelig.",
+    "peerOrganisation": "Svar fra virksomheter vises ikke samlet — de leses enkeltvis."
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",

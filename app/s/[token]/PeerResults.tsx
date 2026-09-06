@@ -13,11 +13,33 @@ import { peerResults, type PeerResults as Peer } from './actions'
  * distribution first. Seeing how everyone else answered before you answer is
  * how you get a survey that measures conformity.
  *
- * Three states, all of them real: a chart, the k-anonymity floor, or nothing at
- * all when the survey did not opt in. There is no loading skeleton pretending
- * to be data.
+ * Four states, all of them real: a chart, the k-anonymity floor, the
+ * organisation note, or nothing at all when the survey did not opt in. There is
+ * no loading skeleton pretending to be data.
+ *
+ * The organisation state is Q47 seen from the respondent's side. The RPC
+ * returns `hidden` for a supplier — a supplier holding a live token could
+ * otherwise retrieve the distribution of its competitors' answers — but the
+ * bundle does not simply drop the panel: it keeps the heading and says why
+ * («Svar fra virksomheter vises ikke samlet — de leses enkeltvis.», :3985).
+ * That is the better treatment, and it costs nothing: the respondent is a
+ * company answering under its own name and already knows which kind of survey
+ * this is.
+ *
+ * `respondentKind` comes from the PAGE, not from the payload. The RPC returns
+ * the same bare `hidden` for three different reasons — an organisation survey,
+ * `reveal_results` off, and a survey with no scale question — and telling them
+ * apart in the payload would hand a token holder a fact about the survey's
+ * configuration for no gain. The page already rendered the questions, so it
+ * knows.
  */
-export function PeerResults({ token }: { token: string }) {
+export function PeerResults({
+  token,
+  respondentKind,
+}: {
+  token: string
+  respondentKind: 'person' | 'organisation'
+}) {
   const t = useTranslations('respondent')
   const [data, setData] = useState<Peer | null>(null)
 
@@ -31,7 +53,17 @@ export function PeerResults({ token }: { token: string }) {
     }
   }, [token])
 
-  if (!data || 'hidden' in data) return null
+  if (!data) return null
+
+  if ('hidden' in data) {
+    if (respondentKind !== 'organisation') return null
+    return (
+      <div className="mt-6 rounded-[14px] bg-sbg p-5 text-left">
+        <div className="text-[14.5px] font-semibold">{t('peerTitle')}</div>
+        <p className="mt-3 text-[13px] text-mut">{t('peerOrganisation')}</p>
+      </div>
+    )
+  }
 
   if ('insufficientData' in data) {
     return (

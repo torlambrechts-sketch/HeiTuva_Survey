@@ -213,6 +213,44 @@ organisation state; 3e the same, table-to-cards checked. Census ≥ +7, +1 file
 (≥ 408 / 21). 5a3 unchanged (a route is not a catalogue surface — this is a
 recorded limit of the gate, not a gap to close).
 
+### V1-2 outcome (2026-09-06)
+
+Built as planned, plus one thing the plan could not have known: the demo
+organisation had never held a survey at **k = 0**, and putting a screen in front
+of one found a crash in four SECURITY DEFINER functions.
+
+**Delivered.** Q43 (CSV route, 14 route checks, the audit clause on the stored
+row, `attributed-csv.ts` + 18 unit tests, D96 for the format); D94 closed
+(migration 0039, `surveys.target` follows the LATEST round, plus the warning's
+second home on Send); Q35 (migration 0040, `role`/`short` on the Åpenhetsloven
+pack, `lib/questions/roles.ts` with the regex negative, `tests/db/pack-roles.ts`);
+the register, the rounds panel, the organisation stat set, the v1 hidden-question
+chrome, the Q47 peer note; Q30 and Q48(a) from the batch commit.
+
+**Migrations 0041 and 0042 — a defect class, not a defect.** Four functions built
+a cell as `case when coalesce(x, 0) >= v_k then {n, avg} else {insufficient_data}`.
+The coalesce turns "no row" into zero, which lands in the else arm at every
+threshold this schema had — and reads `0 >= 0` at k = 0, so a group or a round or
+a cell with nothing in it took the "here is your number" branch and returned
+`{n: null, avg: null}`. `lib/results/types.ts` says in as many words that there is
+no third state where `avg` is present but meaningless. 0041 fixed the two the
+crash came through (`results_summary`, `get_trends`); a catalogue sweep for the
+pattern found two more (`get_heatmap`, `get_benchmarks`) and 0042 fixed those.
+Re-swept to zero. Both were proven failing against the pre-fix definitions.
+
+**Carried to V1-6.**
+1. `bibliotek/actions.ts` builds a pack question's `config` by hand while the
+   wizard uses `configFor`, so `statements` and `multi` survive one path and not
+   the other. Same pack, two shapes.
+2. `get_trends` returns no `n` for a gated point, so «Runde for runde» shows less
+   than Q28 permits — a count of people is not a svarutledet number. Widening it
+   means a third entry in Q28's enumerated exemption list, which is a deliberate
+   act with its own test, not a UI-phase change.
+3. D97: Q43's decision line says `audit_events` is "a table `leser` can read".
+   It is administrator-only (`audit_sel`, M:0008:190). The clause stands on
+   invariant 7 and on the table being append-only; the line's stated reason is
+   what needs the correction.
+
 **Not in this phase.** The register panel (V1-4). Any change to
 `compose_report` beyond Q30.
 

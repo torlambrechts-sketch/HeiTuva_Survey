@@ -134,7 +134,8 @@ export function Respondent({
     return t(p.key, { kWord: p.values?.kWord ?? '', virksomhet: orgName })
   }, [anonymity, kThreshold, respondentKind, locale, orgName, t])
 
-  if (done) return <ThankYou thankYou={e.thank_you} token={token} />
+  if (done)
+    return <ThankYou thankYou={e.thank_you} token={token} respondentKind={respondentKind} />
 
   const isLast = !oneAtATime || step === total - 1
   const pct = total ? Math.round(((step + 1) / total) * 100) : 0
@@ -324,15 +325,27 @@ export function Respondent({
  * The panel renders only when the survey opted in AND the round is at or above
  * the k threshold — both decided by `get_peer_results` (migration 0011), not
  * here. A client that lies about either gets nothing back.
+ *
+ * `respondentKind` is passed through for the organisation note (Q47, v1 bundle
+ * :3985): the RPC still refuses the distribution, and the panel says why rather
+ * than vanishing.
  */
-function ThankYou({ thankYou, token }: { thankYou?: string; token: string }) {
+function ThankYou({
+  thankYou,
+  token,
+  respondentKind,
+}: {
+  thankYou?: string
+  token: string
+  respondentKind: 'person' | 'organisation'
+}) {
   const t = useTranslations('respondent')
   return (
     <Shell>
       <div className="rounded-2xl border border-line bg-sf px-8 py-[50px] text-center">
         <div className="font-display text-[40px] font-medium leading-none">{t('thanks')}</div>
         <p className="mt-2 text-sm text-mut">{thankYou?.trim() || t('thanksSub')}</p>
-        <PeerResults token={token} />
+        <PeerResults token={token} respondentKind={respondentKind} />
       </div>
     </Shell>
   )

@@ -1078,7 +1078,8 @@
     "promiseChoose": "You choose whether to stay anonymous. Anonymous answers are shown only once at least {kWord} have replied.",
     "promiseChooseLow": "You choose whether to stay anonymous. Anonymous answers are shown only once at least {kWord} have replied. In small groups an answer may still be recognisable.",
     "promiseNamed": "Your answer is shown with your name.",
-    "promiseOrganisation": "You are answering on behalf of {virksomhet}. Your answer is shown with the organisation’s name and may be made publicly available."
+    "promiseOrganisation": "You are answering on behalf of {virksomhet}. Your answer is shown with the organisation’s name and may be made publicly available.",
+    "peerOrganisation": "Answers from organisations are not shown together — each is read on its own."
   },
   "surveyNav": {
     "back": "Back to surveys",
