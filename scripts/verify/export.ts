@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto'
 import { chromium } from '@playwright/test'
 import { config } from 'dotenv'
 import { BASE_URL, ensureServer } from './server'
-import { serviceClient } from '../../tests/db/clients'
+import { leserClient, serviceClient } from '../../tests/db/clients'
 import { ORG_PRIMARY } from '../../tests/db/personas'
 import { signIn } from '../../tests/helpers/session'
 import { requireDependencies } from './deps'
@@ -282,6 +282,217 @@ async function main() {
     })
     check('an unknown share token 404s', notFound?.status() === 404, `HTTP ${notFound?.status()}`)
     await bad.close()
+
+    // ============================================================== Q43
+    // The attributed CSV export — DECISIONS Q43, confirmed 2026-09-06.
+    //
+    // A STATED LIMIT, kept verbatim from the decision line: **a route handler
+    // is NOT a Gate 5a3 catalogue surface.** 5a3 enumerates RLS tables and
+    // SECURITY DEFINER functions; a `/csv` route is neither, so this leans on
+    // tests/db instead — and **55 of 71 must never be read as total coverage
+    // of everything reachable.** These checks are what stands between the
+    // route and nothing.
+    //
+    // The route adds no privilege: it calls `attributed_results` as the
+    // viewer, so RLS and the RPC's own organisation and role checks do the
+    // refusing. What is asserted here is that the ROUTE does not undo that —
+    // by using a service client "because it is only an export", by answering
+    // 200 with an empty body where the RPC said forbidden, or by being
+    // reachable without a session at all.
+    const { data: orgSurvey } = await svc
+      .from('surveys')
+      .select('id, respondent_kind')
+      .eq('org_id', org.id)
+      .eq('title', 'Aktsomhetsvurdering leverandør')
+      .single()
+    if (!orgSurvey) throw new Error('the seeded organisation survey is missing')
+
+    const csvUrl = (id: string) => `${BASE_URL}/undersokelser/${id}/resultater/csv`
+
+    // Clear any earlier export rows for this survey so "exactly one" below is a
+    // statement about THIS export rather than about how often the gate has run.
+    // audit_events is append-only against every caller but the service role's
+    // own cascade path, so this is a delete through `svc` and nothing else.
+    await svc.from('audit_events').delete().eq('action', 'attributed.export').eq('target', orgSurvey.id)
+
+    const adminPage = await browser.newPage()
+    await signIn(adminPage, 'administrator', BASE_URL)
+
+    // -- positive control first: without it every refusal below could pass on a
+    //    route that refuses everyone, including the two roles Q43 admits.
+    const asRedaktorCsv = await page.request.get(csvUrl(orgSurvey.id))
+    const csvBody = await asRedaktorCsv.text()
+    check(
+      'Q43 redaktør gets the attributed CSV',
+      asRedaktorCsv.status() === 200 &&
+        (asRedaktorCsv.headers()['content-type'] ?? '').startsWith('text/csv'),
+      `HTTP ${asRedaktorCsv.status()} · ${asRedaktorCsv.headers()['content-type'] ?? 'no type'}`,
+    )
+    check(
+      'Q43 the CSV carries the named rows, which is what attribution means',
+      csvBody.includes('Nordvest Tekstil AS') && csvBody.includes('Trøndelag Komponent AS'),
+      csvBody.split('\n')[1]?.slice(0, 70) ?? '(empty)',
+    )
+    check(
+      'Q43 it is offered as a download, not rendered',
+      (asRedaktorCsv.headers()['content-disposition'] ?? '').includes('attachment'),
+      asRedaktorCsv.headers()['content-disposition'] ?? 'none',
+    )
+
+    const asAdminCsv = await adminPage.request.get(csvUrl(orgSurvey.id))
+    check(
+      'Q43 administrator gets it too',
+      asAdminCsv.status() === 200,
+      `HTTP ${asAdminCsv.status()}`,
+    )
+
+    // -- leser: 403, not 404. The survey IS visible to them in the list, so
+    //    hiding its existence would be a lie they can disprove by looking.
+    //    What they may not have is the named data.
+    const asLeserCsv = await leserPage.request.get(csvUrl(orgSurvey.id))
+    check(
+      'Q43 a leser is refused — aggregates only, and these rows are named',
+      asLeserCsv.status() === 403,
+      `HTTP ${asLeserCsv.status()}`,
+    )
+    const leserCsvBody = await asLeserCsv.text()
+    check(
+      'Q43 and that refusal carries no rows',
+      // Tied to the 403 deliberately. On its own "the body has no supplier
+      // name" is satisfied by a 404 page, by a login form, and by the route
+      // not existing — it passed all three while this was being written.
+      asLeserCsv.status() === 403 && !leserCsvBody.includes('Nordvest Tekstil'),
+      `HTTP ${asLeserCsv.status()} · ${leserCsvBody.slice(0, 32).replace(/\s+/g, ' ')}`,
+    )
+
+    // -- another organisation: 404, because for them the survey does not exist.
+    const outsiderCsvPage = await browser.newPage()
+    await signIn(outsiderCsvPage, 'outsider', BASE_URL)
+    const asOutsiderCsv = await outsiderCsvPage.request.get(csvUrl(orgSurvey.id))
+    check(
+      'Q43 another organisation gets 404, not 403',
+      asOutsiderCsv.status() === 404,
+      `HTTP ${asOutsiderCsv.status()}`,
+    )
+
+    // -- no session at all. Q43: "never reachable through a share link" — a
+    //    share token has no session, so the route must not answer without one.
+    //    Asserting the LANDING PATH, not the status: Playwright follows the
+    //    redirect and a login page returns 200 (the mistake the share-link
+    //    check above already records).
+    const anonCsvPage = await browser.newPage()
+    const anonCsv = await anonCsvPage.goto(csvUrl(orgSurvey.id), { waitUntil: 'domcontentloaded' })
+    const anonLanded = new URL(anonCsvPage.url()).pathname
+    check(
+      'Q43 without a session the route is not reachable',
+      anonLanded.startsWith('/logg-inn') || anonCsv?.status() === 404,
+      `${anonCsv?.status()} on ${anonLanded}`,
+    )
+    await anonCsvPage.close()
+
+    // -- a person survey has no attributed export at all. `attributed_results`
+    //    answers `not_attributed`; the route must not turn that into an empty
+    //    CSV that reads like "no suppliers answered".
+    const asRedaktorPerson = await page.request.get(csvUrl(survey.id))
+    check(
+      'Q43 a person survey is refused, not exported empty',
+      asRedaktorPerson.status() === 404,
+      `HTTP ${asRedaktorPerson.status()}`,
+    )
+
+    // -- THE AUDIT CLAUSE ----------------------------------------------------
+    // The sharpest thing in Q43, and it gets its own name.
+    //
+    // Asserted on the STORED ROW, read back out of `audit_events`, not on the
+    // object handed to `audit()`. Those two diverge the moment a column gains a
+    // default or a trigger enriches the row, and the property is about what is
+    // IN the table — not about what the writer intended to put there.
+    //
+    // One correction to the decision line's stated reason, recorded rather than
+    // quietly adjusted: `audit_events` is NOT readable by a leser. `audit_sel`
+    // (M:0008:190) admits administrators only. The property still matters, for
+    // two reasons that are if anything sharper: CLAUDE.md invariant 7 puts no
+    // respondent text in logs or analytics, and the table is append-only
+    // (M:0007:38) — a row that captured answer text could never be corrected
+    // or deleted while the organisation exists.
+    const { data: auditRows } = await svc
+      .from('audit_events')
+      .select('*')
+      .eq('action', 'attributed.export')
+      .eq('target', orgSurvey.id)
+      .order('created_at')
+    check(
+      'Q43 AUDIT: one export by the redaktør, one by the administrator, and nothing else',
+      (auditRows ?? []).length === 2,
+      `${(auditRows ?? []).length} row(s)`,
+    )
+    // `written` guards the three assertions below. Every one of them is
+    // vacuously TRUE on an empty table — `.every()` over no rows, and a
+    // serialised `[]` that contains no answer text — so all three passed while
+    // the route did not exist, which is the failure mode this phase keeps
+    // finding: the assertion never reached the thing it was about.
+    const written = (auditRows ?? []).length === 2
+    check(
+      'Q43 AUDIT: the stored row names the survey',
+      written &&
+        auditRows!.every((r) => (r.meta as Record<string, unknown>)?.survey_id === orgSurvey.id),
+      written ? JSON.stringify(auditRows![0]!.meta ?? null).slice(0, 70) : 'no rows to assert on',
+    )
+
+    // Every answer the survey actually holds, read from the database rather
+    // than repeated from the seed: a hard-coded list stops covering the thing
+    // it guards the moment someone adds a question.
+    const { data: answerRows } = await svc
+      .from('answers')
+      .select('value, comment, responses!inner(round_id, survey_rounds!inner(survey_id))')
+      .eq('responses.survey_rounds.survey_id', orgSurvey.id)
+    const answerText = (answerRows ?? [])
+      .flatMap((a) => [JSON.stringify(a.value ?? '').replace(/^"|"$/g, ''), a.comment ?? ''])
+      // Two- and three-character values ("Ja", "Nei") are excluded: they occur
+      // by chance in unrelated text and would make this pass or fail for
+      // reasons that have nothing to do with the audit row.
+      .filter((v) => v.length >= 4)
+    const serialised = JSON.stringify(auditRows ?? [])
+    const leaked = answerText.filter((v) => serialised.includes(v))
+    check(
+      'Q43 AUDIT: no answer text anywhere in the stored rows',
+      written && answerText.length > 0 && leaked.length === 0,
+      !written ? 'no rows to assert on'
+      : answerText.length === 0 ? 'NO ANSWERS TO CHECK — the assertion is vacuous'
+      : leaked.length ? `leaked: ${leaked[0]!.slice(0, 50)}`
+      : `${answerText.length} answer strings, none present`,
+    )
+    // A closed key set, so a field ADDED later has to be added here too. This
+    // is the half a substring check cannot do: a new key holding new content
+    // would pass the scan above on the day it is introduced and every day it
+    // stays empty in the fixture.
+    const metaKeys = new Set((auditRows ?? []).flatMap((r) => Object.keys((r.meta ?? {}) as object)))
+    const allowed = new Set(['survey_id', 'format', 'rows'])
+    check(
+      'Q43 AUDIT: meta carries only the closed set of keys',
+      written && metaKeys.size > 0 && [...metaKeys].every((k) => allowed.has(k)),
+      [...metaKeys].join(',') || '(no keys)',
+    )
+    // Where the row actually lands, asserted rather than assumed — through a
+    // real leser session, not an unauthenticated request, because "rejected"
+    // and "filtered by RLS" are different results and only one of them is the
+    // policy under discussion (Gate 2b: an empty result is not a denial, and
+    // here the empty result IS the denial, which is why it has to be shown
+    // against a row that exists).
+    const leserDb = await leserClient()
+    const { data: leserSees, error: leserErr } = await leserDb
+      .from('audit_events')
+      .select('id')
+      .eq('action', 'attributed.export')
+      .eq('target', orgSurvey.id)
+    check(
+      'Q43 AUDIT: a leser reads none of it — audit_sel is administrator-only',
+      leserErr === null && (leserSees ?? []).length === 0 && (auditRows ?? []).length > 0,
+      `leser sees ${(leserSees ?? []).length} of ${(auditRows ?? []).length} existing rows`,
+    )
+
+    await adminPage.close()
+    await outsiderCsvPage.close()
 
     check('no console errors in the editor', consoleErrors.length === 0, consoleErrors[0] ?? 'none')
 

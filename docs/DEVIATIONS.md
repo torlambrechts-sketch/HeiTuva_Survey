@@ -1819,3 +1819,46 @@ rather than centred, 13px at 1.5 rather than 12.5 at 1.45, and `text-pretty` so
 a longer promise does not end on a one-word line. D85 still stands for the
 per-choice consequence text under the banner, which remains a design-brief
 refinement neither bundle draws.
+
+### D96 — The attributed CSV's format is decided, because the bundle has none
+The v1 bundle draws the «Eksporter CSV» button (NEW:2553) but its handler is a
+toast: `onAttribExport` sets `attribNote:"CSV lastet ned"` and clears it after
+two seconds (:4880). There is no file in the prototype and therefore nothing to
+be pixel-perfect to, so the format is a stop-and-choose under CLAUDE.md's
+"minimal consistent option" rule. Three choices, all made to agree with code
+that already exists rather than with a preference:
+
+- **Semicolon, not comma.** Norwegian Excel's list separator, and the app's own
+  importer detects `,`, `;` or tab (`lib/send/import.ts:86`) — so a file
+  exported here parses when it is pasted back into the import step.
+- **A UTF-8 BOM.** Without it Excel renders æ, ø and å as mojibake, and the
+  importer already strips one on the way in (`import.ts:107`).
+- **CRLF.** RFC 4180, and what Excel writes.
+
+Two further behaviours are deliberate and are not merely serialisation:
+
+- A field beginning `=`, `+`, `-` or `@` is prefixed with a single quote.
+  Spreadsheets evaluate such a cell, and respondent free text is exactly the
+  untrusted input a formula-injection needs; the quote is the convention every
+  spreadsheet reads as "this is text". Tested in
+  `tests/unit/attributed-csv.test.ts`.
+- `responded_at` is written as a date, not a timestamp. The hour-truncation
+  rule in the anonymity CHECK governs ANONYMOUS responses and does not reach an
+  attributed row, so this is editorial rather than structural: a supplier
+  register is read by date, and a minute invites someone to reason about who
+  answered just after whom.
+
+### D97 — Q43's stated reason for the audit clause is one step off, and the test says so
+The decision line reads "an audit row that logged what was exported would put
+respondent content into a table `leser` can read". `audit_events` is not
+readable by a leser: `audit_sel` (M:0008:190) admits administrators only, which
+`scripts/verify/export.ts` now asserts directly — a leser session reads 0 of the
+2 rows that exist.
+
+The clause is kept, and the property it asserts is unchanged, because the two
+real reasons are at least as strong: CLAUDE.md invariant 7 keeps respondent free
+text out of logs and analytics entirely, and `audit_events` is append-only
+(M:0007:38) — a row that captured an answer could never be corrected or removed
+while the organisation exists. Recorded here rather than silently rewriting the
+rationale in DECISIONS, because a decision's stated reason is part of the
+decision.

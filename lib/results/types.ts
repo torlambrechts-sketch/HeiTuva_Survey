@@ -137,3 +137,45 @@ export type DashboardSummary = {
   avg: number | null
   drivers: Driver[]
 }
+
+// --- attributed_results ------------------------------------------------------
+/**
+ * The UNGATED path (Q17 §5, migration 0034). There is no `Gated` anywhere in
+ * this shape and that is deliberate: `app.k_for` returns 0 for an organisation
+ * survey, so every row is shown with the respondent's name. The gate that
+ * matters here is WHO may call it — administrator and redaktør only (Q43) —
+ * not which cells come back.
+ */
+export type AttributedStatus = 'svart' | 'paaminnet' | 'ikke_svart'
+
+export type AttributedAnswer = {
+  question_id: string
+  value: unknown
+  comment: string | null
+}
+
+export type AttributedRow = {
+  invitation_id: string
+  name: string | null
+  email: string | null
+  round_id: string
+  status: AttributedStatus
+  responded_at: string | null
+  answers: AttributedAnswer[] | null
+}
+
+export type AttributedQuestion = { id: string; type: string; text: string }
+
+export type Attributed = {
+  survey_id: string
+  title: string
+  respondent_kind: string
+  /** Always 0 — the magic value that means "no threshold", not "threshold zero". */
+  k: 0
+  invited: number
+  responded: number
+  /** Answers with no invitation behind them. Should be 0 on an attributed survey. */
+  unattributed: number
+  questions: AttributedQuestion[]
+  rows: AttributedRow[]
+}

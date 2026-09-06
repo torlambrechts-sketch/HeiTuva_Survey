@@ -12,6 +12,7 @@ import {
   createShareLink,
   createSurvey,
   dropOrg,
+  inviteOrganisations,
   inviteTo,
   submitResponses,
 } from '../tests/db/factories'
@@ -151,6 +152,81 @@ async function main() {
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
   ], { status: 'utkast', audience: 'Hele selskapet' })
+
+  // --- V1-2: the attributed path needs a survey that HAS one ----------------
+  // Until now the demo organisation held only person surveys, so every screen
+  // and every check that reads `attributed_results` had nothing to read and
+  // "no rows" was indistinguishable from "the gate refused". This is the
+  // Åpenhetsloven supplier survey: `respondent_kind = 'organisation'`, which
+  // makes `app.k_for` return 0 — no threshold, because attribution is the
+  // point (Q17 §5) — and named invitations, because the row heading IS the
+  // supplier's name.
+  //
+  // The pack is applied so the questions carry Q35's `role`, and so the policy
+  // arrives locked from the law rather than being set here.
+  const suppliers = await createSurvey(org.id, 'Aktsomhetsvurdering leverandør', [
+    { type: 'yesno', text: 'Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?' },
+    { type: 'yesno', text: 'Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?' },
+    {
+      type: 'choice',
+      text: 'Hvor mange ledd bakover i kjeden har dere oversikt over?',
+      config: { options: ['Ingen', 'Ett ledd', 'To ledd', 'Tre eller flere'] },
+    },
+    { type: 'yesno', text: 'Har dere avdekket brudd eller risiko siste 12 måneder?' },
+    { type: 'yesno', text: 'Har dere en varslingskanal som er åpen for arbeidere i kjeden?' },
+    { type: 'text', text: 'Beskriv tiltakene dere har iverksatt' },
+  ], {
+    respondentKind: 'organisation',
+    audience: 'Leverandører og forretningspartnere',
+    templatePackKey: 'leverandor-apenhetsloven',
+  })
+
+  const supplierRound = await createRound(suppliers, 0)
+  // Five suppliers in three states, because the register's whole job is to show
+  // WHO has not answered — a table where everyone answered proves nothing about
+  // the two states that need chasing.
+  const supplierInvites = await inviteOrganisations(supplierRound.id, [
+    'Nordvest Tekstil AS',
+    'Bergen Logistikk AS',
+    'Sørlandet Emballasje AS',
+    'Fjordfrakt AS',
+    'Trøndelag Komponent AS',
+  ])
+
+  // Three answer. One reports a breach and one has no policy, so the register's
+  // two filters — «Har avdekket brudd» and «Mangler policy» — each match a real
+  // row rather than rendering an empty table that looks broken.
+  const supplierAnswers: Record<string, string>[] = [
+    { policy: 'Ja', egen: 'Ja', ledd: 'Tre eller flere', brudd: 'Nei', varsling: 'Ja',
+      tiltak: 'Årlig revisjon av alle leverandører i kategori A.' },
+    { policy: 'Ja', egen: 'Ja', ledd: 'Ett ledd', brudd: 'Ja', varsling: 'Ja',
+      tiltak: 'Avdekket overtidsbrudd hos underleverandør; handlingsplan med frist i mars.' },
+    { policy: 'Nei', egen: 'Nei', ledd: 'Ingen', brudd: 'Nei', varsling: 'Nei',
+      tiltak: 'Har startet arbeidet med en policy.' },
+  ]
+  const supplierQ = suppliers.questions
+  await submitResponses(
+    supplierInvites.slice(0, 3).map((i) => i.token),
+    (i) => {
+      const a = supplierAnswers[i]!
+      return {
+        [supplierQ[0]!.id]: { value: a.policy! },
+        [supplierQ[1]!.id]: { value: a.egen! },
+        [supplierQ[2]!.id]: { value: a.ledd! },
+        [supplierQ[3]!.id]: { value: a.brudd! },
+        [supplierQ[4]!.id]: { value: a.varsling! },
+        [supplierQ[5]!.id]: { value: a.tiltak! },
+      }
+    },
+  )
+
+  // The fourth was reminded and still has not answered; the fifth has not been
+  // chased at all. `reminded_at` is an array — one entry per reminder sent.
+  await svc
+    .from('survey_invitations')
+    .update({ reminded_at: [new Date(Date.now() - 6 * 864e5).toISOString()] })
+    .eq('round_id', supplierRound.id)
+    .eq('name', supplierInvites[3]!.name)
 
   // --- Phase 5: the duty engine, in every state the card can be in ----------
   // Four cards, four different states, so a capture shows the ladder rather
@@ -364,7 +440,9 @@ async function main() {
   ${ORG_OTHER} (${other.id}) — cross-org isolation fixture
   "${above.title}" 6 responses (above k=5)
   "${below.title}" 3 responses (below k=5)
-  "${draft.title}" draft, no round\n  share link /s/${DEMO_SHARE_TOKEN}`)
+  "${draft.title}" draft, no round
+  "${suppliers.title}" organisation survey — ${supplierInvites.length} suppliers, 3 answered, no threshold
+  share link /s/${DEMO_SHARE_TOKEN}`)
 }
 
 main().catch((e) => {

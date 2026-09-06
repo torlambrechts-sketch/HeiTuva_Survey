@@ -2,6 +2,35 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
 
+/**
+ * ── THE STANDING QUESTION FOR EVERY DENIAL TEST ─────────────────────────────
+ *
+ *   What ELSE could refuse this before the check I am testing gets a chance?
+ *
+ * Twice in two phases the answer was "something", and both times the test
+ * believed it was exercising the last control when an earlier one had already
+ * ended the request:
+ *
+ *   V1-1  A guard test for `threshold_admin_only` ran as a redaktør on a survey
+ *         RLS would not show them. `surveys_upd` filtered the row, the update
+ *         matched nothing, PostgREST returned NO error — and the assertion was
+ *         simply wrong about which control had acted. Written the other way
+ *         round it would have passed with the guard deleted.
+ *
+ *   V1-2  A Q30 test used a `ledere_eget_team` share with no group. Such a
+ *         share is refused outright at `M:0034:255`, so the payload was
+ *         `{error:forbidden}` and the assertion ran against a document with no
+ *         sections at all.
+ *
+ * Two of two says the answer is rarely nothing. The layers in this schema
+ * stack: auth → RLS → a guard trigger → a CHECK → the function's own rule, and
+ * a fixture that trips an early one never reaches the late one. So arrange the
+ * fixture so ONLY the rule under test can produce the result, and where both
+ * layers matter, write two tests — one proving the outer control acts (and
+ * that zero rows is not a denial, Gate 2b), one removing it so the inner one
+ * has to.
+ */
+
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
 export const ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
