@@ -124,7 +124,11 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
 phase, not built. Two numbers carry forward and may only move up: **55 of 71 surfaces
-actively checked** by 5a3, and **18 files / 392 tests** in the census manifest.
+actively checked** by 5a3, and **18 files / 395 tests** in the census manifest.
+Both were re-measured on a fresh `supabase db reset` at the start of V1-0
+(2026-09-06): 5a3 enumerates 42 RLS tables + 29 SECURITY DEFINER functions = 71,
+of which 16 are allowlisted by design, leaving 55 — every one protected AND
+guarded, none merely unproven. The census rose 392 → 395 with Q47's three tests.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.
