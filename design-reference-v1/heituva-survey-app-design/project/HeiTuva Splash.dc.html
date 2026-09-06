@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0}
+body{background:#FCF6E9}
+a{color:#191510;text-decoration:none}
+a:hover{color:#8A6A12}
+@keyframes ht-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FCF6E9;color:#191510;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 44px;max-width:1240px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:11px">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="HeiTuva" role="img" style="display:block;flex:none">
+        <path d="M6 3h20a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H14.6l-6.1 5.2A1 1 0 0 1 7 27.4V23H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="#F5C64A"/>
+        <rect x="8.5" y="14.5" width="3.6" height="4.6" rx="1.3" fill="#191510"/>
+        <rect x="14.2" y="11" width="3.6" height="8.1" rx="1.3" fill="#191510"/>
+        <rect x="19.9" y="7.4" width="3.6" height="11.7" rx="1.3" fill="#191510"/>
+      </svg>
+      <span style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:700;font-size:21px;letter-spacing:-.03em">HeiTuva</span>
+    </div>
+    <nav style="display:flex;align-items:center;gap:4px;font-size:14px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+        <a href="{{ n.href }}" style="padding:9px 13px;border-radius:9px;color:#5F5849;font-weight:500;white-space:nowrap" style-hover="background:rgba(25,21,16,.05);color:#191510">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="position:relative;display:inline-flex;align-items:center">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5F5849" stroke-width="1.8" aria-hidden="true" style="position:absolute;left:11px;pointer-events:none">
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/>
+        </svg>
+        <select value="{{ langValue }}" onChange="{{ onLangSelect }}" aria-label="{{ t.langLabel }}" style="appearance:none;cursor:pointer;padding:10px 30px 10px 33px;border:1px solid #E8DFC9;border-radius:10px;background:#FFFDF6;color:#191510;font-size:13.5px;font-weight:600;font-family:'DM Sans',system-ui,sans-serif;outline:none">
+          <sc-for list="{{ langOptions }}" as="l" hint-placeholder-count="4">
+            <option value="{{ l.value }}">{{ l.name }}</option>
+          </sc-for>
+        </select>
+        <span style="position:absolute;right:12px;font-size:10px;color:#5F5849;pointer-events:none">▾</span>
+      </span>
+      <button onClick="{{ goLogin }}" style="cursor:pointer;padding:10px 17px;border-radius:10px;border:1px solid #E8DFC9;background:transparent;color:#191510;font-size:13.5px;font-weight:600;white-space:nowrap">{{ t.login }}</button>
+      <button onClick="{{ goSignup }}" style="cursor:pointer;padding:10px 17px;border-radius:10px;border:none;background:#191510;color:#FFFDF6;font-size:13.5px;font-weight:600;white-space:nowrap">{{ t.tryFree }}</button>
+    </div>
+  </header>
+
+  <section style="max-width:1240px;margin:0 auto;padding:30px 44px 0;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center">
+    <div style="animation:ht-in .3s ease">
+      <span style="display:inline-flex;align-items:center;gap:9px;padding:7px 14px;border-radius:999px;background:#FBD5C4;font-size:12.5px;font-weight:600">{{ t.heroBadge }}</span>
+      <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:56px;line-height:1.06;letter-spacing:-.02em;margin:22px 0 0;text-wrap:pretty">{{ t.heroLine1 }}<br>{{ t.heroLine2 }}</h1>
+      <p style="font-size:16.5px;line-height:1.65;color:#5F5849;max-width:470px;margin:20px 0 0;text-wrap:pretty">{{ t.heroBody }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:11px;margin-top:28px">
+        <button onClick="{{ goSignup }}" style="cursor:pointer;padding:16px 28px;border-radius:12px;border:none;background:#F5C64A;color:#191510;font-size:15.5px;font-weight:700;white-space:nowrap">{{ t.ctaMain }}</button>
+        <a href="HeiTuva.dc.html" style="display:inline-flex;align-items:center;padding:16px 26px;border-radius:12px;border:1px solid #E8DFC9;font-size:15px;font-weight:600;white-space:nowrap">{{ t.ctaSee }}</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:16px;font-size:12.5px;color:#5F5849">
+        <sc-for list="{{ t.risk }}" as="r" hint-placeholder-count="3">
+          <span>{{ r.label }}</span>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:30px;margin-top:34px">
+        <sc-for list="{{ t.proof }}" as="p" hint-placeholder-count="3">
+          <div>
+            <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:30px;line-height:1">{{ p.value }}</div>
+            <div style="font-size:12.5px;color:#5F5849;margin-top:4px;max-width:155px;line-height:1.4">{{ p.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:30px;border-radius:22px;border:1px solid #E8DFC9;background:#FFFDF6;box-shadow:0 20px 50px rgba(25,21,16,.08);animation:ht-in .4s ease">
+      <div style="display:flex;gap:3px;padding:4px;border-radius:999px;background:rgba(25,21,16,.05);width:fit-content">
+        <sc-for list="{{ authTabs }}" as="a" hint-placeholder-count="2">
+          <button onClick="{{ a.onClick }}" style="cursor:pointer;border:none;padding:9px 20px;border-radius:999px;background:{{ a.bg }};box-shadow:{{ a.sh }};font-size:13px;font-weight:600;color:#191510">{{ a.label }}</button>
+        </sc-for>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;margin-top:18px">{{ authTitle }}</div>
+      <div style="font-size:13px;color:#5F5849;margin-top:4px">{{ authSub }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+        <sc-for list="{{ authFields }}" as="f" hint-placeholder-count="3">
+          <label style="display:block">
+            <span style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#5F5849">{{ f.label }}</span>
+            <input value="{{ f.value }}" onChange="{{ f.onChange }}" type="{{ f.type }}" placeholder="{{ f.placeholder }}" style="box-sizing:border-box;width:100%;margin-top:6px;padding:13px 15px;border:1px solid #E8DFC9;border-radius:11px;background:#FCF6E9;color:#191510;font-size:14.5px;outline:none">
+          </label>
+        </sc-for>
+      </div>
+      <button onClick="{{ onAuth }}" style="width:100%;margin-top:18px;cursor:pointer;padding:15px;border-radius:12px;border:none;background:#191510;color:#FFFDF6;font-size:15px;font-weight:700">{{ authCta }}</button>
+      <sc-if value="{{ authNote }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:12px;padding:11px 14px;border-radius:11px;background:#A8D5D2;font-size:13px">{{ authNote }}</div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0">
+        <span style="flex:1;height:1px;background:#E8DFC9;display:block"></span>
+        <span style="font-size:12px;color:#5F5849">{{ t.or }}</span>
+        <span style="flex:1;height:1px;background:#E8DFC9;display:block"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <button onClick="{{ onSso }}" style="cursor:pointer;padding:12px;border-radius:11px;border:1px solid #E8DFC9;background:transparent;color:#191510;font-size:13px;font-weight:600">Entra ID</button>
+        <button onClick="{{ onSso }}" style="cursor:pointer;padding:12px;border-radius:11px;border:1px solid #E8DFC9;background:transparent;color:#191510;font-size:13px;font-weight:600">Google Workspace</button>
+      </div>
+      <div style="font-size:11.5px;color:#5F5849;margin-top:14px;line-height:1.55">{{ authFinePrint }}</div>
+    </div>
+  </section>
+
+  <section style="max-width:1240px;margin:0 auto;padding:64px 44px 0">
+    <div style="padding:30px 34px;border-radius:24px;background:#FFFDF6;border:1px solid #E8DFC9;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center">
+      <div>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.showKicker }}</span>
+        <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:28px;line-height:1.2;margin-top:8px">{{ t.showTitle }}</div>
+        <div style="font-size:14px;line-height:1.65;color:#5F5849;margin-top:10px;max-width:440px">{{ t.showBody }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:16px">
+          <sc-for list="{{ t.chips }}" as="c" hint-placeholder-count="8">
+            <span style="padding:6px 12px;border-radius:999px;background:#FCF6E9;border:1px solid #E8DFC9;font-size:12px">{{ c.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding:18px;border-radius:16px;background:#FCF6E9;border:1px solid #E8DFC9">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-size:13px;font-weight:700">{{ t.heatTitle }}</span>
+          <span style="font-size:11.5px;color:#5F5849">{{ t.heatMeta }}</span>
+        </div>
+        <div style="display:flex;gap:5px;padding-left:92px;margin-top:12px">
+          <sc-for list="{{ t.heatCols }}" as="c" hint-placeholder-count="4">
+            <span style="flex:1;font-size:10px;color:#5F5849;line-height:1.3">{{ c.label }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
+          <sc-for list="{{ heatRows }}" as="r" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="width:88px;flex:none;font-size:12px;font-weight:600">{{ r.label }}</span>
+              <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4">
+                <span style="flex:1;height:32px;border-radius:7px;background:{{ c.bg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">{{ c.txt }}</span>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <span style="padding:7px 13px;border-radius:999px;background:#F5C64A;font-size:11.5px;font-weight:700">{{ t.heatCta }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="svar" style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.navWhy }}</span>
+    <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:36px;line-height:1.15;margin:8px 0 0;max-width:600px;text-wrap:pretty">{{ t.driverTitle }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px">
+      <sc-for list="{{ drivers }}" as="d" hint-placeholder-count="3">
+        <div style="padding:26px;border-radius:20px;border:1px solid #E8DFC9;background:{{ d.tint }}">
+          <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:34px;line-height:1">{{ d.stat }}</div>
+          <div style="font-size:17px;font-weight:600;margin-top:14px">{{ d.title }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:#5F5849;margin-top:6px">{{ d.desc }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="bruksomrader" style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+      <div>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.navUse }}</span>
+        <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:36px;line-height:1.15;margin:8px 0 0;max-width:520px;text-wrap:pretty">{{ t.useTitle }}</h2>
+      </div>
+      <p style="font-size:14.5px;line-height:1.65;color:#5F5849;max-width:380px;margin:0">{{ t.useBody }}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px">
+      <sc-for list="{{ useCases }}" as="u" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;padding:26px;border-radius:20px;border:1px solid #E8DFC9;background:{{ u.tint }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ u.tag }}</span>
+            <span style="padding:5px 11px;border-radius:999px;background:#FFFDF6;border:1px solid #E8DFC9;font-size:11.5px;white-space:nowrap">{{ u.cadence }}</span>
+          </div>
+          <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:22px;line-height:1.25;margin-top:12px">{{ u.title }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:#5F5849;margin-top:8px;flex:1">{{ u.desc }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:16px">
+            <sc-for list="{{ u.chips }}" as="c" hint-placeholder-count="3">
+              <span style="padding:6px 11px;border-radius:999px;background:#FFFDF6;border:1px solid #E8DFC9;font-size:11.5px;color:#5F5849">{{ c.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="lovpalagt" style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <div style="padding:40px;border-radius:26px;background:#191510;color:#FFFDF6;display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:start">
+      <div>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.7">{{ t.legalKicker }}</span>
+        <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:34px;line-height:1.15;margin-top:10px;text-wrap:pretty">{{ t.legalTitle }}</div>
+        <div style="font-size:14.5px;line-height:1.7;opacity:.85;margin-top:14px">{{ t.legalBody }}</div>
+        <button onClick="{{ goSignup }}" style="margin-top:22px;cursor:pointer;padding:14px 24px;border-radius:12px;border:none;background:#F5C64A;color:#191510;font-size:14.5px;font-weight:700">{{ t.legalCta }}</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <sc-for list="{{ duties }}" as="d" hint-placeholder-count="4">
+          <div style="padding:18px;border-radius:16px;background:rgba(255,253,246,.07);border:1px solid rgba(255,253,246,.14)">
+            <div style="font-size:14.5px;font-weight:600">{{ d.title }}</div>
+            <div style="font-size:12px;opacity:.7;margin-top:3px">{{ d.law }}</div>
+            <div style="display:inline-block;margin-top:12px;padding:5px 10px;border-radius:999px;background:{{ d.tone }};color:#191510;font-size:11.5px;font-weight:700">{{ d.due }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.stepKicker }}</span>
+    <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:36px;line-height:1.15;margin:8px 0 0">{{ t.stepTitle }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:26px">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+        <div style="padding:24px;border-radius:18px;border:1px solid #E8DFC9;background:#FFFDF6">
+          <div style="width:34px;height:34px;border-radius:11px;background:#F5C64A;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">{{ s.num }}</div>
+          <div style="font-size:16px;font-weight:600;margin-top:14px">{{ s.title }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:#5F5849;margin-top:6px">{{ s.desc }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="priser" style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+      <div>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.navPrice }}</span>
+        <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:36px;line-height:1.15;margin:8px 0 0">{{ t.priceTitle }}</h2>
+      </div>
+      <div style="display:flex;gap:3px;padding:4px;border-radius:999px;background:rgba(25,21,16,.05)">
+        <sc-for list="{{ billingTabs }}" as="b" hint-placeholder-count="2">
+          <button onClick="{{ b.onClick }}" style="cursor:pointer;border:none;padding:9px 18px;border-radius:999px;background:{{ b.bg }};box-shadow:{{ b.sh }};font-size:13px;font-weight:600;color:#191510">{{ b.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px;align-items:stretch">
+      <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;padding:28px;border-radius:22px;border:{{ p.bw }} solid {{ p.bd }};background:{{ p.bg }};position:relative">
+          <sc-if value="{{ p.popular }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;top:-12px;left:28px;padding:5px 12px;border-radius:999px;background:#191510;color:#FFFDF6;font-size:11px;font-weight:700">{{ t.popular }}</span>
+          </sc-if>
+          <div style="font-size:14px;font-weight:700">{{ p.name }}</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px">
+            <span style="font-family:'Playfair Display',serif;font-weight:500;font-size:40px;line-height:1">{{ p.price }}</span>
+            <span style="font-size:13px;color:#5F5849">{{ p.unit }}</span>
+          </div>
+          <div style="font-size:13px;color:#5F5849;margin-top:6px;line-height:1.5">{{ p.desc }}</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:20px;flex:1">
+            <sc-for list="{{ p.features }}" as="f" hint-placeholder-count="5">
+              <div style="display:flex;align-items:flex-start;gap:9px;font-size:13.5px;line-height:1.45">
+                <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:999px;background:#A8D5D2;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">✓</span>{{ f.label }}
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ goSignup }}" style="margin-top:22px;cursor:pointer;padding:13px;border-radius:12px;border:{{ p.ctaBd }};background:{{ p.ctaBg }};color:{{ p.ctaFg }};font-size:14px;font-weight:700">{{ p.cta }}</button>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:12.5px;color:#5F5849;margin-top:14px">{{ t.priceFine }}</div>
+  </section>
+
+  <section style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <div style="display:grid;grid-template-columns:.8fr 1.2fr;gap:40px">
+      <div>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">{{ t.faqKicker }}</span>
+        <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:32px;line-height:1.15;margin:8px 0 0">{{ t.faqTitle }}</h2>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ faq }}" as="f" hint-placeholder-count="5">
+          <div style="padding:18px 0;border-bottom:1px solid #E8DFC9">
+            <button onClick="{{ f.onToggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;cursor:pointer;border:none;background:transparent;padding:0;text-align:left;color:#191510;font-size:16px;font-weight:600">{{ f.q }}<span style="font-size:18px;color:#5F5849">{{ f.mark }}</span></button>
+            <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:14px;line-height:1.65;color:#5F5849;margin-top:10px;max-width:620px">{{ f.a }}</div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1240px;margin:0 auto;padding:76px 44px 0">
+    <div style="padding:44px;border-radius:26px;background:#FBEBBE;display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:34px;line-height:1.15">{{ t.endTitle }}</div>
+        <div style="font-size:15px;color:#5F5849;margin-top:8px">{{ t.endBody }}</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onClick="{{ goSignup }}" style="cursor:pointer;padding:16px 28px;border-radius:12px;border:none;background:#191510;color:#FFFDF6;font-size:15px;font-weight:700;white-space:nowrap">{{ t.ctaMain }}</button>
+        <button onClick="{{ onDemo }}" style="cursor:pointer;padding:16px 26px;border-radius:12px;border:1px solid #191510;background:transparent;color:#191510;font-size:15px;font-weight:600;white-space:nowrap">{{ t.ctaDemo }}</button>
+      </div>
+    </div>
+  </section>
+
+  <footer style="max-width:1240px;margin:0 auto;padding:60px 44px 44px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-top:26px;border-top:1px solid #E8DFC9;font-size:12.5px;color:#5F5849">
+      <span>HeiTuva — Nordisk Studio AS · Storgata 12, 0155 Oslo · {{ t.footNote }}</span>
+      <span style="display:flex;gap:22px"><a href="#lovpalagt">{{ t.footPrivacy }}</a><a href="#lovpalagt">{{ t.footDpa }}</a><a href="HeiTuva.dc.html">{{ t.navProduct }}</a></span>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1020},&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;no&quot;,&quot;sv&quot;,&quot;da&quot;,&quot;en&quot;],&quot;default&quot;:&quot;no&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Innhold&quot;}}">
+const L = {
+  no: {
+    code:"NO", name:"Norsk", langLabel:"Velg språk",
+    navWhy:"Hvorfor folk svarer", navUse:"Bruksområder", navLegal:"Lovpålagt", navPrice:"Priser", navProduct:"Se det i bruk",
+    navShort:["Hvorfor svare","Bruksområder","Lovpålagt","Priser","Produktet"],
+    login:"Logg inn", tryFree:"Prøv gratis", or:"eller",
+    heroBadge:"Norsk, svensk, dansk og engelsk · data i Norge og EØS",
+    heroLine1:"De svarer.", heroLine2:"Og dere vet hva dere skal gjøre.",
+    heroBody:"De fleste undersøkelser dør to steder: folk gidder ikke svare, og svarene havner i et regneark ingen åpner. HeiTuva fjerner begge. Fem minutter å lage, 90 sekunder å svare, ferdig rapport til leder og styre samme dag.",
+    ctaMain:"Lag den første undersøkelsen", ctaSee:"Se det i bruk →", ctaDemo:"Få en gjennomgang på 20 minutter",
+    risk:[{label:"Gratis i 30 dager"},{label:"· Uten betalingskort"},{label:"· Ingenting å installere"}],
+    proof:[{value:"71 %",label:"svarer når vi spør på SMS — snitt hos pilotkundene"},{value:"90 sek",label:"bruker folk på å svare"},{value:"4 lovkrav",label:"med ferdig mal, frist og rapport"}],
+    showKicker:"Slik ser dere svarene", showTitle:"Fra spørsmål til fargekart til rapport — uten regneark",
+    showBody:"Fargekartet viser hvert team mot hvert spørsmål. Rødt er der dere må inn. Team med under fem svar skjules automatisk, og ett klikk løfter grafen inn i rapporten.",
+    chips:[{label:"Samlet oversikt"},{label:"Fargekart per team"},{label:"Ferdige rapportmaler"},{label:"Arkiv for lovkrav"},{label:"Egen spørsmålsbank"},{label:"Del med riktig rolle"},{label:"CSV, Entra, Google"},{label:"QR, SMS, e-post"}],
+    heatTitle:"Team mot spørsmål", heatMeta:"siste runde", heatCta:"Legg i rapport",
+    heatCols:[{label:"Tid til oppgaver"},{label:"Tydelige mål"},{label:"Hjelp ved behov"},{label:"Anbefale"}],
+    heatTeams:["Produkt","Design","Utvikling","Ledelse"], few:"n<5",
+    driverTitle:"Tre grunner til at folk faktisk svarer",
+    drivers:[
+      {stat:"90 sek",title:"Ett spørsmål om gangen",desc:"Laget for mobil, uten innlogging, med tiden oppgitt før første spørsmål. Folk svarer fordi det er lettere enn å la være."},
+      {stat:"n ≥ 5",title:"Anonymitet som holder",desc:"Ingen ser hvem som svarte hva — heller ikke den som er administrator. Er dere færre enn fem, vises ingen tall."},
+      {stat:"+18 pp",title:"Dere viser hva det ble til",desc:"«Dere ba om færre møter — torsdager er nå møtefrie.» Ingenting løfter neste runde like mye."}],
+    useTitle:"Det folk faktisk bruker HeiTuva til",
+    useBody:"Alle maler er skrevet på norsk og klare å sende. Endre det du vil, hent formuleringer som er testet før, og lagre deres egne spørsmål så neste kollega slipper å finne dem opp igjen.",
+    useCases:[
+      {tag:"HR",cadence:"Ukentlig",title:"Pulsmåling",desc:"Tre til fem faste spørsmål som viser hvilken vei det går, før noe vokser seg stort.",chips:["Skala","Trend","Anonymt"]},
+      {tag:"HR",cadence:"Årlig",title:"Medarbeiderundersøkelse",desc:"Den store runden, sammenlignet med i fjor og brutt ned per team.",chips:["Matrise","Fargekart","Rapport"]},
+      {tag:"Ledelse",cadence:"30 · 60 · 90 dager",title:"Oppstartssjekk",desc:"Spør nyansatte mens inntrykket er ferskt. Går ut av seg selv etter startdatoen.",chips:["Automatisk","Fritekst","Oppfølging"]},
+      {tag:"Drift",cadence:"Etter behov",title:"Arrangement og samling",desc:"Vis QR-koden på skjermen i salen, og få svarene før folk har reist hjem.",chips:["QR-kode","Ansikter","Ett minutt"]},
+      {tag:"Kunder",cadence:"Løpende",title:"Kundeundersøkelse",desc:"Spør kundene rett etter levering: vil de anbefale dere, og hva kunne vært bedre.",chips:["0–10","Lenke","Kommentar"]},
+      {tag:"Alle",cadence:"Når som helst",title:"Raskt spørsmål",desc:"Ett spørsmål, én lenke, svar innen timen. Funker like godt til vennegjengen.",chips:["Ja / nei","Delbar lenke","Uten innlogging"]}],
+    legalKicker:"Det loven krever, ferdig utfylt",
+    legalTitle:"Åpenhetsloven, arbeidsmiljøloven og likestilling — dokumentert etter hvert som dere jobber",
+    legalBody:"Hver plikt har sin mal, sjekkliste, frist og ansvarlig. Rapporten skriver seg selv med metode, deltakelse, funn og tiltak — og legges i arkivet med signatur, så fjorårets versjon alltid ligger rett ved.",
+    legalCta:"Begynn med den første plikten",
+    duties:[
+      {title:"Aktsomhetsvurdering",law:"Åpenhetsloven §§ 4–5",due:"Frist 30. juni",tone:"#F5C64A"},
+      {title:"Psykososial kartlegging",law:"Arbeidsmiljøloven § 4-3",due:"Årlig",tone:"#A8D5D2"},
+      {title:"Likestilling og ARP",law:"Likestillingsloven § 26",due:"Annethvert år",tone:"#FBD5C4"},
+      {title:"Trakassering og ytringsklima",law:"Aml. kap. 2A",due:"Årlig",tone:"#FBEBBE"}],
+    stepKicker:"Slik virker det", stepTitle:"Fire steg fra spørsmål til endring",
+    steps:[
+      {title:"Bygg",desc:"Følg veiviseren eller velg en mal. Vi sier fra hvis et spørsmål er ledende eller egentlig er to."},
+      {title:"Hent og send",desc:"Hent mottakerne fra CSV, Excel, Entra ID eller Google. Send på e-post, SMS, lenke eller QR."},
+      {title:"Se svarene",desc:"Se alle runder samlet, fargekart per team, og hva folk skriver om oftest."},
+      {title:"Vis hva det ble til",desc:"Rapport til leder eller styre på ett klikk. Fortell hva dere gjorde — derfor svarer folk neste gang."}],
+    priceTitle:"Begynn gratis. Betal når det er verdt det.", popular:"Mest valgt",
+    billing:[{k:"mnd",label:"Månedlig"},{k:"aar",label:"Årlig · spar 20 %"}],
+    priceFine:"Alle planer: data i EØS, databehandleravtale, ingen tall under fem svar og support på norsk. Priser uten mva.",
+    plans:[
+      {name:"Gratis",price:"0 kr",unit:"for alltid",desc:"For ett team, eller ett spørsmål du bare må ha svar på.",cta:"Kom i gang",
+        features:["Opptil 25 som svarer","3 aktive undersøkelser","Alle spørsmålstyper og maler","Lenke og QR","Ingen tall før fem har svart"]},
+      {name:"Team",priceM:"49 kr",priceY:"39 kr",unit:"per ansatt / mnd",desc:"For dere som spør jevnlig og skal rapportere oppover.",cta:"Prøv gratis i 30 dager",
+        features:["Så mange undersøkelser og folk dere vil","Samlet oversikt og fargekart per team","Rapportmaler, deling per rolle og faste utsendinger","E-post og SMS med påminnelser","CSV, Excel, Entra ID og Google","Felles spørsmålsbank for hele firmaet"]},
+      {name:"Bedrift",priceM:"79 kr",priceY:"64 kr",unit:"per ansatt / mnd",desc:"For virksomheter med lovkrav, flere enheter og revisor på døra.",cta:"Ta en prat med oss",
+        features:["Alt i Team","Rapporter for lovkrav, med arkiv og signering","Pålogging med SSO, roller og full logg","Kobling mot HR-systemet","Egen rådgiver som hjelper dere i gang"]}],
+    faqKicker:"Vanlige spørsmål", faqTitle:"Det vi får spørsmål om først",
+    faq:[
+      ["Er svarene virkelig anonyme?","Ja. Vi lagrer ingen kobling mellom person og svar, og viser ingen tall før fem har svart. Er teamet mindre enn fem, får heller ikke administrator se det brutt ned."],
+      ["Hvor ligger dataene?","På servere i Oslo og Frankfurt. Databehandleravtale, personvernerklæring og risikovurdering ligger ferdig i Admin, og rådata slettes automatisk etter tiden dere velger."],
+      ["Må folk logge inn eller laste ned noe?","Nei. Lenke, QR eller SMS åpner undersøkelsen rett på mobilen. Ett spørsmål om gangen, rundt 90 sekunder."],
+      ["Kan vi spørre på flere språk?","Ja. Undersøkelsen kan gå ut på norsk, svensk, dansk og engelsk samtidig — hver ansatt svarer på sitt språk, og svarene samles i samme rapport."],
+      ["Hva skjer når de 30 dagene er over?","Du velger en plan, eller fortsetter på gratisversjonen. Ingenting slettes uten at du ber om det."]],
+    endTitle:"Rekker dere en undersøkelse før lunsj?",
+    endBody:"Gratis i 30 dager, uten betalingskort. Hent mottakerne fra CSV eller Entra ID, og send i dag.",
+    authTabs:["Prøv gratis","Logg inn"],
+    authTitleUp:"Gratis i 30 dager", authTitleIn:"Velkommen tilbake",
+    authSubUp:"Uten betalingskort. Avslutt når du vil.", authSubIn:"Logg inn med jobb-e-posten din",
+    authCtaUp:"Opprett konto", authCtaIn:"Logg inn",
+    fields:{name:"Navn",company:"Firma",email:"Jobb-e-post",password:"Passord"},
+    ph:{name:"Tuva Berg",company:"Nordisk Studio AS",email:"tuva@nordiskstudio.no",passUp:"Minst 10 tegn",passIn:"••••••••"},
+    noteMissing:"Fyll ut alle feltene, så er du i gang", noteUp:"Kontoen er klar — sjekk e-posten for å bekrefte",
+    noteIn:"Du er logget inn — åpner oversikten", noteSso:"Sender deg videre for å logge inn", noteDemo:"Vi tar kontakt og avtaler et tidspunkt",
+    fineUp:"Når du oppretter konto, godtar du personvernerklæringen. Data lagres i EØS, og slettes når du avslutter.",
+    fineIn:"Glemt passord? Vi sender en engangslenke til jobb-e-posten din.",
+    footNote:"Norsk, svensk, dansk og engelsk", footPrivacy:"Personvernerklæring", footDpa:"Databehandleravtale"
+  },
+
+  sv: {
+    code:"SV", name:"Svenska", langLabel:"Välj språk",
+    navWhy:"Varför folk svarar", navUse:"Användningsområden", navLegal:"Lagkrav", navPrice:"Priser", navProduct:"Se hur det fungerar",
+    navShort:["Varför svara","Användning","Lagkrav","Priser","Produkten"],
+    login:"Logga in", tryFree:"Testa gratis", or:"eller",
+    heroBadge:"Svenska, norska, danska och engelska · data inom EU/EES",
+    heroLine1:"De svarar.", heroLine2:"Och ni vet vad ni ska göra.",
+    heroBody:"De flesta undersökningar dör på två ställen: ingen orkar svara, och svaren hamnar i ett kalkylblad som ingen öppnar. HeiTuva tar bort båda. Fem minuter att bygga, 90 sekunder att svara, färdig rapport till chef och styrelse samma dag.",
+    ctaMain:"Skapa din första undersökning", ctaSee:"Se hur det fungerar →", ctaDemo:"Boka en genomgång på 20 minuter",
+    risk:[{label:"Gratis i 30 dagar"},{label:"· Inget betalkort"},{label:"· Inget att installera"}],
+    proof:[{value:"71 %",label:"svarar när vi frågar via sms — snitt hos pilotkunderna"},{value:"90 sek",label:"tar det att svara"},{value:"4 lagkrav",label:"med färdig mall, deadline och rapport"}],
+    showKicker:"Så ser ni svaren", showTitle:"Från fråga till färgkarta till rapport — utan kalkylblad",
+    showBody:"Färgkartan visar varje team mot varje fråga. Rött är där ni behöver gå in. Team med färre än fem svar döljs automatiskt, och ett klick lyfter grafen in i rapporten.",
+    chips:[{label:"Samlad översikt"},{label:"Färgkarta per team"},{label:"Färdiga rapportmallar"},{label:"Arkiv för lagkrav"},{label:"Egen frågebank"},{label:"Dela med rätt roll"},{label:"CSV, Entra, Google"},{label:"QR, sms, e-post"}],
+    heatTitle:"Team mot fråga", heatMeta:"senaste omgången", heatCta:"Lägg i rapporten",
+    heatCols:[{label:"Tid för uppgifter"},{label:"Tydliga mål"},{label:"Hjälp vid behov"},{label:"Rekommendera"}],
+    heatTeams:["Produkt","Design","Utveckling","Ledning"], few:"n<5",
+    driverTitle:"Tre skäl till att folk faktiskt svarar",
+    drivers:[
+      {stat:"90 sek",title:"En fråga i taget",desc:"Byggt för mobilen, utan inloggning, med tiden angiven före första frågan. Folk svarar för att det är enklare än att strunta i det."},
+      {stat:"n ≥ 5",title:"Anonymitet som håller",desc:"Ingen ser vem som svarat vad — inte heller administratören. Är ni färre än fem visas inga tal."},
+      {stat:"+18 pe",title:"Ni visar vad det blev av det",desc:"«Ni bad om färre möten — torsdagar är nu mötesfria.» Inget lyfter nästa omgång lika mycket."}],
+    useTitle:"Det folk faktiskt använder HeiTuva till",
+    useBody:"Alla mallar är skrivna på svenska och klara att skicka. Ändra fritt, använd formuleringar som testats tidigare, och spara era egna frågor så nästa kollega slipper hitta på dem igen.",
+    useCases:[
+      {tag:"HR",cadence:"Varje vecka",title:"Pulsmätning",desc:"Tre till fem fasta frågor som visar vartåt det går, innan något växer sig stort.",chips:["Skala","Trend","Anonymt"]},
+      {tag:"HR",cadence:"Årligen",title:"Medarbetarundersökning",desc:"Den stora omgången, jämförd med i fjol och nedbruten per team.",chips:["Matris","Färgkarta","Rapport"]},
+      {tag:"Ledning",cadence:"30 · 60 · 90 dagar",title:"Startkoll",desc:"Fråga nyanställda medan intrycket är färskt. Går ut av sig själv efter startdatum.",chips:["Automatiskt","Fritext","Uppföljning"]},
+      {tag:"Drift",cadence:"Vid behov",title:"Event och konferens",desc:"Visa QR-koden på skärmen i salen och få svaren innan folk rest hem.",chips:["QR-kod","Ansikten","En minut"]},
+      {tag:"Kunder",cadence:"Löpande",title:"Kundundersökning",desc:"Fråga kunderna direkt efter leverans: vill de rekommendera er, och vad kunde varit bättre.",chips:["0–10","Länk","Kommentar"]},
+      {tag:"Alla",cadence:"När som helst",title:"Snabb fråga",desc:"En fråga, en länk, svar inom timmen. Funkar lika bra till vänkretsen.",chips:["Ja / nej","Delbar länk","Utan inloggning"]}],
+    legalKicker:"Det lagen kräver, redan ifyllt",
+    legalTitle:"Arbetsmiljö, jämställdhet och hållbarhet — dokumenterat medan ni arbetar",
+    legalBody:"Varje krav har sin mall, checklista, deadline och ansvarig. Rapporten skriver sig själv med metod, deltagande, resultat och åtgärder — och arkiveras med signatur, så fjolårets version alltid ligger intill.",
+    legalCta:"Börja med det första kravet",
+    duties:[
+      {title:"Riskbedömning OSA",law:"AFS 2015:4",due:"Årligen",tone:"#A8D5D2"},
+      {title:"Jämställdhetskartläggning",law:"Diskrimineringslagen 3 kap.",due:"Årligen",tone:"#FBD5C4"},
+      {title:"Kränkande särbehandling",law:"AFS 2015:4 § 13",due:"Årligen",tone:"#FBEBBE"},
+      {title:"Due diligence i leverantörskedjan",law:"CSDDD / hållbarhet",due:"Deadline 30 juni",tone:"#F5C64A"}],
+    stepKicker:"Så funkar det", stepTitle:"Fyra steg från fråga till förändring",
+    steps:[
+      {title:"Bygg",desc:"Följ guiden eller välj en mall. Vi säger till om en fråga är ledande eller egentligen är två."},
+      {title:"Hämta och skicka",desc:"Hämta mottagarna från CSV, Excel, Entra ID eller Google. Skicka via e-post, sms, länk eller QR."},
+      {title:"Se svaren",desc:"Se alla omgångar samlat, färgkarta per team och vad folk skriver om oftast."},
+      {title:"Visa vad det blev",desc:"Rapport till chef eller styrelse med ett klick. Berätta vad ni gjorde — därför svarar folk nästa gång."}],
+    priceTitle:"Börja gratis. Betala när det är värt det.", popular:"Populärast",
+    billing:[{k:"mnd",label:"Månadsvis"},{k:"aar",label:"Årligen · spara 20 %"}],
+    priceFine:"Alla planer: data inom EU/EES, biträdesavtal, inga tal under fem svar och support på svenska. Priser exkl. moms.",
+    plans:[
+      {name:"Gratis",price:"0 kr",unit:"för alltid",desc:"För ett team, eller en fråga ni bara måste ha svar på.",cta:"Kom igång",
+        features:["Upp till 25 som svarar","3 aktiva undersökningar","Alla frågetyper och mallar","Länk och QR","Inga tal förrän fem svarat"]},
+      {name:"Team",priceM:"59 kr",priceY:"47 kr",unit:"per anställd / mån",desc:"För er som frågar regelbundet och ska rapportera uppåt.",cta:"Testa gratis i 30 dagar",
+        features:["Så många undersökningar och personer ni vill","Samlad översikt och färgkarta per team","Rapportmallar, delning per roll och schemalagda utskick","E-post och sms med påminnelser","CSV, Excel, Entra ID och Google","Gemensam frågebank för hela företaget"]},
+      {name:"Företag",priceM:"95 kr",priceY:"77 kr",unit:"per anställd / mån",desc:"För verksamheter med lagkrav, flera enheter och revisor på dörren.",cta:"Prata med oss",
+        features:["Allt i Team","Rapporter för lagkrav, med arkiv och signering","Inloggning med SSO, roller och full logg","Koppling mot HR-systemet","Egen rådgivare som hjälper er igång"]}],
+    faqKicker:"Vanliga frågor", faqTitle:"Det vi får frågor om först",
+    faq:[
+      ["Är svaren verkligen anonyma?","Ja. Vi sparar ingen koppling mellan person och svar, och visar inga tal förrän fem har svarat. Är teamet mindre än fem får inte heller administratören se det nedbrutet."],
+      ["Var lagras data?","På servrar i Oslo och Frankfurt. Biträdesavtal, integritetspolicy och riskbedömning ligger färdiga i Admin, och rådata raderas automatiskt efter den tid ni väljer."],
+      ["Måste folk logga in eller ladda ner något?","Nej. Länk, QR eller sms öppnar undersökningen direkt i mobilen. En fråga i taget, runt 90 sekunder."],
+      ["Kan vi fråga på flera språk?","Ja. Undersökningen kan gå ut på svenska, norska, danska och engelska samtidigt — var och en svarar på sitt språk, och svaren samlas i samma rapport."],
+      ["Vad händer när de 30 dagarna är slut?","Du väljer en plan, eller fortsätter på gratisversionen. Inget raderas utan att du ber om det."]],
+    endTitle:"Hinner ni en undersökning före lunch?",
+    endBody:"Gratis i 30 dagar, utan betalkort. Hämta mottagarna från CSV eller Entra ID och skicka idag.",
+    authTabs:["Testa gratis","Logga in"],
+    authTitleUp:"Gratis i 30 dagar", authTitleIn:"Välkommen tillbaka",
+    authSubUp:"Inget betalkort. Avsluta när du vill.", authSubIn:"Logga in med din jobbmejl",
+    authCtaUp:"Skapa konto", authCtaIn:"Logga in",
+    fields:{name:"Namn",company:"Företag",email:"Jobbmejl",password:"Lösenord"},
+    ph:{name:"Tuva Berg",company:"Nordisk Studio AB",email:"tuva@nordiskstudio.se",passUp:"Minst 10 tecken",passIn:"••••••••"},
+    noteMissing:"Fyll i alla fält, sedan är du igång", noteUp:"Kontot är klart — kolla mejlen för att bekräfta",
+    noteIn:"Du är inloggad — öppnar översikten", noteSso:"Skickar dig vidare för att logga in", noteDemo:"Vi hör av oss och bokar en tid",
+    fineUp:"När du skapar konto godkänner du integritetspolicyn. Data lagras inom EU/EES och raderas när du avslutar.",
+    fineIn:"Glömt lösenordet? Vi skickar en engångslänk till din jobbmejl.",
+    footNote:"Svenska, norska, danska och engelska", footPrivacy:"Integritetspolicy", footDpa:"Biträdesavtal"
+  },
+
+  da: {
+    code:"DA", name:"Dansk", langLabel:"Vælg sprog",
+    navWhy:"Hvorfor folk svarer", navUse:"Brugsområder", navLegal:"Lovkrav", navPrice:"Priser", navProduct:"Se det i brug",
+    navShort:["Hvorfor svare","Brugsområder","Lovkrav","Priser","Produktet"],
+    login:"Log ind", tryFree:"Prøv gratis", or:"eller",
+    heroBadge:"Dansk, norsk, svensk og engelsk · data i EU/EØS",
+    heroLine1:"De svarer.", heroLine2:"Og I ved, hvad I skal gøre.",
+    heroBody:"De fleste undersøgelser dør to steder: ingen gider svare, og svarene ender i et regneark, ingen åbner. HeiTuva fjerner begge. Fem minutter at bygge, 90 sekunder at svare, færdig rapport til ledelse og bestyrelse samme dag.",
+    ctaMain:"Lav den første undersøgelse", ctaSee:"Se det i brug →", ctaDemo:"Få en gennemgang på 20 minutter",
+    risk:[{label:"Gratis i 30 dage"},{label:"· Uden betalingskort"},{label:"· Intet at installere"}],
+    proof:[{value:"71 %",label:"svarer, når vi spørger via sms — gennemsnit hos pilotkunderne"},{value:"90 sek",label:"tager det at svare"},{value:"4 lovkrav",label:"med færdig skabelon, frist og rapport"}],
+    showKicker:"Sådan ser I svarene", showTitle:"Fra spørgsmål til farvekort til rapport — uden regneark",
+    showBody:"Farvekortet viser hvert team over for hvert spørgsmål. Rødt er der, hvor I skal ind. Team med under fem svar skjules automatisk, og ét klik løfter grafen ind i rapporten.",
+    chips:[{label:"Samlet overblik"},{label:"Farvekort pr. team"},{label:"Færdige rapportskabeloner"},{label:"Arkiv til lovkrav"},{label:"Egen spørgsmålsbank"},{label:"Del med den rette rolle"},{label:"CSV, Entra, Google"},{label:"QR, sms, e-mail"}],
+    heatTitle:"Team over for spørgsmål", heatMeta:"seneste runde", heatCta:"Læg i rapporten",
+    heatCols:[{label:"Tid til opgaver"},{label:"Tydelige mål"},{label:"Hjælp ved behov"},{label:"Anbefale"}],
+    heatTeams:["Produkt","Design","Udvikling","Ledelse"], few:"n<5",
+    driverTitle:"Tre grunde til, at folk faktisk svarer",
+    drivers:[
+      {stat:"90 sek",title:"Ét spørgsmål ad gangen",desc:"Bygget til mobilen, uden login, med tiden oplyst før første spørgsmål. Folk svarer, fordi det er lettere end at lade være."},
+      {stat:"n ≥ 5",title:"Anonymitet, der holder",desc:"Ingen ser, hvem der svarede hvad — heller ikke administratoren. Er I under fem, vises der ingen tal."},
+      {stat:"+18 pp",title:"I viser, hvad det blev til",desc:"«I bad om færre møder — torsdage er nu mødefri.» Intet løfter næste runde lige så meget."}],
+    useTitle:"Det folk faktisk bruger HeiTuva til",
+    useBody:"Alle skabeloner er skrevet på dansk og klar til at sende. Ret frit, brug formuleringer der er testet før, og gem jeres egne spørgsmål, så næste kollega slipper for at finde dem op igen.",
+    useCases:[
+      {tag:"HR",cadence:"Ugentligt",title:"Pulsmåling",desc:"Tre til fem faste spørgsmål, der viser hvilken vej det går, før noget vokser sig stort.",chips:["Skala","Tendens","Anonymt"]},
+      {tag:"HR",cadence:"Årligt",title:"Medarbejderundersøgelse",desc:"Den store runde, sammenlignet med sidste år og opdelt pr. team.",chips:["Matrix","Farvekort","Rapport"]},
+      {tag:"Ledelse",cadence:"30 · 60 · 90 dage",title:"Opstartstjek",desc:"Spørg nye medarbejdere, mens indtrykket er friskt. Sendes af sig selv efter startdatoen.",chips:["Automatisk","Fritekst","Opfølgning"]},
+      {tag:"Drift",cadence:"Efter behov",title:"Event og samling",desc:"Vis QR-koden på skærmen i salen, og få svarene før folk er rejst hjem.",chips:["QR-kode","Ansigter","Ét minut"]},
+      {tag:"Kunder",cadence:"Løbende",title:"Kundeundersøgelse",desc:"Spørg kunderne lige efter levering: vil de anbefale jer, og hvad kunne være bedre.",chips:["0–10","Link","Kommentar"]},
+      {tag:"Alle",cadence:"Når som helst",title:"Hurtigt spørgsmål",desc:"Ét spørgsmål, ét link, svar inden for timen. Virker lige så godt til vennekredsen.",chips:["Ja / nej","Delbart link","Uden login"]}],
+    legalKicker:"Det loven kræver, allerede udfyldt",
+    legalTitle:"Arbejdsmiljø, ligestilling og bæredygtighed — dokumenteret mens I arbejder",
+    legalBody:"Hvert krav har sin skabelon, tjekliste, frist og ansvarlige. Rapporten skriver sig selv med metode, deltagelse, fund og tiltag — og arkiveres med signatur, så sidste års version altid ligger lige ved.",
+    legalCta:"Begynd med det første krav",
+    duties:[
+      {title:"APV — psykisk arbejdsmiljø",law:"Arbejdsmiljøloven § 15a",due:"Hvert 3. år",tone:"#A8D5D2"},
+      {title:"Ligestillingsredegørelse",law:"Ligestillingsloven § 5a",due:"Hvert 2. år",tone:"#FBD5C4"},
+      {title:"Krænkende handlinger",law:"AT-vejledning 4.3.1",due:"Årligt",tone:"#FBEBBE"},
+      {title:"Due diligence i leverandørkæden",law:"CSDDD / bæredygtighed",due:"Frist 30. juni",tone:"#F5C64A"}],
+    stepKicker:"Sådan virker det", stepTitle:"Fire trin fra spørgsmål til forandring",
+    steps:[
+      {title:"Byg",desc:"Følg guiden eller vælg en skabelon. Vi siger til, hvis et spørgsmål er ledende eller egentlig er to."},
+      {title:"Hent og send",desc:"Hent modtagerne fra CSV, Excel, Entra ID eller Google. Send via e-mail, sms, link eller QR."},
+      {title:"Se svarene",desc:"Se alle runder samlet, farvekort pr. team og hvad folk oftest skriver om."},
+      {title:"Vis hvad det blev til",desc:"Rapport til ledelse eller bestyrelse med ét klik. Fortæl hvad I gjorde — derfor svarer folk næste gang."}],
+    priceTitle:"Begynd gratis. Betal når det er værd det.", popular:"Mest valgte",
+    billing:[{k:"mnd",label:"Månedligt"},{k:"aar",label:"Årligt · spar 20 %"}],
+    priceFine:"Alle planer: data i EU/EØS, databehandleraftale, ingen tal under fem svar og support på dansk. Priser uden moms.",
+    plans:[
+      {name:"Gratis",price:"0 kr.",unit:"for altid",desc:"Til ét team, eller ét spørgsmål I bare skal have svar på.",cta:"Kom i gang",
+        features:["Op til 25 der svarer","3 aktive undersøgelser","Alle spørgsmålstyper og skabeloner","Link og QR","Ingen tal før fem har svaret"]},
+      {name:"Team",priceM:"39 kr.",priceY:"31 kr.",unit:"pr. medarbejder / md.",desc:"Til jer der spørger jævnligt og skal rapportere opad.",cta:"Prøv gratis i 30 dage",
+        features:["Så mange undersøgelser og personer I vil","Samlet overblik og farvekort pr. team","Rapportskabeloner, deling pr. rolle og planlagte udsendelser","E-mail og sms med påmindelser","CSV, Excel, Entra ID og Google","Fælles spørgsmålsbank for hele virksomheden"]},
+      {name:"Virksomhed",priceM:"62 kr.",priceY:"50 kr.",unit:"pr. medarbejder / md.",desc:"Til virksomheder med lovkrav, flere enheder og revisor på trapperne.",cta:"Tag en snak med os",
+        features:["Alt i Team","Rapporter til lovkrav, med arkiv og underskrift","Login med SSO, roller og fuld log","Kobling til HR-systemet","Egen rådgiver der hjælper jer i gang"]}],
+    faqKicker:"Ofte stillede spørgsmål", faqTitle:"Det vi oftest bliver spurgt om",
+    faq:[
+      ["Er svarene virkelig anonyme?","Ja. Vi gemmer ingen kobling mellem person og svar, og viser ingen tal, før fem har svaret. Er teamet under fem, kan administratoren heller ikke se det opdelt."],
+      ["Hvor ligger data?","På servere i Oslo og Frankfurt. Databehandleraftale, privatlivspolitik og risikovurdering ligger klar i Admin, og rådata slettes automatisk efter den tid I vælger."],
+      ["Skal folk logge ind eller hente noget?","Nej. Link, QR eller sms åbner undersøgelsen direkte på mobilen. Ét spørgsmål ad gangen, omkring 90 sekunder."],
+      ["Kan vi spørge på flere sprog?","Ja. Undersøgelsen kan sendes på dansk, norsk, svensk og engelsk samtidig — hver medarbejder svarer på sit sprog, og svarene samles i samme rapport."],
+      ["Hvad sker der, når de 30 dage er gået?","Du vælger en plan eller fortsætter på gratisversionen. Intet slettes, uden at du beder om det."]],
+    endTitle:"Kan I nå en undersøgelse før frokost?",
+    endBody:"Gratis i 30 dage, uden betalingskort. Hent modtagerne fra CSV eller Entra ID, og send i dag.",
+    authTabs:["Prøv gratis","Log ind"],
+    authTitleUp:"Gratis i 30 dage", authTitleIn:"Velkommen tilbage",
+    authSubUp:"Uden betalingskort. Stop når du vil.", authSubIn:"Log ind med din arbejdsmail",
+    authCtaUp:"Opret konto", authCtaIn:"Log ind",
+    fields:{name:"Navn",company:"Virksomhed",email:"Arbejdsmail",password:"Adgangskode"},
+    ph:{name:"Tuva Berg",company:"Nordisk Studio ApS",email:"tuva@nordiskstudio.dk",passUp:"Mindst 10 tegn",passIn:"••••••••"},
+    noteMissing:"Udfyld alle felter, så er du i gang", noteUp:"Kontoen er klar — tjek mailen for at bekræfte",
+    noteIn:"Du er logget ind — åbner overblikket", noteSso:"Sender dig videre for at logge ind", noteDemo:"Vi kontakter dig og aftaler et tidspunkt",
+    fineUp:"Når du opretter konto, accepterer du privatlivspolitikken. Data lagres i EU/EØS og slettes, når du stopper.",
+    fineIn:"Glemt adgangskode? Vi sender et engangslink til din arbejdsmail.",
+    footNote:"Dansk, norsk, svensk og engelsk", footPrivacy:"Privatlivspolitik", footDpa:"Databehandleraftale"
+  },
+
+  en: {
+    code:"EN", name:"English", langLabel:"Choose language",
+    navWhy:"Why people answer", navUse:"Use cases", navLegal:"Compliance", navPrice:"Pricing", navProduct:"See it working",
+    navShort:["Why they answer","Use cases","Compliance","Pricing","Product"],
+    login:"Log in", tryFree:"Try free", or:"or",
+    heroBadge:"Norwegian, Swedish, Danish and English · data in the EU/EEA",
+    heroLine1:"They answer.", heroLine2:"And you know what to do next.",
+    heroBody:"Most surveys die in two places: nobody bothers to answer, and the answers end up in a spreadsheet nobody opens. HeiTuva removes both. Five minutes to build, 90 seconds to answer, a finished report for your leadership team the same day.",
+    ctaMain:"Build your first survey", ctaSee:"See it working →", ctaDemo:"Get a 20-minute walkthrough",
+    risk:[{label:"Free for 30 days"},{label:"· No card needed"},{label:"· Nothing to install"}],
+    proof:[{value:"71%",label:"answer when we ask by SMS — average across pilot customers"},{value:"90 sec",label:"is all it takes to answer"},{value:"4 duties",label:"with a ready template, deadline and report"}],
+    showKicker:"How you read the answers", showTitle:"From question to heat map to report — no spreadsheets",
+    showBody:"The heat map puts every team against every question. Red is where you need to step in. Teams with fewer than five answers are hidden automatically, and one click lifts the chart into your report.",
+    chips:[{label:"One shared overview"},{label:"Heat map per team"},{label:"Ready report templates"},{label:"Compliance archive"},{label:"Your own question bank"},{label:"Share by role"},{label:"CSV, Entra, Google"},{label:"QR, SMS, email"}],
+    heatTitle:"Teams against questions", heatMeta:"latest round", heatCta:"Add to report",
+    heatCols:[{label:"Time for the work"},{label:"Clear goals"},{label:"Help when needed"},{label:"Would recommend"}],
+    heatTeams:["Product","Design","Engineering","Leadership"], few:"n<5",
+    driverTitle:"Three reasons people actually answer",
+    drivers:[
+      {stat:"90 sec",title:"One question at a time",desc:"Built for the phone, no login, with the time stated before the first question. People answer because it is easier than skipping it."},
+      {stat:"n ≥ 5",title:"Anonymity that holds",desc:"Nobody can see who said what — not even an administrator. Under five answers, no numbers are shown at all."},
+      {stat:"+18 pp",title:"You show what came of it",desc:"“You asked for fewer meetings — Thursdays are now meeting-free.” Nothing lifts the next round as much."}],
+    useTitle:"What people actually use HeiTuva for",
+    useBody:"Every template is ready to send. Change what you like, reuse wording that has been tested before, and save your own questions so the next colleague does not have to invent them again.",
+    useCases:[
+      {tag:"HR",cadence:"Weekly",title:"Pulse survey",desc:"Three to five fixed questions that show which way things are going, before anything grows.",chips:["Scale","Trend","Anonymous"]},
+      {tag:"HR",cadence:"Yearly",title:"Employee survey",desc:"The big round, compared with last year and broken down per team.",chips:["Matrix","Heat map","Report"]},
+      {tag:"Leadership",cadence:"30 · 60 · 90 days",title:"New-hire check-in",desc:"Ask new people while the impression is fresh. Sends itself after the start date.",chips:["Automatic","Free text","Follow-up"]},
+      {tag:"Operations",cadence:"As needed",title:"Events and offsites",desc:"Put the QR code on the screen in the room and get answers before people head home.",chips:["QR code","Faces","One minute"]},
+      {tag:"Customers",cadence:"Ongoing",title:"Customer survey",desc:"Ask customers right after delivery: would they recommend you, and what could have been better.",chips:["0–10","Link","Comment"]},
+      {tag:"Everyone",cadence:"Any time",title:"Quick question",desc:"One question, one link, answers within the hour. Works just as well for friends.",chips:["Yes / no","Shareable link","No login"]}],
+    legalKicker:"Compliance, already filled in",
+    legalTitle:"Working environment, equality and supply-chain duties — documented as you go",
+    legalBody:"Every duty has its template, checklist, deadline and owner. The report writes itself with method, participation, findings and actions — and is archived with a signature, so last year's version always sits right beside it.",
+    legalCta:"Start with the first duty",
+    duties:[
+      {title:"Supply-chain due diligence",law:"Transparency Act / CSDDD",due:"Due 30 June",tone:"#F5C64A"},
+      {title:"Psychosocial risk assessment",law:"Working Environment Act",due:"Yearly",tone:"#A8D5D2"},
+      {title:"Equality reporting",law:"Equality & Anti-Discrimination Act",due:"Every two years",tone:"#FBD5C4"},
+      {title:"Harassment and speak-up climate",law:"Whistleblowing rules",due:"Yearly",tone:"#FBEBBE"}],
+    stepKicker:"How it works", stepTitle:"Four steps from question to change",
+    steps:[
+      {title:"Build",desc:"Follow the wizard or pick a template. We flag it if a question is leading or is really two questions."},
+      {title:"Import and send",desc:"Pull recipients from CSV, Excel, Entra ID or Google. Send by email, SMS, link or QR."},
+      {title:"Read the answers",desc:"All rounds in one view, a heat map per team, and the themes people write about most."},
+      {title:"Show what came of it",desc:"A report for your leadership team in one click. Tell people what you did — that is why they answer next time."}],
+    priceTitle:"Start free. Pay when it is worth it.", popular:"Most popular",
+    billing:[{k:"mnd",label:"Monthly"},{k:"aar",label:"Yearly · save 20%"}],
+    priceFine:"All plans: data in the EU/EEA, a data processing agreement, no numbers below five answers, and support in Nordic languages and English. Prices excl. VAT.",
+    plans:[
+      {name:"Free",price:"€0",unit:"forever",desc:"For one team, or one question you simply need answered.",cta:"Get started",
+        features:["Up to 25 respondents","3 active surveys","All question types and templates","Link and QR","No numbers until five have answered"]},
+      {name:"Team",priceM:"€4.50",priceY:"€3.60",unit:"per employee / month",desc:"For teams that ask regularly and report upwards.",cta:"Try free for 30 days",
+        features:["Unlimited surveys and people","Shared overview and heat map per team","Report templates, sharing by role and scheduled sends","Email and SMS with reminders","CSV, Excel, Entra ID and Google","A shared question bank for the whole company"]},
+      {name:"Enterprise",priceM:"€7.20",priceY:"€5.80",unit:"per employee / month",desc:"For organisations with legal duties, several units and auditors at the door.",cta:"Talk to us",
+        features:["Everything in Team","Compliance reports with archive and signing","SSO login, roles and a full audit log","HR system integration","A dedicated adviser to get you started"]}],
+    faqKicker:"FAQ", faqTitle:"What people ask us first",
+    faq:[
+      ["Are the answers really anonymous?","Yes. We store no link between person and answer, and show no numbers until five people have answered. If a team is smaller than five, not even an administrator sees it broken down."],
+      ["Where is the data stored?","On servers in Oslo and Frankfurt. The data processing agreement, privacy notice and risk assessment are ready in Admin, and raw data is deleted automatically after the retention period you choose."],
+      ["Do people need to log in or install anything?","No. A link, QR code or SMS opens the survey straight on their phone. One question at a time, around 90 seconds."],
+      ["Can we ask in several languages?","Yes. A survey can go out in Norwegian, Swedish, Danish and English at once — each person answers in their own language, and the answers land in the same report."],
+      ["What happens after the 30 days?","You pick a plan, or continue on the free tier. Nothing is deleted unless you ask us to."]],
+    endTitle:"Could you have a survey out before lunch?",
+    endBody:"Free for 30 days, no card. Import recipients from CSV or Entra ID and send today.",
+    authTabs:["Try free","Log in"],
+    authTitleUp:"Free for 30 days", authTitleIn:"Welcome back",
+    authSubUp:"No card needed. Cancel whenever.", authSubIn:"Log in with your work email",
+    authCtaUp:"Create account", authCtaIn:"Log in",
+    fields:{name:"Name",company:"Company",email:"Work email",password:"Password"},
+    ph:{name:"Tuva Berg",company:"Nordisk Studio",email:"tuva@nordiskstudio.no",passUp:"At least 10 characters",passIn:"••••••••"},
+    noteMissing:"Fill in every field and you are good to go", noteUp:"Account created — check your email to confirm",
+    noteIn:"You are logged in — opening the overview", noteSso:"Sending you on to log in", noteDemo:"We will get in touch to book a time",
+    fineUp:"Creating an account means you accept the privacy notice. Data is stored in the EU/EEA and deleted when you leave.",
+    fineIn:"Forgotten your password? We will send a one-time link to your work email.",
+    footNote:"Norwegian, Swedish, Danish and English", footPrivacy:"Privacy notice", footDpa:"Data processing agreement"
+  }
+};
+
+const TINTS = ["#FFFDF6","#CFE7E4","#FBEBBE"];
+const CASE_TINTS = ["#FBEBBE","#FFFDF6","#CFE7E4","#FBD5C4","#FFFDF6","#F3E7DB"];
+const HEAT = [
+  [["4,2","#CFE7E4"],["3,9","#FBEBBE"],["4,4","#CFE7E4"],["4,1","#FBEBBE"]],
+  [["4,6","#CFE7E4"],["4,3","#CFE7E4"],["4,5","#CFE7E4"],["4,4","#CFE7E4"]],
+  [["3,3","#FBD5C4"],["3,8","#FBEBBE"],["3,5","#FBD5C4"],["3,9","#FBEBBE"]],
+  [null,null,null,null]
+];
+
+class Component extends DCLogic {
+  state = { lang: null, mode: "signup", email: "", name: "", company: "", password: "", note: "", noteKey: "", billing: "aar", faqOpen: 0 };
+
+  set(k){ return e => { const v = e.target.value; this.setState({ [k]: v }); }; }
+
+  renderVals(){
+    const lang = this.state.lang || this.props.lang || "no";
+    const st = this.state, t = L[lang] || L.no, signup = st.mode === "signup", yearly = st.billing === "aar";
+    const decimal = lang === "en" ? v => v.replace(",", ".") : v => v;
+
+    const fieldKeys = signup ? ["name","company","email","password"] : ["email","password"];
+    const note = st.noteKey ? t[st.noteKey] : "";
+
+    return {
+      t,
+      langValue: lang,
+      langOptions: ["no","sv","da","en"].map(k => ({ value:k, name: L[k].name })),
+      onLangSelect: e => this.setState({ lang: e.target.value }),
+      navItems: (t.navShort || []).map((label,i) => ({ label, href: ["#svar","#bruksomrader","#lovpalagt","#priser","HeiTuva.dc.html"][i] })),
+
+      goSignup: () => this.setState({ mode:"signup", noteKey:"" }),
+      goLogin: () => this.setState({ mode:"login", noteKey:"" }),
+      onDemo: () => this.setState({ noteKey:"noteDemo", mode:"signup" }),
+      authTabs: t.authTabs.map((label,i) => { const k = i === 0 ? "signup" : "login";
+        return { label, bg: st.mode===k ? "#FFFDF6" : "transparent", sh: st.mode===k ? "0 1px 3px rgba(25,21,16,.14)" : "none",
+          onClick: () => this.setState({ mode:k, noteKey:"" }) }; }),
+      authTitle: signup ? t.authTitleUp : t.authTitleIn,
+      authSub: signup ? t.authSubUp : t.authSubIn,
+      authCta: signup ? t.authCtaUp : t.authCtaIn,
+      authFields: fieldKeys.map(k => ({ label: t.fields[k], type: k === "password" ? "password" : k === "email" ? "email" : "text",
+        placeholder: k === "password" ? (signup ? t.ph.passUp : t.ph.passIn) : t.ph[k],
+        value: st[k], onChange: this.set(k) })),
+      authNote: note,
+      onAuth: () => { const missing = fieldKeys.filter(k => !String(st[k]).trim()).length;
+        this.setState({ noteKey: missing ? "noteMissing" : (signup ? "noteUp" : "noteIn") }); },
+      onSso: () => this.setState({ noteKey:"noteSso" }),
+      authFinePrint: signup ? t.fineUp : t.fineIn,
+
+      heatRows: t.heatTeams.map((label,ri) => ({ label,
+        cells: HEAT[ri].map(c => c ? { txt: decimal(c[0]), bg: c[1] } : { txt: t.few, bg:"rgba(25,21,16,.06)" }) })),
+
+      drivers: t.drivers.map((d,i) => Object.assign({}, d, { tint: TINTS[i] })),
+      useCases: t.useCases.map((u,i) => Object.assign({}, u, { tint: CASE_TINTS[i], chips: u.chips.map(label => ({ label })) })),
+      duties: t.duties,
+      steps: t.steps.map((s,i) => Object.assign({}, s, { num: String(i+1) })),
+
+      billingTabs: t.billing.map(b => ({ label:b.label, bg: st.billing===b.k ? "#FFFDF6" : "transparent",
+        sh: st.billing===b.k ? "0 1px 3px rgba(25,21,16,.14)" : "none", onClick: () => this.setState({ billing:b.k }) })),
+      plans: t.plans.map((p,i) => ({ name:p.name, unit:p.unit, desc:p.desc, cta:p.cta,
+        price: p.price || (yearly ? p.priceY : p.priceM),
+        popular: i === 1,
+        bd: i === 1 ? "#191510" : "#E8DFC9", bw: i === 1 ? "2px" : "1px",
+        bg: i === 2 ? "#FBEBBE" : "#FFFDF6",
+        ctaBd: i === 1 ? "none" : "1px solid " + (i === 2 ? "#191510" : "#E8DFC9"),
+        ctaBg: i === 1 ? "#F5C64A" : "transparent", ctaFg: "#191510",
+        features: p.features.map(label => ({ label })) })),
+
+      faq: t.faq.map(([q,a],i) => ({ q, a, open: st.faqOpen === i, mark: st.faqOpen === i ? "–" : "+",
+        onToggle: () => this.setState({ faqOpen: st.faqOpen === i ? -1 : i }) }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>
