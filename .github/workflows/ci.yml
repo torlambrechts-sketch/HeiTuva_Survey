@@ -60,7 +60,7 @@ jobs:
               select count(*) into duties   from public.duty_definitions;
               select count(*) into bank     from public.question_bank;
               select count(*) into sections from public.report_section_types;
-              if packs <> 17 or duties <> 4 or bank <> 12 or sections <> 10 then
+              if packs <> 17 or duties <> 4 or bank <> 12 or sections <> 11 then
                 raise exception 'seed drift: packs=% duties=% bank=% sections=%', packs, duties, bank, sections;
               end if;
             end \$\$;"
