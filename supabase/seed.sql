@@ -99,7 +99,20 @@ insert into public.quality_rules (key, lang, pattern, rule, message) values
 ('double_barreled','no','\m(og|eller)\M','{"kind":"regex_min_words","min_words":7}','Ser ut som to spørsmål i ett — del det opp'),
 ('leading_words','no',null,'{"kind":"leading_words","words":["fornøyd","enig i at","selvsagt","åpenbart","endelig","flott","utmerket","dårlige"]}','Ledende ordvalg — prøv en nøytral formulering'),
 ('too_long','no',null,'{"kind":"max_words","max":20}','Over 20 ord — kort det ned'),
-('negation','no','\m(ikke|aldri)\M','{"kind":"regex"}','Negasjon gjør spørsmålet vanskelig å svare på');
+('negation','no','\m(ikke|aldri)\M','{"kind":"regex"}','Negasjon gjør spørsmålet vanskelig å svare på'),
+-- The policy panel's pronoun rule (DECISIONS Q36's panel, v1 bundle :3529). It
+-- is a quality_rules row so that retuning the pronoun list, or adding the rule
+-- for another language, stays a row rather than a code change. `qualityFlags`
+-- skips kinds it does not know, so this never appears as a question-quality
+-- flag; only the policy panel reads it, and only in organisation mode.
+-- Its message carries one {question} placeholder — the single extension this
+-- table's convention needed, because this rule has to name what it is about.
+--
+-- Norwegian only, like the four rules above it: `quality_rules` has a `lang`
+-- column but its primary key is `key` alone, so the table cannot actually hold
+-- the same rule twice. Logged rather than migrated here — widening the key is a
+-- schema change and this is a panel.
+('policy_pronoun','no','\m(du|deg|din|ditt|dine|jeg|meg|min|mitt|mine)\M','{"kind":"policy_pronoun"}','«{question}» handler om enkeltpersoner, men svarene attribueres til virksomheten.');
 
 -- Benchmarks (static reference seed — DECISIONS Q8; replace with sourced values) --
 insert into public.benchmarks (industry, metric_key, value, source) values

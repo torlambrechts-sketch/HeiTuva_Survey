@@ -17,5 +17,6 @@
   "tests/invariants/threshold-policy.test.ts": 14,
   "tests/unit/anonymity-promise.test.ts": 6,
   "tests/invariants/attributed-results.test.ts": 15,
-  "tests/db/policy-panel.test.ts": 4
+  "tests/db/policy-panel.test.ts": 4,
+  "tests/unit/policy-warnings.test.ts": 10
 }
