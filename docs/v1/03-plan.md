@@ -61,15 +61,26 @@ Negative tests, written first and shown failing:
 - `WideToggle` per Q32 (default: `xl` only; deviation logged).
 - `components/AppHeader.tsx:19–25`, `AppNav.tsx:19–26`, `MobileNav.tsx`: `insight` item; `nav.insight` key in both message files. Pattern: App shell.
 - `InsightTabs` on `DashboardScreen.tsx:114` and `ReportsScreen.tsx:64`; subtitles. Pattern: Tab rails.
-- `scripts/verify/reference.ts:21, 27` → `design-reference-v1/…`; regenerate `artifacts/reference/*.png` once; CLAUDE.md and VERIFY.md path text updated (required edits, outside `docs/v1/`).
+- `scripts/verify/reference.ts:21, 27` renders **both** bundles (Q18): the Phase 1–7 renders are KEPT, not overwritten, and the two sets are named so which-is-which needs no inference — `artifacts/reference/<screen>.png` stays the Phase 1–7 baseline and `artifacts/reference-v1/<screen>.png` is the v1 target. CLAUDE.md and VERIFY.md carry both paths and state which governs what (required edits, outside `docs/v1/`).
 
-**Definition of done.** Gates 1–7. Gate 3a for **all 37 routes** against the
-regenerated references — this is the only phase that compares everything, and
+**Definition of done.** Gates 1–7, and CI green — which it is not today (see
+the carried blocker below). Gate 3a for **all 37 routes** against the v1
+references — this is the only phase that compares everything, and
 it produces the fidelity list every later phase inherits. Gate 3e all routes
 (`verify:responsive`; the frame changes every width). Census ≥ 393 (≥ 394 with
 Q28), files 18. 5a3: measured on a reset database and recorded as the floor;
 no change expected (no new table or function). Visual baselines untouched
 (login and wizard step 0 are not in this phase).
+
+**Carried blocker, found on starting the phase.** CI has been red on `main`
+since `cd74022` (the Phase 9 prod-apply commit): `npm ci` fails because
+`package-lock.json` is out of sync with `package.json`, so tsc, eslint and the
+build are skipped; and the seed-count check fails because migration 0034 added
+the `per_virksomhet` section type, making `report_section_types` 11 rows where
+`.github/workflows/ci.yml:63` still asserts 10 — so the Phase 9 invariant suite
+has never run in CI. Both are fixed in this phase, before anything else: a
+phase whose definition of done is "gates green" cannot start on a build that
+cannot run them. This is D55's shape recurring and is logged as such.
 
 **Not in this phase.** Any new screen; the wizard; Oversikt's relocation
 (V1-6); any dashboard change beyond the heading.

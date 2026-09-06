@@ -6,9 +6,19 @@ the recommended answer the plan in `03-plan.md` assumes; overruling one changes
 the plan where the phase text says "per Qnn". Anything the bundle implies but
 never states is here as a decision, not an assumption.
 
+**Status.** Q18, Q28, Q32 and Q47 are **CONFIRMED by Tor** (2026-09-06) and are
+in force. Q19–Q46 are staged: they are confirmed in batches tied to the phase
+where each bites, because a decision taken out of context is taken badly. The
+batch order is V1-1 (Q31, Q36) → V1-2 (Q30, Q34, Q35, Q43) → V1-3 (Q19–Q23) →
+V1-4 (Q25, Q26, Q27, Q29, Q33, Q42, Q46) → V1-5 (Q24, Q44, Q45) → V1-6 (Q37)
+→ V1-7 (Q41); Q38, Q39 and Q40 belong to no phase and are confirmed when their
+subject arises. Nine of the twenty-nine touch the security core: six on the
+k-gate or an aggregate path (Q26, Q28, Q30, Q36, Q41, Q42) and three on RLS or
+role semantics (Q23, Q25, Q43).
+
 | # | Question | DEFAULT (confirm / overrule) | Where it bites |
 |---|---|---|---|
-| Q18 | Design source of truth | `design-reference-v1/…` is the source for every screen; the old bundle stays in the repo for history; CLAUDE.md, VERIFY.md and `scripts/verify/reference.ts:21` are re-pointed. | V1-0; C15 |
+| Q18 | Design source of truth | **CONFIRMED with refinement.** `design-reference-v1/…` is the target for every screen a v1 phase touches; `design-reference/` remains the reference for Phase 1–7 work **as built**, so a fidelity question about an untouched screen is answered against the bundle it was built from. Both bundles stay in the repo — CLAUDE.md makes the design load-bearing, and a referenced-but-absent bundle turns fidelity into guesswork. The v1 renders are captured beside the Phase 1–7 renders, named so which-is-which needs no inference; CLAUDE.md, VERIFY.md and `scripts/verify/reference.ts:21` carry both paths and say which governs what. | V1-0; C15 |
 | Q19 | Does recurrence supersede D43? | **No.** D43's two controls ("Sendes" picker, reminder chips) are still drawn (NEW:2245–2263) and stay open; the row chip "Planlagt hver uke · 12 runder" (NEW:3269–3272) closes D43's open question about how a scheduled survey appears on the list. Recurrence (status, pause/stop, custom, yearly/biennial, inherited) is built as drawn. | V1-3; C21 |
 | Q20 | Cadence vocabulary | Add `biennial` and `custom` to `app.cadence`; "Hvert år" = existing `annual`; `biannual` stays unused and undocumented in the UI. | V1-3 |
 | Q21 | Inherited statutory cadence | **Default, not lock.** The pack's cadence pre-fills the schedule; the padlock note becomes an explanatory note. (Overrule = a guard trigger on `schedules` and one more negative test.) | V1-3; C4 |
@@ -18,11 +28,11 @@ never states is here as a decision, not an assumption.
 | Q25 | Dashboard layout ownership | **Per member** (`dashboard_layouts (org_id, user_id)`), presets per organisation (registry rows + org-saved rows). Mirrors `dashboard_pins` (`M:0024:9–11`). | V1-4; C3 |
 | Q26 | Stream panel | **Defer** behind `feature_flags.event_stream_panel`; the picker shows it unavailable with its `req` chip, as the bundle draws (NEW:2962, 3666–3670). | V1-4 / V1-7; C9 |
 | Q27 | Presets that lead with the stream panel | Seed "Kundeopplevelse" and "Intern tjenestekvalitet" **without** the stream entry (brief B2: omit rather than seed) until Q26 lifts; their descriptions are adjusted accordingly and logged as a deviation. | V1-4 |
-| Q28 | Response counts below the threshold | **Keep the app's reading**: a response count is participation and stays visible (row, Oversikt, Resultater stats); only answer-derived scalars are gated. The brief's "aldri det faktiske antallet" (§ Hva som ikke skal designes) is amended to "never an answer-derived number"; the bundle's own row still prints "N av T". (Overrule = `results_summary` nulls `n/invited/responded/completion` below k **and** the row/Oversikt counts follow.) | V1-0, V1-2; C2 |
+| Q28 | Response counts below the threshold | **CONFIRMED as DEFAULT.** Keep the app's reading: a response count is participation and stays visible (row, Oversikt, Resultater stats); only answer-derived scalars are gated. The brief's "aldri det faktiske antallet" (§ Hva som ikke skal designes) is amended to "never an answer-derived number"; the bundle's own row still prints "N av T". Three follow-ons, all in V1-0: the design brief's line is amended to «aldri et svarutledet tall» so the brief stops contradicting the bundle for whoever reads it next; the reasoning is written into `tests/invariants/threshold-policy.test.ts` as a comment on the exemptions — **counts of PEOPLE are participation, anything derived from what they SAID is gated** — because a grandfathered pair of names decays and a stated rule does not; and the exemption list stays enumerated and closed, so a third count-only function FAILS the assertion until someone adds it deliberately with a reason, the same rule as the k_for allowlist. | V1-0, V1-2; C2 |
 | Q29 | Pins without an opener | **Keep** the app's "Åpne rapport (n)" beside "Frys som rapport"; log the deviation from NEW (which removed the button but kept the pins). | V1-4; C17 |
 | Q30 | «Svar per virksomhet» under share links | **Refuse** for token readers (`alle_ansatte`, `ledere_eget_team`): composed as `unavailable / share_scope`; members at `ledelse` see it. Åpenhetsloven publishes the redegjørelse, not the per-supplier answers. | V1-2; C11 |
 | Q31 | Respondent language chips | Only **active** locales are drawn (Q11 holds; D73 precedent); NEW's chip chrome adopted; logged as a deviation with Q11 as driver. | V1-1; C5 |
-| Q32 | Wide toggle below 1192 px | Render at `xl` and above only; deviation logged under RESPONSIVE.md rule 4's own escape clause. | V1-0; C10 |
+| Q32 | Wide toggle below 1192 px | **CONFIRMED as DEFAULT.** Render at `xl` and above only; deviation logged under RESPONSIVE.md rule 4's own escape clause. | V1-0; C10 |
 | Q33 | Mobile pattern for the "Tilpass" card | It **stacks in place** (content order); its rail wraps; the picker's columns become one. Written into RESPONSIVE.md as a named pattern before V1-4's UI starts. | V1-4; C14 |
 | Q34 | Mobile treatment of an expandable attributed row | Card per row (Data tables, wide row); the detail grid opens **inside** the card as a single column; no overflow menu (no consequential controls). Written into RESPONSIVE.md. | V1-2 |
 | Q35 | Key-question designation for the attributed table | **Data on the pack**: a `role` (`brudd`, `policy`, `key`) on the pack's question entries, carried into `survey_questions.config`; never a regex on question text (NEW:3536–3540). | V1-2 |
@@ -36,6 +46,7 @@ never states is here as a decision, not an assumption.
 | Q43 | Attributed CSV export | Administrator and redaktør; leser refused; audited (`attributed.export`); never reachable through a share link. | V1-2 |
 | Q44 | Wizard purposes | The wizard lists the first six packs of the chosen use case (NEW:4197) instead of the fixed six keys (`undersokelser/keys.ts:93–100`). | V1-5 |
 | Q45 | The five new packs' categories | Seeded with `category = 'Annet'` and `use_case` set; `template_packs.category` CHECK untouched (C8). | V1-5 |
+| Q47 | Peer results on an organisation survey | **CONFIRMED (was C1).** `get_peer_results` returns `hidden` when `respondent_kind = 'organisation'`, decided in the RPC and not in the component: a supplier holding a live token can call the function directly, and today `app.k_for` returns 0 for an organisation survey (`M:0032:1152, 1176`), so the distribution of the other suppliers' answers comes back. That is **disclosure between competitors**, not a display choice. It needs its own negative test in V1-0: a supplier token retrieves its own submission and nothing about any other respondent, with a positive control proving the supplier's own data does come back. | V1-0; was C1 |
 | Q46 | Filters move into the "Tilpass" card | Adopt NEW on desktop (period/group/survey chips leave the header). Below `md` this costs taps; accepted as drawn unless Q33's pattern says otherwise. | V1-4 |
 
 **Two things this register does not decide.** The 5a3 floor after Phase 9
