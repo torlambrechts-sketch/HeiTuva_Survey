@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { QUESTION_ROLES } from '@/lib/questions/roles'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 
@@ -16,6 +17,8 @@ const PackQuestion = z.object({
   options: z.array(z.string()).optional(),
   required: z.boolean().optional(),
   help: z.string().optional(),
+  role: z.enum(QUESTION_ROLES).optional(),
+  short: z.string().optional(),
 })
 
 async function requireEditor() {
@@ -73,7 +76,16 @@ export async function createSurveyFromPack(packId: string): Promise<LibraryResul
         text: q.text,
         help: q.help ?? null,
         required: q.required ?? false,
-        config: (q.options ? { options: q.options } : {}) as never,
+        // Q35 travels with the question here too. NOTE for the next phase's
+        // list, not fixed in this one: this path builds `config` by hand while
+        // the wizard's uses `configFor`, so a pack question's `statements` and
+        // `multi` are lost when the survey is created from «Bruk mal» and kept
+        // when it is created from the wizard. Same pack, two shapes.
+        config: {
+          ...(q.options ? { options: q.options } : {}),
+          ...(q.role ? { role: q.role } : {}),
+          ...(q.short ? { short: q.short } : {}),
+        } as never,
       })),
     )
     if (qError) {

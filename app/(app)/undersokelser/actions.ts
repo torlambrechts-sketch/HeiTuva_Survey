@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { audit } from '@/lib/auth/audit'
 import { NEW_QUESTION_TEXT, QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
+import { QUESTION_ROLES } from '@/lib/questions/roles'
 import { SHARE_SCOPES } from './keys'
 
 export type SurveyResult = { ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
@@ -25,6 +26,10 @@ const PackQuestion = z.object({
   multi: z.boolean().optional(),
   required: z.boolean().optional(),
   help: z.string().optional(),
+  /** DECISIONS Q35 — what the question IS in an attributed register. */
+  role: z.enum(QUESTION_ROLES).optional(),
+  /** The column heading for a roled question; the text itself when absent. */
+  short: z.string().optional(),
 })
 
 /**
@@ -46,6 +51,12 @@ function configFor(q: z.infer<typeof PackQuestion>): Record<string, unknown> {
   if (q.options?.length) config.options = q.options
   if (q.statements?.length) config.statements = q.statements
   if (q.multi !== undefined) config.multi = q.multi
+  // Q35: the designation travels with the question into the survey. A survey is
+  // a record of what was asked, so the role is COPIED rather than looked up
+  // from the pack at read time — editing the pack later must not silently
+  // reclassify a survey that has already been sent.
+  if (q.role) config.role = q.role
+  if (q.short) config.short = q.short
   return config
 }
 

@@ -17,7 +17,7 @@ insert into public.template_packs (org_id, key, category, legal_ref, title, audi
 (null,'likestilling-deltid','Lovpålagt','ARP — kartlegges annethvert år','Likestilling og ufrivillig deltid','Alle ansatte · annethvert år',
  '[{"text":"Jobber du heltid eller deltid?","type":"choice","options":["Heltid","Deltid — frivillig","Deltid — ønsker å jobbe mer"]},{"text":"Er du tilgjengelig for å jobbe mer enn du gjør i dag?","type":"yesno"},{"text":"Hva ville gjort det mulig for deg å jobbe mer?","type":"choice","multi":true,"options":["Annen arbeidstid","Tilrettelagte oppgaver","Barnehage/SFO","Tilrettelegging for helse","Ikke aktuelt"]},{"text":"Jeg har samme mulighet til utvikling og forfremmelse som andre","type":"likert"},{"text":"Jeg opplever at lønn settes rettferdig hos oss","type":"likert"},{"text":"Er det noe vi bør endre for å bli mer likestilte?","type":"text"}]',7),
 (null,'leverandor-apenhetsloven','Lovpålagt','Åpenhetsloven §§ 4–5 · frist 30. juni','Aktsomhetsvurdering leverandør','Leverandører og forretningspartnere',
- '[{"text":"Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?","type":"yesno"},{"text":"Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?","type":"yesno"},{"text":"Hvor mange ledd bakover i kjeden har dere oversikt over?","type":"choice","options":["Ingen","Ett ledd","To ledd","Tre eller flere"]},{"text":"Har dere avdekket brudd eller risiko siste 12 måneder?","type":"yesno"},{"text":"Har dere en varslingskanal som er åpen for arbeidere i kjeden?","type":"yesno"},{"text":"Beskriv tiltakene dere har iverksatt","type":"text"}]',8),
+ '[{"text":"Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?","type":"yesno","role":"policy","short":"Policy"},{"text":"Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?","type":"yesno","role":"key","short":"Egen vurdering"},{"text":"Hvor mange ledd bakover i kjeden har dere oversikt over?","type":"choice","options":["Ingen","Ett ledd","To ledd","Tre eller flere"]},{"text":"Har dere avdekket brudd eller risiko siste 12 måneder?","type":"yesno","role":"brudd","short":"Brudd/risiko"},{"text":"Har dere en varslingskanal som er åpen for arbeidere i kjeden?","type":"yesno","role":"key","short":"Varslingskanal"},{"text":"Beskriv tiltakene dere har iverksatt","type":"text"}]',8),
 (null,'klima-miljo','Lovpålagt','Bærekraftsrapportering · ESG','Klima- og miljøkartlegging','Ansatte og leverandører',
  '[{"text":"Hvordan kommer du deg oftest på jobb?","type":"choice","options":["Til fots eller sykkel","Kollektivt","Elbil","Fossilbil","Hjemmekontor"]},{"text":"Hvor mange flyreiser i jobb hadde du siste år?","type":"choice","options":["Ingen","1–2","3–5","6 eller flere"]},{"text":"Vi har rutiner som gjør det enkelt å velge miljøvennlig","type":"likert"},{"text":"Hva hindrer deg i å ta det grønne valget på jobb?","type":"text"}]',9),
 (null,'nps-kunde','Kunder',null,'Hvor sannsynlig er det at du anbefaler oss?','Kunder · løpende',
@@ -70,6 +70,12 @@ insert into public.duty_definitions (key, title, law, basis, default_interval_mo
  'Varslingsrutinen skal være kjent og testet blant de ansatte.',12,false,'trakassering-ytringsklima',
  '[{"key":"k1","label":"Undersøkelse gjennomført"},{"key":"k2","label":"Varslingsrutine kjent"},{"key":"k3","label":"Funn håndtert"},{"key":"k4","label":"Ansvarlig oppnevnt"}]',
  '[{"key":"hr","label":"HR-ansvarlig","role":"Eier varslingsrutinen"}]');
+
+-- Q35 (2026-09-06): the Åpenhetsloven pack's questions above carry `role` and
+-- `short`. Migration 0040 sets the same values, and for the same reason the
+-- note below gives: it runs BEFORE this seed, so on a fresh reset its UPDATE
+-- hits zero rows and only serves a database whose packs predate it. The two
+-- must be edited together or a reset and an upgrade disagree.
 
 -- Q17 threshold policy on the statutory packs and duties (docs/Q17_terskel_forslag.md,
 -- the law-anchored table). This is DATA and belongs with the pack rows it governs.

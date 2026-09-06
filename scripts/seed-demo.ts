@@ -165,15 +165,21 @@ async function main() {
   // The pack is applied so the questions carry Q35's `role`, and so the policy
   // arrives locked from the law rather than being set here.
   const suppliers = await createSurvey(org.id, 'Aktsomhetsvurdering leverandør', [
-    { type: 'yesno', text: 'Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?' },
-    { type: 'yesno', text: 'Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?' },
+    // Q35: the roles are the pack's, copied here because this fixture builds the
+    // questions directly rather than going through `createSurveyFromPack`.
+    { type: 'yesno', text: 'Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?',
+      config: { role: 'policy', short: 'Policy' } },
+    { type: 'yesno', text: 'Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?',
+      config: { role: 'key', short: 'Egen vurdering' } },
     {
       type: 'choice',
       text: 'Hvor mange ledd bakover i kjeden har dere oversikt over?',
       config: { options: ['Ingen', 'Ett ledd', 'To ledd', 'Tre eller flere'] },
     },
-    { type: 'yesno', text: 'Har dere avdekket brudd eller risiko siste 12 måneder?' },
-    { type: 'yesno', text: 'Har dere en varslingskanal som er åpen for arbeidere i kjeden?' },
+    { type: 'yesno', text: 'Har dere avdekket brudd eller risiko siste 12 måneder?',
+      config: { role: 'brudd', short: 'Brudd/risiko' } },
+    { type: 'yesno', text: 'Har dere en varslingskanal som er åpen for arbeidere i kjeden?',
+      config: { role: 'key', short: 'Varslingskanal' } },
     { type: 'text', text: 'Beskriv tiltakene dere har iverksatt' },
   ], {
     respondentKind: 'organisation',
