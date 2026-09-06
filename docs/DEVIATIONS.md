@@ -1797,14 +1797,35 @@ count group members the survey is not yet addressed to — and render a warning
 computed from a guess. CLAUDE.md's never-fabricate rule covers exactly that: a
 made-up denominator is indistinguishable from a real one in review.
 
-**Status: to-fix in V1-2** (Tor, 2026-09-06). This does not travel forward as a
-standing deviation. A warning that is implemented, tested and permanently silent
-is worse than an absent one — it reads as working, and the next person to look
-will believe the rule is covering them. V1-2 owns Send, which is where
-recipients stop being hypothetical, so it carries the writer: `03-plan.md` §
-V1-2 has it in scope. Once `surveys.target` has a writer this warning fires with
-no further change, and the same rule wants a second home on the Send screen's
-readiness, where the count is known at the moment it matters.
+**Status: CLOSED in V1-2** (migration 0039). `surveys.target` now has a writer,
+and the writer is a trigger on `survey_invitations` rather than the Send action,
+because recipients reach a round by several paths and an action-level writer
+covers the one it is written in.
+
+**Which count, decided explicitly:** the LATEST round's recipient count — not
+the first, not the largest, not the sum. Tor's case is the reason: threshold 5,
+round 1 to 40, round 2 to 4. A survey-level number that stayed at 40 is silent
+in exactly the situation the rule exists for, and a sum (44) is a number nobody
+will ever compare with a threshold, because the threshold is applied per round
+(`aggregate_results(p_survey, p_group, p_round)`). Proven both ways in
+`tests/db/policy-panel.test.ts` — "latest" and "largest" agree on every fixture
+where rounds grow and disagree only here, so the test asserts that 40 and 44 are
+both wrong rather than only that 4 is right. Four of its five assertions were
+proven failing with the triggers dropped before the migration was kept.
+
+Two edge cases decided with it: a round with no recipients does not move the
+number (so creating round 2 does not blank what round 1 earned), and emptying a
+round falls back to the previous round rather than to 0 — 0 means "nobody chosen
+yet" to `policyWarnings`, and a survey that has been sent is not in that state.
+
+The rule got its second home at the same time. `SendScreen` computes it from
+`reach` — the recipients being chosen right now, before anyone is invited, which
+is the last moment where changing the count costs nothing — through the same
+`policyWarnings` the Builder's panel and readiness list use, so the three cannot
+disagree. Its copy (`send.reachBelowThreshold`) names the two ways out. The card
+already had a treatment for "a sentence to read before pressing send", so the
+warning reuses it rather than introducing a second one; neither bundle draws a
+warning on this screen.
 
 ### D95 — «Valgfritt» now carries the threshold, and the banner grew to fit
 The respondent banner for `optional` used to be a bare invitation to choose

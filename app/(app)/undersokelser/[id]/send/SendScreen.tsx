@@ -21,6 +21,7 @@ import {
   type Channel,
   type ImportSource,
 } from '@/lib/send/registry'
+import { policyWarnings } from '@/lib/questions/policy-warnings'
 import { parseRecipients, type ImportedRecipient } from '@/lib/send/import'
 import { sendSurvey, sendTestToSelf } from './actions'
 
@@ -89,6 +90,25 @@ export function SendScreen({
     0,
   )
   const reach = recipients.length + groupHeads
+
+  /*
+    D94's second home. The Builder's warning reads `surveys.target`, which
+    migration 0039 keeps equal to the LATEST round's recipient count — but that
+    is the count of the round that has ALREADY been sent. Here the number is
+    the one being chosen right now, before anyone is invited, which is the last
+    moment where changing it costs nothing.
+
+    Same function as the Builder's panel and the Builder's readiness check, so
+    the three cannot disagree about what the rule is. Questions and rules are
+    empty deliberately: rule 2 is about question WORDING and belongs where the
+    wording can be fixed, and this screen has no editor.
+  */
+  const reachWarnings = policyWarnings(
+    { respondentKind, anonymity, kThreshold, target: reach },
+    [],
+    [],
+    ({ target, k }) => t('reachBelowThreshold', { target, k }),
+  )
 
   const toggle = <T,>(list: T[], value: T) =>
     list.includes(value) ? list.filter((x) => x !== value) : [...list, value]
@@ -648,6 +668,14 @@ export function SendScreen({
                     ? t('policyOptional', { k: kThreshold })
                     : t('policyAnonymous', { k: kThreshold })}
             </div>
+            {reachWarnings.map((w) => (
+              // Same chrome as the failure block below — the card already has a
+              // treatment for "a sentence you must read before pressing send",
+              // and a second one would be a new pattern for the same job.
+              <p key={w.key} className="mt-3 rounded-[10px] bg-sf px-3.5 py-2.5 text-[12.5px] leading-normal">
+                {w.text}
+              </p>
+            ))}
             {failure ? (
               <p role="alert" className="mt-3 rounded-[10px] bg-sf px-3.5 py-2.5 text-[12.5px]">
                 {failure === 'no_recipients'

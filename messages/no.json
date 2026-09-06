@@ -434,7 +434,8 @@
     "lockedByPack": "Låst av malen — {legalRef} krever {anonymity} og terskel {k}.",
     "lockedByPackAttributed": "Låst av malen — {legalRef} krever navngitte svar attribuert til virksomhet.",
     "lockedBySent": "Kan ikke endres etter at svar har kommet inn.",
-    "lockedAnonymousWord": "anonyme svar"
+    "lockedAnonymousWord": "anonyme svar",
+    "reachBelowThreshold": "Du sender til {target}. Med terskel {k} vil resultatet aldri vises — velg flere mottakere, eller senk terskelen i byggesteget."
   },
   "results": {
     "title": "Resultater",

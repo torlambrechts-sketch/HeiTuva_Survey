@@ -434,7 +434,8 @@
     "lockedByPack": "Locked by the template — {legalRef} requires {anonymity} and a threshold of {k}.",
     "lockedByPackAttributed": "Locked by the template — {legalRef} requires named answers attributed to the organisation.",
     "lockedBySent": "Cannot be changed once answers have come in.",
-    "lockedAnonymousWord": "anonymous answers"
+    "lockedAnonymousWord": "anonymous answers",
+    "reachBelowThreshold": "You are sending to {target}. With a threshold of {k} the result will never be shown — choose more recipients, or lower the threshold in the build step."
   },
   "results": {
     "title": "Results",

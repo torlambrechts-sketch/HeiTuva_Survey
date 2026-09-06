@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { adminClient, redaktorClient, serviceClient, type Client } from './clients'
 import { ORG_PRIMARY } from './personas'
+import { policyWarnings } from '@/lib/questions/policy-warnings'
+import { hashToken } from './factories'
 
 /**
  * The policy panel's server-side rules (DECISIONS Q36, confirmed 2026-09-06).
@@ -283,5 +285,138 @@ describe('the guard refuses what the panel disables', () => {
       .order('created_at', { ascending: false })
       .limit(1)
     expect(audit?.[0]?.meta, 'the change is on the record').toMatchObject({ to: 8 })
+  })
+})
+
+/**
+ * D94 — `surveys.target` follows the LATEST round (migration 0039).
+ *
+ * The rule this feeds is the policy panel's first warning: "Gruppen har 4
+ * mottakere. Med terskel 5 vil resultatet aldri vises." Whether the warning is
+ * useful or decorative turns entirely on WHICH count `target` holds, which is
+ * why the number gets a test of its own rather than being taken on trust from
+ * the unit test that renders it.
+ *
+ * The case, stated as Tor did: threshold 5, first send to 40, a later round to
+ * 4. If `target` stays at 40 the warning is silent in exactly the situation it
+ * exists for — round 2 will never show a result. Asserted in both directions,
+ * because "target equals the latest round" and "target equals the biggest
+ * round" agree on every fixture where the rounds grow, and only disagree here.
+ */
+describe('(D94) surveys.target is the latest round’s recipient count', () => {
+  let d94: string
+  let round1: string
+  let round2: string
+
+  beforeAll(async () => {
+    const { data: row } = await svc
+      .from('surveys')
+      .insert({
+        org_id: orgId,
+        title: `Mottakere-${Date.now()}`,
+        status: 'aktiv',
+        respondent_kind: 'person',
+        k_threshold: 5,
+      })
+      .select('id')
+      .single()
+    d94 = row!.id
+    made.push(d94)
+
+    const mkRound = async (no: number) => {
+      const { data: r } = await svc
+        .from('survey_rounds')
+        .insert({ survey_id: d94, round_no: no, status: 'open', question_snapshot: [] })
+        .select('id')
+        .single()
+      return r!.id as string
+    }
+    round1 = await mkRound(1)
+    round2 = await mkRound(2)
+  })
+
+  const invite = (roundId: string, n: number) =>
+    svc.from('survey_invitations').insert(
+      Array.from({ length: n }, (_, i) => ({
+        round_id: roundId,
+        email: `d94-${roundId.slice(0, 8)}-${i}@example.test`,
+        // A real 64-char hash. The first draft padded `round-1` with zeros to
+        // length 64, which produced the SAME string as `round-10` padded — a
+        // unique violation that looked like a trigger failure.
+        token_hash: hashToken(`d94-${roundId}-${i}`),
+        channel: 'email' as const,
+      })),
+    )
+
+  const targetOf = async () => {
+    const { data } = await svc.from('surveys').select('target').eq('id', d94).single()
+    return data!.target
+  }
+
+  it('a round with no recipients does not move it — the wizard’s estimate survives', async () => {
+    // Both rounds exist and neither has anyone in it. The trigger is on
+    // `survey_invitations`, so nothing has fired, and `target` is still what the
+    // insert left. This is the check that says creating round 2 does not blank
+    // the number round 1 earned.
+    expect(await targetOf()).toBeNull()
+  })
+
+  it('the first round’s recipients set it', async () => {
+    const { error } = await invite(round1, 40)
+    expect(error, 'the fixture must insert cleanly').toBeNull()
+    expect(await targetOf()).toBe(40)
+  })
+
+  it('THE CASE: a later, smaller round takes it over', async () => {
+    const { error } = await invite(round2, 4)
+    expect(error).toBeNull()
+
+    const target = await targetOf()
+    expect(target, 'the LATEST round, not the first and not the largest').toBe(4)
+
+    // Said the other way round, so a future "use the biggest" reading fails
+    // here rather than passing quietly: 40 is still in the database and is
+    // still the wrong answer.
+    const { count: roundOneStill } = await svc
+      .from('survey_invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('round_id', round1)
+    expect(roundOneStill, 'round 1 still has its 40 — this is not a deletion').toBe(40)
+    expect(target).not.toBe(40)
+    expect(target).not.toBe(44) // nor the sum: a threshold is applied per round
+  })
+
+  it('and that is the number the warning is computed from', async () => {
+    // The link between the column and the rule, asserted rather than assumed.
+    // `policyWarnings` is pure, so this is the whole rule: 4 recipients under a
+    // threshold of 5 can never produce a result.
+    const { data } = await svc
+      .from('surveys')
+      .select('target, k_threshold, respondent_kind, anonymity')
+      .eq('id', d94)
+      .single()
+    const warnings = policyWarnings(
+      {
+        respondentKind: data!.respondent_kind as 'person',
+        anonymity: data!.anonymity as 'anonymous',
+        kThreshold: data!.k_threshold,
+        target: data!.target ?? 0,
+      },
+      [],
+      [],
+      ({ target, k }) => `${target}/${k}`,
+    )
+    expect(warnings.map((w) => w.key)).toContain('target_below_threshold')
+    expect(warnings[0]!.text).toBe('4/5')
+  })
+
+  it('removing the later round’s recipients does not fall back to 0', async () => {
+    // 0 means "nobody chosen yet" to `policyWarnings`, which exempts it. A
+    // survey that has been sent is not back in that state, so an emptied round
+    // leaves the previous number rather than writing a value that reads as a
+    // fresh draft.
+    await svc.from('survey_invitations').delete().eq('round_id', round2)
+    const target = await targetOf()
+    expect(target, 'back to round 1, which still has its recipients').toBe(40)
   })
 })
