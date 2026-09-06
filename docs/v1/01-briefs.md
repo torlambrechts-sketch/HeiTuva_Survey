@@ -29,7 +29,7 @@ Phase 8/9 kernel or is a reshaping of reads the schema already serves.
 | Innsikt nav, frame, wide toggle | None. `wide` stays `localStorage` (NEW:3117) — a viewer convenience, not tenant state. | — | No |
 | Respondent banner / peer results | `get_peer_results` (`M:0032:1130–1195`) gains `if v_survey.respondent_kind = 'organisation' then return hidden` before the gate. A rule change inside an existing DEFINER function, re-covered by the k_for two-sided test. | #1, Q17 | No (modified) |
 | Results stats below k | If decided (see 04): `results_summary` (`M:0032:422–584`) nulls `n`, `invited`, `responded`, `completion` when `v_n < v_k`. | #1 (existing DEFINER), and the `DO_NOT_GATE` convention (`tests/invariants/threshold-policy.test.ts:297–300`) | No (modified) |
-| Oversikt compliance card | None — `duties.next_due_at` (`M:0006:21`), `reminder_weeks` (`M:0005:16–18`). | — | No |
+| Oversikt compliance card | None — `duties.next_due_at` (`M:0006:21`), `reminder_weeks` (`M:0904-0005:16–18`). | — | No |
 
 ### Three highest-risk items
 
@@ -135,7 +135,7 @@ section that governs it; "stop-and-ask" is where the file has nothing.
 
 | Surface | Pattern (RESPONSIVE.md) | Verdict |
 |---|---|---|
-| Frame `calc(100% - 72px)` | Breakpoints table (:7–14): ≥1280 pixel-perfect; below, layout may reflow. The new frame *is* the reflow the app already does with `mx-5` (`layout.tsx:18`, 20 px vs the bundle's 36 px side gutter) | Covered; the gutter value is a desktop fidelity item, not a responsive one |
+| Frame `calc(100% - 72px)` | Breakpoints table (:7–14): ≥1280 pixel-perfect; below, layout may reflow. The new frame *is* the reflow the app already does with `mx-5` (`app/(app)/layout.tsx:18`, 20 px vs the bundle's 36 px side gutter) | Covered; the gutter value is a desktop fidelity item, not a responsive one |
 | Wide toggle | Global rule 4 (:23) "No feature hidden on mobile" — but the control does nothing below 1192 px (1120 + 72), and rule 4's own escape is "if something genuinely cannot work at 390px, stop and ask" | **Stop-and-ask** |
 | Innsikt rail beside a Playfair 28 px heading | Tab rails (:35–40): wrap, keep chip size, 44 px separation | Covered |
 | Wizard: six cadence chips; custom editor row (number, two selects, time) | Modals (:61–62) full-screen sheet; Tab rails for the chips; the editor row wraps by its own `flex-wrap` and each control needs `touch-44-field` | Covered |

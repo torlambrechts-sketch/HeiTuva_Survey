@@ -9,7 +9,7 @@ bundle actually unpacks one level deeper. Throughout this document:
 
 - `OLD` = `design-reference/heituva-survey-app-design/project/HeiTuva.dc.html` (4097 lines)
 - `NEW` = `design-reference-v1/heituva-survey-app-design/project/HeiTuva.dc.html` (4901 lines)
-- `M:NNNN` = `supabase/migrations/…NNNN…sql`; app paths are repo-relative.
+- `M:NNNN` = `supabase/migrations/20260902000NNN_*.sql` for NNNN ≤ 0016 and `supabase/migrations/20260904000NNN_*.sql` for NNNN ≥ 0017 (those numbers exist only in that series). The three low-numbered files of the 2026-09-04 series are written out: `M:0904-0005` (duty_card_fields), `M:0904-0006` (report_templates), `M:0904-0013` (overview_activity). 2026-09-03 files are cited by full name. App paths are repo-relative.
 
 The new bundle was unpacked from the uploaded zip
 (`fd2f388d-20260906_HeiTuva_survey_app_designhandoff_v1.zip`) into
@@ -329,7 +329,7 @@ version — D87). Phase 8 = commit `8e19873` (migration `20260904000032`,
 | Surface (NEW) | What exists today | Class | Fidelity |
 |---|---|---|---|
 | "Hvem skal svare?" use-case chips, purposes filtered by use case (NEW:60–66, 4195–4197) | Step 0 lists a fixed six packs by key (`undersokelser/keys.ts:93–100`; rendered `undersokelser/ny/Wizard.tsx:138–200`) | NOT BUILT | Matches OLD:3504 |
-| Six cadence chips incl. custom editor (NEW:114–135, 4213–4222) | Three chips once/weekly/monthly (`keys.ts:103–109`; `Wizard.tsx:284–306`); server accepts only those three (`undersokelser/actions.ts:94–99`) | PARTIALLY BUILT — quarterly, yearly, custom and the editor missing | Matches OLD:3520 |
+| Six cadence chips incl. custom editor (NEW:114–135, 4213–4222) | Three chips once/weekly/monthly (`undersokelser/keys.ts:103–109`; `Wizard.tsx:284–306`); server accepts only those three (`undersokelser/actions.ts:94–99`) | PARTIALLY BUILT — quarterly, yearly, custom and the editor missing | Matches OLD:3520 |
 | Wizard writes `recur` incl. every/unit/weekday/hour (NEW:4229–4236) | Wizard inserts a `schedules` row with `runs_total: 0` and nothing else — no `next_run_at`, no `send_at_local` (`undersokelser/actions.ts:179–186`) | PARTIALLY BUILT | See c.3: this row is never picked up by the scheduler |
 
 ### b.3 Survey context bar, survey list
@@ -428,11 +428,11 @@ version — D87). Phase 8 = commit `8e19873` (migration `20260904000032`,
 | Surface (NEW) | What exists today | Class | Fidelity |
 |---|---|---|---|
 | "Bruksområder" tab and six cards (NEW:1873–1897) | Two tabs (`bibliotek/chips.ts:15`; `bibliotek/page.tsx:76–83`) | NOT BUILT | Matches OLD:3717 |
-| Category chips = use cases (NEW:4469) | Five categories bound to the DB CHECK (`chips.ts:9`, `page.tsx:239–253`) | NOT BUILT | Matches OLD:3726 |
-| Card eyebrow = use-case label (NEW:4484) | Eyebrow = `p.category` (`page.tsx:195–200`) | ALREADY BUILT to OLD | Differs from NEW |
-| Policy line on card and list (NEW:1944–1946, 1976–1978) | Card: `policyLineFor` → `mt-1.5 text-[12px] text-mut` (`page.tsx:189–194`, `TemplateCard.tsx:77`; keys `messages/no.json:902–903`). List view: no policy line (`page.tsx:294–305`) | PARTIALLY BUILT — list row missing; card built from the brief | NEW: `font-size:11.5px; margin-top:6px` (card), `11.5px; margin-top:4px` (list); app card 12px / 6px |
+| Category chips = use cases (NEW:4469) | Five categories bound to the DB CHECK (`chips.ts:9`, `bibliotek/page.tsx:239–253`) | NOT BUILT | Matches OLD:3726 |
+| Card eyebrow = use-case label (NEW:4484) | Eyebrow = `p.category` (`bibliotek/page.tsx:195–200`) | ALREADY BUILT to OLD | Differs from NEW |
+| Policy line on card and list (NEW:1944–1946, 1976–1978) | Card: `policyLineFor` → `mt-1.5 text-[12px] text-mut` (`bibliotek/page.tsx:189–194`, `TemplateCard.tsx:77`; keys `messages/no.json:902–903`). List view: no policy line (`bibliotek/page.tsx:294–305`) | PARTIALLY BUILT — list row missing; card built from the brief | NEW: `font-size:11.5px; margin-top:6px` (card), `11.5px; margin-top:4px` (list); app card 12px / 6px |
 | Five new packs, two re-categorised (NEW:2837, 2842, 2857–2881) | Seed has 17 packs with categories Ansatte/Kunder/Lovpålagt/Annet (`supabase/seed.sql:4–38`); CI asserts `packs = 17` (`.github/workflows/ci.yml:63`) | NOT BUILT | — |
-| Grids auto-fill | `md:grid-cols-2 xl:grid-cols-3` (`page.tsx:219, 264`) | ALREADY BUILT to OLD | Desktop identical |
+| Grids auto-fill | `md:grid-cols-2 xl:grid-cols-3` (`bibliotek/page.tsx:219, 264`) | ALREADY BUILT to OLD | Desktop identical |
 
 ### b.12 Personvern (Administrasjon)
 
@@ -490,12 +490,12 @@ Inventory only. "Exists" cites the migration; "GAP" states the missing thing.
 
 ### c.5 Dashboard customisation
 - Layout (ordered panel keys, per-panel width), chosen preset, saved presets — **GAP**: no tables. `dashboard_pins` is `(org, user, panel_key)` with `panel_key` FK → `report_section_types` (`M:0024:16–26`).
-- Panel library — `PANEL_LIB` (NEW:2955–2963) has seven keys; four are section types (`trend, heatmap, drivers, themes`, `M:0006:38–49`); **`register`, `duties`, `stream` are not registry rows anywhere**, so they cannot be pinned (FK) — consistent with `pn.canPin` false for them (NEW:3680).
+- Panel library — `PANEL_LIB` (NEW:2955–2963) has seven keys; four are section types (`trend, heatmap, drivers, themes`, `M:0904-0006:38–49`); **`register`, `duties`, `stream` are not registry rows anywhere**, so they cannot be pinned (FK) — consistent with `pn.canPin` false for them (NEW:3680).
 - Presets — `DASH_PRESETS` (NEW:2974–2981) **GAP**: no registry; no org-saved preset table.
 - "Frys som rapport" — `reports.sections/filters/base_template` exist (`M:0006:64–67`); `createReport` path exists (`dashboard/actions.ts:75–79`). Sections limited to aggregate panels in NEW (NEW:3647).
 - Register panel — `attributed_results` exists; "avvik"/"forfalt" need c.2's designation and `paaminnet` status.
 - Duties panel — `duties`, `duty_definitions`, `owner_member_id` exist (`M:0006:3–24`).
-- Stream panel — **GAP**: no per-day, per-survey series RPC; `overview_activity` is org-wide participation (`M:0013`, D65); `get_trends` is per round.
+- Stream panel — **GAP**: no per-day, per-survey series RPC; `overview_activity` is org-wide participation (`M:0904-0013`, D65); `get_trends` is per round.
 - `dashThresholdLine` — RPCs compute `k` over the selection (`M:0032:973, 1043`); NEW's org-wide max (NEW:3533) has no counterpart.
 
 ### c.6 Use-case library and packs
@@ -516,7 +516,7 @@ Inventory only. "Exists" cites the migration; "GAP" states the missing thing.
 - `optional` banner with number word: `k_threshold` already in the token payload (`M:0033:44`).
 
 ### c.10 Oversikt compliance card
-- `duties.next_due_at` (`M:0006:21`), `reminder_weeks` (`M:0005:16–18`), `duty_definitions` — exist. "Krever handling i år" count and 12-month positions are derivable. No gap.
+- `duties.next_due_at` (`M:0006:21`), `reminder_weeks` (`M:0904-0005:16–18`), `duty_definitions` — exist. "Krever handling i år" count and 12-month positions are derivable. No gap.
 
 ### c.11 Library policy line
 - `template_packs.policy` — exists (`M:0032:31`, seeded `supabase/seed.sql:80–85`). No gap.

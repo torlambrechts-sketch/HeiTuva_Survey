@@ -217,7 +217,7 @@ inherited cadence is refused.
 - `CadenceEditor.tsx` shared by `SendScreen.tsx:470–551` and `Wizard.tsx:284–306`; eight radios from `lib/send/registry.ts:29` + keys; status row; inherited note. Pattern: Send screen; Modals (wizard sheet); all controls `touch-44-field`.
 - `SurveyRow.tsx:141–160` chip, `:279–298` two menu items; `undersokelser/page.tsx:45–49` joins `schedules`. Pattern: Data tables (narrow row), menu spacing per D32.
 - `SurveyContextBar.tsx:77–82` chip. Pattern: App shell.
-- `keys.ts:103–109`, `undersokelser/actions.ts:94–99` (Zod enum).
+- `undersokelser/keys.ts:103–109`, `undersokelser/actions.ts:94–99` (Zod enum).
 
 **Fixtures.** A real recurring send with recipients in `seed-demo.ts`
 (today's is test-only, `:277–290`). Manifest states: `send`: `recurring-status`,
@@ -328,7 +328,7 @@ total; a Lovpålagt pack maps by `legalFor`; an unmapped pack falls to `annet`).
 
 **UI second.** `UseCaseCard.tsx`; `bibliotek/chips.ts:9, 15` from the
 registry; `bibliotek/page.tsx:76–83, 239–253, 195–200`; `Wizard.tsx:138–200`
-chips and filtered list (`keys.ts:93–100` retired). Pattern: Tab rails (nine
+chips and filtered list (`undersokelser/keys.ts:93–100` retired). Pattern: Tab rails (nine
 chips wrap to three rows at 390 px; the "Bruksområder" rail), grid reflow,
 Modals (wizard).
 
@@ -351,7 +351,7 @@ own commit (C18). Census ≥ +7, +1 file (≥ 442 / 23). 5a3: +1 registry (`--`)
 | Everything carried from V1-0…V1-5 fix passes | as listed by then |
 
 **Schema first.** None; `duties.next_due_at` (`M:0006:21`), `reminder_weeks`
-(`M:0005:16–18`). The "N av M plikter krever handling i år" count is derived
+(`M:0904-0005:16–18`). The "N av M plikter krever handling i år" count is derived
 the way `oversikt/page.tsx:131–164` already derives tones.
 
 **UI second.** `ComplianceCard.tsx`; `OverviewScreen.tsx:117–192, 194–289`

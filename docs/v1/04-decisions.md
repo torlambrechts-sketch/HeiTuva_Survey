@@ -34,7 +34,7 @@ never states is here as a decision, not an assumption.
 | Q41 | Window-step rule for the stream gate (only if Q26 = build) | Suppress any window whose set of responses differs from its neighbour's by fewer than k; volume bars follow the same gate. | V1-7 |
 | Q42 | `dashThresholdLine` semantics | The RPC's k over the **selection** (already how `get_heatmap`/`dashboard_summary` gate); the bundle's org-wide maximum (NEW:3533) is not adopted. | V1-4; C7 |
 | Q43 | Attributed CSV export | Administrator and redaktør; leser refused; audited (`attributed.export`); never reachable through a share link. | V1-2 |
-| Q44 | Wizard purposes | The wizard lists the first six packs of the chosen use case (NEW:4197) instead of the fixed six keys (`keys.ts:93–100`). | V1-5 |
+| Q44 | Wizard purposes | The wizard lists the first six packs of the chosen use case (NEW:4197) instead of the fixed six keys (`undersokelser/keys.ts:93–100`). | V1-5 |
 | Q45 | The five new packs' categories | Seeded with `category = 'Annet'` and `use_case` set; `template_packs.category` CHECK untouched (C8). | V1-5 |
 | Q46 | Filters move into the "Tilpass" card | Adopt NEW on desktop (period/group/survey chips leave the header). Below `md` this costs taps; accepted as drawn unless Q33's pattern says otherwise. | V1-4 |
 
