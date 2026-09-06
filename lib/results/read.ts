@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   isRefusal,
   type Aggregate,
+  type Attributed,
   type Benchmarks,
   type DashboardSummary,
   type Heatmap,
@@ -88,3 +89,15 @@ export const readDashboard = (
   call<DashboardSummary>('dashboard_summary', {
     p_org: org, p_surveys: surveys ?? null, p_group: group ?? null, p_rounds: rounds ?? null,
   })
+
+/**
+ * The attributed register (Q17 §5, Q43).
+ *
+ * Uses the same `call` wrapper as everything above, so a refusal comes back as
+ * `null` and the screen renders its empty state. The CSV route does NOT use
+ * this: it needs to tell `forbidden` (403) from `not_attributed` (404) apart,
+ * and a reader that flattens both into null cannot. Two callers, two needs —
+ * the route keeps its own narrowing rather than this one growing a mode.
+ */
+export const readAttributed = (survey: string, round?: string | null) =>
+  call<Attributed>('attributed_results', { p_survey: survey, p_round: round ?? undefined })

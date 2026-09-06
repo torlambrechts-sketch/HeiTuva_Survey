@@ -159,7 +159,7 @@ export async function createSurvey(
     .single()
   if (error) throw new Error(`createSurvey(${title}): ${error.message}`)
 
-  const created: { id: string; type: string; text: string }[] = []
+  const created: { id: string; type: string; text: string; config: Record<string, unknown> }[] = []
   for (const [i, q] of questions.entries()) {
     const { data, error: qErr } = await svc
       .from('survey_questions')
@@ -170,10 +170,15 @@ export async function createSurvey(
         text: q.text,
         config: (q.config ?? {}) as never,
       })
-      .select('id, type, text')
+      // `config` too, because the real send path snapshots it
+      // (`app.send_round`, M:0027:124) and Q35's roles live in it. A fixture
+      // whose snapshot dropped config produced an attributed register with no
+      // columns while the pack designated four — a difference between the
+      // harness and production, which is the one thing a fixture must not have.
+      .select('id, type, text, config')
       .single()
     if (qErr) throw new Error(`addQuestion(${q.text}): ${qErr.message}`)
-    created.push(data)
+    created.push(data as { id: string; type: string; text: string; config: Record<string, unknown> })
   }
 
   return { ...survey, questions: created }
@@ -182,7 +187,7 @@ export async function createSurvey(
 /** A round plus `invitations` unused tokens. Raw tokens are returned so tests
  *  can submit; only their hashes reach the database. */
 export async function createRound(
-  survey: { id: string; questions: { id: string; type: string; text: string }[] },
+  survey: { id: string; questions: { id: string; type: string; text: string; config?: unknown }[] },
   invitations: number,
   opts: { groupId?: string | null; roundNo?: number; svc?: Client } = {},
 ) {

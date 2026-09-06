@@ -489,3 +489,89 @@ describe('(Q30) «Svar per virksomhet» is refused to a share-link reader', () =
     expect(doc.sections?.find((x) => x.key === 'per_virksomhet')?.unavailable).not.toBe(true)
   })
 })
+
+/**
+ * The shape an aggregate cell is allowed to have — found in V1-2, when the
+ * first organisation-survey fixture put a real screen in front of `k = 0`.
+ *
+ * `lib/results/types.ts` says a cell is EITHER `{n, avg}` or
+ * `{insufficient_data}` and there is "no third state where `avg` is present but
+ * meaningless". `results_summary` and `get_trends` both violated that at k = 0:
+ * `coalesce(st.n, 0) >= v_k` reads `0 >= 0` when there is no stats row, so a
+ * group nobody answered for took the "here is your number" branch and returned
+ * `{n: null, avg: null}`. The screen called `.toFixed` on it.
+ *
+ * Asserted as a property of every cell rather than of the one group that
+ * happened to be empty: a cell that claims a number must have one. That form
+ * keeps holding when a fixture changes shape.
+ */
+describe('an aggregate cell is a number or a refusal, never a null wearing a number’s clothes', () => {
+  it('results_summary: a group nobody answered for is a refusal, not {n: null, avg: null}', async () => {
+    const survey = await surveyWith('Tom gruppe', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+
+    // THE CELL THAT MATTERS: a second group in the same organisation that this
+    // survey never reached. Without it every group has a stats row, the
+    // `coalesce` is never exercised, and the test passes against the broken
+    // function — which is exactly what it did on the first attempt.
+    const empty = await insert(ctx.a, 'groups', { org_id: ctx.org.id, name: uniq('Ingen svar') })
+
+    const { data } = await ctx.adminU.client.rpc('results_summary', {
+      p_survey: survey.survey.id,
+      p_round: null,
+      p_group: null,
+    })
+    const payload = data as { k: number; teams: Record<string, unknown>[] }
+    expect(payload.k, 'this only bites at k = 0, so prove the fixture is there').toBe(0)
+
+    const row = payload.teams.find((t) => t.group_id === empty.id)
+    expect(row, 'the empty group must appear at all').toBeDefined()
+    expect(row!.insufficient_data, 'a group with no answers is withheld, not numbered').toBe(true)
+    expect(row!.n, 'and carries no n').toBeUndefined()
+    expect(row!.avg, 'and no avg').toBeUndefined()
+
+    // The property, stated over every row rather than only the one arranged:
+    // a cell that claims a number must have one. This keeps holding when the
+    // fixture changes shape.
+    for (const t of payload.teams) {
+      if (t.insufficient_data === true) continue
+      expect(typeof t.n, `n on ${t.label}`).toBe('number')
+      expect(typeof t.avg, `avg on ${t.label}`).toBe('number')
+    }
+  })
+
+  it('get_trends: a round nobody answered is a refusal too', async () => {
+    const survey = await surveyWith('Runde uten svar', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+
+    const empty = await insert(ctx.a, 'survey_rounds', {
+      survey_id: survey.survey.id,
+      round_no: 2,
+      status: 'open',
+      question_snapshot: [],
+    })
+
+    const { data } = await ctx.adminU.client.rpc('get_trends', {
+      p_survey: survey.survey.id,
+      p_group: null,
+    })
+    const payload = data as { k: number; points: Record<string, unknown>[] }
+    expect(payload.k).toBe(0)
+
+    const point = payload.points.find((p) => p.round_id === empty.id)
+    expect(point, 'the empty round must appear').toBeDefined()
+    expect(point!.insufficient_data).toBe(true)
+    expect(point!.n).toBeUndefined()
+    expect(point!.avg).toBeUndefined()
+
+    for (const p of payload.points) {
+      if (p.insufficient_data === true) continue
+      expect(typeof p.n, `n on round ${p.round_no}`).toBe('number')
+      expect(typeof p.avg, `avg on round ${p.round_no}`).toBe('number')
+    }
+  })
+})

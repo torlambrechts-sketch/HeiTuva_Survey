@@ -1883,3 +1883,22 @@ text out of logs and analytics entirely, and `audit_events` is append-only
 while the organisation exists. Recorded here rather than silently rewriting the
 rationale in DECISIONS, because a decision's stated reason is part of the
 decision.
+
+### D98 — A leser opening an organisation survey: a refusal, not four zeros
+Neither bundle draws this state, because the prototype has no roles. The app
+does: `attributed_results` refuses a leser (`forbidden`, M:0034:180 — attributed
+rows are named data and a leser reads aggregates only), and `readAttributed`
+flattens the refusal to null like every other reader on the results screen.
+
+The first version then rendered the four organisation stat cards from an empty
+array: «0 av 0 virksomheter har svart», «0 avdekket brudd», «0 mangler policy».
+Every one of those is a fabricated number, and in a screenshot it is
+indistinguishable from a supplier survey nobody answered — the case CLAUDE.md's
+never-fabricate rule exists for.
+
+So the cards are not drawn at all and the reason is stated:
+«Navngitte svar vises ikke for din rolle», with what the role does see and who
+to ask. Minimal consistent option, in the screen's existing card chrome; no new
+pattern, no new interaction. The Q43 export control is inside the register and
+therefore also absent — the route would refuse it with 403 either way, but a
+button that always fails is not an honest affordance.
