@@ -405,3 +405,87 @@ describe('(P9 C) «Svar per virksomhet» — refused with a reason wherever a pe
     expect(psec?.extra?.rows ?? null).toBeNull()
   })
 })
+
+describe('(Q30) «Svar per virksomhet» is refused to a share-link reader', () => {
+  /**
+   * Åpenhetsloven obliges publishing the redegjørelse, not the per-supplier
+   * answers. A share link is the one path where "who may see this" stops being
+   * a question about org membership, so the section is refused for token
+   * readers below `ledelse` — and refused HERE, in `compose_report`, not in the
+   * editor: the payload is server-rendered, so a screen that declined to draw
+   * the rows would still ship them.
+   */
+  const shareFor = async (reportId: string, scope: 'ledelse' | 'ledere_eget_team' | 'alle_ansatte') => {
+    const raw = uniq(`share-${scope}`)
+    await insert(ctx.a, 'report_shares', {
+      report_id: reportId, token_hash: hashToken(raw), scope,
+      // `ledere_eget_team` without a group is refused outright (M:0034:255),
+      // so the share needs one — otherwise the payload is `{error:forbidden}`
+      // and this would "pass" on a document that has no sections at all.
+      group_id: scope === 'ledere_eget_team' ? ctx.group.id : null,
+    })
+    return raw
+  }
+
+  const composeAs = async (reportId: string, token: string) => {
+    const { data, error } = await anon().rpc('compose_report', { p_report: reportId, p_token: token })
+    if (error) throw new Error(`compose_report(token): ${error.message}`)
+    return data as Composed
+  }
+
+  it('refuses it to an alle_ansatte token, and the WHOLE payload names no organisation', async () => {
+    const s = await surveyWith('Leverandør', 2, 2,
+      { respondent_kind: 'organisation', anonymity: 'named' },
+      { names: ['Hemmelig Leverandør AS', 'Nabo Trelast AS'] })
+    const rep = await report(['per_virksomhet', 'summary', 'method'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'alle_ansatte'))
+
+    const sec = doc.sections?.find((x) => x.key === 'per_virksomhet')
+    expect(sec, 'shown as unavailable, not silently dropped').toBeDefined()
+    expect(sec?.unavailable).toBe(true)
+    expect(sec?.reason).toBe('share_scope')
+    expect(sec?.extra?.rows ?? null).toBeNull()
+
+    // The whole document, not the section. A `reason` that named which sources
+    // were excluded would leak exactly what the refusal hides, and so would a
+    // source list, a method footnote or a title carrying the supplier's name.
+    const whole = JSON.stringify(doc)
+    expect(whole, 'no organisation name anywhere in the payload').not.toMatch(/Hemmelig Leverandør/)
+    expect(whole, 'not the second one either').not.toMatch(/Nabo Trelast/)
+  })
+
+  it('refuses it to a ledere_eget_team token too', async () => {
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Skjult AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'ledere_eget_team'))
+
+    expect(doc.sections?.find((x) => x.key === 'per_virksomhet')?.reason).toBe('share_scope')
+    expect(JSON.stringify(doc)).not.toMatch(/Skjult AS/)
+  })
+
+  it('POSITIVE CONTROL: a ledelse token still gets the rows', async () => {
+    // Without this, the refusal would pass with the section broken for
+    // everyone — which is the failure mode a one-sided denial test invites.
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Synlig AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'ledelse'))
+
+    const sec = doc.sections?.find((x) => x.key === 'per_virksomhet')
+    expect(sec?.unavailable).not.toBe(true)
+    expect((sec?.extra?.rows ?? []).map((r) => r.name)).toContain('Synlig AS')
+  })
+
+  it('POSITIVE CONTROL: a signed-in member at ledelse is unaffected', async () => {
+    // The rule is about the SHARE SCOPE, not about the section. A redaktør
+    // reading their own report must still see it, or "refuse for token
+    // readers" has quietly become "refuse".
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Intern AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await compose(ctx.redaktorU.client, rep.id)
+
+    expect(doc.sections?.find((x) => x.key === 'per_virksomhet')?.unavailable).not.toBe(true)
+  })
+})

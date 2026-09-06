@@ -49,6 +49,12 @@ Two constraints that override the card treatment in either case:
 - **Consequential controls stay visible.** Anything that changes permissions, access, state, or deletes data — a role select, a deactivate action, a retention setting — is never placed behind an overflow menu on any viewport. Burying it is a safety regression, not a layout choice.
 - **Never nest a card in a card.** Where the table already sits on a card surface, the rows keep the surface they have; the bundle contains no nested-card treatment and inventing one is restyling.
 
+**Expandable rows (the attributed table, DECISIONS Q34)**
+Below `md`: **card per row**, by the wide-row rule above — the attributed table carries organisation, status, date and an answer summary, which is past four fields before the expand affordance. Three constraints specific to it:
+- The detail grid opens **inside** the card, as a single column, in the same order it uses on desktop. It does not become a sheet, a dialog, or a second screen: the row's detail is the row's detail, and moving it elsewhere loses which organisation it belonged to.
+- **No overflow menu**, even though the row is wide. The general rule bans a menu only for consequential controls, and this row has none — the reason here is simpler: the only action is "expand", and hiding one affordance behind a second tap costs more than it saves.
+- The expand control keeps its 44px area against the card's own tap target; a card that is itself a link with an expander inside it needs the two separated, not nested.
+
 **Heatmap (team × question)**
 Below `md`: switch to a grouped list — one section per team, each question as a row with its coloured cell and value. Same colour scale, same `insufficient_data` treatment ("—"). Do not shrink cells below 44px or allow pinch-zoom as the reading mechanism.
 
