@@ -343,13 +343,17 @@ export async function saveSurveyAsTemplate(input: unknown): Promise<BuilderResul
  * real enforcement — `app.guard_survey_policy` refuses a non-administrator,
  * refuses any change once the policy is locked (sent, or set by a statutory
  * pack), and writes the audit row — so this action surfaces those refusals to
- * the UI rather than re-implementing them. The threshold UI (the design brief's
- * "Hvem svarer og hva vises" panel) is a later phase; this is the control it
- * will call.
+ * the UI rather than re-implementing them. The "Hvem svarer og hva vises" panel
+ * is this action's caller and, per Q36, its only one.
  */
 const PolicyInput = z.object({
   surveyId: z.string().uuid(),
-  kThreshold: z.number().int().min(3).max(50),
+  // 3-10 per DECISIONS Q36, matching `organizations.default_k_threshold` and the
+  // panel's top chip. The 50 this replaces predated Q17 and was never a decided
+  // ceiling. The real enforcement is the CHECK on the column (migration 0036) —
+  // this bound exists so the panel gets `invalid` back instead of a database
+  // error it would have to translate.
+  kThreshold: z.number().int().min(3).max(10),
   respondentKind: z.enum(['person', 'organisation']),
 })
 
