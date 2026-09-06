@@ -100,6 +100,15 @@ async function main() {
       await page.waitForTimeout(1500)
       const { data } = await admin.from('groups').select('id, name').eq('name', name)
       show('groups', (data?.length ?? 0) === 1, data?.[0] ?? null)
+
+      // …and then take it away again. The assertion has already run, so nothing
+      // is weakened — but a group is not an inert row: it appears in the
+      // Resultater team panel, in the heatmap and in the group pickers, so one
+      // per run accumulated in the DEMO organisation and turned up in a V1-2
+      // capture as «Gruppe 1788725988772 · n<5». Same rule as
+      // `tests/db/policy-panel.test.ts`'s cleanup: a check must not become part
+      // of what the next check sees.
+      for (const g of data ?? []) await admin.from('groups').delete().eq('id', g.id)
     }
 
     // profiles — Om meg.
