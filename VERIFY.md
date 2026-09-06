@@ -114,7 +114,13 @@ Explicitly list anything in the design you did NOT implement, and anything you b
 that the design does not contain (invented features are a defect, not a bonus).
 
 === GATE 2 — DATABASE: WRITE AND ATTACK ===
-Run against a fresh local database (`supabase db reset`) so results are reproducible.
+Run against a fresh local database so results are reproducible, and run the three
+steps in this order — `supabase db reset` && `npx tsx scripts/seed-i18n.ts --local`
+&& `npm run seed:demo`. This is what CI does (`ci.yml:51, 69`) and it is not
+optional: `ui_messages` is seeded from `/messages/*.json` by the i18n script, not
+by `supabase/seed.sql`, so a reset followed straight by `verify:all` fails
+`invariants.test.ts` on a shipped default that was never written. Not a new
+check — a setup order that was only written down in the workflow file.
 a) Round-trip: for every table this phase writes to, create a row through the actual
    application path (server action or RPC — not raw SQL), then read it back and show the
    row. Prove persistence, defaults, and constraints behave as designed.

@@ -159,6 +159,7 @@ export async function ResultsScreen({
       note: t('attribStatAnsweredNote'),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
     breachCount === null
       ? null
@@ -169,6 +170,7 @@ export async function ResultsScreen({
           note: t('attribStatBreachNote'),
           bg: 'var(--ac3)',
           fg: 'var(--ink)',
+          title: '',
         },
     missingPolicy === null
       ? null
@@ -179,6 +181,7 @@ export async function ResultsScreen({
           note: t('attribStatPolicyNote'),
           bg: 'var(--sf)',
           fg: 'var(--ink)',
+          title: '',
         },
     {
       key: 'missing',
@@ -189,6 +192,7 @@ export async function ResultsScreen({
       }),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
   ].filter((s): s is NonNullable<typeof s> => s !== null)
 
@@ -200,6 +204,7 @@ export async function ResultsScreen({
       note: summary ? t('statResponsesNote', { invited: summary.invited }) : DASH,
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
     {
       key: 'rate',
@@ -208,6 +213,7 @@ export async function ResultsScreen({
       note: unavailable ? DASH : t('statRateNote'),
       bg: 'var(--ac)',
       fg: 'var(--acf)',
+      title: '',
     },
     {
       key: 'avg',
@@ -216,6 +222,11 @@ export async function ResultsScreen({
       note: t('statAvgNote'),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      // :2530. Only this card can be withheld — Q28 keeps the response count
+      // and the rate visible below the threshold, because they are counts of
+      // people rather than svarutledete tall — so it is the only one with a
+      // reason to give.
+      title: (summary?.avg ?? null) === null ? gatedTitle : '',
     },
     {
       key: 'status',
@@ -228,6 +239,7 @@ export async function ResultsScreen({
         : t('statusNotSent'),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
   ]
 
@@ -296,13 +308,25 @@ export async function ResultsScreen({
         </div>
       ) : null}
 
-      {/* RESPONSIVE.md: the four stat cards keep their design size and reflow
-          to two columns below xl and one below md. */}
+      {/* The v1 bundle changed this grid from `repeat(4, 1fr)` (OLD:2156) to
+          `repeat(auto-fill, minmax(200px, 1fr))` (:2528), which is why the
+          explicit breakpoints are gone: auto-fill reflows continuously from
+          four tracks to one as the frame narrows, so RESPONSIVE.md's rule is
+          satisfied by the design's own grid rather than by columns layered on
+          top of it. It also handles the case the old grid could not — an
+          organisation survey whose pack designates no key questions has two
+          stat cards, not four, and they keep their size instead of stretching
+          to half the row each. */}
       {attributedDenied ? null : (
-      <div className="grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
+      <div
+        className="grid gap-[15px]"
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
+      >
         {stats.map((s) => (
           <div
             key={s.key}
+            // :2530 — the card carries the reason when its value is withheld.
+            title={s.title || undefined}
             className="rounded-2xl border border-line px-5 py-[18px]"
             style={{ background: s.bg, color: s.fg }}
           >
