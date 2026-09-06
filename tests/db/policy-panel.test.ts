@@ -129,6 +129,31 @@ describe('(Q36) the threshold ceiling is the database’s rule, not one caller�
  * assert the rule where it actually lives, through persona sessions rather
  * than the service role, because a rule asserted with the service key is a rule
  * proven against the one caller it does not apply to.
+ *
+ * ── A SHAPE TO KNOW BEFORE WRITING THE NEXT GUARD TEST ──────────────────────
+ *
+ * When one control sits BEHIND another, a test for the inner one proves nothing
+ * until the outer one is removed.
+ *
+ * Here: RLS (`surveys_upd`) admits a redaktør only for a survey they created or
+ * were added to. The guard (`threshold_admin_only`) is a second control behind
+ * it. The first version of the redaktør test asserted the guard's error on a
+ * survey the redaktør could not see — so RLS filtered the row, the update
+ * matched nothing, PostgREST returned no error at all, and the assertion
+ * "expected an error" was simply wrong about which control had acted. Had it
+ * been written the other way round — expecting a refusal and finding one — it
+ * would have passed for the wrong reason and kept passing with the guard
+ * deleted.
+ *
+ * The fix is two tests, not one: prove the outer control filters (and that
+ * zero rows is NOT a denial — Gate 2b), then remove it and prove the inner one
+ * refuses. Both directions, named separately, so a later change to either is
+ * visible.
+ *
+ * The general form: ask what ELSE could produce the result you are asserting,
+ * and arrange the fixture so only the rule under test can. RLS in front of a
+ * trigger is the common case in this schema; a role check in front of a CHECK
+ * is the same shape.
  */
 describe('the guard refuses what the panel disables', () => {
   it('refuses any policy change once the survey is sent', async () => {

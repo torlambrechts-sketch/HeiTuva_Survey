@@ -1797,12 +1797,14 @@ count group members the survey is not yet addressed to — and render a warning
 computed from a guess. CLAUDE.md's never-fabricate rule covers exactly that: a
 made-up denominator is indistinguishable from a real one in review.
 
-Two things follow, both logged rather than built here. Whoever gives
-`surveys.target` a writer (the Send screen is the natural place, since that is
-where recipients become real) makes this warning live with no further change.
-And the same rule belongs on the Send screen's readiness, where the count is
-known at the moment it matters — the plan's V1-1 scope is the Builder panel, so
-that is a next-phase item, not a silent widening of this one.
+**Status: to-fix in V1-2** (Tor, 2026-09-06). This does not travel forward as a
+standing deviation. A warning that is implemented, tested and permanently silent
+is worse than an absent one — it reads as working, and the next person to look
+will believe the rule is covering them. V1-2 owns Send, which is where
+recipients stop being hypothetical, so it carries the writer: `03-plan.md` §
+V1-2 has it in scope. Once `surveys.target` has a writer this warning fires with
+no further change, and the same rule wants a second home on the Send screen's
+readiness, where the count is known at the moment it matters.
 
 ### D95 — «Valgfritt» now carries the threshold, and the banner grew to fit
 The respondent banner for `optional` used to be a bare invitation to choose

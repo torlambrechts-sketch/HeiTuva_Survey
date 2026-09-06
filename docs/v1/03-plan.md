@@ -172,7 +172,19 @@ The åpenhetsloven wedge. The data path exists and is tested; this phase draws i
 | Stats "—" + `title` when below k (NEW:4886–4889) — rendering side; the data side was V1-0 per Q28 | NOT BUILT |
 | Stat grid `auto-fill` + `title` (NEW:2527–2530) | ALREADY BUILT to OLD — fidelity |
 | Peer-results note for organisation respondents (NEW:3985) | NOT BUILT (rule shipped in V1-0) |
+| A writer for `surveys.target`, so the policy panel's first warning can fire (D94) | CARRIED IN from V1-1 |
 | «Svar per virksomhet» under share scopes (C11, Q30) | rule change if decided |
+
+**Carried in from V1-1 (Tor's call, 2026-09-06): give `surveys.target` a
+writer.** `polWarnings`' first rule — a target smaller than its own threshold
+can never produce a result — is implemented and tested and permanently silent,
+because nothing writes the column it compares (D94). That is worse than an
+absent warning: it reads as working. This phase owns Send, which is where
+recipients stop being hypothetical, so the writer belongs here. Two parts, and
+neither invents a number: `send_round` (or the recipient step that precedes it)
+records the count it actually addressed, and the Builder's panel keeps showing
+nothing until one exists. The same rule then wants a home on the Send screen's
+readiness, where the count is known at the moment it matters.
 
 **Schema first.**
 - Key-question designation (Q35): a `role` on the pack question entries in `supabase/seed.sql:19–20` (`brudd`, `policy`) carried into `survey_questions.config` by the pack-use path (`bibliotek/actions.ts`, the wizard). Data, no DDL.

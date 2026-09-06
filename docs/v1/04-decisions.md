@@ -7,7 +7,8 @@ the plan where the phase text says "per Qnn". Anything the bundle implies but
 never states is here as a decision, not an assumption.
 
 **Status.** Q18, Q28, Q31, Q32, Q36, Q37 and Q47 are **CONFIRMED by Tor**
-(2026-09-06) and are in force. The rest are staged: they are confirmed in batches tied to the phase
+(2026-09-06) and are in force. Q48 is new — it came out of V1-1 rather than the
+bundle, and is drafted for confirmation with V1-2's batch. The rest are staged: they are confirmed in batches tied to the phase
 where each bites, because a decision taken out of context is taken badly. The
 batch order is V1-2 (Q30, Q34, Q35, Q43) → V1-3 (Q19–Q23) →
 V1-4 (Q25, Q26, Q27, Q29, Q33, Q42, Q46) → V1-5 (Q24, Q44, Q45) → V1-7 (Q41); Q38, Q39 and Q40 belong to no phase and are confirmed when their
@@ -45,6 +46,7 @@ role semantics (Q23, Q25, Q43).
 | Q43 | Attributed CSV export | Administrator and redaktør; leser refused; audited (`attributed.export`); never reachable through a share link. | V1-2 |
 | Q44 | Wizard purposes | The wizard lists the first six packs of the chosen use case (NEW:4197) instead of the fixed six keys (`undersokelser/keys.ts:93–100`). | V1-5 |
 | Q45 | The five new packs' categories | Seeded with `category = 'Annet'` and `use_case` set; `template_packs.category` CHECK untouched (C8). | V1-5 |
+| Q48 | Where the seeded registries keep their translations | **DRAFT — one decision over three tables.** (a) `quality_rules` gains a primary key of `(key, lang)`, replacing `key`: the table already HAS a `lang` column, and the current key makes it unusable — a second-language row is refused by the PK, which is how the policy-pronoun rule ended up Norwegian-only. Do it before more rows land; every row added meanwhile is another to backfill. (b) `duty_definitions` (`title`, `law`) and `report_section_types` (`label`, `description`) carry user-visible Norwegian with **no `lang` column at all**, and `rapporter/ReportsScreen.tsx:49` says they are "translated by the Phase 6 translation editor" — but that editor writes `ui_messages`, which does not reach them, so today they cannot be translated by any path. Choose: a `lang` column on each (mirrors `quality_rules`, one row per language, editor needs a new surface) **or** an overlay keyed by the registry key inside `ui_messages` (the editor reaches it for free, the registry stays single-language and the join moves into the read). Recommendation: (a) as stated, and for (b) the **overlay**, because it puts every translatable string behind one editor instead of two mechanisms — but the read path grows a join on three screens and a PDF, which is the cost to weigh. | V1-2 (a); V1-3+ (b) |
 | Q47 | Peer results on an organisation survey | **CONFIRMED (was C1).** `get_peer_results` returns `hidden` when `respondent_kind = 'organisation'`, decided in the RPC and not in the component: a supplier holding a live token can call the function directly, and today `app.k_for` returns 0 for an organisation survey (`M:0032:1152, 1176`), so the distribution of the other suppliers' answers comes back. That is **disclosure between competitors**, not a display choice. It needs its own negative test in V1-0: a supplier token retrieves its own submission and nothing about any other respondent, with a positive control proving the supplier's own data does come back. | V1-0; was C1 |
 | Q46 | Filters move into the "Tilpass" card | Adopt NEW on desktop (period/group/survey chips leave the header). Below `md` this costs taps; accepted as drawn unless Q33's pattern says otherwise. | V1-4 |
 
