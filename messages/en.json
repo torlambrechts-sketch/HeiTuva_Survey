@@ -520,7 +520,7 @@
     "statusInProgress": "In progress",
     "statusReady": "Ready",
     "statusPublished": "Published",
-    "progress": "{done} of {total} items",
+    "progress": "{done} of {total} items documented",
     "noLinkedSurveys": "No survey started yet",
     "linkedCta": "Results",
     "settingsOpen": "Settings",

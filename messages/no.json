@@ -520,7 +520,7 @@
     "statusInProgress": "Underveis",
     "statusReady": "Klar",
     "statusPublished": "Publisert",
-    "progress": "{done} av {total} punkter",
+    "progress": "{done} av {total} punkter dokumentert",
     "noLinkedSurveys": "Ingen undersøkelse startet ennå",
     "linkedCta": "Resultater",
     "settingsOpen": "Innstillinger",

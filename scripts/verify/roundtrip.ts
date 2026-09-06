@@ -326,17 +326,24 @@ async function main() {
       once from the table, and once from a different screen, because a row that
       persists but never reaches a page is not a working editor.
 
-      The key edited is `nav.reports`, which the header renders on every screen
+      The key edited is `nav.insight`, which the header renders on every screen
       — so the second read is a genuine end-to-end check of the whole chain
       (row → `ui_messages` overlay → `unstable_cache` → the rendered header),
       including the `revalidateTag` that has to fire for the change to be
       visible before the 300-second expiry.
+
+      It used to be `nav.reports`, and that key stopped being a header item when
+      the v1 bundle merged Dashboard and Rapporter into "Innsikt" — the row still
+      stored, the header simply no longer rendered it, so the probe failed while
+      the behaviour it exists to prove was intact. The lesson is the probe's, not
+      the app's: an end-to-end check must name a key the surface it reads
+      actually renders.
     */
     {
       const page = await ctx.newPage()
-      const MINE = 'Våre rapporter'
+      const MINE = 'Vår innsikt'
 
-      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=insight`, {
         waitUntil: 'domcontentloaded',
       })
       await page.waitForLoadState('load')
@@ -348,7 +355,7 @@ async function main() {
       const { data: row, error } = await admin
         .from('ui_messages')
         .select('value, org_id')
-        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .eq('namespace', 'nav').eq('key', 'insight').eq('lang', 'no').eq('org_id', orgId)
         .maybeSingle()
 
       await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
@@ -365,7 +372,7 @@ async function main() {
 
       // And undone: the shipped copy has to come back, or an org could paint
       // itself into a corner it cannot leave.
-      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=insight`, {
         waitUntil: 'domcontentloaded',
       })
       await page.waitForLoadState('load')
@@ -375,7 +382,7 @@ async function main() {
       const { data: gone } = await admin
         .from('ui_messages')
         .select('id')
-        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .eq('namespace', 'nav').eq('key', 'insight').eq('lang', 'no').eq('org_id', orgId)
         .maybeSingle()
 
       await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
@@ -384,8 +391,8 @@ async function main() {
 
       show(
         'ui_messages (reset)',
-        !gone && restored.includes('Rapporter') && !restored.includes(MINE),
-        { row_removed: !gone, header_back_to_shipped: restored.includes('Rapporter') && !restored.includes(MINE) },
+        !gone && restored.includes('Innsikt') && !restored.includes(MINE),
+        { row_removed: !gone, header_back_to_shipped: restored.includes('Innsikt') && !restored.includes(MINE) },
       )
 
       /*

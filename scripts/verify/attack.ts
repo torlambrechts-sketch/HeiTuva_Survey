@@ -207,21 +207,23 @@ async function main() {
     // rejects the insert first and this probe proves the trigger a second time
     // instead of the unique index. The identical error message is what gave
     // that away the first time it was written.
-    const { data: draft } = await svc
-      .from('surveys')
-      .select('id')
-      .eq('status', 'utkast')
-      .limit(1)
-      .single()
+    //
+    // And it must be a draft that HAS a question, because the duplicate needs a
+    // position to collide with. Picking "any draft" passed on a freshly seeded
+    // database and crashed after the suite had run — the tests leave behind
+    // question-less drafts, and `.limit(1)` then chose one of those. Gate 5a2's
+    // rule ("no assertion whose truth depends on what else exists") applies to
+    // the probes as much as to the tests, so the question decides the survey
+    // rather than the other way round.
     const { data: q } = await svc
       .from('survey_questions')
-      .select('position')
-      .eq('survey_id', draft!.id)
+      .select('position, survey_id, surveys!inner(status)')
+      .eq('surveys.status', 'utkast')
       .limit(1)
       .single()
     const r = await svc
       .from('survey_questions')
-      .insert({ survey_id: draft!.id, position: q!.position, type: 'text', text: 'dupe' })
+      .insert({ survey_id: q!.survey_id, position: q!.position, type: 'text', text: 'dupe' })
     report('UNIQUE survey_questions(survey_id, position)', ['DENIED'], classify(r.error, null))
   }
   {
