@@ -83,11 +83,11 @@ phase whose definition of done is "gates green" cannot start on a build that
 cannot run them. This is D55's shape recurring and is logged as such.
 
 **Not in this phase.** Any new screen; the wizard; Oversikt's relocation
-(V1-6); any dashboard change beyond the heading.
+(V1-1, moved there from V1-6); any dashboard change beyond the heading.
 
 ---
 
-## V1-1 — Policy panel: Q17 §1 and §2 on screen
+## V1-1 — Policy panel, and Oversikt's compliance card
 
 **Scope**
 
@@ -102,6 +102,20 @@ cannot run them. This is D55's shape recurring and is logged as such.
 | Respondent banner chrome (NEW:2326–2331) | ALREADY BUILT to OLD — fidelity change |
 | Results threshold line (NEW:2513) | ALREADY BUILT — fidelity check only |
 | Library policy line in the **list** view (NEW:1976–1978) and card metrics 11.5 px / 6 px (NEW:1944–1946) | PARTIALLY BUILT |
+| "Krever handling" relocated into the lower grid (NEW:305–333) — per Q37 | ALREADY BUILT — fidelity rebuild (C12) |
+| Dark compliance card with 12-month timeline (NEW:334–357) — per Q37 | NOT BUILT (data exists) |
+
+**Why Oversikt is here and not in V1-6 (Tor's call, 2026-09-06).** It is the
+first screen anyone opens, so it is the most visible difference between the app
+and the new bundle, and V1-6 was too late for that. The dependencies allow the
+earliest slot: the relocation is a reorder inside `OverviewScreen.tsx`, a file
+no other v1 phase touches, and the compliance card reads `duties.next_due_at`
+(`M:0006:21`), `reminder_weeks` (`M:0904-0005:16–18`) and `duty_definitions` —
+all shipped in Phase 5, with `00-diff.md` § c.10 recording "No gap". It needs
+nothing from this phase's policy work, nothing from V1-2's attributed rows, and
+nothing from V1-4's dashboard. `goCompliance` opens Rapporter's lov tab
+(NEW:4279), which exists today. So V1-1, not V1-2: V1-2 would have been a delay
+with no dependency behind it. The two workstreams share only the phase's gates.
 
 **Schema first.** None. Server action `setSurveyPolicy`
 (`bygg/actions.ts:350–385`) gains `anonymity` and a ceiling per Q36; the
@@ -121,14 +135,19 @@ a `quality_rules`-shaped rule (data), not a component constant.
 - Send: move the lock note above the radios in NEW's chrome (`SendScreen.tsx:568–570`). Pattern: Send screen.
 - Respondent: banner classes (`Respondent.tsx:172–174`) and the `optional` branch (`:131–135`) → `promiseChoose` / `promiseChooseLow` keys carrying `kWord`. Respondent-facing: pixel-perfect at 380–420, not RESPONSIVE.md.
 - Library list row policy line (`bibliotek/page.tsx:294–305`); card line metrics (`TemplateCard.tsx:77`). Pattern: Data tables (list), grids (cards).
+- `ComplianceCard.tsx` under `oversikt/`; `OverviewScreen.tsx:117–192, 194–289` reordered so "Krever handling" is the `minmax(0,1.6fr)` left column of the lower grid and the card is the right. Pattern: content order (RESPONSIVE.md rule 5) when the grid stacks; timeline dots are percentage-positioned.
+- The bundle hard-codes both `complianceSummary` ("2 av 4 plikter krever handling i år", NEW:4278) and `complianceTimeline` (a four-row array, NEW:4272–4277). Both are derived from real duty rows here, the way `oversikt/page.tsx:131–164` already derives tones — CLAUDE.md forbids rendering the mock's numbers. An organisation with no duty due inside twelve months has no drawn state in either bundle: choose the minimal consistent option and log it.
 
 **Manifest states.** `bygg`: `policy-open`, `policy-locked-pack` (a psykososial
 draft), `policy-locked-answers` (a sent survey), `policy-low-warning`,
 `policy-organisation`. `respondent`: an organisation token is V1-2's fixture,
-so the organisation banner state waits for V1-2.
+so the organisation banner state waits for V1-2. `oversikt`: the
+default already exists; add `frister-tomt` if the empty treatment above needs
+one.
 
 **Definition of done.** Gates 1–7; 3a for Builder, Send, Resultater,
-Bibliotek, `/s/[token]`; 3e for the same. Census ≥ +8 tests, +2 files
+Bibliotek, `/s/[token]` and **Oversikt (administrator and leser)**; 3e for the
+same. Census ≥ +8 tests, +2 files
 (≥ 401 / 20). 5a3 unchanged. k_for assertion re-run (the suite runs whole;
 nothing new reads the vault).
 
@@ -351,28 +370,35 @@ own commit (C18). Census ≥ +7, +1 file (≥ 442 / 23). 5a3: +1 registry (`--`)
 
 ---
 
-## V1-6 — Oversikt compliance card, carried findings
+## V1-6 — Carried findings
 
 **Scope**
 
 | Surface | Class |
 |---|---|
-| "Krever handling" relocated into the lower grid (NEW:305–333) | ALREADY BUILT — fidelity rebuild (C12) |
-| Dark compliance card with 12-month timeline (NEW:334–357) | NOT BUILT (data exists) |
 | Everything carried from V1-0…V1-5 fix passes | as listed by then |
 
-**Schema first.** None; `duties.next_due_at` (`M:0006:21`), `reminder_weeks`
-(`M:0904-0005:16–18`). The "N av M plikter krever handling i år" count is derived
-the way `oversikt/page.tsx:131–164` already derives tones.
+**This phase no longer draws anything.** Q37's two Oversikt surfaces were its
+only design work and moved to V1-1 on Tor's call (2026-09-06): Oversikt is the
+first screen anyone opens and V1-6 was too late for the most visible difference
+between the app and the new bundle. Nothing depended on the delay — see V1-1's
+note for the dependency argument.
 
-**UI second.** `ComplianceCard.tsx`; `OverviewScreen.tsx:117–192, 194–289`
-reordered. Pattern: content order (rule 5) when the 1.6fr/.9fr grid stacks;
-timeline dots are percentage-positioned.
+What remains is the pass this plan always needed and never had a slot for: the
+findings each phase's fix pass logged forward rather than fixed, worked in one
+place with the whole v1 surface built. Its size is therefore not knowable now,
+which is why it keeps a phase of its own instead of being folded into V1-5 —
+a carried-findings list with nowhere to land is how findings become permanent.
 
-**Definition of done.** Gates 1–7; 3a Oversikt (administrator, leser); 3e.
-Census unchanged unless a carried finding needs a test. 5a3 unchanged.
+**Schema first.** Whatever the carried list requires; none is known today.
 
-**Not in this phase.** Anything new.
+**UI second.** Likewise.
+
+**Definition of done.** Gates 1–7 over whatever was touched. Census unchanged
+unless a carried finding needs a test. 5a3 unchanged.
+
+**Not in this phase.** Anything new. A finding that arrives during V1-6 goes to
+V1-7 or to the post-v1 list — the two-pass rule does not restart here.
 
 ---
 
@@ -423,5 +449,13 @@ attributed view depends on being understood. V1-2 before V1-3 because the
 wedge is worth more than the scheduler and touches no schema. V1-3 before V1-4
 because the dashboard's register and rounds panels read state V1-2 and V1-3
 make real. V1-4 before V1-5 because the use-case cards open presets. V1-6 last
-of the certain phases because Oversikt aggregates everything (Phase 5's own
-rule). V1-7 is conditional and last because it is the only new k-gate surface.
+of the certain phases because it is now the carried-findings pass and has to
+come after the findings. V1-7 is conditional and last because it is the only
+new k-gate surface.
+
+Oversikt was V1-6 on the reasoning that it aggregates everything, which is
+Phase 5's own ordering rule — and that rule was wrong here. It governs a screen
+whose CONTENT is downstream of other phases; the v1 change is a layout move
+plus a card over duty data that shipped in Phase 5, so nothing about it waits
+on V1-1…V1-5. Ordering by which screen looks most downstream, rather than by
+what it actually reads, put the most visible screen last for no gain.

@@ -13,6 +13,7 @@ import { BASE_URL, ensureServer } from './server'
 import { LOCAL_SUPABASE } from './local-env'
 import { signIn } from '../../tests/helpers/session'
 import { personaClient, serviceClient } from '../../tests/db/clients'
+import { requireDependencies, reachable } from './deps'
 
 config({ path: '.env.local', quiet: true })
 
@@ -24,6 +25,20 @@ function check(label: string, ok: boolean, detail: string) {
 }
 
 async function main() {
+  // Mailpit is not in the CLI's default service set and CI excludes it
+  // outright (`ci.yml`: `supabase start -x …,mailpit`), so the mail half of
+  // this pipeline runs nowhere but here. Without it the worker's SMTP connect
+  // fails and three checks report FAIL as though the worker were broken.
+  await requireDependencies('verify:send', [
+    {
+      name: 'Mailpit (the local SMTP sink the mail worker delivers to)',
+      where: `${MAILPIT} (HTTP API) and 127.0.0.1:54325 (SMTP)`,
+      probe: () => reachable(`${MAILPIT}/api/v1/messages?limit=1`),
+      howto:
+        'supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor',
+    },
+  ])
+
   // Re-seed first. This gate SENDS the seeded draft, which flips it to `aktiv`
   // and consumes it — so a second run in a row has nothing to send, and a run
   // that follows any other verifier inherits whatever that one left behind.

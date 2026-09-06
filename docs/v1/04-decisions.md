@@ -6,12 +6,11 @@ the recommended answer the plan in `03-plan.md` assumes; overruling one changes
 the plan where the phase text says "per Qnn". Anything the bundle implies but
 never states is here as a decision, not an assumption.
 
-**Status.** Q18, Q28, Q32 and Q47 are **CONFIRMED by Tor** (2026-09-06) and are
-in force. Q19–Q46 are staged: they are confirmed in batches tied to the phase
+**Status.** Q18, Q28, Q32, Q37 and Q47 are **CONFIRMED by Tor** (2026-09-06)
+and are in force. The rest are staged: they are confirmed in batches tied to the phase
 where each bites, because a decision taken out of context is taken badly. The
 batch order is V1-1 (Q31, Q36) → V1-2 (Q30, Q34, Q35, Q43) → V1-3 (Q19–Q23) →
-V1-4 (Q25, Q26, Q27, Q29, Q33, Q42, Q46) → V1-5 (Q24, Q44, Q45) → V1-6 (Q37)
-→ V1-7 (Q41); Q38, Q39 and Q40 belong to no phase and are confirmed when their
+V1-4 (Q25, Q26, Q27, Q29, Q33, Q42, Q46) → V1-5 (Q24, Q44, Q45) → V1-7 (Q41); Q38, Q39 and Q40 belong to no phase and are confirmed when their
 subject arises. Nine of the twenty-nine touch the security core: six on the
 k-gate or an aggregate path (Q26, Q28, Q30, Q36, Q41, Q42) and three on RLS or
 role semantics (Q23, Q25, Q43).
@@ -37,7 +36,7 @@ role semantics (Q23, Q25, Q43).
 | Q34 | Mobile treatment of an expandable attributed row | Card per row (Data tables, wide row); the detail grid opens **inside** the card as a single column; no overflow menu (no consequential controls). Written into RESPONSIVE.md. | V1-2 |
 | Q35 | Key-question designation for the attributed table | **Data on the pack**: a `role` (`brudd`, `policy`, `key`) on the pack's question entries, carried into `survey_questions.config`; never a regex on question text (NEW:3536–3540). | V1-2 |
 | Q36 | Threshold values and ceiling | The panel offers 3/4/5/8/10 (NEW:4855); the server accepts **3–10** (down from 50 at `bygg/actions.ts:352`), matching the org default's CHECK. | V1-1; C6 |
-| Q37 | Oversikt relocation | Adopt NEW: "Krever handling" into the lower grid, chip row → dark compliance card. | V1-6; C12 |
+| Q37 | Oversikt relocation | **CONFIRMED** (Tor, 2026-09-06). Adopt NEW: "Krever handling" into the lower grid, chip row → dark compliance card. **Moved V1-6 → V1-1** in the same call: it is the first screen anyone opens and nothing depended on the delay (see `03-plan.md` § V1-1). | V1-1; C12 |
 | Q38 | Personvern §8 controls (still undrawn) | **Wait** for a bundle; D87's stop-and-ask stands. (Overrule = build from the brief's prose, logged as an invented screen like D8/D21.) | none; cross-phase 6 |
 | Q39 | «Svar per virksomhet» report section body and the optional-mode per-choice texts (still undrawn) | **Wait** for a bundle (same as Q38). | none; cross-phase 6 |
 | Q40 | RESPONSIVE.md Charts rule vs the bundle's 120 px / 172 px charts | Amend the rule: "never smaller than the design draws it; never below 44 px per interactive mark"; drop the 200 px floor. | V1-2, V1-7; C13 |

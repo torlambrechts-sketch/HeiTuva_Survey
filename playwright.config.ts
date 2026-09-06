@@ -13,6 +13,9 @@ export const BASE_URL = process.env.HEITUVA_BASE_URL ?? 'http://127.0.0.1:3100'
 
 export default defineConfig({
   testDir: './tests/visual',
+  // Refuses to start when a browser a project needs is not installed, so a
+  // missing dependency never arrives disguised as six failing screenshots.
+  globalSetup: './tests/visual/browsers.setup.ts',
   fullyParallel: false,
   workers: 1,
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],

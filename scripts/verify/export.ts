@@ -20,6 +20,8 @@ import { BASE_URL, ensureServer } from './server'
 import { serviceClient } from '../../tests/db/clients'
 import { ORG_PRIMARY } from '../../tests/db/personas'
 import { signIn } from '../../tests/helpers/session'
+import { requireDependencies } from './deps'
+import { LOCAL_SUPABASE } from './local-env'
 
 config({ path: '.env.local', quiet: true })
 
@@ -30,6 +32,37 @@ function check(label: string, ok: boolean, detail: string) {
 }
 
 async function main() {
+  // storage-api is not in the CLI's default service set and CI does not run
+  // this gate at all, so the archive half exists only here. Without it the
+  // export route's upload fails, the `report_exports` insert is skipped (by
+  // design — a Storage hiccup must not deny the reader their document), and
+  // "only the writing role archived its exports" reports FAIL with an empty
+  // detail, which reads like a broken export rather than an absent service.
+  await requireDependencies('verify:export', [
+    {
+      name: 'Supabase Storage (storage-api, where report exports are archived)',
+      where: `${LOCAL_SUPABASE.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/bucket`,
+      probe: async () => {
+        const ac = new AbortController()
+        const t = setTimeout(() => ac.abort(), 3000)
+        try {
+          // Kong answers 503 for a service that is not up and 400/401 for one
+          // that is (the request carries no key). Anything but 503 is alive.
+          const r = await fetch(`${LOCAL_SUPABASE.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/bucket`, {
+            signal: ac.signal,
+          })
+          return r.status !== 503
+        } catch {
+          return false
+        } finally {
+          clearTimeout(t)
+        }
+      },
+      howto:
+        'supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor',
+    },
+  ])
+
   const server = await ensureServer()
   const browser = await chromium.launch()
   const svc = serviceClient()
