@@ -99,8 +99,14 @@ export function MobileNav({
                 {newSurveyLabel}
               </Link>
               {items.map((item) => {
+                // Same mapping as AppNav: the "Innsikt" item covers /dashboard
+                // and /rapporter both, so the slide-over agrees with the bar.
                 const on =
-                  item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                  item.key === 'insight'
+                    ? pathname.startsWith('/dashboard') || pathname.startsWith('/rapporter')
+                    : item.href === '/'
+                      ? pathname === '/'
+                      : pathname.startsWith(item.href)
                 return (
                   <Link
                     key={item.key}

@@ -83,7 +83,7 @@ export async function OverviewScreen({
   const card = 'rounded-[18px] border border-line bg-sf px-6 py-6'
 
   return (
-    <main className="max-w-[1140px] animate-enter pt-[26px]">
+    <main className="animate-enter pt-[26px]">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="text-[12.5px] text-mut">{t('overline')}</div>

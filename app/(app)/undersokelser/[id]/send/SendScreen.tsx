@@ -178,7 +178,7 @@ export function SendScreen({
 
   /* ---- the screen ------------------------------------------------------- */
   return (
-    <main className="animate-enter max-w-[1140px] pt-[26px]">
+    <main className="animate-enter pt-[28px]">
       {!canSend ? (
         <p className="mb-3 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px]">{t('readOnly')}</p>
       ) : null}

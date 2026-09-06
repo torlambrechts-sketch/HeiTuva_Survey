@@ -68,7 +68,7 @@ export default async function LibraryPage({
   }
 
   return (
-    <main className="animate-enter max-w-[1080px] pt-[26px]">
+    <main className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-center gap-4">
         <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
         {/* Chip rail — RESPONSIVE.md § Tab rails: wraps below md, chips keep

@@ -15,7 +15,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <AppHeader viewer={viewer} />
-      <div className="mx-5 pb-16">{children}</div>
+      {/* One frame for every screen (v1 bundle, HeiTuva.dc.html:364). */}
+      <div className="frame pb-16">{children}</div>
     </>
   )
 }

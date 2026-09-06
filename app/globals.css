@@ -36,6 +36,44 @@
   .animate-enter {
     animation: enter 0.25s ease;
   }
+
+  /* The shared frame the v1 bundle introduces (HeiTuva.dc.html:160, 220, 243,
+     364): one centred column for the header, the survey context bar and every
+     screen, instead of each screen carrying its own max-width. Before this the
+     app matched the OLD bundle — 1140 / 1080 / 900 per screen — so the column
+     jumped width as you navigated.
+
+     Below `md` the gutter stays at the 20px the responsive work settled rather
+     than the design's 36px: 72px of a 390px viewport is a fifth of the screen,
+     and the bundle has no mobile canvas to be faithful to (docs/RESPONSIVE.md
+     governs there). Desktop is the design's own value.
+
+     `--frame-max` is what the wide toggle moves; see the rule below. */
+  .frame {
+    width: calc(100% - 40px);
+    max-width: var(--frame-max, 1120px);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: 768px) {
+    .frame {
+      width: calc(100% - 72px);
+    }
+  }
+}
+
+/* The header's full-width toggle (DECISIONS Q32). Only at `xl` and above: the
+   cap does not bind until 1192px, so below that the control would change
+   nothing — and RESPONSIVE.md rule 4's escape clause covers exactly the case
+   of something that cannot work at 390px. The attribute is set before paint by
+   the inline script in app/layout.tsx, so a wide session does not flash narrow
+   on every navigation. */
+@media (min-width: 1280px) {
+  :root[data-wide='1'] {
+    --frame-max: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

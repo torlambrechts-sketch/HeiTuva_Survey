@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (viewer.role !== 'administrator') {
     return (
-      <main className="animate-enter max-w-[1080px] pt-[26px]">
+      <main className="animate-enter pt-[34px]">
         <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
         <p role="alert" className="mt-3 text-[13.5px] text-mut">
           {t('onlyAdmin')}
@@ -45,7 +45,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   })
 
   return (
-    <main className="animate-enter max-w-[1080px] pt-[26px]">
+    <main className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div>
           <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>

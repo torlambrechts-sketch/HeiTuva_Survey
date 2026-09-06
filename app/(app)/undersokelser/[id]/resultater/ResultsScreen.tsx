@@ -155,7 +155,7 @@ export async function ResultsScreen({
   ]
 
   return (
-    <div className="flex animate-enter flex-col gap-[18px] pt-[26px]">
+    <div className="flex animate-enter flex-col gap-[18px] pt-[28px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[26px] font-medium">{t('title')}</h1>

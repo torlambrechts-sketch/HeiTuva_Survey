@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
 import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/results/types'
+import { InsightTabs } from '@/components/InsightTabs'
 import { DashboardFilters } from './DashboardFilters'
 import { PinButton } from './PinButton'
 import { OpenPinnedButton } from './OpenPinnedButton'
@@ -37,6 +38,7 @@ export async function DashboardScreen({
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
+  const tNav = await getTranslations('nav')
   const locale = await getLocale()
   // The strictest threshold across the selected surveys, as the RPCs applied
   // it (Q17). Null only when there is nothing to show — then no cell is gated.
@@ -108,12 +110,32 @@ export async function DashboardScreen({
   }
 
   return (
-    <div className="max-w-[1080px] animate-enter pt-[34px]">
+    <div className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
-          <p className="mt-[3px] text-[13px] text-mut">
-            {unavailable ? t('unavailable') : `${filterLine} · ${t('updatedNow')}`}
+          {/* The v1 bundle merges Dashboard and Rapporter under one heading
+              with a rail between them (HeiTuva.dc.html:918-928). */}
+          <div className="flex flex-wrap items-center gap-[14px]">
+            <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
+            <InsightTabs
+              label={tNav('insightTabs')}
+              tabs={[
+                { href: '/dashboard', label: tNav('dashboard') },
+                { href: '/rapporter', label: tNav('reports') },
+              ]}
+            />
+          </div>
+          {/* "Levende tall · {utvalg} · {terskel}". The threshold is the one
+              the RPCs actually applied to the panels on this screen — the k
+              they returned for this selection, never a figure computed here
+              (DECISIONS Q42's default; CLAUDE.md forbids a number the gate did
+              not produce). It is omitted when there is nothing to gate. */}
+          <p className="mt-[6px] text-[13px] text-mut">
+            {unavailable
+              ? t('unavailable')
+              : [t('liveNumbers'), filterLine, trendK === null ? null : t('thresholdLine', { k: trendK })]
+                  .filter(Boolean)
+                  .join(' · ')}
           </p>
         </div>
         <DashboardFilters

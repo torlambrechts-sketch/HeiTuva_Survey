@@ -10,7 +10,16 @@ HeiTuva is a Norwegian-market survey SaaS with a statutory-compliance wedge (Arb
 - Email: provider adapter in `lib/mail/` — Amazon SES eu-north-1 (see DECISIONS Q6)
 
 ## Design fidelity — pixel-perfect, non-negotiable
-- The design source of truth is `/design-reference/` (the Claude Design handoff bundle). Read `project/HeiTuva.dc.html` for any screen before building it. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
+- **Two handoff bundles, each governing a different question (DECISIONS Q18).**
+  `/design-reference-v1/` (second handoff) is the source of truth for every screen a
+  v1 phase touches — read `project/HeiTuva.dc.html` there before building it.
+  `/design-reference/` (first handoff) remains the reference for Phase 1–7 work **as
+  built**: a fidelity question about a screen no v1 phase has touched is answered
+  against the bundle it was built from, not against a later one that moved the frame
+  under it. Rendered baselines follow the same split — `artifacts/reference/` is the
+  first bundle, `artifacts/reference-v1/` the second; `npm run verify:reference`
+  renders both and overwrites neither. What changed between them, screen by screen:
+  `docs/v1/00-diff.md`. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
 - Theme tokens (Tailwind theme, CSS vars):
   `--bg #FCF6E9 · --sf #FFFDF6 · --sf2 rgba(25,21,16,.05) · --ink #191510 · --mut #5F5849 · --line #E8DFC9 · --ac #F5C64A · --acf #191510 · --ac2 #A8D5D2 · --ac3 #FBD5C4 · --sbg #FBEBBE · --sbg2 #F6EEDD`
   radius 16px · shadow `0 2px 10px rgba(25,21,16,.05)` · fonts: Playfair Display (display), DM Sans (body), Bricolage Grotesque (logo only) · base 14px · focus outline `3px solid #191510, offset 2px` · entry animation fade + 6px translateY, .25s ease
@@ -129,6 +138,15 @@ Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerates 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 are allowlisted by design, leaving 55 — every one protected AND
 guarded, none merely unproven. The census rose 392 → 395 with Q47's three tests.
+
+**Run order changes what 5a3 can prove, not the number.** 55 of 71 either way. But
+the script only counts a surface as *proven* when there was a real row for the
+policy to refuse, so run it on a freshly reset database and six tables report
+PROTECTED BUT UNPROVEN — `demo_requests`, `duty_survey_links`, `logic_rules`,
+`report_exports`, `report_shares`, `template_pack_translations` are empty until
+something writes them. In `verify:all` the db suite runs first and populates them,
+and every surface reports `ok`. Six unproven tables after a bare reset are that
+ordering, not a regression.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.

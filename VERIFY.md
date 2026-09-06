@@ -44,11 +44,17 @@ Build the verification harness. This is infrastructure I will reuse every phase.
    Any harness fix that widens coverage requires RE-RUNNING earlier completed phases:
    a gate that could not see a defect never proved its absence.
 
-3. scripts/verify/reference.ts — opens the design file
-   /design-reference/heituva-survey-app-design/project/HeiTuva.dc.html in Playwright,
-   drives its internal state to each screen (the prototype is a single page with JS
-   state; set state via page.evaluate rather than guessing click paths), and captures
-   artifacts/reference/<screen>.png at 1440 wide. Run once; commit the reference PNGs.
+3. scripts/verify/reference.ts — opens the design files in Playwright, drives their
+   internal state to each screen (the prototype is a single page with JS state; set
+   state via page.evaluate rather than guessing click paths), and captures each screen
+   at 1440 wide. Run once per bundle update; commit the reference PNGs.
+   Since DECISIONS Q18 it renders BOTH handoffs and overwrites neither:
+   /design-reference/…/HeiTuva.dc.html      -> artifacts/reference/<screen>.png
+     the first handoff, the baseline Phases 1–7 were built against.
+   /design-reference-v1/…/HeiTuva.dc.html   -> artifacts/reference-v1/<screen>.png
+     the second handoff, the target for every screen a v1 phase touches.
+   Gate 3a compares an untouched screen against the first set and a v1-phase screen
+   against the second; the run prints which set is which so nothing is inferred.
 
 4. tests/db/clients.ts — Supabase clients for each persona: anonClient (no session),
    adminClient, redaktorClient, leserClient (real logins as seeded users, NOT the
@@ -88,7 +94,8 @@ to prove your own implementation is wrong. Assume it is until evidence says othe
 
 === GATE 1 — SCOPE TRUTH ===
 Re-read CLAUDE.md and the phase scope in CLAUDE_CODE_PROMPTS.md. Re-read the relevant
-markup in /design-reference/heituva-survey-app-design/project/HeiTuva.dc.html.
+markup in the bundle that governs the screen (Q18): /design-reference-v1/… for
+anything a v1 phase touches, /design-reference/… for Phase 1–7 work as built.
 Produce a table: every screen, element, state, and behaviour the phase required |
 implemented? | file:line where it lives | verified in which gate.
 Explicitly list anything in the design you did NOT implement, and anything you built
@@ -184,6 +191,9 @@ Output in this exact structure, nothing else:
    Fixing defects does not close an unrun gate: if Gate 3a compared three screens of
    twenty, or 3c/3d/3f were not exercised, the verdict stays NOT READY until they are
    actually run. Defects and unrun gates are separate debts and both must clear.
+   **No phase closes while main's CI is red.** The Gate 6 report cites the run number
+   and its status as evidence, exactly like any other claim. A phase verified locally
+   against a pipeline that is not running has been verified once, not twice.
 2. Evidence table: claim | gate | evidence (command output excerpt, file:line, or
    screenshot path).
 3. DEFECTS: numbered, each with severity (blocker/major/minor), location, and proposed fix.
@@ -226,5 +236,7 @@ No fixes until I've seen the list.
 - **Mutation check** — the only way to know a test suite can fail. Green tests over broken code are worse than no tests, because they buy false confidence.
 - **Model-eye visual comparison, not just pixel-diff** — your implementation's DOM differs from the prototype's, so pixel-diff against the design is noise; pixel-diff belongs against its own previous screenshots for regression.
 - **"Where your judgement is weakest"** — invites the model to surface its own uncertainty rather than smoothing over it, which is where your review time is best spent.
+- **Why CI status is evidence, not machinery (recorded at V1-0, no new check)** — both CI jobs had been aborting before reaching anything since Phase 9: the invariant job died at a stale seed-count assertion and the static job at an out-of-sync lock file, so Phase 9's 313-test suite never ran in CI at all, and neither did tsc, eslint or the build. The census and 5a3 both worked — locally. Neither could see that CI was not executing them. That is the fourth instance in this project of a gate reporting green for something it structurally could not see (after `ui_messages`' too-wide predicate, the sweep that measured one state per route, and the two gates measuring history rather than the run). The answer is a rule that makes CI status part of the evidence, not another checker: a CI-watching gate would itself be a thing that can silently stop running.
+
 - **What Gate 5a3 does NOT prove (recorded after Phase 6, no new check)** — 5a3 proves a denial test *exists* for every surface, not that the test's scope is *right*. `ui_messages` was cross-tenant from Phase 1 to Phase 6 behind a green 5a3: its policy asked "is the caller an administrator of any org" and the tests asked the same question. A gate that enumerates surfaces cannot see that a predicate is too wide; only reading the policy against the table's ownership can. The apparatus stays frozen; this is its documented limit.
 

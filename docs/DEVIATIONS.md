@@ -1681,3 +1681,59 @@ visible, not hidden, as the brief asks. The refusal itself is the RPC's: a
 report row that names the section over person sources composes it as
 `unavailable` with no rows, and the test proves no organisation name leaks
 through the refused section.
+
+### D89 — the wide toggle renders at `xl` and above only
+`HeiTuva.dc.html:181-183` puts a round icon button between «Ny undersøkelse» and
+the language globe; `4007-4011` is its handler — it flips a `wide` flag that
+releases the frame's 1120px cap. DECISIONS **Q32** (confirmed 2026-09-06) is to
+render it at `xl` and above only, and the control carries that in one class:
+`hidden … xl:inline-flex` (`components/WideToggle.tsx:55`).
+
+The reason is arithmetic, not taste. The frame is `calc(100% - 72px)` capped at
+1120px, so the cap binds only from 1192px up. Below that the viewport is already
+narrower than the cap and the button would be a control that visibly does
+nothing on press — which D26 settled is worse than a control that is absent.
+`docs/RESPONSIVE.md` rule 4 ("no feature may be hidden on mobile") is the rule
+this bends, and it bends by its own escape clause: a control whose *only* effect
+is a desktop-width layout choice has nothing to offer a 390px viewport. The
+media query is the same 1280px `xl` breakpoint everything else uses rather than
+a bespoke 1192px one, so there is one breakpoint vocabulary, not two.
+
+The preference is per viewer and lives in `localStorage` exactly as the bundle
+has it — nothing about a personal window-width choice belongs in the database —
+and is applied before paint by the inline script at `app/layout.tsx` so a wide
+viewer does not see the narrow frame flash first. The component reads the
+attribute back on mount rather than seeding React state from it, because the
+server cannot know the preference and rendering it into the first HTML would be
+a hydration mismatch.
+
+### D90 — the frame keeps a 20px gutter on mobile where the bundle draws 36px
+`HeiTuva.dc.html` gives `.frame` `width: calc(100% - 72px)` at every width — a
+36px gutter each side, unconditionally. The v1 bundle is a desktop artefact and
+never renders below 1280px, so that number was never tested against a phone: at
+390px it spends 18.5% of the viewport on margin, and the cards inside then carry
+their own 16–20px padding on top of it, leaving ~250px of content.
+
+`app/globals.css` therefore gives `.frame` `calc(100% - 40px)` and restores the
+bundle's `calc(100% - 72px)` at `md` (768px) and up. Above `md` the rendering is
+the bundle's, exactly; below it there is no design to match and
+`docs/RESPONSIVE.md` governs, where 20px is the gutter every Phase 1–7 screen
+already used (the per-screen `px-5` this frame replaced). This is the smaller
+deviation of the two available: keeping 36px would have changed every screen's
+mobile rendering, which no decision asked for.
+
+### D91 — the Phase 1–7 reference renders are frozen and re-rendered on request
+`scripts/verify/reference.ts` now drives both bundles
+(`BUNDLES`, `reference.ts:21`): `design-reference-v1/` → `artifacts/reference-v1/`
+and `design-reference/` → `artifacts/reference/`. Per **Q18** both sets stay, and
+they are named for their bundle so which-is-which needs no inference.
+
+Only the v1 set renders by default (`npm run verify:reference`); the legacy set
+needs `--bundle=legacy` or `--all`. That is not a convenience — it is what keeps
+the older set trustworthy. The renders are browser screenshots, and a Chromium
+upgrade repaints them: re-rendering the legacy bundle on this container's
+Chromium moved five PNGs that no code change had touched. A baseline that drifts
+whenever the toolchain moves cannot be evidence for "Phase 1–7 as built" (Q18's
+whole purpose), so the legacy set is committed, restored (`git checkout --
+artifacts/reference/`), and re-rendered only when someone asks for it and can say
+why. The v1 set, which is the live target, re-renders every run.

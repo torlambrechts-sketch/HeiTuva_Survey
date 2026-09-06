@@ -29,7 +29,11 @@
     "administration": "Administrasjon",
     "privacyGdpr": "Personvern og GDPR",
     "openMenu": "Åpne meny",
-    "closeMenu": "Lukk meny"
+    "closeMenu": "Lukk meny",
+    "insight": "Innsikt",
+    "insightTabs": "Innsiktsfaner",
+    "wide": "Full bredde",
+    "narrow": "Smal visning"
   },
   "dash": {
     "overline": "Oversikt",
@@ -639,7 +643,8 @@
     "methodAttributed": "Attribuerte svar — ingen terskel. Hver virksomhet vises med navn.",
     "sectionUnavailable": "Ikke tilgjengelig i denne rapporten",
     "unavailablePersonSources": "Bare tilgjengelig når alle kildene er organisasjonsundersøkelser.",
-    "perVirksomhetPending": "Tabellen kommer med den attribuerte resultatvisningen. Radene er komponert og eksporteres når visningen er tegnet."
+    "perVirksomhetPending": "Tabellen kommer med den attribuerte resultatvisningen. Radene er komponert og eksporteres når visningen er tegnet.",
+    "frozenShared": "Fryste og delte rapporter"
   },
   "admin": {
     "title": "Administrasjon",
@@ -1109,7 +1114,9 @@
     "openPinned": "Åpne rapport",
     "pinnedReportTitle": "Fra dashboard — {date}",
     "themeMentions": "{label} · nevnt {count} ganger",
-    "heatNoteGeneric": "Grønn ≥ 4,2 · gul ≥ 3,6 · rød under. Grupper under terskelen vises ikke."
+    "heatNoteGeneric": "Grønn ≥ 4,2 · gul ≥ 3,6 · rød under. Grupper under terskelen vises ikke.",
+    "liveNumbers": "Levende tall",
+    "thresholdLine": "strengeste terskel blant valgte undersøkelser: {k}"
   },
   "splash": {
     "langLabel": "Velg språk",

@@ -355,7 +355,7 @@ export function Builder({
   )
 
   return (
-    <div className="animate-enter pt-[26px]">
+    <div className="animate-enter pt-[28px]">
       {locked ? (
         <p className="mb-3 rounded-[10px] bg-ac3 px-3 py-2 text-[12.5px]">{t('lockedNotice')}</p>
       ) : !canEdit ? (

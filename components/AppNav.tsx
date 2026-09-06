@@ -16,11 +16,12 @@ export type NavItem = { href: string; key: string; label: string }
 export function AppNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
 
+  // "Innsikt" is one item over two routes (v1 bundle, HeiTuva.dc.html:3598:
+  // the item is active for `dashboard` OR `reports`), so both mark it.
   const activeKey = (() => {
     if (pathname.startsWith('/undersokelser')) return 'surveys'
-    if (pathname.startsWith('/dashboard')) return 'dashboard'
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/rapporter')) return 'insight'
     if (pathname.startsWith('/bibliotek')) return 'library'
-    if (pathname.startsWith('/rapporter')) return 'reports'
     if (pathname === '/') return 'dash'
     return ''
   })()

@@ -157,7 +157,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div className="animate-enter max-w-[1080px] pt-[34px]">
+    <div className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>

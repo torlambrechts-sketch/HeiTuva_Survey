@@ -31,9 +31,13 @@ next-env.d.ts
 *.tsbuildinfo
 
 # verification artifacts — captures are regenerated per run.
-# artifacts/reference/ IS committed: it is the design baseline.
+# Both reference sets ARE committed: they are the design baselines, one per
+# handoff (DECISIONS Q18). artifacts/reference/ is the first bundle, the
+# baseline Phases 1-7 were built against; artifacts/reference-v1/ is the
+# second, the target for every screen a v1 phase touches.
 artifacts/*
 !artifacts/reference/
+!artifacts/reference-v1/
 artifacts/.cdn-cache/
 test-results/
 playwright-report/

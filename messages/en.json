@@ -29,7 +29,11 @@
     "administration": "Administration",
     "privacyGdpr": "Privacy and GDPR",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "insight": "Insight",
+    "insightTabs": "Insight tabs",
+    "wide": "Full width",
+    "narrow": "Narrow view"
   },
   "dash": {
     "overline": "Overview",
@@ -639,7 +643,8 @@
     "methodAttributed": "Attributed answers — no threshold. Each organisation is shown by name.",
     "sectionUnavailable": "Not available in this report",
     "unavailablePersonSources": "Only available when every source is an organisation survey.",
-    "perVirksomhetPending": "The table arrives with the attributed results view. The rows are composed and will export once the view is drawn."
+    "perVirksomhetPending": "The table arrives with the attributed results view. The rows are composed and will export once the view is drawn.",
+    "frozenShared": "Frozen and shared reports"
   },
   "admin": {
     "title": "Administration",
@@ -1109,7 +1114,9 @@
     "openPinned": "Open report",
     "pinnedReportTitle": "From dashboard — {date}",
     "themeMentions": "{label} · mentioned {count} times",
-    "heatNoteGeneric": "Green ≥ 4.2 · yellow ≥ 3.6 · red below. Groups below the threshold are not shown."
+    "heatNoteGeneric": "Green ≥ 4.2 · yellow ≥ 3.6 · red below. Groups below the threshold are not shown.",
+    "liveNumbers": "Live figures",
+    "thresholdLine": "strictest threshold among the selected surveys: {k}"
   },
   "splash": {
     "langLabel": "Choose language",
