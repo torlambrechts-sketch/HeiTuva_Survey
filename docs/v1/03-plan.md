@@ -250,6 +250,14 @@ Re-swept to zero. Both were proven failing against the pre-fix definitions.
    It is administrator-only (`audit_sel`, M:0008:190). The clause stands on
    invariant 7 and on the table being append-only; the line's stated reason is
    what needs the correction.
+4. The attributed CSV round-trips through the app's own importer for addresses
+   but not names: the register heads that column «Virksomhet» and
+   `lib/send/import.ts`'s `HEADER_NAME` has no synonym for it. One row in an
+   existing list, but it changes how every imported file is read, so it is not
+   a V1-2 change (D96).
+5. `verify:roundtrip`'s `dsr_requests` and `profiles` probes leave rows behind
+   the way its group probe did. Neither reaches a rendered screen, which is why
+   only the group was fixed in V1-2.
 
 **Not in this phase.** The register panel (V1-4). Any change to
 `compose_report` beyond Q30.

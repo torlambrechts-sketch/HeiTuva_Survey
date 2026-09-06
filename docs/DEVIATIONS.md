@@ -1850,8 +1850,14 @@ be pixel-perfect to, so the format is a stop-and-choose under CLAUDE.md's
 that already exists rather than with a preference:
 
 - **Semicolon, not comma.** Norwegian Excel's list separator, and the app's own
-  importer detects `,`, `;` or tab (`lib/send/import.ts:86`) — so a file
-  exported here parses when it is pasted back into the import step.
+  importer detects `,`, `;` or tab (`lib/send/import.ts:86`), so a file exported
+  here parses when it is pasted back into the import step. **Checked, with its
+  limit:** both addresses come back and nothing is rejected, but the supplier
+  NAMES do not — the register heads that column «Virksomhet» and the importer's
+  name synonyms (`HEADER_NAME`) do not include it, so a re-invite built from an
+  export would carry addresses only. Adding the synonym is a one-row change to
+  an existing list and is logged for V1-6 rather than made here, because it
+  changes how every other imported file is read.
 - **A UTF-8 BOM.** Without it Excel renders æ, ø and å as mojibake, and the
   importer already strips one on the way in (`import.ts:107`).
 - **CRLF.** RFC 4180, and what Excel writes.
