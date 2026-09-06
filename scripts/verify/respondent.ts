@@ -13,7 +13,13 @@ import { createHash, randomBytes } from 'node:crypto'
 import { BASE_URL, ensureServer } from './server'
 import { serviceClient } from '../../tests/db/clients'
 import { DEMO_SHARE_TOKEN, ORG_PRIMARY } from '../../tests/db/personas'
-import { createRound, createShareLink, createSurvey, submitResponses } from '../../tests/db/factories'
+import {
+  createRound,
+  createShareLink,
+  createSurvey,
+  hashToken,
+  submitResponses,
+} from '../../tests/db/factories'
 
 /** A share token for the below-k fixture this script creates for itself. */
 const BELOW_K_TOKEN = 'verify-below-k-share-token-local-only'
@@ -33,21 +39,45 @@ async function main() {
   const svc = serviceClient()
 
   try {
-    const { data: round } = await svc
-      .from('survey_rounds')
-      .select('id, survey_id, question_snapshot, surveys(title, anonymity)')
-      .eq('status', 'open')
-      .order('created_at')
-      .limit(1)
-      .single()
-    if (!round) throw new Error('no open round seeded')
-
     const { data: org } = await svc
       .from('organizations')
       .select('id')
       .eq('name', ORG_PRIMARY)
       .single()
-    ORG_ID.current = org!.id
+    if (!org) throw new Error(`no organisation named ${ORG_PRIMARY}`)
+    ORG_ID.current = org.id
+
+    /*
+      The round this gate needs, NAMED rather than assumed.
+
+      This used to be "the oldest open round in the database" — no organisation
+      filter and no anonymity filter — and it picked whatever the test suites
+      happened to have left behind. On a stack where `verify:db` had run first
+      it chose `Leverandør-…`, an ATTRIBUTED fixture in another organisation, and
+      three checks then failed for the only reason they could: they assert the
+      anonymity banner, an anonymous response row and an hour-truncated
+      timestamp, and a named organisation survey has none of those.
+
+      Every property the checks below depend on is now in the query: the demo
+      organisation, an anonymous survey, an open round. If no such round exists
+      the gate says so instead of testing something else — a check that silently
+      retargets is the failure this phase has hit three times.
+    */
+    const { data: rounds } = await svc
+      .from('survey_rounds')
+      .select('id, survey_id, question_snapshot, surveys!inner(title, anonymity, org_id)')
+      .eq('status', 'open')
+      .eq('surveys.org_id', org.id)
+      .eq('surveys.anonymity', 'anonymous')
+      .order('created_at')
+    const round = (rounds ?? []).find(
+      (r) => ((r.question_snapshot ?? []) as unknown[]).length > 0,
+    )
+    if (!round) {
+      throw new Error(
+        `no open anonymous round with questions in ${ORG_PRIMARY} — run "npm run seed:demo"`,
+      )
+    }
 
     const survey = round.surveys as unknown as { title: string; anonymity: string }
     const questions = (round.question_snapshot ?? []) as { id: string; type: string; text: string }[]
@@ -234,6 +264,12 @@ async function main() {
         { audience: 'Probe' },
       )
       const belowRound = await createRound(belowSurvey, 4)
+      // The token is a fixed constant — the harness cannot look up a value that
+      // is only stored hashed — so a run that died before this point leaves the
+      // row behind and the NEXT run dies on the unique index instead of
+      // reporting whatever actually went wrong. Clearing it first makes the
+      // probe idempotent: the survey is new each run, only the token is reused.
+      await svc.from('share_links').delete().eq('token_hash', hashToken(BELOW_K_TOKEN))
       await createShareLink(belowRound.id, BELOW_K_TOKEN)
       await submitResponses(
         belowRound.tokens,
