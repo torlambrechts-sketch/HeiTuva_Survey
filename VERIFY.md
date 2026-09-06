@@ -11,9 +11,21 @@ The protocol's premise: **an unverified claim is a hallucination in waiting.** C
 ```
 Build the verification harness. This is infrastructure I will reuse every phase.
 
-1. Playwright: install with `npx playwright install --with-deps chromium`.
+1. Playwright: install with `npx playwright install --with-deps chromium webkit`.
    Create playwright.config.ts with two projects: "desktop" (1440x900, deviceScaleFactor 2)
    and "mobile" (390x844, iPhone 13 profile).
+   The mobile project is WebKit, so a container with only Chromium runs the desktop
+   half and reports the mobile half as an install error — which is not the same as
+   a pass, and is easy to skim past in a long log.
+
+   The local Supabase stack must include mailpit and storage-api. CI excludes both
+   (`ci.yml`: `supabase start -x …,mailpit`) and runs neither browser gate, so the
+   mail and archive halves of `verify:send` and `verify:export` exist ONLY here:
+   without those two services the invitation worker cannot deliver and the export
+   cannot be archived, and both report as check failures rather than as an absent
+   dependency. Start with
+   `supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor`
+   (mailpit on 54324/54325, storage behind Kong on 54321).
 
 2. scripts/verify/capture.ts — starts the dev server if not running, logs in as a
    seeded user, navigates to each route in the manifest AT THE VIEWPORTS THAT ROUTE IS
