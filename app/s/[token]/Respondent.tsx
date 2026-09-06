@@ -124,12 +124,12 @@ export function Respondent({
 
   const secondsLeft = Math.max(0, PROMISED_SECONDS - elapsed)
   // The promise is generated from the survey's settings (Q17), never fixed
-  // copy: the banner must change with the threshold, or it lies. `optional`
-  // keeps today's per-choice UI below; its banner stays the invitation to
-  // choose (the per-option consequence text is a design-brief refinement,
-  // docs/DEVIATIONS.md D85).
+  // copy: the banner must change with the threshold, or it lies. That now
+  // includes «valgfritt», whose banner used to be a bare invitation to choose —
+  // it carries the number and the small-group caveat, because a respondent who
+  // chooses anonymity is gated by the same threshold as anyone else. The
+  // per-option consequence text below is still a design-brief refinement (D85).
   const anonBanner = useMemo(() => {
-    if (anonymity === 'optional') return t('choose')
     const p = anonymityPromise({ anonymity, kThreshold, respondentKind }, locale)
     return t(p.key, { kWord: p.values?.kWord ?? '', virksomhet: orgName })
   }, [anonymity, kThreshold, respondentKind, locale, orgName, t])
@@ -169,9 +169,13 @@ export function Respondent({
         ) : null}
       </div>
 
-      <div className="mt-3.5 flex items-center gap-[11px] rounded-xl bg-sbg px-3.5 py-[11px]">
+      {/* v1 chrome (NEW:2327-2330): the row aligns to the top rather than the
+          centre, the text steps 12.5 -> 13px at 1.5, and `text-pretty` stops
+          the promise ending on a one-word line. The banner grew because the
+          promise did — «valgfritt» now carries the threshold too. */}
+      <div className="mt-3.5 flex items-start gap-[11px] rounded-xl bg-sbg px-3.5 py-3">
         <span className="block h-[22px] w-[22px] flex-none rounded-full border-2 border-ink" />
-        <span className="flex-1 text-[12.5px] leading-[1.45]">{anonBanner}</span>
+        <span className="flex-1 text-pretty text-[13px] leading-[1.5]">{anonBanner}</span>
         <span className="flex-none whitespace-nowrap rounded-full bg-sf px-3 py-1.5 text-xs font-semibold">
           {secondsLeft ? t('secondsLeft', { n: secondsLeft }) : t('takeYourTime')}
         </span>

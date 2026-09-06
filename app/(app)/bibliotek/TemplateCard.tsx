@@ -74,7 +74,8 @@ export function TemplateCard({
           {pack.legalRef}
         </span>
       ) : null}
-      {policyLine ? <p className="mt-1.5 text-[12px] text-mut">{policyLine}</p> : null}
+      {/* 11.5px, 6px above (NEW:1944-1946) — it stepped down from 12px in v1. */}
+      {policyLine ? <p className="mt-1.5 text-[11.5px] text-mut">{policyLine}</p> : null}
 
       <h3 className="mt-2 font-display text-[21px] font-medium leading-[1.25]">{pack.title}</h3>
       <p className="mt-1 text-[13px] text-mut">{labels.meta}</p>

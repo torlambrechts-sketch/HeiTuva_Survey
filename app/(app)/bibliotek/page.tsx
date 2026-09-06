@@ -302,6 +302,12 @@ async function TemplatesTab({
                     {p.legalRef}
                   </span>
                 ) : null}
+                {/* v1 adds the policy to the LIST too (NEW:1976-1978), not only
+                    the cards: the same statutory pack has to read the same way
+                    whichever view someone happens to be in. */}
+                {policyLineFor(p) ? (
+                  <span className="mt-1 block text-[11.5px] text-mut">{policyLineFor(p)}</span>
+                ) : null}
               </span>
               <span className="text-[13px] text-mut">
                 {t('questionCount', { count: p.questionCount })} ·{' '}

@@ -553,6 +553,26 @@ export function SendScreen({
             <div className="my-5 h-px" style={{ background: 'var(--line)' }} />
 
             <h2 className={H2}>{t('delivery')}</h2>
+            {/* The v1 bundle moves this ABOVE the radios and gives it a `--sf2`
+                box with a padlock (NEW:2227-2232). The order is the point: a
+                reader who meets the reason first understands why the controls
+                below are inert, where one who meets it after has already tried
+                to press them. Same sentence as before — Q17's, from Phase 9. */}
+            {lockedReason ? (
+              <div
+                className="mt-3 flex items-start gap-[9px] rounded-[10px] px-3 py-[10px]"
+                style={{ background: 'var(--sf2)' }}
+              >
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" aria-hidden="true" className="mt-[2px] flex-none text-mut"
+                >
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                <span className="text-[12.5px] leading-[1.5] text-mut">{lockedReason}</span>
+              </div>
+            ) : null}
             <div className="mt-3.5 flex flex-col gap-2">
               {ANONYMITY_MODES.map((a) => (
                 <Radio
@@ -565,9 +585,6 @@ export function SendScreen({
                 />
               ))}
             </div>
-            {lockedReason ? (
-              <p className="mt-2 text-[12.5px] leading-[1.5] text-mut">{lockedReason}</p>
-            ) : null}
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <span className="text-sm">{t('reminder')}</span>

@@ -26,7 +26,13 @@ export type PromiseInput = {
 }
 
 export type Promise = {
-  key: 'promiseAnonymous' | 'promiseAnonymousLow' | 'promiseNamed' | 'promiseOrganisation'
+  key:
+    | 'promiseAnonymous'
+    | 'promiseAnonymousLow'
+    | 'promiseChoose'
+    | 'promiseChooseLow'
+    | 'promiseNamed'
+    | 'promiseOrganisation'
   values?: { kWord: string }
 }
 
@@ -58,6 +64,19 @@ export function anonymityPromise(input: PromiseInput, locale = 'no'): Promise {
   // caveat is not decoration — it is the difference between an honest promise
   // and a dishonest one.
   const values = { kWord: numberWord(input.kThreshold, locale) }
+
+  // «Valgfritt» is not a third promise — it is the anonymous one with the choice
+  // named. A respondent who stays anonymous is gated by exactly the same
+  // threshold, so the sentence has to carry the same number and the same
+  // small-group caveat (v1 bundle :2949, `choose:n =>`). The old copy was a
+  // bare invitation to choose, which said nothing about what choosing anonymity
+  // would actually get them.
+  if (input.anonymity === 'optional') {
+    return input.kThreshold < 5
+      ? { key: 'promiseChooseLow', values }
+      : { key: 'promiseChoose', values }
+  }
+
   return input.kThreshold < 5
     ? { key: 'promiseAnonymousLow', values }
     : { key: 'promiseAnonymous', values }

@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { PolicyPanel, type PolicyPanelProps } from './PolicyPanel'
+import { policyWarnings } from '@/lib/questions/policy-warnings'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
   ADD_PANEL_TYPES,
@@ -55,6 +57,7 @@ export function Builder({
   anonymous,
   canEdit,
   locked,
+  policy,
 }: {
   surveyId: string
   initial: BuilderDraft
@@ -62,6 +65,7 @@ export function Builder({
   anonymous: boolean
   canEdit: boolean
   locked: boolean
+  policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
 }) {
   const t = useTranslations('builder')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
@@ -197,6 +201,25 @@ export function Builder({
     { messageKey: 'ready_texts', done: draft.questions.every((q) => q.text.trim().length > 0) },
     { messageKey: 'ready_quality', done: draft.questions.every((q) => flagsFor(q.text).length === 0) },
     { messageKey: 'ready_anonymity', done: !draft.questions.some(breachOn) },
+    // NEW:4645. The policy panel's own warnings are the test: if a threshold
+    // and a target cannot both be satisfied, the survey is not ready however
+    // good its questions are. Same function the panel renders from, so the
+    // list and the card cannot disagree.
+    {
+      messageKey: 'ready_policy',
+      done:
+        policyWarnings(
+          {
+            respondentKind: policy.respondentKind,
+            anonymity: policy.anonymity,
+            kThreshold: policy.kThreshold,
+            target: policy.target,
+          },
+          draft.questions.map((q) => ({ id: q.id, text: q.text })),
+          rules,
+          () => '',
+        ).length === 0,
+    },
   ]
 
   const rightPane = (
@@ -292,6 +315,18 @@ export function Builder({
             )
           })}
         </div>
+      ) : null}
+
+      {/* The v1 bundle inserts this ABOVE "Klar til utsending?" (:577, :636) —
+          the policy is what the readiness list is checked against, so it is
+          read first. */}
+      {tab === 'settings' ? (
+        <PolicyPanel
+          surveyId={surveyId}
+          {...policy}
+          questions={draft.questions.map((q) => ({ id: q.id, text: q.text }))}
+          rules={rules}
+        />
       ) : null}
 
       {tab === 'settings' ? (

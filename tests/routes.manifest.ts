@@ -447,6 +447,33 @@ export const ROUTES: RouteSpec[] = [
           await page.locator('h2:visible', { hasText: 'Engasjement og svarprosent' }).first().waitFor()
         },
       },
+      {
+        // The policy panel open (v1, NEW:577-635). Its closed state rides along
+        // in `innstillinger`; this is the one that shows the chips, the notes
+        // and the threshold row.
+        name: 'policy-open',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Innstillinger')
+          await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
+          await page.locator('button:visible', { hasText: 'Fysiske personer' }).first().waitFor()
+        },
+      },
+      {
+        // Threshold 3: the `--sbg` box explaining what a low threshold costs.
+        // The state worth capturing is the WARNING, not the chip — it is the
+        // only place the product argues with the person setting it.
+        name: 'policy-low-warning',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Innstillinger')
+          await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
+          await page.locator('button:visible', { hasText: '3' }).first().click()
+          await page.locator(':visible', { hasText: 'Med terskel 3 kan svar' }).first().waitFor()
+        },
+      },
     ],
   },
   {

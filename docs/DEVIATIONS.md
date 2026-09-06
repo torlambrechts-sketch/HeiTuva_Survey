@@ -1779,3 +1779,41 @@ rather than substituted for `--ink` or `--mut`, because substituting a control's
 colour is restyling and because `--ink` on `--ac3` is the pairing the design
 specifically avoided here. If a "text on tint" token is ever added, this is the
 first place it belongs.
+
+### D94 — the policy panel's first warning cannot fire in the Builder yet
+`polWarnings`' first rule (HeiTuva.dc.html:3528) compares the recipient count
+with the threshold: "Gruppen har 4 mottakere. Med terskel 5 vil resultatet aldri
+vises." In the bundle that comparison is always available, because its mock
+survey carries a `target` at build time.
+
+The app does not. Recipients are chosen on the **Send** screen, and
+`surveys.target` — the column that means exactly what the bundle means — has no
+writer: it is null on every real survey. So the rule is implemented, tested
+(`tests/unit/policy-warnings.test.ts`) and wired, and in practice stays silent
+in the Builder because the number it needs does not exist there yet.
+
+The alternative was to invent one — derive a target from the audience string, or
+count group members the survey is not yet addressed to — and render a warning
+computed from a guess. CLAUDE.md's never-fabricate rule covers exactly that: a
+made-up denominator is indistinguishable from a real one in review.
+
+Two things follow, both logged rather than built here. Whoever gives
+`surveys.target` a writer (the Send screen is the natural place, since that is
+where recipients become real) makes this warning live with no further change.
+And the same rule belongs on the Send screen's readiness, where the count is
+known at the moment it matters — the plan's V1-1 scope is the Builder panel, so
+that is a next-phase item, not a silent widening of this one.
+
+### D95 — «Valgfritt» now carries the threshold, and the banner grew to fit
+The respondent banner for `optional` used to be a bare invitation to choose
+(«Du velger selv …»), which said nothing about what choosing anonymity would
+get. Q17's rule is that the promise is generated from the settings or it lies,
+and the v1 bundle's own copy carries the number (`choose:n =>`, :2949), so
+`anonymityPromise` now returns `promiseChoose` / `promiseChooseLow` with the
+same `kWord` and the same small-group caveat as the anonymous branch.
+
+The banner chrome follows the v1 change with it (NEW:2327-2330): top-aligned
+rather than centred, 13px at 1.5 rather than 12.5 at 1.45, and `text-pretty` so
+a longer promise does not end on a one-word line. D85 still stands for the
+per-choice consequence text under the banner, which remains a design-brief
+refinement neither bundle draws.
