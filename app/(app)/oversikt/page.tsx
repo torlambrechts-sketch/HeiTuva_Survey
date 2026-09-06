@@ -130,26 +130,57 @@ export default async function OverviewPage() {
 
   const dutyByKey = new Map((duties ?? []).map((d) => [d.definition_key, d]))
   const now = Date.now()
+
+  /**
+   * The compliance card's timeline runs "nå" to "12 mnd" (HeiTuva.dc.html:349),
+   * so a duty's position on it is `months / 12`, computed HERE, on every render,
+   * from `next_due_at`. It is deliberately not a column: a duty's interval can
+   * change and nothing would recompute a stored percentage, so it would go
+   * quietly stale on the first screen anyone sees. If a frozen report ever needs
+   * a position that cannot move, that belongs to the snapshot that freezes it.
+   *
+   * The clamp keeps the dot on the bar rather than half off its end: the marker
+   * is 16px wide with `margin-left:-8px`, so 0% and 100% hang over the edges.
+   * Two cases land on the left end deliberately — a duty that is overdue, and
+   * one the organisation has never instantiated (duties are created on first
+   * touch, so a new organisation has four of these). Both are "at or before
+   * now", which is where the axis starts; the bundle draws neither (D92).
+   */
+  const AXIS_MONTHS = 12
+  const posFor = (months: number | null) =>
+    months === null ? 3 : Math.min(97, Math.max(3, Math.round((months / AXIS_MONTHS) * 100)))
+
   const compliance: ComplianceChip[] = (definitions ?? []).map((def) => {
     const duty = dutyByKey.get(def.key)
     const due = duty?.next_due_at ? new Date(duty.next_due_at) : null
 
     let days: string
+    let when: string
     let tone: string
+    let urgent: boolean
+    let months: number | null = null
     if (!duty || !due) {
       days = t('dueNotStarted')
+      when = t('dueNotStarted')
       tone = 'var(--ac3)'
+      urgent = true
     } else {
-      const months = Math.round((due.getTime() - now) / (1000 * 60 * 60 * 24 * 30.44))
+      months = Math.round((due.getTime() - now) / (1000 * 60 * 60 * 24 * 30.44))
       if (months < 0) {
         days = t('dueOverdue')
+        when = t('dueOverdue')
         tone = 'var(--ac3)'
+        urgent = true
       } else if (due.getFullYear() === new Date().getFullYear() && months <= 3) {
         days = t('dueThisYear')
+        when = t('dueWhenThisYear')
         tone = 'var(--ac3)'
+        urgent = true
       } else {
         days = months <= 1 ? t('dueInMonth') : t('dueInMonths', { months })
+        when = months <= 1 ? t('dueWhenMonth') : t('dueWhenMonths', { months })
         tone = months >= 6 ? 'var(--ac2)' : 'var(--ac)'
+        urgent = false
       }
     }
 
@@ -159,9 +190,27 @@ export default async function OverviewPage() {
       law: def.law,
       due: duty?.next_due_at ? dateFmt(duty.next_due_at) : t('dueNotStarted'),
       days,
+      when,
       tone,
+      urgent,
+      pos: posFor(months !== null && months < 0 ? null : months),
     }
   })
+
+  /**
+   * "N av M plikter krever handling i år" — a count of DUTIES, not of responses.
+   * Q28's participation-versus-derived rule does not reach it and no k-gate
+   * applies: nothing here is computed from what anybody answered. It counts the
+   * statutory obligations whose deadline the organisation has to act on, which
+   * is public-facing information about the organisation itself; the same four
+   * rows are already named on this screen and in Rapporter. A future reader
+   * seeing a bare number beside compliance data should find this rather than
+   * have to reconstruct it.
+   *
+   * "Krever handling" is the same test the tone already makes: not started,
+   * past its date, or falling due inside the current year.
+   */
+  const complianceUrgent = compliance.filter((c) => c.urgent).length
 
   const activeSurveys = (surveys ?? []).filter((s) => s.status === 'aktiv').length
 
@@ -174,6 +223,7 @@ export default async function OverviewPage() {
       totalSurveys={(surveys ?? []).length}
       actions={actions.slice(0, 3)}
       compliance={compliance}
+      complianceUrgent={complianceUrgent}
       activity={activity}
       loop={(loop ?? []).map((l) => ({
         id: l.id,

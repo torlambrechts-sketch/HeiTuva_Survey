@@ -1737,3 +1737,45 @@ whenever the toolchain moves cannot be evidence for "Phase 1–7 as built" (Q18'
 whole purpose), so the legacy set is committed, restored (`git checkout --
 artifacts/reference/`), and re-rendered only when someone asks for it and can say
 why. The v1 set, which is the live target, re-renders every run.
+
+### D92 — the compliance timeline's three undrawn states
+`HeiTuva.dc.html:334-357` draws the dark "Lovpålagte frister" card from a
+hard-coded four-row array (`complianceTimeline`, :4272–4277) and a literal
+summary ("2 av 4 plikter krever handling i år", :4278). Every one of those rows
+is due in the future, so three states a real organisation reaches are undrawn.
+Each is decided here and none invents a treatment:
+
+**Overdue.** `pos` is `months / 12` over an axis labelled «nå» → «12 mnd», so a
+duty past its date computes negative and would render off the left end — half
+the 16px dot outside the bar, or clipped entirely. It is clamped to the axis
+start (3%, the offset that keeps a `margin-left:-8px` marker fully on a 6px
+bar), because "at or before now" is where the axis begins. The chip reads «Over
+fristen», the wording the screen already used before this card existed.
+
+**Never instantiated.** Duties are rows created on first touch (Phase 5), so a
+new organisation has none — and `duty_definitions` is a global table of four, so
+the card still lists four rows, each «Ikke startet», each at the axis start. The
+four dots then overlap into one, which is accurate rather than unfortunate: they
+are at the same point in time. The bundle's own first row is «Ikke startet» at
+pos 4, so this is its treatment, applied four times.
+
+**Nothing due this year.** The bundle's summary always names a number, and
+"0 av 4 plikter krever handling i år" is true but reads as a warning that is not
+one. The zero case gets its own sentence instead — «Ingen plikter krever
+handling i år» — which is one invented string and the minimal consistent option;
+the alternative was a number that misreads.
+
+Verified by setting duty dates in the local database and screenshotting the card
+in each state: four «Ikke startet» stacked at 3%; the clear case spread across
+42/50/67/92% with «Ingen plikter …»; the overdue case at 3% reading «2 av 4
+plikter krever handling i år», which is the bundle's own summary shape.
+
+### D93 — the compliance card's chip foregrounds are the bundle's literal hexes
+The theme has tokens for the three tints (`--ac`, `--ac2`, `--ac3`) but none for
+text ON them. The bundle carries three literal foregrounds — `#8A4B22`,
+`#2F5D2A`, `#8A6A12` (`HeiTuva.dc.html:4273–4276`) — chosen so the deadline chip
+stays legible on each tint. They are carried verbatim into `ComplianceCard.tsx`
+rather than substituted for `--ink` or `--mut`, because substituting a control's
+colour is restyling and because `--ink` on `--ac3` is the pairing the design
+specifically avoided here. If a "text on tint" token is ever added, this is the
+first place it belongs.
