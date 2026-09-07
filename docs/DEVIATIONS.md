@@ -2309,3 +2309,32 @@ the product that exists — so a divergence between them can be closed from eith
 side, and which side moves is a decision (Q90) rather than a fidelity question.
 The V2-1 note was correct when written; recording it as a deviation is what made
 it cheap to reverse.
+
+### D108 — «Profil og avsender» ships two of its five cards
+The v2 tab draws five cards (`HeiTuva.dc.html:2313-2404`). V2-2 builds **Logo**
+(`:2313-2325`) and **Farge og typografi** (`:2327-2347`) exactly as drawn. The
+other three are **not** rendered:
+
+| Card | Bundle | Why not |
+|---|---|---|
+| Avsender — domains + profiles | `:2348-2372`, data `:4912-4922` | Every row carries a DNS verification status («Verifisert», «Mangler DKIM»). There is no provider to ask, so the chip would be decoration |
+| Låst per mal | `:2374-2390`, data `:4923-4928` | Each row names a **sender** («Nøytral avsender låst»). The lock is real — `app.guard_survey_policy` — but the thing it locks does not exist yet |
+| Standard emnefelt | `:2392-2402`, data `:4929` | Four languages, of which two are active (Q11), and no column holds a default subject |
+
+**The rule that decides this is CLAUDE.md's never-fabricate rule, not scope.**
+A status chip is not a label: in a screenshot and in a demo it is
+indistinguishable from a verified domain, and it survives into both. The plan's
+own mitigation for V2-1 — "manual/DNS-record display only" — does not help,
+because what the card displays IS the verification state.
+
+**What is rendered instead**: one sentence (`admin.brandSenderDeferred`) saying
+that sender, per-template locking and default subjects belong to this tab and
+are built with sending. That is the design's own honesty about an unavailable
+feature (the `feature_flags` pattern from Q26), applied to a card the bundle
+has no unavailable state for. Sender verification lands in **V2-11**.
+
+**One thing the bundle does not draw at all, and the app must**: a slot that
+HAS a logo. The prototype has no storage, so it draws the empty slot only. The
+uploaded image renders inside that slot's own frame, above the button, which
+becomes «Bytt» — the minimal consistent option, logged here per CLAUDE.md's
+"when ambiguous" rule.

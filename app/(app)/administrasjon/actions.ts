@@ -534,3 +534,138 @@ export async function setDsrStatus(id: string, status: string): Promise<AdminRes
   revalidatePath('/administrasjon')
   return { ok: true }
 }
+
+/* ── V2-2 · «Profil og avsender», the unblocked half ────────────────────────
+   The accent is validated against the REGISTRY rather than against a list in
+   this file. A Zod enum here would be a second place the five live, and the
+   moment design adds a sixth one of the two would be quietly wrong — the same
+   reasoning that made the column a foreign key rather than a CHECK. The type
+   pair IS an enum here, because its constraint is a CHECK for the reason the
+   migration gives: a third pair needs a font the shell loads.                */
+
+const BRAND_TYPES = ['playfair', 'bricolage'] as const
+const BrandInput = z.object({
+  accent: z.string().trim().min(1).max(40).nullable(),
+  type: z.enum(BRAND_TYPES).nullable(),
+})
+
+export async function setBranding(input: {
+  accent: string | null
+  type: 'playfair' | 'bricolage' | null
+}): Promise<AdminResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+
+  const parsed = BrandInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+
+  // NULL is a real choice — "back to the product default" — and is deliberately
+  // not the same as picking the accent whose hex happens to equal it.
+  const { error } = await supabase
+    .from('organizations')
+    .update({ brand_accent: parsed.data.accent, brand_type: parsed.data.type })
+    .eq('id', admin.orgId)
+  if (error) {
+    // A foreign-key violation here means the client sent an accent key the
+    // registry does not have. That is invalid input, not a failure to save, and
+    // saying so is what lets the screen distinguish "try again" from "that is
+    // not a colour we offer".
+    if (error.code === '23503' || /foreign key/i.test(error.message)) {
+      return { ok: false, error: 'invalid' }
+    }
+    console.error(`setBranding failed: ${error.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  // The audit row is written by `app.audit_branding_change` (M:0056), not here.
+  // A trigger sees every writer; an action sees only its own callers, and this
+  // setting can also move through the logo upload path below.
+  revalidatePath('/administrasjon/profil')
+  return { ok: true }
+}
+
+/** The three slots the design draws (V2:4909), as the column each writes. */
+const LOGO_SLOTS = { light: 'logo_light', dark: 'logo_dark', icon: 'logo_icon' } as const
+export type LogoSlot = keyof typeof LOGO_SLOTS
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const LOGO_TYPES = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'] as const
+const EXT: Record<string, string> = {
+  'image/svg+xml': 'svg',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+}
+
+const LogoInput = z.object({
+  slot: z.enum(['light', 'dark', 'icon']),
+  size: z.number().int().positive().max(MAX_LOGO_BYTES),
+  type: z.enum(LOGO_TYPES),
+})
+
+export type LogoResult = AdminResult & { url?: string }
+
+/**
+ * Uploads a logo and records it, in one call.
+ *
+ * THE UPLOAD GOES THROUGH THE VIEWER'S OWN SESSION, not the service role, so
+ * the bucket's policies are what admit it — `orglogo_obj_ins` is
+ * administrator-only, and a write that only this function's `requireAdmin`
+ * refused would be a rule about one caller. The check here is what lets the
+ * screen say why; the policy is what makes it true.
+ *
+ * THE PATH IS DERIVED SERVER-SIDE AND NEVER ACCEPTED FROM THE CLIENT. The
+ * bucket is org-scoped by prefix, so a path is an authorisation claim: taking
+ * one from the browser would mean validating a string that has no business
+ * crossing the boundary at all. The client sends a slot and a file; the
+ * organisation comes from the session.
+ *
+ * The bucket ALSO enforces the size and MIME limits (M:0056), so these checks
+ * are the message rather than the rule.
+ */
+export async function uploadLogo(formData: FormData): Promise<LogoResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) return { ok: false, error: 'invalid' }
+
+  const parsed = LogoInput.safeParse({
+    slot: formData.get('slot'),
+    size: file.size,
+    type: file.type,
+  })
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const path = `${admin.orgId}/logo_${parsed.data.slot}.${EXT[parsed.data.type]}`
+
+  const { error: upErr } = await supabase.storage
+    .from('org-logos')
+    .upload(path, file, { upsert: true, contentType: parsed.data.type })
+  if (upErr) {
+    console.error(`uploadLogo failed: ${upErr.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  // Written as an explicit column rather than a computed key: a computed key
+  // types as `string` and defeats the generated row type, which is the one
+  // thing standing between a typo and a silent no-op update.
+  const column = LOGO_SLOTS[parsed.data.slot]
+  const patch =
+    column === 'logo_light' ? { logo_light: path }
+    : column === 'logo_dark' ? { logo_dark: path }
+    : { logo_icon: path }
+
+  const { error } = await supabase.from('organizations').update(patch).eq('id', admin.orgId)
+  if (error) {
+    console.error(`uploadLogo could not record ${column}: ${error.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  const { data: signed } = await supabase.storage.from('org-logos').createSignedUrl(path, 3600)
+  revalidatePath('/administrasjon/profil')
+  return { ok: true, url: signed?.signedUrl }
+}

@@ -184,8 +184,8 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **56 of 74 surfaces
-actively checked** by 5a3, and **37 files / 612 tests** in the census manifest.
+phase, not built. Two numbers carry forward and may only move up: **56 of 75 surfaces
+actively checked** by 5a3, and **38 files / 631 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
@@ -215,10 +215,15 @@ it 572 → 577 with D102's five (`tests/unit/register-stats.test.ts`). **V2-1 to
 from both ends and the statutory-lock refusal (`tests/db/org-threshold.test.ts`,
 18), the k=2 promise tier (4), the shared tier boundary and the «two» copy's
 three-way binding (`tests/unit/threshold-tier.test.ts`, 12) and the reachability
-of 2 on a survey (1). 5a3 held at **56 of 74** through all of it: `M:0054`
-replaces two functions in the `app` schema and `M:0055` moves two CHECK
-constraints, and neither an app-schema function nor a CHECK is a catalogue
-surface either sweep enumerates — a recorded limit of that gate, not a gap in it.
+of 2 on a survey (1). V2-2's Profil half took it 612 → 631 with the branding suite
+(`tests/db/branding.test.ts`, 19). 5a3's checked number held at **56** through
+all of it while its denominator rose 74 → 75: `M:0054` replaces two functions in
+the `app` schema and `M:0055` moves two CHECK constraints — neither an
+app-schema function nor a CHECK is a catalogue surface either sweep enumerates,
+a recorded limit of that gate rather than a gap in it — and `M:0056`'s
+`brand_accents` is a new RLS table, allowlisted with `use_cases`' reason and,
+like it, CHECKED rather than trusted: the suite asserts the table has no column
+matching org/survey/count.
 5a3 is unmoved by
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so

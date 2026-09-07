@@ -47,6 +47,8 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   quality_rules: 'question-quality heuristics; data-not-code',
   theme_rules: 'free-text theme stems; data-not-code',
   benchmarks: 'seeded Norwegian reference values; DECISIONS Q8',
+  brand_accents:
+    'the five accents the design offers (V2:4898); data-not-code, same shape as `use_cases` — a row carries a hex, a name key and a contrast ratio, and no org id, no survey id and no number. `tests/db/branding.test.ts` CHECKS that claim against the column list rather than repeating it here',
   use_cases: 'the six shipped use cases; data-not-code, DECISIONS Q24 — a use case carries no org id, no survey id and no number, and the wizard and library read it before a session exists',
   feature_flags: 'global flags; per-org rows are org-scoped by policy',
   question_bank: 'org_id NULL rows are the shared bank; org rows are org-scoped',

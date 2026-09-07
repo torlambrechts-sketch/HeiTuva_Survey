@@ -56,6 +56,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminTabs
         tabs={[
           { href: '/administrasjon', label: t('tabFirma') },
+          // V2-2: the v2 rail puts «Profil og avsender» second (V2:4889), so
+          // it goes second here. Only two of its five cards are built; the
+          // three that show a sender-verification status are V2-11's, because
+          // a status chip with no provider behind it is fabrication (D108).
+          { href: '/administrasjon/profil', label: t('tabProfil') },
           { href: '/administrasjon/brukere', label: t('tabBrukere') },
           { href: '/administrasjon/grupper', label: t('tabGrupper') },
           { href: '/administrasjon/personvern', label: t('tabPersonvern') },

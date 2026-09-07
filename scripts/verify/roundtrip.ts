@@ -142,6 +142,45 @@ async function main() {
       }
     }
 
+    // organizations.brand_accent + brand_type, through the Profil tab (V2-2).
+    // The point is the ROUND TRIP: a swatch clicked in a browser has to reach
+    // the column, and the trigger has to see it. Asserting the action in a unit
+    // test would prove the action, not the screen.
+    {
+      await page.goto(`${BASE_URL}/administrasjon/profil`, { waitUntil: 'domcontentloaded' })
+      const since = new Date().toISOString()
+      const before = await admin
+        .from('organizations')
+        .select('brand_accent')
+        .eq('id', orgId)
+        .single()
+      const next = before.data?.brand_accent === 'salvie' ? 'Fersken' : 'Salvie'
+      await page.getByRole('button', { name: next }).click()
+      await page.waitForTimeout(1500)
+      const { data } = await admin
+        .from('organizations')
+        .select('brand_accent, brand_type')
+        .eq('id', orgId)
+        .single()
+      const { data: log } = await admin
+        .from('audit_events')
+        .select('action, meta')
+        .eq('org_id', orgId)
+        .eq('action', 'branding.change')
+        .gte('created_at', since)
+      show(
+        'organizations.brand_accent',
+        data?.brand_accent === next.toLowerCase() && (log?.length ?? 0) > 0,
+        { column: data, audited: log?.length ?? 0 },
+      )
+      // Put it back — the demo organisation's branding is what the reference
+      // screenshots render (standing question 4).
+      await admin
+        .from('organizations')
+        .update({ brand_accent: before.data?.brand_accent ?? null })
+        .eq('id', orgId)
+    }
+
     // dsr_requests.
     {
       const email = `dsr-${Date.now()}@example.test`
@@ -468,12 +507,25 @@ async function main() {
       The threshold-policy action, exercised at the level a real administrator
       session hits it — the DB write setSurveyPolicy performs, under the guard
       trigger (migration 0032), with auth.uid() populated. Three contracts:
-      an administrator may lower the threshold and the change is audited; a
+      an administrator may CHANGE the threshold and the change is audited; a
       redaktør (even one who is a survey editor, so RLS is not what stops them)
       may not; and once the real send path locks the survey, no one may — not
       even the administrator who could a moment ago. The isolated DB test proves
       the trigger; this proves the trigger under an authenticated app session,
       end to end through send_round's lock.
+
+      DECISIONS Q90 SPLIT THE FIRST CONTRACT IN TWO, and the split is the whole
+      reason these three checks moved. "An administrator may lower the
+      threshold" used to be unconditional; it is now "may raise freely, may go
+      under the ORGANISATION's floor only where the organisation's own flag
+      allows it". So the first block proves raising, then the refusal, then the
+      flag opening it — three facts where there was one.
+
+      The other two moved for standing question 1 rather than for Q90:
+      they used to change the threshold DOWNWARD, which after Q90 would be
+      refused by `below_org_floor` before the control under test could act. The
+      values are now all at or above the organisation's floor, so the only
+      thing that can refuse is the rule each check is about.
     */
     {
       const redaktor = await personaClient('redaktor')
@@ -501,8 +553,8 @@ async function main() {
         mkErr ? { error: mkErr.message } : made,
       )
 
-      // 1. The administrator lowers it — and the change is audited.
-      const lower = await admin.from('surveys').update({ k_threshold: 3 }).eq('id', q17Id).select('k_threshold').single()
+      // 1a. The administrator RAISES it — always allowed — and it is audited.
+      const raise = await admin.from('surveys').update({ k_threshold: 8 }).eq('id', q17Id).select('k_threshold').single()
       const { data: auditRow } = await svc
         .from('audit_events')
         .select('action, target, meta')
@@ -513,16 +565,48 @@ async function main() {
         .limit(1)
         .maybeSingle()
       show(
-        'administrator may lower the threshold, audited',
-        !lower.error && lower.data?.k_threshold === 3 &&
+        'administrator may raise the threshold, audited',
+        !raise.error && raise.data?.k_threshold === 8 &&
           auditRow?.action === 'threshold.change' &&
-          (auditRow?.meta as { from?: number; to?: number })?.to === 3,
-        lower.error ? { error: lower.error.message } : { k: lower.data?.k_threshold, audit: auditRow?.meta ?? null },
+          (auditRow?.meta as { from?: number; to?: number })?.to === 8,
+        raise.error ? { error: raise.error.message } : { k: raise.data?.k_threshold, audit: auditRow?.meta ?? null },
+      )
+
+      // 1b. Q90 — and may NOT go under the organisation's floor, flag off.
+      const { data: orgFloorRow } = await svc
+        .from('organizations').select('default_k_threshold, privacy').eq('id', orgId).single()
+      const under = await admin.from('surveys').update({ k_threshold: 3 }).eq('id', q17Id).select('id')
+      const { data: afterUnder } = await svc.from('surveys').select('k_threshold').eq('id', q17Id).single()
+      show(
+        'Q90: the organisation default is a floor, even for an administrator',
+        /below_org_floor/.test(under.error?.message ?? '') && afterUnder?.k_threshold === 8,
+        {
+          org_floor: orgFloorRow?.default_k_threshold,
+          refused: under.error?.message?.slice(0, 40),
+          k_unchanged: afterUnder?.k_threshold,
+        },
+      )
+
+      // 1c. POSITIVE CONTROL on the same value: the organisation's own flag
+      //     opens its own floor. Without this, 1b would pass identically if 3
+      //     were refused by something else entirely.
+      const privacyNow = (orgFloorRow?.privacy as Record<string, unknown>) ?? {}
+      await svc.from('organizations')
+        .update({ privacy: { ...privacyNow, redaktor_may_lower: true } }).eq('id', orgId)
+      const opened = await admin.from('surveys').update({ k_threshold: 3 }).eq('id', q17Id).select('k_threshold').single()
+      await svc.from('organizations')
+        .update({ privacy: { ...privacyNow, redaktor_may_lower: false } }).eq('id', orgId)
+      show(
+        'Q90: «Tillat at redaktører senker terskelen» opens that floor',
+        !opened.error && opened.data?.k_threshold === 3,
+        opened.error ? { error: opened.error.message } : { k: opened.data?.k_threshold },
       )
 
       // 2. A redaktør — made an editor first, so the refusal is the policy
       //    guard, not the survey RLS — cannot.
       await svc.from('survey_editors').insert({ survey_id: q17Id, member_id: redMember!.id })
+      //    5 is AT the organisation's floor, so `below_org_floor` cannot be
+      //    what refuses — only `threshold_admin_only` can.
       const byRed = await redaktor.from('surveys').update({ k_threshold: 5 }).eq('id', q17Id).select('id')
       const { data: afterRed } = await svc.from('surveys').select('k_threshold').eq('id', q17Id).single()
       show(
@@ -535,7 +619,9 @@ async function main() {
       //    change it a moment ago now cannot.
       const sent = await admin.rpc('send_round', { p_survey: q17Id, p_channels: ['link'] })
       const { data: locked } = await svc.from('surveys').select('policy_locked').eq('id', q17Id).single()
-      const afterLock = await admin.from('surveys').update({ k_threshold: 4 }).eq('id', q17Id).select('id')
+      //    8 rather than 4: above the organisation's floor, so the refusal can
+      //    only be the lock.
+      const afterLock = await admin.from('surveys').update({ k_threshold: 8 }).eq('id', q17Id).select('id')
       const { data: finalK } = await svc.from('surveys').select('k_threshold').eq('id', q17Id).single()
       show(
         'sending locks the policy against even an administrator',
