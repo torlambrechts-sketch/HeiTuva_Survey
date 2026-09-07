@@ -524,7 +524,6 @@
     "attribCount": "{answered} of {total} organisations have answered · {reminded} reminded",
     "attribExport": "Export CSV",
     "attribColOrg": "Organisation",
-    "attribColEmail": "Email",
     "attribColDate": "Answered",
     "attribColStatus": "Status",
     "attribStatusAnswered": "Answered",

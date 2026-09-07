@@ -19,7 +19,6 @@ import type { Attributed } from '@/lib/results/types'
  */
 const labels = {
   name: 'Virksomhet',
-  email: 'E-post',
   status: 'Status',
   respondedAt: 'Svardato',
   statusLabels: { svart: 'Svart', paaminnet: 'Påminnet', ikke_svart: 'Ikke svart' },
@@ -109,7 +108,7 @@ describe('attributedCsv — the file', () => {
     const csv = attributedCsv(doc([], questions), labels)
     expect(csv.startsWith(BOM)).toBe(true)
     expect(csv).toContain('\r\n')
-    expect(csv).toContain('Virksomhet;E-post;Status;Svardato;Har dere en policy?;Beskriv tiltakene')
+    expect(csv).toContain('Virksomhet;Status;Svardato;Har dere en policy?;Beskriv tiltakene')
   })
 
   it('writes a row per respondent, with the answers under their questions', () => {
@@ -131,7 +130,7 @@ describe('attributedCsv — the file', () => {
     // The answers arrive ordered by question_id, not by position — the columns
     // follow the QUESTIONS, so a row must be assembled by lookup rather than by
     // zipping two lists that only usually agree.
-    expect(row).toBe('Nordvest Tekstil AS;post@nordvest.test;Svart;2026-08-14;Ja;Årlig revisjon')
+    expect(row).toBe('Nordvest Tekstil AS;Svart;2026-08-14;Ja;Årlig revisjon')
   })
 
   it('leaves the answer cells empty for someone who has not answered', () => {
@@ -147,7 +146,7 @@ describe('attributedCsv — the file', () => {
     )
     // Empty, not "—" and not "undefined": the file is data, and a dash in a
     // data column is a value someone will later count.
-    expect(csv.split('\r\n')[1]).toBe('Fjordfrakt AS;post@fjordfrakt.test;Påminnet;;;')
+    expect(csv.split('\r\n')[1]).toBe('Fjordfrakt AS;Påminnet;;;')
   })
 
   it('carries a comment beside its answer', () => {
@@ -163,6 +162,56 @@ describe('attributedCsv — the file', () => {
       labels,
     )
     expect(csv.split('\r\n')[1]).toContain('Nei — Under arbeid')
+  })
+
+  it('carries NO contact address anywhere in the file', () => {
+    /*
+      The property, not the column list. Tor's call (2026-09-06): a supplier
+      register export is a legal artefact, and an address is administrative data
+      that leaves the organisation the moment the file is forwarded. What the
+      redegjørelse needs is which supplier answered what and when; chasing a
+      non-responder happens in the app, where access is scoped and audited.
+
+      Asserted over the WHOLE serialised file rather than by naming the columns,
+      for the same reason the Q43 audit check is: a column list stops covering
+      this the day someone adds a column, and the addresses are still on every
+      row of the payload for anyone who reaches for them.
+    */
+    const csv = attributedCsv(
+      doc(
+        [
+          { invitation_id: 'i1', name: 'Nordvest Tekstil AS', email: 'post@nordvest.test',
+            round_id: 'r1', status: 'svart', responded_at: '2026-08-14T09:00:00.000Z',
+            answers: [{ question_id: 'q1', value: 'Ja', comment: null }] },
+          { invitation_id: 'i2', name: 'Fjordfrakt AS', email: 'kontakt@fjordfrakt.test',
+            round_id: 'r1', status: 'ikke_svart', responded_at: null, answers: null },
+        ],
+        questions,
+      ),
+      labels,
+    )
+    expect(csv).not.toContain('post@nordvest.test')
+    expect(csv).not.toContain('kontakt@fjordfrakt.test')
+    expect(csv).not.toContain('@')
+    // …and the rows are still there, so this is not passing on an empty file.
+    expect(csv).toContain('Nordvest Tekstil AS')
+    expect(csv).toContain('Fjordfrakt AS')
+  })
+
+  it('falls back to the address ONLY when a row has no name at all', () => {
+    // An invitation with no name is a fixture defect rather than a real state
+    // (`inviteOrganisations` requires one), but a blank first column would make
+    // the row unidentifiable and the file useless. The address is the least-bad
+    // identifier at that point, and it is the only path that can emit one.
+    const csv = attributedCsv(
+      doc(
+        [{ invitation_id: 'i3', name: null, email: 'ukjent@leverandor.test', round_id: 'r1',
+           status: 'svart', responded_at: '2026-08-14T09:00:00.000Z', answers: [] }],
+        questions,
+      ),
+      labels,
+    )
+    expect(csv.split('\r\n')[1]).toBe('ukjent@leverandor.test;Svart;2026-08-14;;')
   })
 
   it('shows the date only, never the minute', () => {

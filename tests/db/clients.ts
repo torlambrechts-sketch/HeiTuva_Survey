@@ -3,9 +3,16 @@ import type { Database } from '@/types/database'
 import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
 
 /**
- * ── THE STANDING QUESTION FOR EVERY DENIAL TEST ─────────────────────────────
+ * ── THE TWO STANDING QUESTIONS ──────────────────────────────────────────────
  *
- *   What ELSE could refuse this before the check I am testing gets a chance?
+ * Before writing a check, ask both. They are halves of one thing — a check
+ * that reaches the wrong control, and a check that reaches the wrong row —
+ * and V1-2 hit each of them twice.
+ *
+ *   1. What ELSE could refuse this before the check I am testing gets a chance?
+ *   2. What could have MOVED the state my selector assumes?
+ *
+ * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
  *
  * Twice in two phases the answer was "something", and both times the test
  * believed it was exercising the last control when an earlier one had already
@@ -29,6 +36,58 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * layers matter, write two tests — one proving the outer control acts (and
  * that zero rows is not a denial, Gate 2b), one removing it so the inner one
  * has to.
+ *
+ * The same question has a positive form, and V1-2 needed it twice: what else
+ * could SATISFY this assertion? `.every()` over an empty table is true, a
+ * serialised `[]` contains no forbidden substring, and "the body has no
+ * supplier name" is satisfied by a 404 page, by a login form and by the route
+ * not existing. Three audit assertions passed against a route that had not
+ * been written. A check that cannot fail is not a check, so guard the ones
+ * whose subject might be absent on the subject EXISTING — `written`,
+ * `rows.length > 0`, a positive control beside the denial.
+ *
+ * ── 2. WHAT COULD HAVE MOVED THE STATE MY SELECTOR ASSUMES? ─────────────────
+ *
+ * The first question is about a request reaching the wrong control. This one
+ * is about a check reaching the wrong ROW, and it bites hardest in the
+ * harness, where a selector runs against whatever the database happens to hold
+ * rather than against a fixture the check built.
+ *
+ *   V1-2  `verify:respondent` chose its round as "the oldest OPEN round in the
+ *         database" — no organisation filter, no anonymity filter — and then
+ *         asserted the anonymity banner, an anonymous response row and an
+ *         hour-truncated timestamp. On a stack where the db suite had run
+ *         first it picked an ATTRIBUTED fixture in another organisation, and
+ *         three checks failed for the only reason they could.
+ *
+ *   V1-2  `verify:send` drained the queue with `mail-worker --once`, which
+ *         drains ONE BATCH of ten, and then asserted that a specific SMS job
+ *         had been sent. Ten reminders queued earlier filled the batch, so the
+ *         SMS job was never reached and three checks reported "nothing
+ *         captured" — which reads like a broken provider rather than a queue
+ *         the check never got to the end of.
+ *
+ * Neither was caused by the change that exposed it. Both had been fragile for
+ * phases; V1-2's fixtures only changed which row was oldest and how full the
+ * queue was. That is the tell: a selector that depends on ORDERING or on
+ * COUNT, rather than on the properties the assertions need, is already broken
+ * and simply has not been unlucky yet.
+ *
+ * So: name every property the assertions depend on, in the query. If the check
+ * needs an anonymous survey in the demo organisation with questions and an
+ * open round, say all four — and fail loudly when nothing matches, rather than
+ * silently testing something else. If the check needs a queue drained, drain
+ * until it reports empty rather than assuming one pass is enough.
+ *
+ * ── AND THE CONVERSE, WHICH IS THE SAME RULE FROM THE OTHER SIDE ────────────
+ *
+ * Do not BECOME what else exists. Gate 5a2's rule is usually read as "do not
+ * depend on a pristine database"; its other half is that a check must not leave
+ * the database changed for the next one. `tests/db/policy-panel.test.ts` cleans
+ * up because its fixtures changed which survey `/resultater` opened and broke a
+ * focus assertion four steps away; `verify:roundtrip` now deletes the group it
+ * creates, because one accumulated per run in the DEMO organisation and turned
+ * up in a V1-2 capture as a team row nobody had made.
  */
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'

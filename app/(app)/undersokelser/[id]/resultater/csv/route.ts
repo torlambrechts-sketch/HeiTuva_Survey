@@ -94,7 +94,6 @@ export async function GET(
 
   const csv = attributedCsv(attributed, {
     name: t('attribColOrg'),
-    email: t('attribColEmail'),
     status: t('attribColStatus'),
     respondedAt: t('attribColDate'),
     statusLabels: {

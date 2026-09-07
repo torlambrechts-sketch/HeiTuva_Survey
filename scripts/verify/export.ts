@@ -333,6 +333,16 @@ async function main() {
       csvBody.includes('Nordvest Tekstil AS') && csvBody.includes('Trøndelag Komponent AS'),
       csvBody.split('\n')[1]?.slice(0, 70) ?? '(empty)',
     )
+    // Tor, 2026-09-06: no contact address in a legal artefact. The unit tests
+    // assert this over a constructed document; this asserts it over the file the
+    // ROUTE actually served, against a fixture whose every invitation has an
+    // address in the database — so it cannot pass because there was none to
+    // leak. Guarded on the rows being present for the same reason.
+    check(
+      'Q43 and no contact address anywhere in the served file',
+      csvBody.includes('Nordvest Tekstil AS') && !csvBody.includes('@'),
+      csvBody.includes('@') ? `leaked: ${csvBody.match(/\S+@\S+/)?.[0] ?? '?'}` : 'no "@" in the file',
+    )
     check(
       'Q43 it is offered as a download, not rendered',
       (asRedaktorCsv.headers()['content-disposition'] ?? '').includes('attachment'),

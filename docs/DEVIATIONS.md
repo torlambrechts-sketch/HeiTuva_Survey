@@ -1849,18 +1849,36 @@ be pixel-perfect to, so the format is a stop-and-choose under CLAUDE.md's
 "minimal consistent option" rule. Three choices, all made to agree with code
 that already exists rather than with a preference:
 
-- **Semicolon, not comma.** Norwegian Excel's list separator, and the app's own
-  importer detects `,`, `;` or tab (`lib/send/import.ts:86`), so a file exported
-  here parses when it is pasted back into the import step. **Checked, with its
-  limit:** both addresses come back and nothing is rejected, but the supplier
-  NAMES do not — the register heads that column «Virksomhet» and the importer's
-  name synonyms (`HEADER_NAME`) do not include it, so a re-invite built from an
-  export would carry addresses only. Adding the synonym is a one-row change to
-  an existing list and is logged for V1-6 rather than made here, because it
-  changes how every other imported file is read.
+- **Semicolon, not comma.** Norwegian Excel's list separator, which is what a
+  Norwegian customer opens this in. The app's own importer also detects `,`, `;`
+  or tab (`lib/send/import.ts:86`), but **the export is deliberately not an
+  import source** — see the address decision below — so that is now a
+  coincidence rather than a reason.
 - **A UTF-8 BOM.** Without it Excel renders æ, ø and å as mojibake, and the
   importer already strips one on the way in (`import.ts:107`).
 - **CRLF.** RFC 4180, and what Excel writes.
+
+**No contact address (Tor, 2026-09-06).** The first version carried an «E-post»
+column. It is gone, and this is not a formatting choice: a supplier register
+export is a legal artefact, and an address is administrative data that leaves the
+organisation the moment the file is forwarded. What an aktsomhetsvurdering — and
+the redegjørelse built from it — needs is which supplier answered what, and when.
+Chasing a non-responder happens in the app, where access is role-scoped and the
+read is auditable; a spreadsheet on someone's desktop is neither.
+
+The one path that can still emit an address is a row with no `name` at all,
+where the alternative is an unidentifiable blank first column. Asserted as the
+only path over the WHOLE serialised file rather than by naming the columns — a
+column list stops covering this the day someone adds a column, and every
+address is still on the payload for anyone who reaches for one.
+
+**Consequence, stated rather than discovered later:** the export no longer
+round-trips through the import step at all. `parseRecipients` needs an address
+or a phone column to recognise a header row, so a re-imported register yields
+zero recipients rather than a partial list. That is the decision working as
+intended, not a defect, and it retires the V1-6 finding about adding a
+«Virksomhet» synonym to `HEADER_NAME` — there is no longer an address column for
+such a file to carry.
 
 Two further behaviours are deliberate and are not merely serialisation:
 
@@ -1908,3 +1926,25 @@ to ask. Minimal consistent option, in the screen's existing card chrome; no new
 pattern, no new interaction. The Q43 export control is inside the register and
 therefore also absent — the route would refuse it with 403 either way, but a
 button that always fails is not an honest affordance.
+
+### D99 — OPEN: the aggregate half is removed for organisation surveys, not settled
+The v1 bundle switches the whole lower half of Resultater on respondent kind —
+`resAttrib` and `resAggregate` are `pol.kind === "org"` and its negation (:4861)
+— so an organisation survey shows the register INSTEAD of the aggregate panels.
+V1-2 built it that way, and it is right for the primary case: a per-supplier
+register is what the duty is, and a supplier survey has no group breakdown, no
+trend of averages and no themes, because each row is the finding.
+
+**Logged as OPEN rather than settled (Tor, 2026-09-06).** «How many of our 200
+suppliers have a whistleblowing channel» is a legitimate aggregate over
+organisations, and Åpenhetsloven reporting at scale will ask it. The answer, if
+a customer does, is **a section — not a restored screen half**: a named panel
+over the roles the pack already designates (`brudd`, `policy`, `key`), which is
+a different thing from the person-survey aggregate that was removed. Reinstating
+`resAggregate` for organisation surveys would bring back the group breakdown,
+the trend of averages and the themes, none of which mean anything here.
+
+Nothing to do until a customer asks. Recorded so that the next person to meet
+this reads a decision with a stated boundary rather than a screen half that
+looks accidentally missing.
+

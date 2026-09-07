@@ -12,16 +12,19 @@ import type { Attributed, AttributedRow } from './types'
  * (`onAttribExport`, :4880), so there is nothing to be pixel-perfect to. The
  * choices and their reasons, logged as D96:
  *
- *   · semicolon, not comma — Norwegian Excel's list separator, and the app's
- *     own importer already accepts `;` (`lib/send/import.ts:86`), so a file
- *     exported here parses if it is pasted back in;
+ *   · semicolon, not comma — Norwegian Excel's list separator, which is what a
+ *     Norwegian customer opens this in. (It is also what the app's own importer
+ *     detects, `lib/send/import.ts:86`, but that is now a coincidence rather
+ *     than a purpose: with no address column there is nothing for the import
+ *     step to read, and a re-invite is meant to happen in the app anyway.);
  *   · a UTF-8 BOM — without it Excel reads æ, ø and å as mojibake, and the
  *     importer strips it again (`import.ts:107`);
  *   · CRLF line endings, which is what RFC 4180 says and what Excel expects.
  *
  * Nothing here is gated, because nothing in the attributed path is: `k` is 0
  * and the rows are named by design. The gate is the route, which calls
- * `attributed_results` as the viewer.
+ * `attributed_results` as the viewer. What the file does NOT carry is a contact
+ * address — see the comment on the row cells below.
  */
 const SEP = ';'
 const EOL = '\r\n'
@@ -69,7 +72,6 @@ export function csvValue(value: unknown): string {
 export type AttributedCsvLabels = {
   /** Column headings, from next-intl — the file is as translated as the screen. */
   name: string
-  email: string
   status: string
   respondedAt: string
   /** One label per `AttributedRow['status']`. */
@@ -80,7 +82,6 @@ export function attributedCsv(data: Attributed, labels: AttributedCsvLabels): st
   const questions = data.questions ?? []
   const header = [
     labels.name,
-    labels.email,
     labels.status,
     labels.respondedAt,
     ...questions.map((q) => q.text),
@@ -93,8 +94,17 @@ export function attributedCsv(data: Attributed, labels: AttributedCsvLabels): st
       (row.answers ?? []).map((a) => [a.question_id, a] as const),
     )
     const cells = [
-      row.name ?? '',
-      row.email ?? '',
+      // NO CONTACT ADDRESS. Decided (Tor, 2026-09-06) and it is not a
+      // formatting choice: a supplier register export is a legal artefact, and
+      // an address is administrative data that leaves the organisation the
+      // moment the file is forwarded. What the redegjørelse needs is which
+      // supplier answered what, and when. Chasing a non-responder happens in
+      // the app, where access is scoped and audited; a spreadsheet is neither.
+      //
+      // The `?? row.email` is the ONLY path that can emit one, and it exists so
+      // a row with no name at all is still identifiable rather than blank. It
+      // is asserted as the only path, over the whole serialised file.
+      row.name ?? row.email ?? '',
       labels.statusLabels[row.status] ?? row.status,
       // Date only. `responded_at` on an attributed row is a real timestamp —
       // the hour-truncation rule is about ANONYMOUS responses — but a register

@@ -524,7 +524,6 @@
     "attribCount": "{answered} av {total} virksomheter har svart · {reminded} påminnet",
     "attribExport": "Eksporter CSV",
     "attribColOrg": "Virksomhet",
-    "attribColEmail": "E-post",
     "attribColDate": "Svardato",
     "attribColStatus": "Status",
     "attribStatusAnswered": "Svart",

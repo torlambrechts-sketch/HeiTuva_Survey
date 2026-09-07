@@ -19,7 +19,8 @@
   "tests/invariants/attributed-results.test.ts": 22,
   "tests/db/policy-panel.test.ts": 14,
   "tests/unit/policy-warnings.test.ts": 10,
-  "tests/unit/attributed-csv.test.ts": 18,
+  "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/question-roles.test.ts": 12,
-  "tests/db/pack-roles.test.ts": 5
+  "tests/db/pack-roles.test.ts": 5,
+  "tests/unit/refusal-copy.test.ts": 9
 }
