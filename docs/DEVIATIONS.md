@@ -2035,7 +2035,7 @@ rendering identically.
 
 ---
 
-### D102 — the repair options, for Tor (V1-6)
+### D102 — the repair options, for Tor (V1-6). **RESOLVED 2026-09-07: the scope is ZERO. Option D taken.**
 
 **Scope, to be measured rather than estimated.** Every organisation survey on
 `heituva-prod` created before migration `20260906000040` — the one that wrote roles into
@@ -2065,9 +2065,36 @@ nobody has counted. D plus the copy fix is honest at every size — it never cla
 it does not have — and if the population turns out to be large, B is still available and D
 is not wasted, because the copy fix is B's empty state too.
 
-**I have not run the scope query**, because reading prod's survey inventory is not
-something to do without saying so first. It is one statement and the whole trade turns on
-it.
+**THE SCOPE QUERY, RUN 2026-09-07 on `heituva-prod` (`jmhhszsnjfqgclxzhciq`) on Tor's
+instruction. Read-only.** The affected population is **zero surveys**:
+
+| | |
+|---|---|
+| Surveys on prod, all kinds | **4** |
+| Of which `respondent_kind = 'organisation'` | **0** |
+| Organisation surveys with no `brudd` role | **0** |
+
+All four are `person` / `utkast`. There is no organisation survey on prod, so there is no
+survey the defect can reach — the population is not small, it is empty.
+
+**Option D taken, and the copy fix with it** (which was recommended regardless of the
+option chosen). `lib/dashboard/panels.ts` — `registerStats` returns `value: null` with the
+label «ingen bruddspørsmål er utpekt» when no question carries the role, and
+`DashboardScreen.tsx` draws «—» for a null value, the same treatment a gated cell gets.
+`tests/unit/register-stats.test.ts` binds it in five tests, two of which were proven
+failing against the previous behaviour before the change was kept.
+
+**A, B and C are NOT taken and the reasons stand unchanged.** B remains available if the
+population ever becomes non-trivial, and this copy fix is B's empty state, so nothing here
+is wasted work.
+
+**WHAT THE QUERY ALSO FOUND, and it is larger than D102.** `M:0040` is not applied on
+prod. Prod's newest migration is `20260905220242`; the repository's is
+`20260907000053`. **Nineteen migrations are unapplied** — everything from `0035` (Q47)
+through `0053`, which is the whole v1 series from V1-1's tail onward. That is why
+`packs_with_brudd_role` is also 0 there: the pack edit has not landed either. Applying
+them is a production deployment and therefore a decision, not a chore — carried in
+`docs/v1/05-status.md` § 3.
 
 ---
 

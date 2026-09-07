@@ -1294,6 +1294,7 @@
     "allGroupsOption": "All groups",
     "regAnswered": "organisations have answered",
     "regBreaches": "have disclosed a breach or risk",
+    "regNoBreachQuestion": "no breach question has been designated",
     "regOverdue": "overdue after a reminder",
     "registerNoteLive": "One row per organisation, no threshold.",
     "registerNoteNone": "No survey with organisation respondents in the selection.",

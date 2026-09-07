@@ -9,7 +9,14 @@ import { isNegative, roleOf, type RoledQuestion } from '@/lib/questions/roles'
  * derivation that lives in the page is a derivation nothing can test without a
  * browser.
  */
-export type RegisterStat = { key: string; value: string; label: string }
+/**
+ * `value` is nullable and the null is load-bearing (DECISIONS D102, option D).
+ * A stat whose numerator is UNDEFINED is not a stat whose numerator is zero,
+ * and the panel drew the same `0` for both until V1-6 closed it. The renderer
+ * draws «—» for null, the same treatment a gated cell gets, because "there is
+ * no number here" is one fact with one appearance.
+ */
+export type RegisterStat = { key: string; value: string | null; label: string }
 
 /**
  * «Svar per virksomhet» as three counts (NEW:3697).
@@ -23,10 +30,26 @@ export type RegisterStat = { key: string; value: string; label: string }
  * follows the designation Q35 put on the pack (`lib/questions/roles.ts`). The
  * bundle matches `/brudd/i` against the question text; a role on the row is the
  * same rule with the drift removed.
+ *
+ * D102, CLOSED IN V1-6 AS OPTION D. A survey created before `M:0040` carries no
+ * `brudd` role on any question, because that migration deliberately did not
+ * rewrite live surveys — a survey is a record of what was asked. Such a survey
+ * has no breach question to count, and this function used to return `0` for it:
+ * a real zero and an undefined numerator rendering identically, which is the
+ * fabricated-data rule in its quietest form. It now returns `null` with the
+ * label saying why.
+ *
+ * WHY OPTION D AND NOT A BACKFILL: measured on `heituva-prod` 2026-09-07, the
+ * affected population is **zero surveys** — prod holds four surveys, all
+ * `person`, none organisation. A backfill (option A) would edit a live survey's
+ * questions, which is what Q35 exists to prevent; a read-time text match
+ * (option C) reintroduces the regex Q35 removed. Option B, a re-designation
+ * control in the Builder, remains available if the population is ever
+ * non-trivial — and this copy fix is B's empty state too, so it is not wasted.
  */
 export function registerStats(
   data: Attributed | null,
-  labels: { answered: string; breaches: string; overdue: string },
+  labels: { answered: string; breaches: string; overdue: string; noBreachQuestion: string },
 ): RegisterStat[] | null {
   if (!data) return null
 
@@ -40,7 +63,7 @@ export function registerStats(
           (a) => a.question_id === bruddQ.id && isNegative('brudd', a.value),
         ),
       ).length
-    : 0
+    : null
 
   // «forfalt etter påminnelse»: reminded and still silent. `paaminnet` is the
   // status the send pipeline sets, so this is a fact about what was sent, not
@@ -49,7 +72,9 @@ export function registerStats(
 
   return [
     { key: 'answered', value: `${answered} av ${rows.length}`, label: labels.answered },
-    { key: 'breaches', value: String(breaches), label: labels.breaches },
+    breaches === null
+      ? { key: 'breaches', value: null, label: labels.noBreachQuestion }
+      : { key: 'breaches', value: String(breaches), label: labels.breaches },
     { key: 'overdue', value: String(overdue), label: labels.overdue },
   ]
 }

@@ -242,8 +242,11 @@ export async function DashboardScreen({
                       key={s.key}
                       className="rounded-xl border border-line bg-bg px-4 py-[14px]"
                     >
+                      {/* D102: a null value is «there is no number», drawn the
+                          same way a gated cell is. Never a 0 standing in for an
+                          undefined numerator. */}
                       <div className="font-display text-[26px] font-bold leading-none">
-                        {s.value}
+                        {s.value ?? '—'}
                       </div>
                       <div className="mt-1 text-[12.5px] leading-[1.35] text-mut">{s.label}</div>
                     </div>

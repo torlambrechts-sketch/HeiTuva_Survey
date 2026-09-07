@@ -5,11 +5,13 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
 /**
  * ── THE STANDING QUESTIONS ──────────────────────────────────────────────────
  *
- * Before writing a check, ask all three. The first two are halves of one thing
- * — a check that reaches the wrong control, and a check that reaches the wrong
- * row — and V1-2 hit each of them twice. The third is about a check that
- * reaches the right thing and only looks at part of it; V1-3 found it, and
- * V1-4 found it again rotated onto a new axis (see 2b).
+ * Ask these before writing a check — and ask 5 before EDITING one. The first
+ * two are halves of one thing — a check that reaches the wrong control, and a
+ * check that reaches the wrong row — and V1-2 hit each of them twice. The third
+ * is about a check that reaches the right thing and only looks at part of it;
+ * V1-3 found it, and V1-4 found it again rotated onto a new axis (see 2b). The
+ * fifth is the only one that fires when a test is already RED and the fix looks
+ * like one line.
  *
  *   1. What ELSE could refuse this before the check I am testing gets a chance?
  *   2. What could have MOVED the state my selector assumes?
@@ -17,6 +19,8 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  *   3. Am I asserting over the SET — of values, AND of the sites that can
  *      violate the property — or over the ones I happened to pick?
  *   4. What does my test LEAVE BEHIND when it fails to fail?
+ *   5. This assertion is red because MY OWN change moved the contract. Before
+ *      I update it: what does the new value MEAN?
  *
  * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
  *
@@ -224,6 +228,42 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * something the database returned: a row that was refused has no id to
  * remember, and an id-based cleanup silently skips exactly the rows that need
  * it.
+ *
+ * ── 5. THE ONE-LINE FIX TO A RED ASSERTION ──────────────────────────────────
+ *
+ * The other four fire while a test is being WRITTEN. This one fires while a
+ * test is being EDITED, which is the moment nobody treats as dangerous — the
+ * suite is red, the cause looks obvious, and the change is one line.
+ *
+ *   A TEST THAT FAILS BECAUSE YOUR OWN CHANGE ALTERED THE CONTRACT IS NOT A
+ *   STALE TEST. IT IS THE ONLY READER THAT NOTICED THE CONTRACT MOVED.
+ *
+ *   V1-6  `attributed-results.test.ts` asserted `point.n` was undefined on a
+ *         gated trend point, which was the shape before Q49 widened it. The
+ *         phase's own migration had started emitting `n`, so the assertion went
+ *         red with `expected +0 to be undefined`.
+ *
+ *         Updating it to `toBe(0)` is one line, is green immediately, and cites
+ *         the decision that justifies it. It would also have shipped two
+ *         application defects: the emitted count was `count(distinct r.id)` over
+ *         responses JOINED TO ANSWERS on scale questions — so a round four
+ *         people answered reported 0 when those four skipped the scale — and
+ *         the decision's user-visible half, the panel rendering the count, did
+ *         not exist at all. Every layer was individually green: `tsc` was clean
+ *         because nothing read the new field, and the visual gate passed
+ *         because it had only ever photographed the ungated form.
+ *
+ * THE RULE: when the fix is one line, the question is what the value MEANS, not
+ * whether the types agree. State the new value in words — "n is how many people
+ * took part in this round" — and then check that the code produces THAT. Here
+ * the sentence took four lines of CTE to falsify, and falsifying it is what
+ * found both defects. A stale-test fix that does not survive being stated in
+ * words is a defect being written down as an expectation.
+ *
+ * The corollary, for the phase that made the change: a contract has more readers
+ * than the one that went red. Q49 moved the payload; the TypeScript union, the
+ * component and two message strings all described the old one and none of them
+ * failed. GREP FOR THE FIELD YOU CHANGED, not for the test that told you.
  *
  */
 

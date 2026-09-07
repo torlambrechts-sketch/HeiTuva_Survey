@@ -133,7 +133,7 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
 phase, not built. Two numbers carry forward and may only move up: **56 of 74 surfaces
-actively checked** by 5a3, and **34 files / 572 tests** in the census manifest.
+actively checked** by 5a3, and **35 files / 577 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
@@ -157,7 +157,8 @@ so the checked number holds at 56. **V1-6 took the census 553 → 572** with Q49
 count and its narrowing (4), Q50's clock (7), Q48(b)'s registry binding (5), the
 pack builder's two callers (2) and the fix pass's participation denominator (1);
 5a3 did not move at all, because `M:0053` replaces a function that already
-existed and `M:0051`'s two new ones live in the `app` schema. 5a3 is unmoved by
+existed and `M:0051`'s two new ones live in the `app` schema. The close-out took
+it 572 → 577 with D102's five (`tests/unit/register-stats.test.ts`). 5a3 is unmoved by
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so
 neither is a catalogue surface — recorded limits of that gate, not gaps in it.

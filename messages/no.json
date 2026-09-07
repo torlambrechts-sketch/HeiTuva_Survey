@@ -1294,6 +1294,7 @@
     "allGroupsOption": "Alle grupper",
     "regAnswered": "virksomheter har svart",
     "regBreaches": "har avdekket brudd eller risiko",
+    "regNoBreachQuestion": "ingen bruddspørsmål er utpekt",
     "regOverdue": "forfalt etter påminnelse",
     "registerNoteLive": "Én rad per virksomhet, ingen terskel.",
     "registerNoteNone": "Ingen undersøkelse med organisasjonsrespondenter i utvalget.",

@@ -1,6 +1,8 @@
 # Status — what remains across the whole specification
 
-**Written at V1-4's close, 2026-09-07; updated at V1-6's close, the same day.**
+**Written at V1-4's close, 2026-09-07; updated at V1-6's close and again at the
+bundle's close, the same day.** The one-page summary of the whole bundle is
+`docs/v1/06-closeout.md`; this file stays the detailed picture.
 Not a phase report: this is the whole picture, so that the next decision is taken
 against the remaining work rather than against the next phase.
 
@@ -153,13 +155,13 @@ phase and are listed in §1. The other three:
 |---|---|---|---|
 | **Q38** | Personvern §8 controls | NOT IMPLEMENTED **by decision** — waits for a bundle that draws them | `04-decisions.md:45` |
 | **Q39** | Undrawn report-section bodies | NOT IMPLEMENTED **by decision** — same | `04-decisions.md:46` |
-| **Q40** | Amend RESPONSIVE.md's charts rule | **NOT IMPLEMENTED, and this one is an oversight rather than a wait.** `docs/RESPONSIVE.md:90-91` still reads "minimum height 200px"; the decided replacement (never smaller than the design draws it, never below 44px per interactive mark, drop the 200px floor) was never written in | unassigned |
+| **Q40** | Amend RESPONSIVE.md's charts rule | **DONE in V1-4's fix pass.** `docs/RESPONSIVE.md:98-99` carries both clauses and the 200px floor is dropped, with the reason it was wrong | closed |
 
-**One provenance discrepancy worth reconciling.** `DECISIONS.md` marks Q28, Q31,
-Q32 and Q36 as flat **CONFIRMED (Tor)**; `docs/v1/04-decisions.md` marks the same
-four as "CONFIRMED as DEFAULT", which is weaker. The register is the authority,
-so nothing is wrong today — but two files disagree about how firmly four
-decisions are held, and the weaker one is the file a future phase reads first.
+**The provenance discrepancy is reconciled.** `docs/v1/04-decisions.md` is now a
+STAGING AREA, not a register: its promoted rows point at `DECISIONS.md` and the
+"CONFIRMED as DEFAULT" strings were neutralised to "DRAFT RECOMMENDATION" in
+V1-4's fix pass. The single surviving occurrence is `04-decisions.md:11`, which
+narrates the discrepancy rather than asserting it.
 
 ---
 
@@ -167,19 +169,38 @@ decisions are held, and the weaker one is the file a future phase reads first.
 
 ### From the phase reports
 
-| Item | Owner | Reference |
+**Everything V1-6 owned is closed.** What is left is listed with a real owner; nothing
+here says "a future phase".
+
+| Item | Owner | State |
 |---|---|---|
-| `bibliotek/actions.ts` builds a pack question's `config` by hand while the wizard uses `configFor` — `statements` and `multi` survive one path and are lost on the other | V1-6 | `reports/V1-2.md:299-301` |
-| **Q49** — `get_trends` returns no `n` for a gated point, so «Runde for runde» shows less than Q28 permits | V1-6 | `reports/V1-2.md:302-306`, `04-decisions.md:54` |
-| D97's correction to Q43's stated reason | V1-6 | `reports/V1-2.md:307` |
-| `verify:roundtrip`'s `dsr_requests` and `profiles` probes leave rows behind | V1-6 | `reports/V1-2.md:309-311` |
-| **React #418** on `bibliotek-maler/liste/mobile` — one failure, nine targeted reproductions and a clean full re-run, cause **not established**. Not called a flake | V1-4 → unresolved, carry to V1-5 | `reports/V1-3.md:236-268, 375-377` |
-| **Q50** — timezone | V1-6 or sooner | `reports/V1-3.md:381` |
-| **D99** — resAttrib/resAggregate, open rather than settled | V1-6 | `reports/V1-3.md:382` |
+| `bibliotek/actions.ts` built a pack question's `config` by hand | — | **CLOSED in V1-6** — `lib/questions/pack.ts`, one builder for both callers |
+| **Q49** — `get_trends` returned no `n` for a gated point | — | **CLOSED in V1-6** — `M:0050`, corrected by `M:0053`; panel at `RoundsPanel.tsx:91` |
+| D97's correction to Q43's stated reason | — | **CLOSED in V1-2's acceptance** |
+| `verify:roundtrip`'s probes left rows behind | — | **CLOSED in V1-6** — `scripts/verify/roundtrip.ts` |
+| **Q50** — timezone | — | **CLOSED in V1-6** — `M:0051`, `M:0052` |
+| **D102** — the register panel's 0 breaches | — | **CLOSED 2026-09-07** — scope measured on prod as ZERO, option D taken. `tests/unit/register-stats.test.ts` |
+| **React #418** on `bibliotek-maler/liste/mobile` | **Unowned by design** — one failure, no reproduction in V1-4, V1-5 or V1-6. Not called a flake, and nothing to do until it recurs | `reports/V1-3.md:236-268` |
+| **D99** — resAttrib/resAggregate | **Waits for a customer.** Open, not settled; the answer if one asks is a named report section, not a restored screen half | `DEVIATIONS.md:1930` |
+
+### Prod is nineteen migrations behind — **the largest open item in this file**
+
+Measured 2026-09-07 while running D102's scope query. `heituva-prod`'s newest applied
+migration is `20260905220242`; the repository's is `20260907000053`. **Nineteen migrations
+are unapplied** — `0035` (Q47's peer-results org rule) through `0053` — which is every
+schema change from V1-1's tail onward: the threshold ceiling, the quality-rules key, the
+attributed-share scope, the pack roles, D94's k=0 fix and its sweep, the whole recurrence
+series, `dashboard_layouts` and its registry, `use_cases`, Q49's count and Q50's clock.
+
+**Owner: Tor.** Applying them is a production deployment, which CLAUDE.md makes a decision
+rather than a chore, and it is the gate every other launch-readiness item sits behind — a
+remote load test against a schema nineteen migrations old measures nothing. Prod currently
+holds four surveys, all `person` and all `utkast`, so nothing live depends on the old
+schema; that is what makes this cheap to do and expensive to keep forgetting.
 
 ### From `docs/DEVIATIONS.md`
 
-103 entries; most record a settled deviation and need nothing. These are the ones
+106 entries; most record a settled deviation and need nothing. These are the ones
 with work still attached:
 
 | # | Subject | State | Reference |
@@ -189,7 +210,8 @@ with work still attached:
 | **D99** | Organisation surveys lose the aggregate half — **OPEN, not settled** | Nothing to do until a customer asks; the answer if one does is a named section, not a restored screen half | `DEVIATIONS.md:1930` |
 | **D100** | Two presets seeded without the stream panel, descriptions changed | Reverts as a seed change when Q26 lifts | `DEVIATIONS.md:1952` |
 | **D101** | First-run preset cards carry no illustration | The bundle's seven SVGs are keyed by array POSITION; the honest form is one per preset KEY | `DEVIATIONS.md:1983` |
-| **D102** | The register panel counts 0 breaches for a survey predating `M:0040` | Affects `heituva-prod` surveys only. The repair is a decision; the thing that makes it safe to leave is the panel distinguishing "no breach question designated" from "no breaches found", which it does not | `DEVIATIONS.md` (new) |
+| **D102** | The register panel counted 0 breaches for a survey predating `M:0040` | **CLOSED 2026-09-07.** Scope measured on prod: zero affected surveys. Option D taken — `registerStats` returns `null` with «ingen bruddspørsmål er utpekt», the panel draws «—» | `DEVIATIONS.md` D102 |
+| **D103** | «Runde for runde»'s note amended, because Q49 made the bundle's sentence false on its own screen | Settled. The first time a v1 phase changed bundle copy on a decision's authority | `DEVIATIONS.md` D103 |
 
 ### Apparatus
 
@@ -197,7 +219,10 @@ with work still attached:
 |---|---|---|
 | **The census manifest is hand-maintained** — it flags a file that SHRINKS, so an entry drifting upward is invisible. V1-3 found two stale by two | **DONE in V1-6.** `CENSUS_WRITE=1` regenerates it, refuses a partial run, and never writes on an ordinary one | `tests/census.ts:55-143`, `package.json` (`census:write`) |
 | **A screenshot gate cannot see a surface that was never built.** V1-6's largest defect passed Gate 3a and its visual diff, because the screen rendered exactly as its baseline did — the baseline was taken before the decision that required the change | recorded, no action; the decision-conformance section in Gate 6 is the mechanism that covers it | `docs/v1/reports/V1-6.md` § 5 |
-| Gate 3a's evidence now carries **five** instances of "the suite cannot see this" — the newest being that duplication is invisible to assertions checking presence rather than count | recorded, no action | `VERIFY.md:259-265` |
+| **THE DEMO SEED REACHES ONLY STATES THE CURRENT CODE CREATES**, so a state the code can produce but the seed never does is invisible to every gate at once. **Twice in this bundle:** (1) D102's pre-`M:0040` organisation survey — "affects nothing on the local stack or in the demo seed, both of which are created from the current pack"; (2) V1-6's multi-round survey below the threshold, which no fixture has, so Gate 3a photographs «Runde for runde» only in its ungated form. The general form is that a seed built by running the current code is a sample of the code's OUTPUTS, not of its INPUTS | **OWNED BY LAUNCH READINESS.** Not left unowned and not a phase of its own: the fixture work is one seed row plus one `routes.manifest.ts` state for the multi-round case, and it belongs beside the remote load test, which needs fixtures that are not the happy path either. **Its natural trigger is the first real organisation** — the same trigger the two deferred auth controls carry — because that is when the seed stops being the only data anyone has | `docs/v1/reports/V1-6.md` § 1.4, § 8.4; `docs/DEVIATIONS.md` D102 |
+| Gate 3a's evidence now carries **five** instances of "the suite cannot see this" — the newest being that duplication is invisible to assertions checking presence rather than count | recorded, no action | `VERIFY.md:292-298` |
+| **Standing question 5** — a test that fails because your own change altered the contract is not a stale test; it is the only reader that noticed the contract moved | **DONE in V1-6.** Written where the next one-line fix gets written | `tests/db/clients.ts` § 5 |
+| **The bundles' copies of governing documents go stale by design.** `Designbrief_terskel_Q17.md` exists in `docs/` (amended by Q28) and inside the frozen v1 bundle (un-amended), and the frozen one reads as the more authoritative | **DONE in V1-6.** `design-reference-v1/README.md` says `docs/` governs, names the one diverged file, and carries the shell one-liner that re-checks the table | `design-reference-v1/README.md` |
 
 ---
 
@@ -272,12 +297,12 @@ depends on a document not in this repository. See § 1.
 | | |
 |---|---|
 | Migrations | 81 (`supabase/migrations/*.sql`) |
-| Deviations logged | 106 (`docs/DEVIATIONS.md`) |
+| Deviations logged | 106 (`docs/DEVIATIONS.md`), of which D102 closed at the bundle's close |
 | Decisions in the register | 48, of which 33 are CONFIRMED (Tor) (`DECISIONS.md:38`) |
 | Decisions Q18-Q51 audited | 30 in the register + 4 staged only (Q38, Q39, Q40, Q41 — all V1-7's, descheduled with it) |
-| UI messages per language | 1558 (`messages/no.json`, `messages/en.json`) |
+| UI messages per language | 1559 (`messages/no.json`, `messages/en.json`) |
 | Gate 5a3 | 56 of 74 surfaces actively checked (45 RLS tables + 29 SECURITY DEFINER functions, 18 allowlisted) |
-| Census manifest | 572 tests across 34 files (`tests/expected-counts.json`) |
+| Census manifest | 577 tests across 35 files (`tests/expected-counts.json`) |
 | Capture states | 159 · responsive combinations 160 |
 | v1 phases closed | **7 of 7** (V1-0 … V1-6) — V1-7 descheduled. **The bundle is finished.** |
 | Phase reports on disk | 5 of 7 closed phases (V1-0 and V1-1 were chat-only) |

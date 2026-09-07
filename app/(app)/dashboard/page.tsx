@@ -321,6 +321,7 @@ export default async function DashboardPage({
           answered: t('regAnswered'),
           breaches: t('regBreaches'),
           overdue: t('regOverdue'),
+          noBreachQuestion: t('regNoBreachQuestion'),
         })
       : null
 
