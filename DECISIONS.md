@@ -2,6 +2,39 @@
 
 Status legend: **CONFIRMED** = decided by Tor · **DEFAULT** = Claude-recommended default, applied so the build can start; overrule with a one-line instruction and the plan/migrations adjust.
 
+**WHEN A DECISION MAY BE CORRECTED (added 2026-09-07, after V1-5).** A confirmed
+decision may be corrected when it **MISDESCRIBES THE WORLD** — when its text says
+something about the bundle, the schema or the product that is not so. It may
+**NEVER** be corrected because the implementation is inconvenient, harder than
+expected, or already built differently.
+
+Correcting a register to match reality is what a register is for. Leaving a false
+clause standing so a conformance check can fail against it would manufacture a
+finding, and a table that fails on a wrong premise is not evidence either.
+
+**Every correction is visible, dated, and carries its reason**, in the line
+itself — never a silent edit. The instance that produced this rule: Q24 and Q44
+both said the wizard would gain a **step**; the bundle keeps four and puts the
+use-case chips inside step 0 (NEW:4195–4197). Both lines were corrected on
+2026-09-07 and both say so where they say it.
+
+**Where that phrase came from is recorded because the answer changes the fix.**
+It was mine, not Tor's. It first appears in `docs/v1/01-briefs.md:263` — my own
+product brief — in the list «a tab, chips, wizard step, eyebrows», and was
+inherited into Q24's draft without being re-read against the bundle. **The
+correlation is exact and is the useful part: every clause in that batch carrying
+a `NEW:` line citation was right, and the one carrying none was wrong.** Q44
+cited NEW:4197 and said "the first six packs of the chosen use case" — correct.
+`03-plan.md:401` cited NEW:60–66, 4195–4197 and said "chips" — correct. The
+brief's parenthetical cites a line for the categories, the presets and the tab,
+and **nothing for «wizard step»**. Q24's draft cited nothing at all.
+
+**So the rule that prevents the next one is not "read the bundle before
+drafting" — it is narrower and checkable: A CLAUSE THAT ASSERTS WHAT THE BUNDLE
+DOES MUST CARRY THE LINE IT DOES IT ON.** An uncited clause is the one that
+drifts, and it drifts by inheritance — copied forward from a document written
+before the code was read, past two other documents that had it right.
+
 46 decisions carried here. Q11, Q15, Q17, Q18, Q19, Q20, Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28, Q29, Q30, Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q42, Q43, Q44, Q45, Q46, Q47, Q48, Q50 and Q51 are confirmed by Tor; Q11/Q15 shape verification scope, Q17 and Q47 the security kernel, Q28 the k-gate's boundary. The rest are defaults shaping the build.
 
 **The v1 bundle raises twenty-nine more (Q18–Q46, plus Q47), staged in `docs/v1/04-decisions.md`.** Twelve are confirmed and appear below; the remaining seventeen are confirmed in batches tied to the phase where each bites, because a decision taken out of context is taken badly. Nine of the twenty-nine touch the security core — six on the k-gate or an aggregate path (Q26, Q28, Q30, Q36, Q41, Q42), three on RLS or role semantics (Q23, Q25, Q43).
