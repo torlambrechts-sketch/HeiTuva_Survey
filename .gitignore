@@ -31,13 +31,18 @@ next-env.d.ts
 *.tsbuildinfo
 
 # verification artifacts — captures are regenerated per run.
-# Both reference sets ARE committed: they are the design baselines, one per
-# handoff (DECISIONS Q18). artifacts/reference/ is the first bundle, the
-# baseline Phases 1-7 were built against; artifacts/reference-v1/ is the
-# second, the target for every screen a v1 phase touches.
+# ALL THREE reference sets ARE committed: they are the design baselines, one
+# per handoff (DECISIONS Q18, extended by Q52). artifacts/reference/ is the
+# first bundle, the baseline Phases 1-7 were built against; reference-v1/ is
+# the second, the reference for screens a v1 phase built and no v2 phase
+# touches; reference-v2/ is the third, the target for every screen a v2 phase
+# touches. Which surface is judged against which: docs/v2/00-diff.md section 0.3.
+# An added bundle needs a line here as well as one in scripts/verify/
+# reference.ts — without it the set renders and is silently never committed.
 artifacts/*
 !artifacts/reference/
 !artifacts/reference-v1/
+!artifacts/reference-v2/
 artifacts/.cdn-cache/
 test-results/
 playwright-report/

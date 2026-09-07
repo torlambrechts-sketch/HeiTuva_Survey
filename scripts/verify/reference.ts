@@ -19,19 +19,27 @@ import { chromium, type Page } from '@playwright/test'
 import { serveCdnFromCache } from './cdn-cache'
 
 /**
- * TWO bundles, both rendered, both kept (DECISIONS Q18).
+ * THREE bundles, all rendered, all kept (DECISIONS Q18, extended by Q52).
  *
  * `design-reference/` is the first handoff and remains the reference for
- * Phase 1–7 work AS BUILT: a fidelity question about a screen no v1 phase has
- * touched is answered against the bundle it was built from, not against a
+ * Phase 1–7 work AS BUILT: a fidelity question about a screen no later phase
+ * has touched is answered against the bundle it was built from, not against a
  * later one that moved the frame under it.
  *
- * `design-reference-v1/` is the second handoff and is the TARGET for every
- * screen a v1 phase touches.
+ * `design-reference-v1/` is the second handoff. It was the TARGET while the v1
+ * bundle ran; it is now the reference for every screen a v1 phase built and no
+ * v2 phase touches.
  *
- * So the renders are two sets side by side, named for what they are rather
- * than by which ran last. Overwriting the first set would have destroyed the
- * only evidence of what Phases 1–7 were built against.
+ * `design-reference-v2/` is the third handoff and is the TARGET for every
+ * screen a v2 phase touches.
+ *
+ * WHICH SURFACE IS JUDGED AGAINST WHICH IS NOT INFERRED HERE. It is written
+ * down once, per surface, in `docs/v2/00-diff.md § 0.3`. This file only
+ * renders; that table decides.
+ *
+ * So the renders are three sets side by side, named for what they are rather
+ * than by which ran last. Overwriting an earlier set would destroy the only
+ * evidence of what the phases before it were judged against.
  */
 type Bundle = {
   key: string
@@ -39,6 +47,10 @@ type Bundle = {
   role: string
   design: string
   splash: string
+  /** v2 ships a THIRD prototype file. Optional, because the earlier bundles do
+   *  not have it — a screen that names a file its bundle lacks is skipped
+   *  rather than rendered from the wrong page. */
+  bruksomrader?: string
   out: string
 }
 
@@ -52,10 +64,18 @@ const BUNDLES: Bundle[] = [
   },
   {
     key: 'v1',
-    role: 'second handoff — the target for every screen a v1 phase touches',
+    role: 'second handoff — the reference for screens v1 built and no v2 phase touches',
     design: 'design-reference-v1/heituva-survey-app-design/project/HeiTuva.dc.html',
     splash: 'design-reference-v1/heituva-survey-app-design/project/HeiTuva Splash.dc.html',
     out: 'artifacts/reference-v1',
+  },
+  {
+    key: 'v2',
+    role: 'third handoff — the target for every screen a v2 phase touches',
+    design: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva.dc.html',
+    splash: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva Splash.dc.html',
+    bruksomrader: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva Bruksomrader.dc.html',
+    out: 'artifacts/reference-v2',
   },
 ]
 
@@ -72,6 +92,15 @@ type Screen = {
    *  its own copy object, and no `screen` key at all — so it is named per
    *  screen rather than assumed. Marked here, resolved per bundle below. */
   splash?: true
+  /** Bruksområder is a THIRD file, and only v2 has it. */
+  bruksomrader?: true
+  /** Bundles this screen exists in. Omitted = every bundle. A v2-only screen
+   *  rendered against v1 would not fail loudly — the state key simply would not
+   *  apply and the previous screen would be captured under the new name, which
+   *  is the "measured as whatever page linked to it" failure VERIFY.md's
+   *  one-time setup already names. So the restriction is declared, not left to
+   *  the duplicate-hash check to catch after the fact. */
+  only?: string[]
 }
 
 const SCREENS: Screen[] = [
@@ -108,6 +137,18 @@ const SCREENS: Screen[] = [
   { name: 'splash', state: {}, splash: true },
   { name: 'splash-priser-manedlig', state: { billing: 'mnd' }, splash: true },
   { name: 'splash-logg-inn', state: { mode: 'login' }, splash: true },
+
+  // v2's new surfaces. Declared `only: ['v2']` because the earlier bundles have
+  // no such `screen` value: the patch would not apply, and the run would
+  // capture whatever screen was already showing under the new name.
+  { name: 'oppgaver', state: { screen: 'tasks' }, only: ['v2'] },
+  { name: 'live', state: { screen: 'livestage' }, only: ['v2'] },
+  { name: 'live-revealed', state: { screen: 'livestage', liveRevealed: true }, only: ['v2'] },
+  { name: 'hjelp', state: { screen: 'help' }, only: ['v2'] },
+  { name: 'admin-profil', state: { screen: 'admin', adminTab: 'profil' }, only: ['v2'] },
+  { name: 'admin-malgrupper', state: { screen: 'admin', adminTab: 'malgrupper' }, only: ['v2'] },
+  { name: 'admin-integrasjoner', state: { screen: 'admin', adminTab: 'integrasjoner' }, only: ['v2'] },
+  { name: 'bruksomrader', state: {}, bruksomrader: true, only: ['v2'] },
 ]
 
 /** Reaches the prototype's logic instance through the React fiber and merges a
@@ -135,17 +176,26 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
 }
 
 /**
- * Which bundles this run renders. Default: the v1 set only.
+ * Which bundles this run renders. Default: the v2 set only.
  *
  * The legacy set is FROZEN, and not by discipline: re-rendering it moved five
  * PNGs the first time this ran, with no design change behind them — a newer
  * Chromium paints them slightly differently. A baseline that drifts with the
  * browser build is a baseline that silently stops being the thing Phases 1-7
- * were judged against, which is the whole reason Q18 keeps it. So it is
- * regenerated only when someone asks for it by name:
+ * were judged against, which is the whole reason Q18 keeps it.
  *
- *   npx tsx scripts/verify/reference.ts              v1 only (default)
- *   npx tsx scripts/verify/reference.ts --all        both
+ * THE V1 SET NOW FREEZES FOR THE SAME REASON, and Q52 adds a second: v1 is no
+ * longer a target, it is the reference for every screen a v1 phase built and no
+ * v2 phase touches. Re-rendering it under a newer Chromium would move PNGs that
+ * are the only evidence of what V1-0…V1-6 were judged against — exactly the
+ * loss the legacy freeze was introduced to prevent, one bundle along.
+ *
+ * So the default renders the TARGET set only, and an older set is regenerated
+ * only when someone asks for it by name:
+ *
+ *   npx tsx scripts/verify/reference.ts              v2 only (default)
+ *   npx tsx scripts/verify/reference.ts --all        all three
+ *   npx tsx scripts/verify/reference.ts --bundle=v1
  *   npx tsx scripts/verify/reference.ts --bundle=legacy
  *
  * Either way both sets stay on disk, named, side by side.
@@ -159,7 +209,7 @@ function selectedBundles(): Bundle[] {
     if (!hit.length) throw new Error(`unknown bundle "${named}" — try ${BUNDLES.map((b) => b.key).join(' | ')}`)
     return hit
   }
-  return BUNDLES.filter((b) => b.key === 'v1')
+  return BUNDLES.filter((b) => b.key === 'v2')
 }
 
 async function main() {
@@ -180,7 +230,14 @@ async function main() {
     // silent failure, but two SCREENS rendering identically within one bundle
     // still are.
     const hashes = new Map<string, string>()
-    for (const s of SCREENS) {
+    const screens = SCREENS.filter((s) => {
+      if (s.only && !s.only.includes(bundle.key)) return false
+      if (s.bruksomrader && !bundle.bruksomrader) return false
+      return true
+    })
+    const withheld = SCREENS.length - screens.length
+    if (withheld) console.log(`   (${withheld} screen(s) not in this bundle — skipped, not rendered from another page)`)
+    for (const s of screens) {
       const width = s.width ?? WIDTH
       const ctx = await browser.newContext({
         viewport: { width, height: 900 },
@@ -193,7 +250,8 @@ async function main() {
 
       try {
         await serveCdnFromCache(page)
-        await page.goto(pathToFileURL(resolve(s.splash ? bundle.splash : bundle.design)).href, {
+        const file0 = s.bruksomrader ? bundle.bruksomrader! : s.splash ? bundle.splash : bundle.design
+        await page.goto(pathToFileURL(resolve(file0)).href, {
           waitUntil: 'domcontentloaded',
         })
 
@@ -229,7 +287,7 @@ async function main() {
         }
         hashes.set(hash, s.name)
         captured++
-        console.log(`  ok   ${s.name.padEnd(22)} ${width}px  ${applied.screen ? `screen=${applied.screen}` : 'splash prototype (no screen state)'}`)
+        console.log(`  ok   ${s.name.padEnd(22)} ${width}px  ${applied.screen ? `screen=${applied.screen}` : 'standalone prototype (no screen state)'}`)
         if (errors.length) console.log(`       note: ${errors.length} page error(s): ${errors[0]?.slice(0, 90)}`)
       } catch (e) {
         failed++
