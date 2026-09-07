@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { setSurveyPolicy } from './actions'
 import { policyWarnings, type PolicyState } from '@/lib/questions/policy-warnings'
 import type { QualityRule } from '@/lib/questions/quality'
+import { thresholdTier } from '@/lib/questions/threshold-tier'
 
 /**
  * "Hvem svarer og hva vises" — HeiTuva.dc.html:577-635, the v1 bundle's new
@@ -40,7 +41,7 @@ export type PolicyPanelProps = {
   rules: QualityRule[]
 }
 
-const THRESHOLDS = [3, 4, 5, 8, 10] as const
+const THRESHOLDS = [2, 3, 4, 5, 8, 10] as const
 const KINDS = ['person', 'organisation'] as const
 const ANONYMITIES = ['anonymous', 'named', 'optional'] as const
 
@@ -274,7 +275,21 @@ export function PolicyPanel({
                 ))}
               </div>
               <p className="mt-2 text-[12.5px] text-mut">{t('policyRecommended')}</p>
-              {policy.kThreshold < 5 ? (
+              {/* DECISIONS Q91 — TWO TIERS, and the tiers are not degrees of the
+                  same warning. Below 5, answers from a small group are HARDER TO
+                  KEEP APART. At 2 the other respondent can DERIVE yours exactly
+                  by subtraction — a different claim, so it gets different words
+                  and a heavier ground (`--ac3` rather than `--sbg`). Writing 2
+                  as "even smaller" would be the one real error Q17 named: copy
+                  that promises more than the setting holds. */}
+              {thresholdTier(policy.kThreshold) === 'two' ? (
+                <p
+                  className="mt-[10px] rounded-[10px] px-[14px] py-3 text-[12.5px] leading-[1.55]"
+                  style={{ background: 'var(--ac3)' }}
+                >
+                  {t('policyTwoText')}
+                </p>
+              ) : thresholdTier(policy.kThreshold) === 'low' ? (
                 <p
                   className="mt-[10px] rounded-[10px] px-[14px] py-3 text-[12.5px] leading-[1.55]"
                   style={{ background: 'var(--sbg)' }}

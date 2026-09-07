@@ -168,13 +168,14 @@ export async function setRetention(months: number): Promise<AdminResult> {
  * proves by asserting the VALUE did not move rather than that an error came
  * back, since RLS filters an UPDATE instead of erroring.
  *
- * THE RANGE IS NOT THIS FUNCTION'S TO DECIDE. 3-10 is Q36's CHECK on the column
- * (M:0034:19-20) and Q17's floor for natural persons; the Zod bound mirrors it
+ * THE RANGE IS NOT THIS FUNCTION'S TO DECIDE. 2-10 is Q36's ceiling and Q91's
+ * floor, CHECKed on the column (M:0055); the Zod bound mirrors it
  * so the form can say something useful, and the database refuses independently.
- * Both sides are tested from both ends: 11 refused, 10 accepted, 3 accepted,
- * 2 refused.
+ * Both sides are tested from both ends: 11 refused, 10 accepted, 2 accepted,
+ * 1 refused.
  */
-const DefaultKInput = z.coerce.number().int().min(3).max(10)
+// Q91 moved the floor to 2; the CHECK on the column is the real enforcement.
+const DefaultKInput = z.coerce.number().int().min(2).max(10)
 
 export async function setDefaultThreshold(k: number): Promise<AdminResult> {
   const admin = await requireAdmin()

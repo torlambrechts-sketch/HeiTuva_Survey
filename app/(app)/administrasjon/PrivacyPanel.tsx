@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { setDefaultThreshold, setPrivacy, setRetention } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
 import { PRIVACY_KEYS, type PrivacyKey } from './keys'
+import { thresholdTier } from '@/lib/questions/threshold-tier'
 
 const LABEL: Record<PrivacyKey, [string, string]> = {
   ip_logging: ['pIpLogging', 'pIpLoggingDesc'],
@@ -16,9 +17,10 @@ const LABEL: Record<PrivacyKey, [string, string]> = {
 const RETENTIONS = [6, 12, 24, 0] as const
 
 /** DECISIONS Q57 / Q38 — the picker v2 draws (HeiTuva.dc.html:2737-2747). The
- *  values are the bundle's and they agree with the schema: 3 is Q17's floor for
- *  natural persons, 10 is Q36's ceiling, both CHECKed on the column. */
-const THRESHOLDS = [3, 5, 8, 10] as const
+ *  10 is Q36's ceiling. The low end is 2 since Q91 superseded Q17's floor of 3
+ *  — the bundle draws 3/5/8/10, so 2 is an addition the decision requires and
+ *  D107 logs. At 2 the note below carries the arithmetic warning. */
+const THRESHOLDS = [2, 3, 5, 8, 10] as const
 
 /** Personvern card — HeiTuva.dc.html:1477-1502.
  *
@@ -157,16 +159,20 @@ export function PrivacyPanel({
           the picker, so it has one now. Administrator only, in this component,
           in the action, and in `org_upd` (M:0008:8).
 
-          THE NOTE IS NOT THE BUNDLE'S. V2:5591 says «Den som lager en
-          undersøkelse kan heve terskelen, men ikke senke den under
-          virksomhetens minimum», and THREE parts of that are not what this
-          system does: nothing ties a survey's threshold to the organisation's
-          default (the default SEEDS a new survey in `app.apply_pack_policy`
-          and constrains nothing afterwards); by default only an administrator
-          may change a survey's threshold at all; and whether a redaktør may is
-          `privacy.redaktor_may_lower`, which the bundle draws no switch for.
-          So the note states what is true and is parameterised on the flag.
-          Logged in docs/DEVIATIONS.md. */}
+          THE NOTE SWUNG BACK TO THE BUNDLE, AND THE HISTORY IS THE POINT.
+          V2:5591 says «Den som lager en undersøkelse kan heve terskelen, men
+          ikke senke den under virksomhetens minimum». In V2-1 that was FALSE of
+          this system — the default only SEEDED a new survey and constrained
+          nothing afterwards (enumerated, not read for:
+          `scripts/verify/threshold-readers.ts` returned zero bounding surfaces)
+          — so the note was written to state what was true instead. **Q90 then
+          made the bundle's sentence true**, on the evidence of
+          `privacy.redaktor_may_lower`, which is meaningless without a floor to
+          lower beneath. So the note states the floor again, and both branches
+          interpolate {k} rather than asserting it, because the floor IS the
+          picker's value. The flag's two effects are both said: who may change a
+          survey's threshold, and whether anyone may go under this number.
+          Logged in docs/DEVIATIONS.md (D107). */}
       <div className="flex flex-wrap items-center gap-3.5">
         <span className="text-[14px] font-semibold">{t('orgThreshold')}</span>
         <div className="flex flex-wrap gap-2">
@@ -204,9 +210,28 @@ export function PrivacyPanel({
 
       <p className="mt-2.5 text-[13px] leading-[1.6] text-mut">
         {t('orgThresholdNote', { k })}{' '}
-        {redaktorMayLower ? t('orgThresholdRedaktorMayLower') : t('orgThresholdAdminOnly')}{' '}
+        {redaktorMayLower
+          ? t('orgThresholdRedaktorMayLower', { k })
+          : t('orgThresholdAdminOnly', { k })}{' '}
         {t('orgThresholdOrgSurveys')}
       </p>
+
+      {/* DECISIONS Q91 — TWO TIERS, because one warning cannot carry both cases.
+          At 2 the property is not "weaker anonymity": a respondent knows their
+          own answer, sees the aggregate, and SUBTRACTS. Disclosure by
+          arithmetic. So the copy says that in those words, offers «Med navn» as
+          the honest alternative in the same breath, and states the GDPR
+          consequence at the point of choosing rather than in a policy document
+          nobody opens. `--ac3` carries the weight; no red — the design brief
+          forbids an error colour here, and this is a lawful choice with a
+          consequence, not a mistake. */}
+      {thresholdTier(k) === 'two' ? (
+        <div className="mt-3 rounded-[11px] bg-ac3 px-[14px] py-[11px] text-[12.5px] leading-[1.55]">
+          <p className="font-semibold">{t('thresholdTwoWarning')}</p>
+          <p className="mt-1.5">{t('thresholdTwoAlternative')}</p>
+          <p className="mt-1.5">{t('thresholdTwoGdpr')}</p>
+        </div>
+      ) : null}
 
       {error && !error.ok ? (
         <p role="alert" className="mt-3 text-[12.5px] font-semibold text-ink">

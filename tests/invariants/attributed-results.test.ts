@@ -218,8 +218,15 @@ describe('(P9 A) attributed_results — the one path that gates on nothing', () 
 // B. the organisation-level policy: default threshold and the redaktør flag
 // ---------------------------------------------------------------------------
 describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower flag', () => {
-  it('has a floor of 3 and a ceiling of 10, and only an administrator may set it', async () => {
-    const low = await ctx.a.from('organizations').update({ default_k_threshold: 2 }).eq('id', ctx.org.id)
+  it('has a floor of 2 (Q91) and a ceiling of 10, and only an administrator may set it', async () => {
+    // Q91 moved the range 3-10 -> 2-10 (M:0055). The organisation default had
+    // to follow the survey floor: if it could not itself be 2, then 2 on a
+    // survey would ALWAYS require `redaktor_may_lower`, and an organisation
+    // that had deliberately chosen 2 would have to keep an exception flag on
+    // permanently in order to use its own setting.
+    const two = await ctx.a.from('organizations').update({ default_k_threshold: 2 }).eq('id', ctx.org.id)
+    expect(two.error, 'Q91: 2 is now inside the range').toBeNull()
+    const low = await ctx.a.from('organizations').update({ default_k_threshold: 1 }).eq('id', ctx.org.id)
     expect(low.error?.message ?? '', 'below the floor').toMatch(/check|floor|constraint/i)
     const high = await ctx.a.from('organizations').update({ default_k_threshold: 11 }).eq('id', ctx.org.id)
     expect(high.error?.message ?? '', 'above the brief\'s ceiling').toMatch(/check|constraint/i)
@@ -244,8 +251,15 @@ describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower f
     const pack = await insert(ctx.a, 'surveys', {
       org_id: ctx.org.id, title: uniq('Psykososial'), template_pack_key: 'psykososial-kartlegging',
     })
+    // DECISIONS Q58 — THE PACK'S NUMBER IS A FLOOR THE PACK CARRIES, NOT A
+    // CEILING IT IMPOSES. `app.apply_pack_policy` now takes
+    // greatest(pack_k, org_default) for person surveys (M:0054), so this
+    // organisation's 8 wins over the pack's 5. Before Q58 the pack ASSIGNED and
+    // returned early, which meant a statutory pack LOWERED the protection an
+    // organisation had deliberately chosen — the opposite of what a statutory
+    // pack is for. Raising is the safe direction; the lock is unaffected.
     const { data: packRow } = await ctx.a.from('surveys').select('k_threshold, policy_locked').eq('id', pack.id).single()
-    expect(packRow?.k_threshold, 'the law sets the pack survey\'s threshold, not the org').toBe(5)
+    expect(packRow?.k_threshold, 'the stricter of pack (5) and org (8) wins').toBe(8)
     expect(packRow?.policy_locked).toBe(true)
 
     const orgS = await insert(ctx.a, 'surveys', {
@@ -272,6 +286,18 @@ describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower f
     const off = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id).select('id')
     expect(off.error != null || (off.data?.length ?? 0) === 0, 'flag off: a redaktør is refused').toBe(true)
 
+    // Q90 — WITH THE FLAG OFF, THE ORGANISATION'S DEFAULT IS A FLOOR FOR
+    // EVERYONE, ADMINISTRATOR INCLUDED. Asserted here rather than in the role
+    // test because it is the half of the rule that is NOT about roles: a
+    // setting any single person can undercut is not a setting. Raising is
+    // always allowed, which is the positive control on the same line.
+    const adminUnder = await ctx.adminU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id)
+    expect(adminUnder.error?.message ?? '', 'flag off: even an administrator may not go under the org default')
+      .toMatch(/below_org_floor|floor/i)
+    const adminOver = await ctx.adminU.client.from('surveys').update({ k_threshold: 8 }).eq('id', s.survey.id).select('k_threshold').single()
+    expect(adminOver.error, 'raising above the org default is always allowed').toBeNull()
+    expect(adminOver.data?.k_threshold).toBe(8)
+
     await ctx.a.from('organizations').update({ privacy: { ...privacy, redaktor_may_lower: true } }).eq('id', ctx.org.id)
     const on = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id).select('k_threshold').single()
     expect(on.error, 'flag on: a redaktør may lower').toBeNull()
@@ -282,8 +308,17 @@ describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower f
       .eq('action', 'threshold.change').eq('target', s.survey.id)
     expect(events?.some((e) => e.actor_user_id === ctx.redaktorU.userId), 'the redaktør\'s change is audited').toBe(true)
 
-    const floor = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id)
-    expect(floor.error?.message ?? '', 'the flag never opens the floor').toMatch(/check|floor|constraint/i)
+    // TWO FLOORS, AND THE FLAG OPENS EXACTLY ONE OF THEM. Q90's organisation
+    // floor is the organisation's own setting, so its own flag may waive it —
+    // that is what `redaktor_may_lower` has meant since M:0034 and what Q90
+    // finally gave a referent. Q91's CHECK is the product's floor and no flag
+    // reaches it: 2 goes through, 1 does not.
+    const toTwo = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id).select('k_threshold').single()
+    expect(toTwo.error, 'flag on: the org floor is waived down to the CHECK floor').toBeNull()
+    expect(toTwo.data?.k_threshold).toBe(2)
+
+    const floor = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 1 }).eq('id', s.survey.id)
+    expect(floor.error?.message ?? '', 'the flag never opens the CHECK floor').toMatch(/check|floor|constraint/i)
 
     await ctx.a.from('organizations').update({ privacy: { ...privacy, redaktor_may_lower: false } }).eq('id', ctx.org.id)
   })

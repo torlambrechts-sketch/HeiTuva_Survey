@@ -76,13 +76,6 @@ const ALLOWED: Record<string, string> = {
   'admin.orgThresholdNote': 'interpolates {k}; the «tre» in it is the CHECK floor, which is fixed',
   'admin.orgThresholdChip': 'interpolates {k} — it IS the picker',
   'admin.pMinResponsesDesc': 'interpolates {k}',
-  'results.gatedHover': 'interpolates {k}',
-  'results.tooFewShort': 'interpolates {k}',
-  'reports.methodThreshold': 'interpolates {N}',
-  'reports.filterStrictest': 'interpolates the strictest k of the sources',
-  'reports.filterMixed': 'interpolates both numbers',
-  'share.leaderScope': 'interpolates {k}',
-  'library.packPolicy': 'interpolates the pack’s own k',
   'dashboard.thresholdLine': 'interpolates the k of the selection (Q42)',
   // Corrected during V2-2: I allowlisted `respondent.promise` believing it was
   // the derived anonymity promise. It is the greeting, «Har du 90 sekunder?»,
@@ -93,10 +86,24 @@ const ALLOWED: Record<string, string> = {
   'respondent.promise': 'the 90 is SECONDS in the greeting, not a threshold',
 
   // Fixed numbers that are FACTS about the schema, not promises about the gate.
-  'admin.orgThresholdNoteFloor': 'the floor is 3 by CHECK; a fixed 3 is true for every organisation',
-  'legal.privacy3P': 'says «aldri lavere enn tre» — the CHECK floor, fixed and true',
+  // ALL THREE MOVED FROM «tre» TO «to» IN V2-2 (Q91). They are allowed because
+  // the number they carry is the CHECK floor — which means they are exactly the
+  // strings that go stale when the floor moves, and they had already gone stale
+  // once (Q55). A reason naming WHICH constraint the number is lets the next
+  // floor change find them by grep instead of by memory.
+  'legal.privacy3P': 'says «aldri lavere enn to» — surveys_k_threshold_floor, fixed and true',
   'legal.dpa4P': 'same; and states that organisation surveys have no threshold at all',
-  'reports.dutyThreshold': 'says «aldri under tre for personer» — the CHECK floor',
+  'reports.dutyThreshold': 'says «aldri under to for personer» — surveys_k_threshold_floor',
+
+  // Q91's two-tier warning. The fixed 2 is not a promise about the gate — it is
+  // the CONDITION OF THE STRING'S OWN DISPLAY: PrivacyPanel and PolicyPanel
+  // render this block only when the selected value is 2, so a 2 in the text
+  // cannot disagree with the threshold it describes. Interpolating {k} here
+  // would be worse, not better: it would let the sentence «kan den som svarer
+  // regne seg fram til hva den andre svarte» render at 5, where it is false.
+  'admin.thresholdTwoWarning': 'the 2 is the condition under which the string renders at all',
+  'admin.thresholdTwoGdpr': 'same — rendered only at 2',
+  'builder.policyTwoText': 'same — the builder\u2019s tier, rendered only at 2',
 
   // Numbers that sit near a threshold word and are about something else. Each
   // reason names WHAT the number is, so a later reader can tell a stale
@@ -110,6 +117,8 @@ const ALLOWED: Record<string, string> = {
 type Hit = { lang: string; key: string; text: string }
 
 const hits: Hit[] = []
+const seen = new Set<string>()
+
 for (const lang of ['no', 'en']) {
   const doc = JSON.parse(readFileSync(`messages/${lang}.json`, 'utf8')) as Record<
     string,
@@ -122,6 +131,10 @@ for (const lang of ['no', 'en']) {
       const full = `${ns}.${key}`
       const interpolates = /[{#]/.test(value)
       const reason = ALLOWED[full]
+      // Recorded BEFORE any early exit below: a key that exists but takes the
+      // stale-reason branch must not also be reported as DEAD. Mutation-testing
+      // the stale check produced exactly that double report.
+      seen.add(full)
 
       // AN ALLOWLIST KEYED BY NAME AGES EXACTLY LIKE A PHRASE LIST. Proving it:
       // reinstating the four strings V2-0 missed, this sweep caught only two —
@@ -150,6 +163,25 @@ for (const lang of ['no', 'en']) {
       if (reason) continue
       hits.push({ lang, key: full, text: value })
     }
+  }
+}
+
+/**
+ * AN ALLOWLIST ENTRY FOR A KEY THAT DOES NOT EXIST IS NOT HARMLESS — it reads as
+ * coverage and is a permanent no-op. Eight of the twenty entries here were
+ * exactly that when this check was written: seven `interpolates {k}` reasons for
+ * keys I believed existed (`results.gatedHover`, `share.leaderScope` and five
+ * more) and `admin.orgThresholdNoteFloor`, which is `admin.orgThresholdNote`.
+ * None of them had ever suppressed anything. The stale-REASON check below could
+ * not see them, because a key that is never visited is never consulted.
+ */
+for (const key of Object.keys(ALLOWED)) {
+  if (!seen.has(key)) {
+    hits.push({
+      lang: '--',
+      key,
+      text: `DEAD ALLOWLIST ENTRY — no such message key in no.json or en.json, so this entry suppresses nothing. Reason on file: «${ALLOWED[key]}»`,
+    })
   }
 }
 

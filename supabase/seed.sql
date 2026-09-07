@@ -109,6 +109,14 @@ update public.template_packs set policy = jsonb_build_object(
 update public.template_packs set policy = jsonb_build_object(
     'anonymity','named','respondent_kind','organisation','k_threshold',0,'locked',true)
   where org_id is null and key = 'leverandor-apenhetsloven';
+-- DECISIONS Q58: the ONE pack of the three topics the bundle names that exists
+-- as a pack. 8 is a FLOOR the pack carries — app.apply_pack_policy takes
+-- greatest(pack, organisation) since M:0054, so an organisation at 10 is not
+-- lowered to 8. The lock is deliberate: a harassment survey a customer can
+-- switch to «med navn» is the failure the lock exists to prevent.
+update public.template_packs set policy = jsonb_build_object(
+    'anonymity','anonymous','respondent_kind','person','k_threshold',8,'locked',true)
+  where org_id is null and key = 'trakassering-ytringsklima';
 update public.duty_definitions set policy = jsonb_build_object(
     'anonymity','anonymous','respondent_kind','person','k_threshold',5,'locked',true)
   where key in ('arbeidsmiljo','likestilling','trakassering');

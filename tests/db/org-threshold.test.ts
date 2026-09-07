@@ -74,18 +74,21 @@ describe('Q57 — the organisation default threshold has a writer, and it is bou
       await svc.from('organizations').update({ default_k_threshold: original }).eq('id', orgId)
     })
 
-    it('2 is refused — below Q17’s floor for natural persons', async () => {
+    // DECISIONS Q91 moved the floor from 3 to 2. The boundary moves with it, and
+    // this pair is why the tests were written from BOTH ends in the first place:
+    // a one-sided test would still be green and would now be testing nothing.
+    it('1 is refused — 1 is not a threshold, it is publication', async () => {
       const a = await adminClient()
-      const { error } = await a.from('organizations').update({ default_k_threshold: 2 }).eq('id', orgId)
+      const { error } = await a.from('organizations').update({ default_k_threshold: 1 }).eq('id', orgId)
       expect(error, 'the floor is the CHECK, and no flag opens it').not.toBeNull()
       expect(await read(orgId)).toBe(original)
     })
 
-    it('3 is accepted — the floor itself', async () => {
+    it('2 is accepted — the floor itself, since Q91', async () => {
       const a = await adminClient()
-      const { error } = await a.from('organizations').update({ default_k_threshold: 3 }).eq('id', orgId)
+      const { error } = await a.from('organizations').update({ default_k_threshold: 2 }).eq('id', orgId)
       expect(error).toBeNull()
-      expect(await read(orgId)).toBe(3)
+      expect(await read(orgId)).toBe(2)
       await svc.from('organizations').update({ default_k_threshold: original }).eq('id', orgId)
     })
   })
@@ -120,5 +123,218 @@ describe('Q57 — the organisation default threshold has a writer, and it is bou
     expect(error).toBeNull()
     expect(await read(orgId)).toBe(8)
     await svc.from('organizations').update({ default_k_threshold: original }).eq('id', orgId)
+  })
+})
+
+/**
+ * DECISIONS Q90 — the organisation default is a FLOOR, not merely a seed.
+ *
+ * The derivation, because it is the reason this exists rather than a
+ * preference: `privacy.redaktor_may_lower` has been in the schema since M:0034
+ * and is MEANINGLESS WITHOUT A FLOOR TO LOWER BENEATH. The global floor is a
+ * CHECK at 3, and a CHECK cannot be granted or withheld by permission — so
+ * "lower" had no referent unless the organisation's value binds.
+ *
+ * These test the flag in BOTH directions, which is the point: off, the floor
+ * holds against everyone including an administrator; on, it opens.
+ */
+describe('Q90 — the organisation default binds, and the flag is its only exception', () => {
+  let svc: Client
+  let orgId: string
+  let surveyId: string
+  let originalK = 5
+  let originalPrivacy: Record<string, boolean> = {}
+
+  const setFlag = async (on: boolean) => {
+    await svc
+      .from('organizations')
+      .update({ privacy: { ...originalPrivacy, redaktor_may_lower: on } })
+      .eq('id', orgId)
+  }
+  const surveyK = async () => {
+    const { data } = await svc.from('surveys').select('k_threshold').eq('id', surveyId).single()
+    return data!.k_threshold
+  }
+
+  beforeAll(async () => {
+    svc = serviceClient()
+    const { data: org } = await svc
+      .from('organizations')
+      .select('id, default_k_threshold, privacy')
+      .eq('name', ORG_PRIMARY)
+      .single()
+    orgId = org!.id
+    originalK = org!.default_k_threshold
+    originalPrivacy = (org!.privacy as Record<string, boolean> | null) ?? {}
+
+    // The organisation's floor is 8; the survey starts there. Not policy_locked,
+    // because a locked survey is refused by an EARLIER rule and the test would
+    // then prove that rule instead of this one — standing question 1.
+    await svc.from('organizations').update({ default_k_threshold: 8 }).eq('id', orgId)
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q90 floor ${Date.now()}`, status: 'utkast', anonymity: 'anonymous', respondent_kind: 'person', k_threshold: 8 })
+      .select('id')
+      .single()
+    surveyId = s!.id
+  })
+
+  afterAll(async () => {
+    await svc.from('surveys').delete().eq('id', surveyId)
+    await svc.from('organizations').update({ default_k_threshold: originalK, privacy: originalPrivacy }).eq('id', orgId)
+  })
+
+  it('with the flag OFF, an ADMINISTRATOR cannot go below the organisation floor', async () => {
+    await setFlag(false)
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
+    expect(error, 'the floor binds the administrator too — a setting one person can undercut is not a setting').not.toBeNull()
+    expect(error!.message).toMatch(/below_org_floor/)
+    expect(await surveyK()).toBe(8)
+  })
+
+  it('with the flag OFF, raising ABOVE the floor is still allowed', async () => {
+    await setFlag(false)
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 10 }).eq('id', surveyId)
+    expect(error, 'a floor constrains downwards only').toBeNull()
+    expect(await surveyK()).toBe(10)
+    await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
+  })
+
+  it('with the flag ON, the same administrator CAN go below it — the flag is the exception', async () => {
+    await setFlag(true)
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
+    expect(error).toBeNull()
+    expect(await surveyK()).toBe(5)
+    await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
+  })
+
+  it('the flag does not open the CHECK floor — a permission cannot grant past a constraint', async () => {
+    await setFlag(true)
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 1 }).eq('id', surveyId)
+    expect(error, 'Q91 floor 2 is a CHECK and no flag reaches it').not.toBeNull()
+    expect(await surveyK()).toBe(8)
+  })
+
+  it('with the flag ON, 2 IS reachable — Q91’s new floor, per survey', async () => {
+    await setFlag(true)
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 2 }).eq('id', surveyId)
+    expect(error).toBeNull()
+    expect(await surveyK()).toBe(2)
+    await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
+  })
+
+  it('a statutory pack lands on the STRICTER of pack and organisation (Q58 greatest)', async () => {
+    // trakassering-ytringsklima carries 8; this organisation's floor is 10 here.
+    await svc.from('organizations').update({ default_k_threshold: 10 }).eq('id', orgId)
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q58 greatest ${Date.now()}`, status: 'utkast', template_pack_key: 'trakassering-ytringsklima' })
+      .select('id, k_threshold, anonymity, policy_locked')
+      .single()
+    expect(s!.k_threshold, 'greatest(pack 8, org 10) — the pack floor must not LOWER the organisation').toBe(10)
+    expect(s!.anonymity, 'Q58: the pack locks anonymity, deliberately').toBe('anonymous')
+    expect(s!.policy_locked).toBe(true)
+    await svc.from('surveys').delete().eq('id', s!.id)
+    await svc.from('organizations').update({ default_k_threshold: 8 }).eq('id', orgId)
+  })
+
+  it('an organisation survey is untouched by the floor — k_for is 0 there by design', async () => {
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q90 org ${Date.now()}`, status: 'utkast', anonymity: 'named', respondent_kind: 'organisation', k_threshold: 0 })
+      .select('id, k_threshold')
+      .single()
+    expect(s!.k_threshold, 'the floor is person-only; gating an attributed survey is the opposite of Q17').toBe(0)
+    await svc.from('surveys').delete().eq('id', s!.id)
+  })
+})
+
+/**
+ * DECISIONS Q91 — 2 is reachable, and STATUTORY LOCKS ARE UNTOUCHED BY IT.
+ *
+ * This is the pair that matters. A floor moving down is only safe if the
+ * surfaces that must never move are proven not to have moved, and "the lock
+ * still works" is exactly the claim a phase is most tempted to assert rather
+ * than measure. So: refused on a statutory-pack survey, WITH a positive control
+ * on a non-statutory one so the refusal cannot be an accident of the fixture.
+ */
+describe('Q91 — 2 is reachable, except where a statutory pack locks the policy', () => {
+  let svc: Client
+  let orgId: string
+  let originalK = 5
+  let originalPrivacy: Record<string, boolean> = {}
+
+  beforeAll(async () => {
+    svc = serviceClient()
+    const { data: org } = await svc
+      .from('organizations')
+      .select('id, default_k_threshold, privacy')
+      .eq('name', ORG_PRIMARY)
+      .single()
+    orgId = org!.id
+    originalK = org!.default_k_threshold
+    originalPrivacy = (org!.privacy as Record<string, boolean> | null) ?? {}
+    // The organisation permits going under its own default, so the ONLY thing
+    // that can refuse below is the statutory lock — standing question 1.
+    await svc
+      .from('organizations')
+      .update({ default_k_threshold: 5, privacy: { ...originalPrivacy, redaktor_may_lower: true } })
+      .eq('id', orgId)
+  })
+
+  afterAll(async () => {
+    await svc
+      .from('organizations')
+      .update({ default_k_threshold: originalK, privacy: originalPrivacy })
+      .eq('id', orgId)
+  })
+
+  it('an administrator CANNOT set 2 on a statutory-pack survey', async () => {
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q91 statutory ${Date.now()}`, status: 'utkast', template_pack_key: 'psykososial-kartlegging' })
+      .select('id, k_threshold, policy_locked')
+      .single()
+    expect(s!.policy_locked, 'fixture precondition: the pack locked it').toBe(true)
+
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 2 }).eq('id', s!.id)
+    expect(error, 'the law sets this survey’s policy; no role and no flag reaches it').not.toBeNull()
+    expect(error!.message).toMatch(/policy_locked/)
+
+    const { data: after } = await svc.from('surveys').select('k_threshold').eq('id', s!.id).single()
+    expect(after!.k_threshold).toBe(s!.k_threshold)
+    await svc.from('surveys').delete().eq('id', s!.id)
+  })
+
+  it('the positive control: 2 IS accepted on a non-statutory survey in the same organisation', async () => {
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q91 ordinary ${Date.now()}`, status: 'utkast', anonymity: 'anonymous', respondent_kind: 'person', k_threshold: 5 })
+      .select('id')
+      .single()
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 2 }).eq('id', s!.id)
+    expect(error, 'without this the refusal above could be an accident of the fixture').toBeNull()
+    const { data: after } = await svc.from('surveys').select('k_threshold').eq('id', s!.id).single()
+    expect(after!.k_threshold).toBe(2)
+    await svc.from('surveys').delete().eq('id', s!.id)
+  })
+
+  it('1 is refused on the ordinary survey too — the CHECK is the last word', async () => {
+    const { data: s } = await svc
+      .from('surveys')
+      .insert({ org_id: orgId, title: `Q91 one ${Date.now()}`, status: 'utkast', anonymity: 'anonymous', respondent_kind: 'person', k_threshold: 5 })
+      .select('id')
+      .single()
+    const a = await adminClient()
+    const { error } = await a.from('surveys').update({ k_threshold: 1 }).eq('id', s!.id)
+    expect(error).not.toBeNull()
+    await svc.from('surveys').delete().eq('id', s!.id)
   })
 })

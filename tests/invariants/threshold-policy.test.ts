@@ -161,16 +161,27 @@ describe('(Q17 #1) a survey with no explicit setting still aggregates at 5', () 
   })
 })
 
-// 2. k_threshold = 2 avvises av CHECK for respondent_kind = 'person'.
-describe('(Q17 #2) the floor is 3 for natural persons', () => {
+// 2. k_threshold under gulvet avvises av CHECK for respondent_kind = 'person'.
+//    DECISIONS Q91 flyttet gulvet fra 3 til 2 (M:0055) — Q17s gulv er avløst,
+//    ikke fjernet: 1 er ikke en terskel, det er publisering.
+describe('(Q17 #2, floor moved by Q91) the floor is 2 for natural persons', () => {
   it('accepts a valid threshold and refuses one below the floor', async () => {
     const ok = await ctx.a.from('surveys').insert({
       org_id: ctx.org.id, title: uniq('Gyldig'), respondent_kind: 'person', k_threshold: 5,
     })
     expect(ok.error).toBeNull()
 
+    // THE BOUNDARY MOVED, SO THE TEST TESTS THE NEW BOUNDARY FROM BOTH SIDES.
+    // Asserting only "1 is refused" would pass against the OLD floor of 3 as
+    // well, and a test that passes on either side of the change it exists to
+    // record is not recording it.
+    const two = await ctx.a.from('surveys').insert({
+      org_id: ctx.org.id, title: uniq('Pa gulvet'), respondent_kind: 'person', k_threshold: 2,
+    })
+    expect(two.error, 'Q91: 2 is now the floor, so it is accepted').toBeNull()
+
     const bad = await ctx.a.from('surveys').insert({
-      org_id: ctx.org.id, title: uniq('Under gulv'), respondent_kind: 'person', k_threshold: 2,
+      org_id: ctx.org.id, title: uniq('Under gulv'), respondent_kind: 'person', k_threshold: 1,
     })
     expect(bad.error).not.toBeNull()
     expect(bad.error?.message ?? '').toMatch(/k_threshold|check|constraint/i)

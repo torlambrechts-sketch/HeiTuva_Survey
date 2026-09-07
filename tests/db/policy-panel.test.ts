@@ -93,18 +93,32 @@ describe('(Q36) the threshold ceiling is the database’s rule, not one caller�
     expect(data!.k_threshold).toBe(10)
   })
 
-  it('POSITIVE CONTROL: still refuses 2 — the floor Q17 put there is untouched', async () => {
-    const { error } = await svc
-      .from('surveys')
-      .update({ k_threshold: 2 })
-      .eq('id', surveyId)
+  it('POSITIVE CONTROL: still refuses 1 — the floor survives the ceiling', async () => {
+    // Q91 moved the floor 3 -> 2, so this control moved with it. What it
+    // controls for is unchanged and is the reason it exists: a CHECK that only
+    // has an upper bound would let this suite report a "range" while the bottom
+    // was open. 1 is not a threshold — it is publication.
+    const { error } = await svc.from('surveys').update({ k_threshold: 1 }).eq('id', surveyId)
 
     expect(error, 'the floor must survive the ceiling being added').not.toBeNull()
     expect(error!.message).toMatch(/k_threshold/)
   })
 
+  it('accepts 2 — the floor is a floor, not a value nobody can reach', async () => {
+    // Without this, the control above passes identically against the OLD floor
+    // of 3, and Q91 would be untested at the only place it changed.
+    const { error } = await svc.from('surveys').update({ k_threshold: 2 }).eq('id', surveyId)
+    expect(error, 'Q91: 2 is reachable').toBeNull()
+
+    // Put it back so later assertions in this file see the value they set up.
+    await svc.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
+  })
+
   it('mirrors the organisation default, which is where the range came from', async () => {
-    // `organizations.default_k_threshold` has carried 3-10 since M:0034:19-20.
+    // `organizations.default_k_threshold` carried 3-10 from M:0034:19-20 and
+    // 2-10 since Q91 (M:0055) — it had to follow, or 2 on a survey would always
+    // have required `redaktor_may_lower` and an organisation choosing 2 would
+    // have to keep an exception flag on permanently to use its own setting.
     // A survey that could hold 50 while the organisation default could not was
     // the inconsistency Q36 closed, so the two ranges are asserted together:
     // if someone widens one, this fails rather than the two drifting quietly.

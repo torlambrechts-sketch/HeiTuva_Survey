@@ -3,7 +3,7 @@
   "tests/db/administration.test.ts": 22,
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/db/pack-roles.test.ts": 5,
-  "tests/db/policy-panel.test.ts": 14,
+  "tests/db/policy-panel.test.ts": 15,
   "tests/db/recurrence.test.ts": 13,
   "tests/db/schedules-rls.test.ts": 6,
   "tests/db/use-cases.test.ts": 9,
@@ -17,7 +17,7 @@
   "tests/invariants/threshold-policy.test.ts": 14,
   "tests/invariants/token-lifecycle.test.ts": 14,
   "tests/unit/absent-deps.test.ts": 2,
-  "tests/unit/anonymity-promise.test.ts": 9,
+  "tests/unit/anonymity-promise.test.ts": 13,
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/dashboard-layout.test.ts": 14,
   "tests/unit/dashboard-panels.test.ts": 5,
@@ -34,5 +34,6 @@
   "tests/unit/results-present.test.ts": 17,
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/threshold-line.test.ts": 5,
-  "tests/db/org-threshold.test.ts": 8
+  "tests/db/org-threshold.test.ts": 18,
+  "tests/unit/threshold-tier.test.ts": 12
 }

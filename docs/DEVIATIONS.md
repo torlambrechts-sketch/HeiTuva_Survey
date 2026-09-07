@@ -2267,3 +2267,45 @@ transcribed with **three** roles, matching `:2279` and the schema, and the
 verneombud sentence describes signing rather than a role. Recorded here so the
 copy is not transcribed verbatim from `:4279` by someone reading only the
 article.
+
+### D107 — the `2` chip is in no bundle, and the note it sits under swung back to one
+**Two divergences from the same decision (Q91 + Q90), recorded together because
+they point in opposite directions and a reader meeting one without the other
+will read it as an inconsistency.**
+
+**(a) No bundle draws a `2`.** The v2 Personvern picker is
+`orgThresholdChips: [3,5,8,10]` (`HeiTuva.dc.html:5583`) and the v1 builder's is
+`polThresholds: [3,4,5,8,10]`
+(`design-reference-v1/…/HeiTuva.dc.html:4855`). The app now offers
+`[2, 3, 5, 8, 10]` on Personvern (`PrivacyPanel.tsx:22`) and
+`[2, 3, 4, 5, 8, 10]` in the builder (`bygg/PolicyPanel.tsx:43`). **The added
+chip exists on DECISIONS Q91's authority alone** — the floor moved from 3 to 2 —
+and Q52's rule settles the precedence: the bundle governs visuals, the register
+governs behaviour, and an option's existence is behaviour. The chip's chrome is
+the bundle's verbatim, tokens and all; only the set has one more member.
+
+**Q91 makes it conditional, not merely available.** At 2 the picker renders a
+three-paragraph `--ac3` block that no bundle draws either: the arithmetic
+property («den som svarer regne seg fram til hva den andre svarte»), «Med navn»
+as the honest alternative, and the GDPR consequence. It is not styled as an
+error — no red — because choosing 2 is lawful and consequential, not a mistake,
+and the design brief forbids an error colour on this control.
+
+**(b) `orgThresholdNote` swung BACK to the bundle's wording, one phase after
+diverging from it.** V2:5591 asserts «Den som lager en undersøkelse kan heve
+terskelen, men ikke senke den under virksomhetens minimum». V2-1 recorded that
+as a divergence and wrote a note stating what was true instead, because the
+column only **seeded** a new survey and bounded nothing afterwards — enumerated
+rather than read for, by `scripts/verify/threshold-readers.ts`, which returned
+`0 surface(s) constrain a survey's threshold against
+organizations.default_k_threshold`. **Q90 then made the bundle's sentence true**,
+on the evidence of `privacy.redaktor_may_lower` — a flag meaningless without a
+floor to lower beneath. So the divergence is withdrawn and the note states the
+floor again.
+
+**Worth naming, because it will happen again.** The bundle was not wrong; it was
+*ahead*. A prototype describes the product someone intends, and the app describes
+the product that exists — so a divergence between them can be closed from either
+side, and which side moves is a decision (Q90) rather than a fidelity question.
+The V2-1 note was correct when written; recording it as a deviation is what made
+it cheap to reverse.

@@ -9,12 +9,26 @@
  * The literals live in ui_messages under the `promise` namespace, so the wording
  * stays editable and translatable; this module owns only which promise applies.
  *
- * Four promises, matching the design brief's §4 table:
+ * Promises, matching the design brief's §4 table plus DECISIONS Q91's tier:
  *   - promiseAnonymous     anonymous, threshold >= 5
  *   - promiseAnonymousLow  anonymous, threshold 3-4 (adds the recognisability caveat)
+ *   - promiseAnonymousTwo  anonymous, threshold 2 — SEE BELOW
  *   - promiseNamed         named answers
  *   - promiseOrganisation  organisation respondents (attributed; anonymity/threshold irrelevant)
+ *
+ * ── WHY 2 NEEDS ITS OWN TIER (Q91) ──────────────────────────────────────────
+ *
+ * Verified at 2 specifically rather than assumed to follow: before this, k=2
+ * fell into `promiseAnonymousLow`, whose caveat is «I små grupper kan svar
+ * likevel være gjenkjennelige». That is the softer version of the property and
+ * it is WRONG at 2 — the other respondent knows their own answer, sees the
+ * aggregate and SUBTRACTS. They do not "recognise" the answer, they COMPUTE it.
+ * Telling a respondent their answer may be recognisable, when it can be derived
+ * exactly, is the class of error Q17 calls «den eneste virkelige feilen i hele
+ * denne endringen»: a text promising more than the setting holds.
  */
+
+import { thresholdTier } from '@/lib/questions/threshold-tier'
 
 export type AnonymityMode = 'anonymous' | 'named' | 'optional'
 export type RespondentKind = 'person' | 'organisation'
@@ -29,18 +43,22 @@ export type Promise = {
   key:
     | 'promiseAnonymous'
     | 'promiseAnonymousLow'
+    | 'promiseAnonymousTwo'
     | 'promiseChoose'
     | 'promiseChooseLow'
+    | 'promiseChooseTwo'
     | 'promiseNamed'
     | 'promiseOrganisation'
   values?: { kWord: string }
 }
 
 /** The threshold spelled as a word, in the respondent's own language — "minst
- *  fem", "at least five". Falls back to the digit for a value outside 3-10. */
+ *  fem", "at least five". Falls back to the digit for a value outside 2-10.
+ *  2 is in the map since Q91 moved the floor there — without it the tier that
+ *  exists BECAUSE 2 is different would have rendered «satt til 2». */
 const NUMBER_WORDS: Record<string, Record<number, string>> = {
-  no: { 3: 'tre', 4: 'fire', 5: 'fem', 6: 'seks', 7: 'sju', 8: 'åtte', 9: 'ni', 10: 'ti' },
-  en: { 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten' },
+  no: { 2: 'to', 3: 'tre', 4: 'fire', 5: 'fem', 6: 'seks', 7: 'sju', 8: 'åtte', 9: 'ni', 10: 'ti' },
+  en: { 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten' },
 }
 
 export function numberWord(k: number, locale: string): string {
@@ -71,13 +89,16 @@ export function anonymityPromise(input: PromiseInput, locale = 'no'): Promise {
   // small-group caveat (v1 bundle :2949, `choose:n =>`). The old copy was a
   // bare invitation to choose, which said nothing about what choosing anonymity
   // would actually get them.
+  const tier = thresholdTier(input.kThreshold)
+
   if (input.anonymity === 'optional') {
-    return input.kThreshold < 5
-      ? { key: 'promiseChooseLow', values }
-      : { key: 'promiseChoose', values }
+    if (tier === 'two') return { key: 'promiseChooseTwo', values }
+    return tier === 'low' ? { key: 'promiseChooseLow', values } : { key: 'promiseChoose', values }
   }
 
-  return input.kThreshold < 5
-    ? { key: 'promiseAnonymousLow', values }
-    : { key: 'promiseAnonymous', values }
+  // Q91: 2 is its own tier, decided BEFORE the <5 branch it would otherwise
+  // fall into. `thresholdTier` owns that order so the builder and the
+  // Personvern panel cannot draw the line anywhere else.
+  if (tier === 'two') return { key: 'promiseAnonymousTwo', values }
+  return tier === 'low' ? { key: 'promiseAnonymousLow', values } : { key: 'promiseAnonymous', values }
 }

@@ -103,3 +103,36 @@ describe('«valgfritt» — the respondent chooses, so the promise has to cover 
     ).toEqual({ key: 'promiseOrganisation' })
   })
 })
+
+describe('Q91 — k=2 is its own tier, not the low-threshold caveat', () => {
+  it('anonymous at 2 does NOT get the «gjenkjennelig» caveat', async () => {
+    const { anonymityPromise } = await load()
+    const p = anonymityPromise({ anonymity: 'anonymous', kThreshold: 2, respondentKind: 'person' })
+    // The property at 2 is arithmetic, not recognisability. A promise saying an
+    // answer "may be recognisable" when it can be DERIVED EXACTLY promises more
+    // than the setting holds — Q17's one real error.
+    expect(p.key).toBe('promiseAnonymousTwo')
+    expect(p.key).not.toBe('promiseAnonymousLow')
+  })
+
+  it('optional at 2 likewise', async () => {
+    const { anonymityPromise } = await load()
+    expect(anonymityPromise({ anonymity: 'optional', kThreshold: 2, respondentKind: 'person' }).key).toBe(
+      'promiseChooseTwo',
+    )
+  })
+
+  it('3 still gets the low tier — the boundary is where Q91 put it', async () => {
+    const { anonymityPromise } = await load()
+    expect(anonymityPromise({ anonymity: 'anonymous', kThreshold: 3, respondentKind: 'person' }).key).toBe(
+      'promiseAnonymousLow',
+    )
+  })
+
+  it('an organisation survey at 0 is unaffected — attributed by design', async () => {
+    const { anonymityPromise } = await load()
+    expect(
+      anonymityPromise({ anonymity: 'named', kThreshold: 0, respondentKind: 'organisation' }).key,
+    ).toBe('promiseOrganisation')
+  })
+})
