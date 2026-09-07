@@ -69,7 +69,7 @@ Q17" phase: Q17 finished. The one staged decision v2 unblocks is **Q38**, and it
 | The expansion catalogue (R3/R4) | populations, retention-per-population, the CRM half of the final phase | 00-diff §0.1 |
 | `HeiTuva Lovpalagt.dc.html` missing | V2-8's splash pass | 00-diff §0.2 |
 | **Q52** — does Q18 extend to a third bundle? | **V2-0, and every fidelity question after it** | 02-conflicts §A1 |
-| **Q72** — what a from-findings task may contain | V2-5, and `task.created` in V2-11 | 02-conflicts §B1 |
+| ~~**Q72**~~ — **CONFIRMED**: the trigger is audience group size, not a finding | *unblocked* — V2-5 proceeds | `DECISIONS.md` Q72 |
 | **Q78–Q82** — live's counter, cloud, questions, viewport, route | V2-9 entirely | 01-briefs §2(ii), §4 |
 | **Q83–Q85** — quiz tokens, assessment semantics, DB refusals | V2-10 entirely | 01-briefs §2(iii), §3 |
 | **Q89** — the API/integrations program go-ahead | V2-11 entirely | 01-briefs §7 |
@@ -359,52 +359,96 @@ reach, not just which roles read? V1-2 hit that twice.
 - Demo seed carries a task at each of the six steps, one late, one awaiting effect
   assessment — the screen has no seedable state otherwise.
 
-**Not in it:** tasks from findings, Teams, the webhook.
+**Not in it:** the blind-spot task generator (V2-5), Teams (Q71), the webhook (**Q73: not
+built**). The card's copy for a generated task is confirmed under Q72 and is rendered by
+V2-5, not here.
 
 ---
 
-## V2-5 — Tasks from findings
+## V2-5 — Tasks from a survey's blind spots
 
-Its own phase, negative tests first, the Q17 treatment. **Blocked on Q72.**
+Its own phase, negative tests first, the Q17 treatment. **Q72 and Q73 are CONFIRMED**, so
+this phase is unblocked — but its shape changed with them, and the phase is renamed because
+the old name described the trigger that was rejected.
 
-**Scope.** One thing: whatever Q72 permits a task created from a suppressed finding to
-contain. Drawn at V2:4239, V2:4270, V2:4168; the detector is V2-3's `hasThresholdWarn`.
+**What Q72 decided, and why the trigger and not the wording.** The drafted option — a task
+saying «undersøkelsesplikt utløst for denne undersøkelsen», naming no group — **still leaked
+by elimination**: groups A(12), B(9), C(4), with A and B visible and healthy, tells the
+reader C scored badly. The predicate was still over a gated value, merely wrapped. So the
+condition that fires a task is **not** «a finding below threshold» but:
 
-**Schema first.** Under the recommended option — the duty, not the finding — a `task_sources`
-row referencing the **survey and the duty**, carrying no group, no question and no score, and
-a generator that cannot construct one.
+> **this survey has an audience group whose SIZE is below `app.k_for(survey)`** — a group
+> that will never receive its own results even at a 100 % response rate.
+
+That is a **count of people**, which Q28 expressly permits, and it is a property of the
+**audience**, not of the responses. The distinction is the whole decision: a trigger reading
+a group's *response count* would reintroduce the leak.
+
+Copy, confirmed: «Denne undersøkelsen har grupper som ikke får egne resultater. Plikten til å
+kartlegge og følge opp gjelder likevel.»
+
+**Scope**
+
+| Surface | Class | Work |
+|---|---|---|
+| The generator | NOT BUILT | Fires on audience group size vs `app.k_for(survey)`. Its **inputs are group sizes and the policy value, and nothing else** |
+| The task's payload | NOT BUILT | No group name, no question, no score, no survey-level derived value |
+| Oppgaver card copy | BUILT in V2-4 | The card renders the confirmed sentence |
+| Bundle copy V2:4239, V2:4270 | — | **Becomes false on this decision's authority and changes.** D103 is the precedent — the first time a v1 phase changed bundle copy because a decision made the drawn sentence untrue on its own screen. **Logged in `docs/DEVIATIONS.md` when this phase ships it** |
+
+**Depends on V2-3**, which builds the audience with per-group sizes. Nothing else.
+
+**Schema first.** A `task_sources` row referencing the **survey and the duty** — no group, no
+question, no score — and a generator that cannot construct one.
 
 **Negative tests, proven failing before implementation — these are the phase**
-1. A generated task contains **no group name** in `title`, `source_ref`, `law_ref` or any
-   rendered string. Asserted by reading the produced row and failing on the group's name
-   appearing in it.
-2. The same for the question text and the score.
-3. A `leser` reading from-findings tasks → tested as a denial or an allowance per Q72, never
-   left implicit.
-4. Two below-threshold groups in one survey produce a task that does not let a reader
-   distinguish which.
-5. **Enumerability:** filtering by `lov` (V2:5164) does not let a reader recover the set of
-   gated groups.
-6. Two-sided: a finding at `k` produces **no** task; at `k−1` it produces one — at k=3 and k=8.
-7. No outbound event is emitted (**Q73**).
 
-**Standing question 3 is the governing one here**: assert over the SET — every field that
-reaches a reader — not the ones you picked. And the positive form: a "the body has no group
-name" assertion is satisfied by a 404, by a login form, and by the route not existing, so
-guard it on the task EXISTING.
+1. The produced row contains **no group name**, **no question text**, **no score**, and **no
+   survey-level derived value**, in `title`, `source_ref`, `law_ref` or any rendered string.
+   Asserted by reading the row and failing on each appearing in it.
+2. **A task is produced for a survey with a sub-threshold group REGARDLESS of that group's
+   results** — including when every group scores well. This is the test that forces the
+   trigger to read audience size rather than responses, and it is the one that would have
+   caught the drafted option.
+3. **No task is produced by any path that reads a gated value.**
 
-**UI.** Oppgaver, already built. What changes is what the card says.
+**Test 3 is the phase, and its FORM matters more than its existence.** Written as "the
+generator does not call `aggregate_results`" it is a *symptom* test — it would miss a
+generator reading `responses` directly, or calling a new RPC added later. V1-6's first rule:
+**the derivation must describe the PROPERTY, not a symptom of it** — that phase's
+`next_run_at` sweep required `send_at_local` in the function body, so it swept only the
+functions that already knew about the column and missed the two that ignored it. So test 3 is
+written as a **catalogue-style assertion**, in the shape
+`tests/invariants/threshold-policy.test.ts:366-386` already uses: enumerate the generator's
+reachable call graph and fail if anything in it reads `responses`/`answers`. That fails by
+construction for a future path nobody thought of, which is the only version worth having.
+
+**Standing question 3 governs test 1** (`tests/db/clients.ts`): assert over the SET — every
+field that reaches a reader — not the ones you picked. And its positive form: "the body has no
+group name" is satisfied by a 404, by a login form, and by the route not existing, so guard
+test 1 on the task **existing**.
+
+**Enumerability, checked rather than assumed.** `taskFilters`' `lov` entry (V2:5164) now
+enumerates surveys with **small groups**, not surveys with bad findings — the channel closes
+rather than narrows. Assert it: a reader filtering by `lov` cannot distinguish a survey whose
+small group scored badly from one whose small group scored well.
+
+**UI.** Oppgaver, built in V2-4. What changes is what the card says.
 
 **Definition of done**
-- Tests 1, 2 and 5 are blockers.
+- Tests 1, 2 and 3 are blockers.
 - Census target **≥670 / 39**. 5a3 unchanged or higher.
-- **Logged as a limit:** no gate here can see what a free-text `source` string discloses to
-  a reader who already knows the team structure. The control is that the string is not
-  constructed that way; the test asserts the construction, not the inference.
+- The `docs/DEVIATIONS.md` entry for the changed bundle copy exists, citing D103 as precedent.
+- **Logged as a limit:** no gate here can see what a free-text string discloses to a reader who
+  already knows the team structure. The control is that the string is not *constructed* from a
+  gated value; test 3 asserts the construction, not the inference.
 
-**Not in it:** the webhook, Teams.
+**Not in it:** `threshold.breached` (**Q73: not built**), Teams notification (V2-4's Q71).
 
----
+**Accepted cost, recorded so it is not later read as a defect:** the task appears more often
+than a findings-triggered one would, including when nothing is wrong. That is tolerable
+noise — it points at a real blind spot every time, and an employer cannot know a
+sub-threshold group is fine either.
 
 ## V2-6 — Help articles and contact
 

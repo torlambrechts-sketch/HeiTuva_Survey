@@ -295,7 +295,19 @@ cannot keep is not shipped — the D73 rule.
 *Confirm: adjust the copy (recommended) / ship the copy and accept it / hold Oppgaver until
 Teams exists.*
 
-## Batch F — before V2-5 (take this early)
+## Batch F — **CONFIRMED (Tor), 2026-09-07 — PROMOTED to `DECISIONS.md` Q72–Q73**
+
+Taken out of phase order, as recommended. **The drafts below are superseded on Q72**: the
+confirmed decision changes the **trigger**, not the wording, because the drafted option 1
+still leaked by elimination. See `DECISIONS.md` Q72 and `docs/v2/05-batches.md § Batch F` for
+the corrected reasoning; `docs/v2/03-plan.md` V2-5 carries the built shape.
+
+- **Q72 — the duty, not the finding, and the condition is «this survey has an audience group
+  whose SIZE is below `app.k_for(survey)`»**, not «a finding below threshold». A count of
+  people, which Q28 permits; a property of the audience, not of the responses.
+- **Q73 — do not build `threshold.breached`.**
+
+### The drafts, as sent from
 
 **Q72 ●● — the first decision of the plan.** *What may a task created from a below-threshold
 finding contain?* v2 says a sub-threshold finding becomes a task automatically with source

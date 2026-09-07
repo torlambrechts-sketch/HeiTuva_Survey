@@ -42,7 +42,7 @@ now part of the rule in `00-diff.md § 0.3`: governance is per **surface**, not 
 
 ---
 
-## Batch F — sent 2026-09-07 · **OPEN**
+## Batch F — sent 2026-09-07 · **CONFIRMED, promoted to `DECISIONS.md` Q72–Q73**
 
 Two decisions, both on the security core. Sent out of phase order — its phase is sixth —
 because Q72 shapes V2-4's card copy, all of V2-5, and `task.created` in V2-11. Deciding it
@@ -113,6 +113,53 @@ draw, and a carve-out at every downstream surface (Teams, the webhook, the `lov`
 
 **Blocks:** V2-5 entirely, V2-4's card copy, and `task.created` in V2-11.
 
+#### OUTCOME — option 1, with the TRIGGER changed. **The menu above was wrong.**
+
+Tor took option 1 and then found the defect in it, which is worth recording exactly because
+the analysis above led up to it and then stopped one step short.
+
+**Option 1 as drafted still leaked, by elimination.** Groups A(12), B(9), C(4); a task saying
+«undersøkelsesplikt utløst for Psykososial kartlegging» with A and B visible and healthy tells
+the reader C scored badly. **The predicate was still over a gated value — merely wrapped.**
+Removing the group name from the payload does not remove the payload's dependence on the
+gated cell; it only makes the inference take one more step.
+
+**The fix is to the condition, not the wording.** The trigger is not «a finding below
+threshold» but **«this survey has an audience group whose SIZE is below `app.k_for(survey)`»**
+— a group that will never receive its own results even at a 100 % response rate. That is a
+**count of people**, which Q28 expressly permits, and it is a property of the **audience**,
+not of the responses.
+
+Confirmed copy: «Denne undersøkelsen har grupper som ikke får egne resultater. Plikten til å
+kartlegge og følge opp gjelder likevel.»
+
+**What it buys over the drafted option, each item verified rather than asserted:**
+
+| | Drafted option 1 | Confirmed trigger |
+|---|---|---|
+| Existence discloses | the gated cell, by elimination | **nothing new** — `groups_sel` and `members_sel` are both `app.is_org_member(org_id)` (`M:0008:13-14, :23`), so any member incl. a `leser` already reads group sizes, and v2 badges them at `mgGroups.small` (V2:5048) |
+| The `lov` filter (V2:5164) enumerates | surveys with bad findings — **narrowed, not closed** | surveys with **small groups** — the channel **closes** |
+| Teams (V2:5198), `task.created` | need a per-kind carve-out | **safe without one** |
+| Honesty about the situation | implies someone knows the finding is bad | the employer **cannot know it is fine either**, and a duty cannot be discharged by looking at a number they may not see |
+
+**Accepted cost:** the task appears more often, including when nothing is wrong. Tolerable
+noise — it points at a real blind spot every time.
+
+**Negative tests** (Tor's three, with the form of the third specified in
+`docs/v2/03-plan.md` V2-5): the row contains no group name, no question, no score and no
+survey-level derived value; **a task is produced for a survey with a sub-threshold group
+regardless of that group's results**; and **no task is produced by any path that reads a gated
+value** — written as a catalogue-style assertion over the generator's reachable call graph,
+not as "does not call `aggregate_results`", because V1-6's first rule is that the derivation
+must describe the property and not a symptom of it.
+
+**Bundle copy V2:4239 and V2:4270 become false and change on this decision's authority.**
+D103 is the precedent; the mechanism has been used once. Logged in `docs/DEVIATIONS.md` when
+V2-5 ships it.
+
+**V2-4 and V2-5 stay separate.** The negative tests *are* V2-5; merging would bury them
+inside a screen build.
+
 ### Q73 ● — `threshold.breached` as a webhook
 
 **V2:5248** — «Funn under terskel — kan utløse undersøkelsesplikt.»
@@ -128,17 +175,24 @@ later reader meets a choice with a reason rather than a gap in a list of six eve
 
 *Confirm: do not build / build it carrying only a survey id / build as drawn.*
 
-### Flagged with the batch
+#### OUTCOME — **do not build**, recorded as a decision line rather than an omission. Under
+the revised Q72 the event would only ever say «this survey has a small group», which
+`task.created` already carries, while still delivering across a boundary where none of this
+product's controls apply. The remaining five events ship.
 
-**V2-4 (Oppgaver) is currently sequenced without the from-findings source**, precisely so the
-statutory register — the most valuable thing in this bundle — does not wait on Q72. If Q72
-lands on option 1, that split stops being necessary and the two phases could merge.
-**Recommendation is still to keep them separate:** the negative tests in V2-5 *are* the phase,
-and they deserve their own verification pass.
+### Flagged with the batch — and answered
+
+**V2-4 (Oppgaver) is sequenced without the task generator**, so the statutory register does
+not wait on Q72. The recommendation was to keep the phases separate even once Q72 landed.
+**Confirmed:** the negative tests *are* V2-5, they deserve their own verification pass, and
+merging would bury them inside a screen build.
 
 ---
 
 ## Batches not yet sent
+
+**Batch B is queued behind V2-0's close** (Tor, 2026-09-07) — it is V2-1's batch, and V2-0
+must land first.
 
 `docs/v2/04-decisions.md` holds the drafts. In plan order: **B** (V2-1, Q57–Q59),
 **C** (V2-2, Q60–Q61), **D** (V2-3, Q62–Q67), **E** (V2-4, Q68–Q71), **G** (V2-6, Q74–Q75),
