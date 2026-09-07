@@ -31,5 +31,6 @@
   "tests/unit/refusal-copy.test.ts": 9,
   "tests/unit/results-present.test.ts": 17,
   "tests/unit/schedule-status.test.ts": 8,
-  "tests/unit/threshold-line.test.ts": 5
+  "tests/unit/threshold-line.test.ts": 5,
+  "tests/unit/registry-strings.test.ts": 5
 }

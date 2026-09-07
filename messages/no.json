@@ -1580,5 +1580,29 @@
     "dpa8P": "Behandlingsansvarlig kan be om dokumentasjon på at forpliktelsene overholdes, og kan én gang per år, med 30 dagers varsel, gjennomføre eller la en uavhengig tredjepart gjennomføre revisjon.",
     "dpa9H": "Varighet, sletting og signering",
     "dpa9P": "Avtalen gjelder så lenge kundeavtalen løper. Ved opphør slettes alle personopplysninger senest 30 dager etter at behandlingsansvarlig har fått eksportert dem, med mindre lov krever lengre oppbevaring. En signert versjon av denne avtalen med virksomhetens navn og dato utstedes ved avtaleinngåelse og finnes under Administrasjon → Personvern og GDPR → Dokumentasjon."
+  },
+  "duty": {
+    "title_apenhet": "Aktsomhetsvurdering leverandører",
+    "law_apenhet": "Åpenhetsloven §§ 4–5",
+    "title_arbeidsmiljo": "Psykososial kartlegging",
+    "law_arbeidsmiljo": "Arbeidsmiljøloven § 4-3 · internkontroll",
+    "title_likestilling": "Likestilling og ARP",
+    "law_likestilling": "Likestillings- og diskrimineringsloven § 26",
+    "title_trakassering": "Trakassering og ytringsklima",
+    "law_trakassering": "Aml. kap. 2A · ARP"
+  },
+  "section": {
+    "label_actions": "Tiltak og ansvarlig",
+    "label_drivers": "Høyest og lavest",
+    "label_duties": "Lovpålagte frister",
+    "label_heatmap": "Heatmap team × spørsmål",
+    "label_method": "Metode og spørsmål",
+    "label_participation": "Deltakelse og svarprosent",
+    "label_per_virksomhet": "Svar per virksomhet",
+    "label_quotes": "Utvalgte sitater",
+    "label_summary": "Sammendrag",
+    "label_teams": "Resultat per team",
+    "label_themes": "Temaer i frisvarene",
+    "label_trend": "Utvikling over tid"
   }
 }

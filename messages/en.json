@@ -1580,5 +1580,29 @@
     "dpa8P": "The controller may request documentation of compliance and may, once a year with 30 days' notice, carry out or commission an independent audit.",
     "dpa9H": "Term, deletion and signature",
     "dpa9P": "This agreement runs for the life of the customer agreement. On termination all personal data is deleted no later than 30 days after the controller has exported it, unless law requires longer retention. A signed version of this agreement with the organisation's name and date is issued at contract and is available under Administration → Privacy and GDPR → Documentation."
+  },
+  "duty": {
+    "title_apenhet": "Supplier due diligence",
+    "law_apenhet": "Åpenhetsloven §§ 4–5",
+    "title_arbeidsmiljo": "Psychosocial working environment survey",
+    "law_arbeidsmiljo": "Arbeidsmiljøloven § 4-3 · internal control",
+    "title_likestilling": "Equality and the ARP duty",
+    "law_likestilling": "Likestillings- og diskrimineringsloven § 26",
+    "title_trakassering": "Harassment and speaking up",
+    "law_trakassering": "Aml. kap. 2A · ARP"
+  },
+  "section": {
+    "label_actions": "Actions and owner",
+    "label_drivers": "Highest and lowest",
+    "label_duties": "Statutory deadlines",
+    "label_heatmap": "Heatmap team × question",
+    "label_method": "Method and questions",
+    "label_participation": "Participation and response rate",
+    "label_per_virksomhet": "Answers per organisation",
+    "label_quotes": "Selected quotes",
+    "label_summary": "Summary",
+    "label_teams": "Result per team",
+    "label_themes": "Themes in the free text",
+    "label_trend": "Development over time"
   }
 }

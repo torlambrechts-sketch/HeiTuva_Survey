@@ -66,7 +66,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   const { data: duty } = survey.template_pack_key
     ? await supabase
         .from('duty_definitions')
-        .select('law, default_interval_months')
+        .select('key, law, default_interval_months')
         .eq('pack_key', survey.template_pack_key)
         .maybeSingle()
     : { data: null }
@@ -93,6 +93,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   // answers is locked by the guard. Either way the chips below are disabled
   // with the reason, instead of letting send_round fail on the trigger.
   const t = await getTranslations('send')
+  const tDuty = await getTranslations('duty')
   const attributed = survey.respondent_kind === 'organisation'
   const k = attributed ? 0 : Math.max(survey.k_threshold, 3)
   let lockedReason: string | null = null
@@ -151,7 +152,10 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
             : null
         }
         inheritedCadence={inheritedCadence}
-        inheritedLegalRef={duty?.law ?? null}
+        // Q48(b): the statute reference from next-intl, keyed by the
+        // registry key — the column is still there and still canonical, but
+        // nothing reads it for display.
+        inheritedLegalRef={duty?.key ? tDuty(`law_${duty.key}` as never) : null}
         questionCount={questionCount ?? 0}
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}

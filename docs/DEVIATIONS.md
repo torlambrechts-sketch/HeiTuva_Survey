@@ -2031,5 +2031,40 @@ screen nobody has asked for). Both are decisions, not chores.
 **What would make it safe to leave:** the panel distinguishing "no breach question was
 designated" from "no breaches were found". It draws the same 0 for both today, and that is
 the fabricated-data rule in its quietest form — a real zero and an undefined numerator
-rendering identically. That is the fix worth doing, it belongs with whoever decides the
-repair, and it is one line of copy plus a null instead of a count.
+rendering identically.
+
+---
+
+### D102 — the repair options, for Tor (V1-6)
+
+**Scope, to be measured rather than estimated.** Every organisation survey on
+`heituva-prod` created before migration `20260906000040` — the one that wrote roles into
+`template_packs.questions` and deliberately did NOT rewrite existing surveys. Locally and
+in the demo seed this is zero surveys, both being built from the current pack. The number
+on prod is one query and nobody has run it. **Run it first, because option D may be the
+whole answer.**
+
+**Common to all four, and not one of the options:** the panel must stop drawing the same
+`0` for two different states. That is the thing that makes any repair safe, and it is one
+null instead of a count plus one line of copy. Recommended regardless of which is chosen —
+including D.
+
+| | Repair | What it costs | What it risks |
+|---|---|---|---|
+| **A** | **Backfill the role onto existing surveys' questions**, matching each survey's questions to its pack's by text | One idempotent migration, no UI | **Edits a live survey's `config` after it was sent.** Q35's own reasoning is that the role is COPIED at creation precisely so editing the pack later cannot reclassify a sent survey; a backfill does what that rule forbids, from the other direction. Text-matching is fuzzy too: a question edited in the Builder no longer matches its pack |
+| **B** | **A re-designation control in the Builder** — an editor marks the breach question on any survey | A screen nobody has asked for, a write path, RLS, tests | The honest answer if this affects several customers, over-built if it affects one. Also the only option that handles a survey whose questions were edited away from the pack |
+| **C** | **Derive at read time** — fall back to the bundle's `/brudd/i` text match when no role is designated | Small, contained in `registerStats` | **Reintroduces exactly what Q35 removed.** A question mentioning «brudd» that is not the breach question would be counted, and the panel would be confidently wrong rather than visibly empty. `tests/unit/question-roles.test.ts` asserts against this by name |
+| **D** | **Nothing but the copy fix** — «ingen bruddspørsmål er utpekt», and the count absent rather than zero | One null, one string | Leaves pre-`M:0040` surveys without a breach count. **Correct if the scope query says "one or two, all finished"** — an aktsomhetsvurdering is annual, so the next round creates a new survey from the current pack and the problem ages out |
+
+**Recommendation: run the scope query, then D — and B only if the query says several
+customers are affected and their surveys are still live.**
+
+A does what Q35 exists to prevent, and does it fuzzily. C reintroduces the regex Q35
+removed and is wrong in the direction that looks right. B is real work for a population
+nobody has counted. D plus the copy fix is honest at every size — it never claims a number
+it does not have — and if the population turns out to be large, B is still available and D
+is not wasted, because the copy fix is B's empty state too.
+
+**I have not run the scope query**, because reading prod's survey inventory is not
+something to do without saying so first. It is one statement and the whole trade turns on
+it.
