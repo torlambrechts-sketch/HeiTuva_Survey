@@ -22,8 +22,19 @@ import {
   type ImportSource,
 } from '@/lib/send/registry'
 import { policyWarnings } from '@/lib/questions/policy-warnings'
+import {
+  hasScheduleStatus,
+  scheduleStatus,
+  type ScheduleState,
+} from '@/lib/schedules/status'
+import {
+  CustomCadence,
+  customDays,
+  customIntervalPhrase,
+  type CustomCadenceValue,
+} from './CustomCadence'
 import { parseRecipients, type ImportedRecipient } from '@/lib/send/import'
-import { sendSurvey, sendTestToSelf } from './actions'
+import { sendSurvey, sendTestToSelf, setSchedulePaused, stopSchedule } from './actions'
 
 const CARD = 'rounded-2xl border border-line bg-sf p-[22px]'
 const H2 = 'font-display text-[23px] font-bold'
@@ -46,6 +57,10 @@ export function SendScreen({
   smsEnabled,
   orgName,
   groups,
+  inheritedCadence,
+  inheritedLegalRef,
+  schedule: scheduleState,
+  status,
 }: {
   surveyId: string
   title: string
@@ -63,6 +78,20 @@ export function SendScreen({
   canSend: boolean
   smsEnabled: boolean
   groups: Group[]
+  /**
+   * Q21 — the pack's cadence PRE-FILLS the picker and explains itself; it does
+   * not lock it. Åpenhetsloven's 30 June is a reporting deadline, not a
+   * survey-frequency rule, so locking here would be the product inventing a
+   * legal constraint — and a customer cannot tell an invented one from a real
+   * one. Null when no pack governs the survey.
+   */
+  inheritedCadence: Cadence | null
+  /** The pack's legal reference, for the explanatory note. */
+  inheritedLegalRef: string | null
+  /** The live series, or null. Read through RLS — a leser sees it too (Q23). */
+  schedule: ScheduleState | null
+  /** Whether the survey has been sent, so the status row knows what to draw. */
+  status: 'utkast' | 'aktiv' | 'lukket'
 }) {
   const t = useTranslations('send')
 
@@ -74,9 +103,24 @@ export function SendScreen({
   const [importSource, setImportSource] = useState<ImportSource>('paste')
   const [importDraft, setImportDraft] = useState('')
   const [anonymity, setAnonymity] = useState<AnonymityMode>(initialAnonymity)
-  const [cadence, setCadence] = useState<Cadence>('once')
+  // The live series first, then the pack's default, then «Én gang». A survey
+  // already running weekly whose picker opened on «Én gang» would be converted
+  // to a one-off by a re-send that changed nothing else — the control would
+  // have been lying about the current state, which is worse than defaulting
+  // badly.
+  const [cadence, setCadence] = useState<Cadence>(
+    scheduleState?.active && scheduleState.cadence !== 'once'
+      ? scheduleState.cadence
+      : (inheritedCadence ?? 'once'),
+  )
   const [runs, setRuns] = useState(4)
   const [rotate, setRotate] = useState(false)
+  // Q20's custom cadence. The defaults are the bundle's opening state (:3260):
+  // every week, Monday, 09:00 — a shape a customer can send without touching
+  // anything, rather than a blank the CHECK would refuse.
+  const [custom, setCustom] = useState<CustomCadenceValue>({
+    every: 1, unit: 'weeks', weekday: 1, hour: '09:00',
+  })
   const [reminderDays, setReminderDays] = useState<(typeof REMINDER_DAYS)[number]>(2)
   const [testSent, setTestSent] = useState(false)
   const [sent, setSent] = useState<{ invited: number; shareToken: string | null } | null>(null)
@@ -84,6 +128,16 @@ export function SendScreen({
   const [pending, startTransition] = useTransition()
 
   const parsed = useMemo(() => parseRecipients(importDraft), [importDraft])
+
+  // The status sentence, from `lib/schedules/status.ts` — the same function the
+  // survey row, the context bar and the rounds panel read, so the four cannot
+  // disagree about what a paused series says.
+  const recurStatus = scheduleStatus(
+    scheduleState,
+    status,
+    (c) => t(CADENCE_KEY[c].label as 'cadOnce').toLowerCase(),
+    (iso) => new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+  )
 
   const groupHeads = chosenGroups.reduce(
     (n, id) => n + (groups.find((g) => g.id === id)?.count ?? 0),
@@ -153,6 +207,17 @@ export function SendScreen({
         groupIds: chosenGroups,
         anonymity,
         cadence,
+        // All three or none — `schedules_custom_shape` refuses a partial set,
+        // and storing them on a non-custom cadence would leave settings that
+        // become live the moment someone switches the cadence to custom.
+        ...(cadence === 'custom'
+          ? {
+              customEvery: custom.every,
+              customUnit: custom.unit,
+              customWeekday: custom.weekday,
+              sendAtLocal: custom.hour,
+            }
+          : {}),
         runs: cadence === 'once' ? 1 : runs,
         reminderDays,
         rotate,
@@ -502,8 +567,85 @@ export function SendScreen({
               ))}
             </div>
 
+            {/* Q21 — the pack pre-filled this, and says so. An explanatory
+                note, NOT a lock: the picker above stays live. The padlock icon
+                is the bundle's (:2167); it marks provenance here rather than a
+                refusal, which is why the sentence ends «Du kan endre den.» */}
+            {inheritedCadence && inheritedLegalRef ? (
+              <div
+                className="mt-3 flex items-start gap-[9px] rounded-[10px] px-3 py-2.5 text-[12.5px] leading-[1.5] text-mut"
+                style={{ background: 'var(--sf2)' }}
+              >
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" aria-hidden="true" className="mt-[2px] flex-none"
+                >
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                <span>
+                  {t('recurInheritNote', {
+                    legalRef: inheritedLegalRef,
+                    cadence: t(CADENCE_KEY[inheritedCadence].label as 'cadOnce').toLowerCase(),
+                  })}
+                </span>
+              </div>
+            ) : null}
+
+            {/* The status row (:2173-2181) is about the series that ALREADY
+                exists, and the picker below is about the next send. Nesting the
+                first inside the second hid the Pause control on exactly the
+                surveys that have something to pause — a live weekly series whose
+                picker happened to be sitting on «Én gang». Seen in the first
+                capture; they are siblings now, not parent and child. */}
+            {status !== 'utkast' && scheduleState && hasScheduleStatus(recurStatus) ? (
+              <div className="mt-3.5 rounded-[13px] border border-line bg-bg p-[15px]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-[13.5px] font-semibold">
+                      ↻ {t(recurStatus.key, ('values' in recurStatus ? recurStatus.values : {}) as never)}
+                    </span>
+                    <span className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={!canSend || pending}
+                        onClick={() =>
+                          startTransition(async () => {
+                            const r = await setSchedulePaused(surveyId, !scheduleState.pausedAt)
+                            if (!r.ok) setFailure(r.error)
+                          })
+                        }
+                        className="touch-44 cursor-pointer rounded-[9px] border border-line bg-transparent px-3.5 py-2 text-[12.5px] font-semibold text-ink disabled:opacity-60"
+                      >
+                        {scheduleState.pausedAt ? t('recurResume') : t('recurPause')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canSend || pending}
+                        onClick={() => {
+                          // Stop is not reversible from the UI (Q22), so it is
+                          // the one recurrence control that asks. Pause does
+                          // not: it undoes itself with the same button.
+                          if (!window.confirm(t('recurStopConfirm'))) return
+                          startTransition(async () => {
+                            const r = await stopSchedule(surveyId)
+                            if (!r.ok) setFailure(r.error)
+                          })
+                        }}
+                        className="touch-44 cursor-pointer rounded-[9px] border border-line bg-transparent px-3.5 py-2 text-[12.5px] font-semibold text-mut disabled:opacity-60"
+                      >
+                        {t('recurStop')}
+                      </button>
+                    </span>
+                </div>
+              </div>
+            ) : null}
+
             {cadence !== 'once' ? (
               <div className="mt-3.5 rounded-[13px] border border-line bg-bg p-[15px]">
+                {cadence === 'custom' ? (
+                  <CustomCadence value={custom} disabled={!canSend} onChange={setCustom} />
+                ) : null}
+
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="text-[13.5px] font-semibold">{t('runs')}</span>
                   <select
@@ -546,7 +688,10 @@ export function SendScreen({
                 </div>
                 <div className="mt-3.5 flex flex-wrap gap-[7px]">
                   {Array.from({ length: Math.min(4, runs || 4) }, (_, i) => {
-                    const when = new Date(Date.now() + CADENCE_DAYS[cadence] * (i + 1) * 86_400_000)
+                    // A custom cadence's spacing is the customer's own, not the
+                    // registry's 0 for `custom`.
+                    const step = cadence === 'custom' ? customDays(custom) : CADENCE_DAYS[cadence]
+                    const when = new Date(Date.now() + step * (i + 1) * 86_400_000)
                     return (
                       <span
                         key={i}
@@ -565,7 +710,15 @@ export function SendScreen({
               {cadence === 'once'
                 ? t('cadenceSummaryOnce')
                 : t('cadenceSummary', {
-                    cadence: t(CADENCE_KEY[cadence].label as 'cadOnce').toLowerCase(),
+                    // A custom cadence's word is its INTERVAL, not the chip's
+                    // label: the bundle's summary reads «Går automatisk hver 3.
+                    // uke …» (`cadOf(rec).label`, :3265), and mine read «Går
+                    // automatisk tilpasset …», which says nothing about how
+                    // often anything happens. Caught in the first capture.
+                    cadence:
+                      cadence === 'custom'
+                        ? customIntervalPhrase(custom, t)
+                        : t(CADENCE_KEY[cadence].label as 'cadOnce').toLowerCase(),
                     runs,
                   })}
             </p>

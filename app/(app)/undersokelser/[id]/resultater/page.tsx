@@ -12,6 +12,7 @@ import {
   readTrends,
 } from '@/lib/results/read'
 import { isGated, type Quotes } from '@/lib/results/types'
+import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { ResultsScreen } from './ResultsScreen'
 
@@ -142,6 +143,7 @@ export default async function ResultsPage({
         title={survey.title}
         audience={survey.audience_label}
         status={survey.status}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
         current="resultater"
       />
       <ResultsScreen
@@ -172,6 +174,7 @@ export default async function ResultsPage({
           [...quotes].map(([qid, q]) => [qid, q && !isGated(q) ? q : null]),
         )}
         attributed={attributed}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
       />
     </>
   )

@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { serviceClient, type Client } from './clients'
+import { adminClient, serviceClient, type Client } from './clients'
 import { ORG_PRIMARY } from './personas'
 
 /**
@@ -182,6 +182,85 @@ describe('(Q20) the cadence vocabulary', () => {
       expect(days, `${cadence} scheduled its next run in ${days.toFixed(1)} days`)
         .toBeGreaterThan(minDays)
     }
+  })
+})
+
+describe('(Q20) …and BOTH places that compute a next run', () => {
+  it('send_round sets the first next run from the cadence too', async () => {
+    /*
+      The test above drives `app.run_due_schedules`. It is the right SHAPE —
+      the relation asserted over every cadence in the vocabulary — and it still
+      missed a live instance of the same bug, because a next run is computed in
+      TWO places and it exercised one.
+
+      `send_round` carried its own eleven-line copy of the interval CASE with
+      the same four arms and the same `else interval '7 days'` (M:0027:210), so
+      after 0044 the sweep advanced an annual survey by a year while the FIRST
+      next run was still a week out. Enumerating the cadences and sampling the
+      call sites is the same mistake one level up.
+
+      So this drives the other site, through the real RPC, as a real editor.
+    */
+    const admin = await adminClient()
+    const floors: Record<string, number> = { annual: 360, biennial: 720, quarterly: 89 }
+    for (const [cadence, minDays] of Object.entries(floors)) {
+      const { surveyId } = await survey(`Send-${cadence}`)
+      const { data, error } = await admin.rpc('send_round', {
+        p_survey: surveyId,
+        p_channels: ['link'],
+        p_recipients: [] as never,
+        p_group_ids: [],
+        p_anonymity: 'anonymous',
+        p_cadence: cadence,
+        p_runs: 4,
+        p_reminder_days: 2,
+        p_rotate: false,
+        p_test_only: false,
+      })
+      expect(error, `send_round(${cadence})`).toBeNull()
+      expect((data as { ok?: boolean })?.ok, `send_round(${cadence}) refused`).toBe(true)
+
+      const { data: sched } = await svc
+        .from('schedules').select('next_run_at').eq('survey_id', surveyId).single()
+      const days = (new Date(sched!.next_run_at!).getTime() - Date.now()) / 86_400_000
+      expect(days, `${cadence}'s FIRST next run is ${days.toFixed(1)} days out`)
+        .toBeGreaterThan(minDays)
+    }
+  })
+
+  it('send_round carries the custom settings onto the schedule', async () => {
+    const admin = await adminClient()
+    const { surveyId } = await survey('Send-tilpasset')
+    const { error } = await admin.rpc('send_round', {
+      p_survey: surveyId,
+      p_channels: ['link'],
+      p_recipients: [] as never,
+      p_group_ids: [],
+      p_anonymity: 'anonymous',
+      p_cadence: 'custom',
+      p_runs: 4,
+      p_reminder_days: 2,
+      p_rotate: false,
+      p_test_only: false,
+      p_custom_every: 3,
+      p_custom_unit: 'weeks',
+      p_custom_weekday: 2,
+      p_send_at_local: '08:30',
+    })
+    expect(error).toBeNull()
+
+    const { data } = await svc
+      .from('schedules')
+      .select('cadence, custom_every, custom_unit, custom_weekday, send_at_local, next_run_at')
+      .eq('survey_id', surveyId)
+      .single()
+    expect(data).toMatchObject({
+      cadence: 'custom', custom_every: 3, custom_unit: 'weeks', custom_weekday: 2,
+    })
+    expect(data!.send_at_local).toMatch(/^08:30/)
+    // Three weeks, from the settings rather than from the cadence name.
+    const days = (new Date(data!.next_run_at!).getTime() - Date.now()) / 86_400_000
+    expect(days).toBeGreaterThan(20)
   })
 })
 

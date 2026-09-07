@@ -25,8 +25,24 @@ export const CHANNEL_KEY: Record<Channel, { label: string; desc: string }> = {
   sms: { label: 'chSms', desc: 'chSmsDesc' },
 }
 
-/** Matches `app.cadence` in migration 0001. */
-export const CADENCES = ['once', 'weekly', 'biweekly', 'monthly', 'quarterly'] as const
+/**
+ * The cadence vocabulary — DECISIONS Q20, and it must stay level with two
+ * other places: the `app.cadence` enum (M:0001:20 + M:0043) and
+ * `app.cadence_interval` (M:0044).
+ *
+ * `biannual` is in the enum and deliberately NOT here: Q20 keeps it because a
+ * Postgres enum value cannot be dropped without recreating the type, and keeps
+ * it out of the product because nothing holds it. A value absent from this
+ * list cannot be chosen in the UI, which is where "undocumented" is enforced.
+ *
+ * NAMING, because the bundle and the schema disagree: the prototype's key for
+ * «Hvert år» is `yearly` (:2941); the column has held `annual` since M:0001:20
+ * and Q20 chose not to rename it. The label is the bundle's, the value is the
+ * schema's.
+ */
+export const CADENCES = [
+  'once', 'weekly', 'biweekly', 'monthly', 'quarterly', 'annual', 'biennial', 'custom',
+] as const
 export type Cadence = (typeof CADENCES)[number]
 
 export const CADENCE_KEY: Record<Cadence, { label: string; desc: string }> = {
@@ -35,16 +51,50 @@ export const CADENCE_KEY: Record<Cadence, { label: string; desc: string }> = {
   biweekly: { label: 'cadBiweekly', desc: 'cadBiweeklyDesc' },
   monthly: { label: 'cadMonthly', desc: 'cadMonthlyDesc' },
   quarterly: { label: 'cadQuarterly', desc: 'cadQuarterlyDesc' },
+  annual: { label: 'cadAnnual', desc: 'cadAnnualDesc' },
+  biennial: { label: 'cadBiennial', desc: 'cadBiennialDesc' },
+  custom: { label: 'cadCustom', desc: 'cadCustomDesc' },
 }
 
-/** Days between rounds, used for the plan chips and the schedule's next run. */
+/**
+ * Days between rounds — the plan chips' spacing and nothing else.
+ *
+ * NOT the schedule's next run. That is `app.cadence_interval` (M:0044), which
+ * uses real month and year intervals rather than a day count, because 30 days
+ * is not a month and 365 is not a year across a leap year. These numbers are
+ * for drawing four chips on a screen; the day the two are asked to agree, the
+ * database is right.
+ *
+ * `custom` is 0 here because its spacing comes from the customer's own
+ * `every`/`unit`, via `customCadenceDays` below.
+ */
 export const CADENCE_DAYS: Record<Cadence, number> = {
   once: 0,
   weekly: 7,
   biweekly: 14,
   monthly: 30,
   quarterly: 91,
+  annual: 365,
+  biennial: 730,
+  custom: 0,
 }
+
+/** The custom cadence's three settings — the bundle's editor (NEW:2183-2195). */
+export const CUSTOM_UNITS = ['days', 'weeks', 'months'] as const
+export type CustomUnit = (typeof CUSTOM_UNITS)[number]
+
+/** Monday–Friday, as the selector offers (:2192) and the CHECK enforces. */
+export const CUSTOM_WEEKDAYS = [1, 2, 3, 4, 5] as const
+
+export const CUSTOM_UNIT_DAYS: Record<CustomUnit, number> = {
+  days: 1,
+  weeks: 7,
+  months: 30,
+}
+
+/** Chip spacing for a custom cadence. Same caveat as CADENCE_DAYS. */
+export const customCadenceDays = (every: number, unit: CustomUnit): number =>
+  Math.max(1, every) * CUSTOM_UNIT_DAYS[unit]
 
 /** Matches `app.anonymity_mode`. */
 export const ANONYMITY_MODES = ['anonymous', 'named', 'optional'] as const

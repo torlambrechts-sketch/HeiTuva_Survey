@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import type { QualityRule } from '@/lib/questions/quality'
 import { parseEngagement } from '@/lib/engagement'
+import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { Builder } from './Builder'
 import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
@@ -102,6 +103,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         title={survey.title}
         audience={survey.audience_label}
         status={survey.status}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
         current="bygg"
       />
       <Builder

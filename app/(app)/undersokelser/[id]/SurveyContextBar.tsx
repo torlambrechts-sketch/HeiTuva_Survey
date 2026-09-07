@@ -44,12 +44,19 @@ export async function SurveyContextBar({
   title,
   audience,
   status,
+  recurrence,
   current,
 }: {
   surveyId: string
   title: string
   audience: string | null
   status: Status
+  /**
+   * The ↻ chip (NEW:228-230). Empty when the survey has no series. Formatted
+   * by the caller from `lib/schedules/status.ts` — the same sentence the list
+   * row, the Send screen and the rounds panel show.
+   */
+  recurrence?: string
   current: SurveyStep
 }) {
   const t = await getTranslations('surveyNav')
@@ -80,6 +87,14 @@ export async function SurveyContextBar({
         >
           {t(STATUS_KEY[status] as 'statusUtkast')}
         </span>
+        {recurrence ? (
+          <span
+            className="inline-block rounded-full px-[10px] py-1 text-[11.5px] font-semibold"
+            style={{ background: 'var(--sbg)' }}
+          >
+            ↻ {recurrence}
+          </span>
+        ) : null}
       </div>
       {/* RESPONSIVE.md § Tab rails: the rail wraps below md and each step keeps
           its design size, so the three 44px targets stay apart. */}

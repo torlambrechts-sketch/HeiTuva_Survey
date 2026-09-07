@@ -62,6 +62,7 @@ export async function ResultsScreen({
   activeTheme,
   quotes,
   attributed: attributedData,
+  recurrence,
 }: {
   surveyId: string
   status: 'utkast' | 'aktiv' | 'lukket'
@@ -85,6 +86,8 @@ export async function ResultsScreen({
   quotes: Record<string, QuoteSet | null>
   /** Q17 §5 — the named register, present only for an organisation survey. */
   attributed: Attributed | null
+  /** The ↻ sentence, or '' when the survey has no series (Q22). */
+  recurrence: string
 }) {
   const t = await getTranslations('results')
   const tNav = await getTranslations('surveyNav')
@@ -374,7 +377,10 @@ export async function ResultsScreen({
           trends={trends}
           labels={{
             title: t('roundsTitle'),
-            status: t('roundsStatus', { count: trends.points.length }),
+            // NEW:2596 — the panel's right-hand line is the RECURRENCE status
+            // when there is a series, and the round count otherwise. Same
+            // sentence as the row chip and the Send screen's status row.
+            status: recurrence || t('roundsStatus', { count: trends.points.length }),
             round: (n) => t('roundsLabel', { n }),
             answers: (n) => t('roundsAnswers', { count: n }),
             belowThreshold: t('roundsBelow'),
