@@ -212,12 +212,45 @@ Output in this exact structure, nothing else:
    **No phase closes while main's CI is red.** The Gate 6 report cites the run number
    and its status as evidence, exactly like any other claim. A phase verified locally
    against a pipeline that is not running has been verified once, not twice.
+
+   **RECORD EVERY CHAIN EXIT AND WHICH GATES IT NEVER REACHED.** `verify:all` stops at
+   the first failing gate, so a chain that exits early has not merely failed — it has left
+   the later gates UNRUN, and their silence is not a pass. V1-4's first chain exited at the
+   capture gate and never reached 3e; when 3e later reported 228 blockers, whether that
+   counted as the verification pass completing or as a forbidden third round turned on a
+   fact nobody had written down.
+
+   **The two-pass rule bounds FIX passes, not gate executions.** A gate that has never run
+   on this code has not had its pass. So the report states, as evidence rather than as
+   judgement: which gate the chain exited at, and which gates were therefore never
+   executed. One line, written when it happens, so the next reading is a fact.
 2. Evidence table: claim | gate | evidence (command output excerpt, file:line, or
    screenshot path).
 3. DEFECTS: numbered, each with severity (blocker/major/minor), location, and proposed fix.
 4. UNVERIFIED and BLOCKED items with reasons.
 5. DEVIATIONS from the design, each with a reason — append these to docs/DEVIATIONS.md.
-6. What I (the human) should look at personally, ranked — where your own judgement is
+6. DECISION CONFORMANCE. For every decision this phase implements, QUOTE THE CLAUSE and
+   cite where it is satisfied — file:line, migration, or test name. One row per clause,
+   not per decision: a decision with three requirements is three rows, and a clause with
+   no citation is the finding.
+
+   **Why this exists, added after V1-4.** A gate checks WHAT EXISTS. Nothing checks WHAT A
+   DECISION REQUIRED. Two confirmed decisions were built halfway in V1-4 and every gate
+   stayed green, because the missing halves were absences: Q26 said «the panel appears in
+   the picker as the bundle's own unavailable state… the bundle sanctions drawing its
+   absence, so this is not hiding a feature», and the picker offered nothing at all;
+   Q29 said keep the opener «beside "Frys som rapport"», and only the opener existed. Both
+   were found by reading DECISIONS.md against the code, which is not something a suite can
+   do — the clause is prose and the citation is judgement.
+
+   This is a REPORT SECTION, not machinery. It executes nothing and cannot fail; it makes
+   the omission visible to a reader at the moment the phase claims to be done. The
+   apparatus stays frozen.
+
+   Quote the clause verbatim rather than paraphrasing it. Both V1-4 misses survived a
+   paraphrase in my own head — «defer the stream panel» and «keep the opener» are both
+   true summaries of decisions I did not fully implement.
+7. What I (the human) should look at personally, ranked — where your own judgement is
    weakest.
 
 === GATE 7 — FIX ===

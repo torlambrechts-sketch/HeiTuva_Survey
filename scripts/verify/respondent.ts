@@ -223,10 +223,19 @@ async function main() {
       })
       await page.waitForLoadState('load')
       const body = await page.locator('body').innerText()
+      // Q31: the chip SHOWS a two-letter code and is NAMED by the language.
+      // Both halves, because either alone is the defect — a code with no
+      // accessible name announces as "E N", and a chip labelled «English»
+      // would have left the drawing. The accessible-name lookup is what
+      // changed when the bundle's `aria-label` was adopted; asserting on the
+      // text alone would have kept passing while the name was absent.
+      const enChip = page.getByRole('link', { name: 'English', exact: true })
       check(
-        'a bilingual survey offers a language switch',
-        (await page.getByRole('link', { name: 'EN' }).count()) > 0,
-        `chips: ${(await page.locator('a[href^="?lang="]').allInnerTexts()).join('/')}`,
+        'a bilingual survey offers a language switch, named by its language',
+        (await enChip.count()) > 0 && (await enChip.first().innerText()).trim() === 'EN',
+        `chips: ${(await page.locator('a[href^="?lang="]').allInnerTexts()).join('/')} · accessible name: ${
+          (await enChip.count()) > 0 ? 'English' : 'MISSING'
+        }`,
       )
       check(
         'English chrome renders on ?lang=en',

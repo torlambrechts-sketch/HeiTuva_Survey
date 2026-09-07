@@ -53,6 +53,7 @@ export function Respondent({
   questions: RespondentQuestion[]
 }) {
   const t = useTranslations('respondent')
+  const tLang = useTranslations('lang')
   const e = engage as Engage
 
   const [answers, setAnswers] = useState<Record<string, AnswerEntry>>({})
@@ -151,16 +152,29 @@ export function Respondent({
           <h1 className="mt-[3px] font-display text-2xl font-medium leading-[1.25]">{title}</h1>
         </div>
         {offeredLocales.length > 1 ? (
-          <div className="flex flex-none gap-[3px] rounded-full p-1" style={{ background: 'var(--sf2)' }}>
+          // DECISIONS Q31: only ACTIVE locales are drawn (the count is
+          // DECISIONS'), with the v1 bundle's chip chrome (NEW:2320-2322)
+          // adopted verbatim — 2px gap, 3px padding, 6px/8px chips, 11px/700
+          // text, and `--sf` for the active one rather than `--ac`.
+          //
+          // THE PART THAT MATTERS IS THE ACCESSIBLE NAME. The bundle carries
+          // `title` AND `aria-label` with the language's own name; the app
+          // carried neither. «NO» announced as "N O" is not a language to a
+          // screen reader, and the visible label cannot be lengthened without
+          // leaving the drawing — which is exactly why the bundle put the name
+          // in an attribute instead. `lang.<code>` already holds those names in
+          // both languages, so this adds no new copy.
+          <div className="flex flex-none gap-[2px] rounded-full p-[3px]" style={{ background: 'var(--sf2)' }}>
             {offeredLocales.map((l) => (
               // A full navigation, not client state: the messages for a locale
               // are loaded on the server, so switching language is a request.
-              // `replace` keeps the token out of the back-button history twice.
               <a
                 key={l}
                 href={`?lang=${l}`}
-                className="touch-44 cursor-pointer rounded-full px-[13px] py-[7px] text-xs font-semibold text-ink no-underline"
-                style={{ background: l === locale ? 'var(--ac)' : 'transparent' }}
+                title={tLang(l)}
+                aria-label={tLang(l)}
+                className="touch-44 cursor-pointer rounded-full px-2 py-[6px] text-[11px] font-bold text-ink no-underline"
+                style={{ background: l === locale ? 'var(--sf)' : 'transparent' }}
                 aria-current={l === locale ? 'true' : undefined}
               >
                 {l.toUpperCase()}

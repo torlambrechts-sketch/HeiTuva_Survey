@@ -93,8 +93,11 @@ Below `md`: channel cards stack full-width; the recipient import panel becomes a
 **Modals and the wizard**
 Below `md`: full-screen sheets with a close affordance in the top-right, not centred dialogs. Step indicator stays.
 
-**Charts**
-Maintain aspect ratio, minimum height 200px, legend below rather than beside. Axis labels may rotate; never truncate to unreadability.
+**Charts** (amended per DECISIONS Q40)
+Maintain aspect ratio; legend below rather than beside. Axis labels may rotate; never truncate to unreadability.
+- **Never smaller than the design draws it**, and never below **44px per interactive mark** — a bar, point or cell a reader can tap or focus is a control and carries the same hit-area rule as any other (global rule 2).
+- **The old "minimum height 200px" floor is dropped.** It was a number with no source: it let a chart with twelve interactive bars satisfy the file at 200px while every bar was 16px tall, and it forbade a two-bar chart that would have been perfectly readable at 120px. A floor on the container answers the wrong question; the mark is what a thumb has to hit.
+- A chart with no interactive marks (a pure sparkline, a static illustration) has no 44px obligation and keeps the design's own height.
 
 ## Verification bar (feeds VERIFY.md Gate 3)
 Because there is no mobile reference image for app screens, mobile verification of app routes is **rule-based, not comparison-based**. For each app route at 390px, check:

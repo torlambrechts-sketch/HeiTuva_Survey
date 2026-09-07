@@ -318,9 +318,15 @@ export function CustomizeCard({
           </div>
           <div>
             <div className={legend}>{labels.switchLegend}</div>
-            <div className="mt-[10px] flex flex-wrap gap-[7px]">
+            {/* `.touch-cluster` on BOTH levels: the row between chips, and the
+                chip-plus-× pair inside each one. A 30px chip with a 44px area
+                overflows 7px per side, so a 7px row gap and a 0px inner gap
+                both collide — Gate 3e measured 594px² between «Ledergruppa»
+                and its own delete control. Same utility as the panel cards
+                (RESPONSIVE.md global rule 2, one systemic fix). */}
+            <div className="touch-cluster mt-[10px] flex flex-wrap gap-[7px]">
               {presets.map((p) => (
-                <span key={p.id} className="flex items-center">
+                <span key={p.id} className="touch-cluster flex items-center">
                   <button
                     type="button"
                     disabled={pending}
@@ -368,7 +374,9 @@ export function CustomizeCard({
                   router.refresh()
                 })
               }
-              className="touch-44 mt-3 cursor-pointer border-none bg-transparent p-0 text-[12.5px] text-mut underline"
+              // 14px below md for the same reason the gaps are: the chip row
+              // above ends 7px into this control's hit area at 12px.
+              className="touch-44 mt-3 max-md:mt-[14px] cursor-pointer border-none bg-transparent p-0 text-[12.5px] text-mut underline"
             >
               {labels.startOver}
             </button>
