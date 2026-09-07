@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Playfair+Display:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0}
+body{background:#FCF6E9}
+a{color:#191510;text-decoration:none}
+a:hover{color:#8A6A12}
+@keyframes ht-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FCF6E9;color:#191510;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased">
+
+  <header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 44px;max-width:1240px;width:100%;box-sizing:border-box;margin:0 auto">
+    <a href="HeiTuva Splash.dc.html" style="display:flex;align-items:center;gap:11px">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="HeiTuva" role="img" style="display:block;flex:none">
+        <path d="M6 3h20a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H14.6l-6.1 5.2A1 1 0 0 1 7 27.4V23H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="#F5C64A"/>
+        <rect x="8.5" y="14.5" width="3.6" height="4.6" rx="1.3" fill="#191510"/>
+        <rect x="14.2" y="11" width="3.6" height="8.1" rx="1.3" fill="#191510"/>
+        <rect x="19.9" y="7.4" width="3.6" height="11.7" rx="1.3" fill="#191510"/>
+      </svg>
+      <span style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:700;font-size:21px;letter-spacing:-.03em">HeiTuva</span>
+    </a>
+    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:14px;min-width:0;flex:1 1 auto">
+      <a href="HeiTuva Splash.dc.html#svar" style="padding:9px 13px;border-radius:9px;color:#5F5849;font-weight:500;white-space:nowrap" style-hover="background:rgba(25,21,16,.05);color:#191510">Hvorfor svare</a>
+      <a href="#omrader" style="padding:9px 13px;border-radius:9px;color:#191510;font-weight:600;white-space:nowrap;background:rgba(25,21,16,.05)">Bruksområder</a>
+      <a href="HeiTuva Splash.dc.html#priser" style="padding:9px 13px;border-radius:9px;color:#5F5849;font-weight:500;white-space:nowrap" style-hover="background:rgba(25,21,16,.05);color:#191510">Priser</a>
+      <a href="HeiTuva.dc.html" style="padding:9px 13px;border-radius:9px;color:#5F5849;font-weight:500;white-space:nowrap" style-hover="background:rgba(25,21,16,.05);color:#191510">Produktet</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:9px">
+      <a href="HeiTuva Splash.dc.html#logginn" style="display:inline-flex;align-items:center;padding:10px 17px;border-radius:10px;border:1px solid #E8DFC9;font-size:13.5px;font-weight:600;white-space:nowrap">Logg inn</a>
+      <a href="HeiTuva Splash.dc.html#registrer" style="display:inline-flex;align-items:center;padding:10px 17px;border-radius:10px;background:#191510;color:#FFFDF6;font-size:13.5px;font-weight:600;white-space:nowrap">Prøv gratis</a>
+    </div>
+  </header>
+
+  <section style="max-width:1240px;margin:0 auto;padding:26px 44px 0;box-sizing:border-box">
+    <div style="animation:ht-in .3s ease">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">Bruksområder</div>
+      <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:40px;line-height:1.1;letter-spacing:-.015em;margin:12px 0 0;max-width:760px;text-wrap:pretty">Hva vil dere finne ut?</h1>
+      <p style="font-size:16px;line-height:1.65;color:#5F5849;max-width:640px;margin:12px 0 0;text-wrap:pretty">Ni undersøkelser norske virksomheter kjører oftest. Hver av dem har ferdig mal, anbefalt frekvens og en rapport som er klar å dele. Velg et område for å se hva den dekker.</p>
+    </div>
+
+    <div id="omrader" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:26px;scroll-margin-top:16px">
+      <sc-for list="{{ cards }}" as="c" hint-placeholder-count="9">
+        <button onClick="{{ c.onPick }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;text-align:left;padding:18px;border-radius:16px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:#191510;min-width:0">
+          <span style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%">
+            <span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:#5F5849;white-space:nowrap">{{ c.tag }}</span>
+            <sc-if value="{{ c.isLegal }}" hint-placeholder-val="{{ false }}">
+              <span style="padding:3px 9px;border-radius:999px;background:#FBD5C4;color:#8A4B22;font-size:10px;font-weight:700;white-space:nowrap">Lovpålagt</span>
+            </sc-if>
+          </span>
+          <span style="font-size:15.5px;font-weight:700;line-height:1.25;text-wrap:pretty">{{ c.title }}</span>
+          <span style="font-size:12.5px;color:#5F5849;line-height:1.5">{{ c.cadence }} · {{ c.count }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="detalj" style="max-width:1240px;margin:0 auto;padding:44px 44px 0;box-sizing:border-box;scroll-margin-top:16px">
+    <div style="padding:30px;border-radius:24px;border:1px solid #E8DFC9;background:#FFFDF6">
+
+      <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:26px;align-items:start">
+        <div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px">
+            <span style="padding:6px 13px;border-radius:999px;background:{{ uc.tint }};font-size:12px;font-weight:700">{{ uc.tag }}</span>
+            <sc-if value="{{ uc.isLegal }}" hint-placeholder-val="{{ false }}">
+              <span style="padding:6px 13px;border-radius:999px;background:#FBD5C4;color:#8A4B22;font-size:12px;font-weight:700">Lovpålagt · {{ uc.law }}</span>
+            </sc-if>
+          </div>
+          <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:34px;line-height:1.12;margin:14px 0 0;text-wrap:pretty">{{ uc.title }}</h2>
+          <p style="font-size:15.5px;line-height:1.65;color:#5F5849;max-width:600px;margin:12px 0 0;text-wrap:pretty">{{ uc.intro }}</p>
+
+          <div style="display:flex;flex-wrap:wrap;gap:28px;margin-top:22px">
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;line-height:1">{{ uc.count }}</div>
+              <div style="font-size:12.5px;color:#5F5849;margin-top:3px">spørsmål i malen</div>
+            </div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;line-height:1">{{ uc.minutes }}</div>
+              <div style="font-size:12.5px;color:#5F5849;margin-top:3px">typisk svartid</div>
+            </div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;line-height:1">{{ uc.cadence }}</div>
+              <div style="font-size:12.5px;color:#5F5849;margin-top:3px">anbefalt frekvens</div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:11px;margin-top:22px">
+            <a href="HeiTuva.dc.html" style="display:inline-flex;align-items:center;padding:13px 22px;border-radius:12px;background:#F5C64A;color:#191510;font-size:14px;font-weight:700">Bruk denne malen</a>
+            <a href="HeiTuva Splash.dc.html#priser" style="display:inline-flex;align-items:center;padding:13px 22px;border-radius:12px;border:1px solid #E8DFC9;font-size:14px;font-weight:600">Se priser</a>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="padding:20px;border-radius:18px;background:{{ uc.tint }}">
+            <div style="font-size:12.5px;font-weight:700">Slik settes den opp</div>
+            <sc-for list="{{ ucSetup }}" as="s2" hint-placeholder-count="4">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid rgba(25,21,16,.12)">
+                <span style="font-size:11.5px;color:#5F5849;white-space:nowrap">{{ s2.label }}</span>
+                <span style="font-size:12px;font-weight:600;text-align:right">{{ s2.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:20px;border-radius:18px;border:1px solid #E8DFC9;background:#FCF6E9">
+            <div style="font-size:12.5px;font-weight:700">Rapporten inneholder</div>
+            <sc-for list="{{ ucReport }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex;align-items:flex-start;gap:9px;padding:7px 0">
+                <span style="width:6px;height:6px;flex:none;margin-top:6px;border-radius:999px;background:#A8D5D2;display:block"></span>
+                <span style="flex:1;font-size:12.5px;line-height:1.5">{{ r.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:28px">
+        <div style="padding:20px;border-radius:16px;border:1px solid #E8DFC9;background:#FCF6E9">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">Hvorfor spørre</div>
+          <sc-for list="{{ ucWhy }}" as="w" hint-placeholder-count="3">
+            <div style="display:flex;align-items:flex-start;gap:9px;margin-top:10px">
+              <span style="width:6px;height:6px;flex:none;margin-top:6px;border-radius:999px;background:#F5C64A;display:block"></span>
+              <span style="flex:1;font-size:13px;line-height:1.55">{{ w.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:20px;border-radius:16px;border:1px solid #E8DFC9;background:#FCF6E9">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">Spørsmålstyper</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+            <sc-for list="{{ ucTypes }}" as="ty" hint-placeholder-count="4">
+              <span style="padding:6px 11px;border-radius:999px;background:#FFFDF6;border:1px solid #E8DFC9;font-size:11.5px;color:#5F5849">{{ ty.label }}</span>
+            </sc-for>
+          </div>
+          <div style="font-size:12.5px;color:#5F5849;margin-top:14px;line-height:1.55">{{ uc.anonNote }}</div>
+        </div>
+        <div style="padding:20px;border-radius:16px;border:1px solid #E8DFC9;background:#FCF6E9">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5F5849">Eksempelspørsmål</div>
+          <sc-for list="{{ ucExamples }}" as="e" hint-placeholder-count="3">
+            <div style="font-size:13px;line-height:1.55;margin-top:10px;font-style:italic;color:#5F5849">«{{ e.label }}»</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:26px;padding:18px 22px;border-radius:16px;background:#FBEBBE">
+        <span style="flex:1;min-width:240px">
+          <span style="display:block;font-size:13px;font-weight:700">{{ uc.tipTitle }}</span>
+          <span style="display:block;font-size:12.5px;color:#5F5849;margin-top:3px;line-height:1.55">{{ uc.tipBody }}</span>
+        </span>
+        <a href="HeiTuva.dc.html" style="flex:none;padding:11px 18px;border-radius:10px;background:#191510;color:#FFFDF6;font-size:12.5px;font-weight:600;white-space:nowrap">Åpne i HeiTuva</a>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1240px;margin:0 auto;padding:48px 44px 0;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:28px 32px;border-radius:20px;background:#191510;color:#FFFDF6">
+      <div style="flex:1;min-width:260px">
+        <div style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;line-height:1.2">Usikker på hvor dere skal begynne?</div>
+        <div style="font-size:14px;opacity:.8;margin-top:6px;line-height:1.6">Start med en pulsmåling på fem spørsmål. Den tar fem minutter å sette opp, og gir dere retningen før den store runden.</div>
+      </div>
+      <a href="HeiTuva.dc.html" style="display:inline-flex;align-items:center;padding:15px 26px;border-radius:12px;background:#F5C64A;color:#191510;font-size:14.5px;font-weight:700;white-space:nowrap">Lag den første undersøkelsen</a>
+    </div>
+  </section>
+
+  <footer style="max-width:1240px;margin:0 auto;padding:56px 44px 44px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-top:24px;border-top:1px solid #E8DFC9;font-size:12.5px;color:#5F5849">
+      <span>HeiTuva — Nordisk Studio AS · Storgata 12, 0155 Oslo</span>
+      <span style="display:flex;gap:20px"><a href="HeiTuva Splash.dc.html">Forsiden</a><a href="HeiTuva Splash.dc.html#priser">Priser</a><a href="HeiTuva.dc.html">Produktet</a></span>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:1000}}">
+const UC = {
+  puls: {
+    tag:"HR", title:"Pulsmåling", tint:"#FBEBBE", cadence:"Ukentlig", count:"5", minutes:"1 min",
+    intro:"Tre til fem faste spørsmål som viser retningen tidlig. Pulsmålingen er den enkleste veien til høy svarprosent, og gir historikk mellom de store rundene.",
+    setup:[["Frekvens","Hver mandag kl. 09.00"],["Mottakere","Hele virksomheten"],["Anonymitet","Anonymt, terskel 5"],["Påminnelse","Dag 2"]],
+    why:["Dere ser endringer før de blir personalsaker.","Korte runder gir høy svarprosent over tid.","Trendlinjen dokumenterer HMS-arbeidet mellom årsrundene."],
+    types:["Skala 1–5","Smilefjes","Fritekst","Ja / nei"],
+    examples:["Hvordan har uken på jobb vært?","Jeg har det jeg trenger for å gjøre jobben min godt","Hva ville gjort neste uke bedre?"],
+    report:["Trend per uke og per team","Fargekart mot forrige runde","Temaer i frisvarene","Tiltak som er åpne"],
+    anonNote:"Anonymt som standard. Team under terskelen vises ikke egen kolonne.",
+    tipTitle:"Hold den kort", tipBody:"Fem spørsmål er nok. Legger dere til flere, faller svarprosenten merkbart."
+  },
+  medarbeider: {
+    tag:"HR", title:"Medarbeiderundersøkelse", tint:"#F3E7DB", cadence:"Årlig", count:"38", minutes:"9 min",
+    intro:"Den store runden som måler engasjement, ledelse, rolleklarhet og tilhørighet. Resultatene sammenlignes med i fjor og fordeles per enhet.",
+    setup:[["Frekvens","Én gang i året"],["Mottakere","Alle ansatte og innleide"],["Anonymitet","Anonymt, terskel 5"],["Medvirkning","Verneombud og AMU"]],
+    why:["Gir et samlet bilde av arbeidsmiljøet, ikke bare stemningen denne uken.","Sammenligning mot i fjor viser om tiltakene virket.","Dokumenterer systematisk HMS-arbeid etter aml. § 3-1."],
+    types:["Matrise","Skala 1–5","Flervalg","Fritekst"],
+    examples:["Jeg vil anbefale denne arbeidsplassen til en venn","Lederen min gir meg nyttige tilbakemeldinger","Hva bør vi begynne med?"],
+    report:["Score per område og enhet","Sammenligning med forrige år","Fargekart for hele organisasjonen","Tiltaksplan med ansvarlig og frist"],
+    anonNote:"Anonymt. Enheter under terskelen slås sammen i rapporten.",
+    tipTitle:"Planlegg tiltakene før utsending", tipBody:"Avklar hvem som eier oppfølgingen først. Undersøkelser uten tiltak senker svarprosenten neste år."
+  },
+  psykososial: {
+    tag:"HR", title:"Psykososial kartlegging", tint:"#CFE7E4", cadence:"Årlig", count:"38", minutes:"9 min",
+    isLegal:true, law:"aml. § 4-3",
+    intro:"Arbeidsmiljøloven pålegger deg å kartlegge psykososial risiko, dokumentere funnene og følge dem opp. Malen dekker krav, kontroll, ledelse, trakassering, helse og organisering.",
+    setup:[["Hjemmel","aml. § 4-3 og § 3-1"],["Frekvens","Minst annethvert år"],["Anonymitet","Anonymt, terskel 5"],["Resultat","Rapport og tiltaksplan"]],
+    why:["Loven krever kartlegging, risikovurdering og oppfølging.","Arbeidstilsynet ber om dokumentasjonen ved tilsyn.","Psykososiale forhold er den vanligste årsaken til langtidsfravær."],
+    types:["Skala 1–5","Ja / nei","Fritekst","Vet ikke-valg"],
+    examples:["Jeg kan si fra om kritikkverdige forhold uten å frykte konsekvenser","Hvor ofte har du så mye å gjøre at du ikke rekker oppgavene dine?","Får du hjelp og støtte fra nærmeste leder?"],
+    report:["Risikobilde per temaområde","Funn under terskel, med hjemmel","Tiltaksplan med ansvarlig og frist","Signaturfelt for verneombud og AMU"],
+    anonNote:"Alltid anonymt. «Vet ikke» er et eget valg, slik at ingen gjetter.",
+    tipTitle:"Involver verneombudet først", tipBody:"Medvirkning skal dokumenteres. Verneombudet har egen rolle i HeiTuva og godkjenner spørsmålene før utsending."
+  },
+  trakassering: {
+    tag:"HR", title:"Trakassering og ytringsklima", tint:"#FBD5C4", cadence:"Årlig", count:"16", minutes:"3 min",
+    isLegal:true, law:"aml. kap. 2A",
+    intro:"Kartlegger mobbing, trakassering, diskriminering og om folk tør å si fra. Temaet krever strengere anonymitet enn vanlige undersøkelser.",
+    setup:[["Hjemmel","aml. kap. 2A og § 4-3 (3)"],["Frekvens","Årlig, eller ved varsel"],["Anonymitet","Forsterket, terskel 8"],["Varsling","Kanal vises i skjemaet"]],
+    why:["Forebyggingsplikten gjelder uansett om noen har varslet.","Varslingsrutinen skal være kjent — dette måler om den er det.","Anonym kartlegging avdekker forhold som ellers først dukker opp i en personalsak."],
+    types:["Ja / nei","Flervalg","Skala 1–5","Fritekst"],
+    examples:["Har du de siste tolv månedene opplevd mobbing eller utfrysing på jobb?","Vet du hvor du skal varsle hvis noe alvorlig skjer?","Er du redd for negative konsekvenser hvis du varsler?"],
+    report:["Forekomst per kategori","Ytringsklima og kjennskap til rutinen","Funn som utløser undersøkelsesplikt","Tiltak og oppdatert varslingsrutine"],
+    anonNote:"Forsterket anonymitet. Ingen gruppe vises med færre enn åtte svar, og frisvar gjennomgås manuelt.",
+    tipTitle:"Rutinen først, undersøkelsen etterpå", tipBody:"Kontroller at varslingsrutinen finnes og er kjent før dere spør. Ellers står folk uten utvei når de svarer."
+  },
+  likestilling: {
+    tag:"HR", title:"Likestilling og ufrivillig deltid", tint:"#EDE9F7", cadence:"Annethvert år", count:"21", minutes:"4 min",
+    isLegal:true, law:"ldl. § 26",
+    intro:"Aktivitets- og redegjørelsesplikten krever at dere undersøker risiko for diskriminering, kartlegger lønnsforskjeller og ufrivillig deltid, og redegjør offentlig for funnene.",
+    setup:[["Hjemmel","ldl. § 26 og § 26 a"],["Frekvens","Lønnskartlegging annethvert år"],["Anonymitet","Anonymt, kjønnsdelt rapport"],["Medvirkning","Tillitsvalgte i alle steg"]],
+    why:["Redegjørelsen skal publiseres i årsberetningen.","Ufrivillig deltid skal kartlegges særskilt, ikke antas.","Lønnsdata må hentes fra lønnssystemet, ikke selvrapporteres."],
+    types:["Flervalg","Tall","Skala 1–5","Fritekst"],
+    examples:["Jobber du deltid, og er dette et ønske fra deg selv?","Hvilken stillingsprosent ønsker du?","Opplever du like muligheter ved intern rekruttering?"],
+    report:["Kjønnsbalanse per stillingsgruppe","Lønnsforskjeller, aggregert","Ufrivillig deltid og midlertidighet","Utkast til redegjørelsestekst"],
+    anonNote:"Anonymt. Kjønn og gruppe vises bare når gruppen er over terskelen.",
+    tipTitle:"Koble til lønnssystemet", tipBody:"Selvrapportert lønn holder ikke for ARP. Hent tallene aggregert per stillingsgruppe under Integrasjoner."
+  },
+  aktsomhet: {
+    tag:"Leverandør", title:"Aktsomhetsvurdering", tint:"#FBEBBE", cadence:"Årlig", count:"27", minutes:"8 min",
+    isLegal:true, law:"åpenhetsloven §§ 4–5",
+    intro:"Skjema til leverandørene om arbeidsforhold, menneskerettigheter og underleverandører. Svarene er grunnlaget for redegjørelsen som skal publiseres innen 30. juni.",
+    setup:[["Hjemmel","åpenhetsloven §§ 4, 5 og 6"],["Frekvens","Årlig, frist 30. juni"],["Attribuering","Per leverandør, ikke anonymt"],["Språk","Norsk, svensk, dansk, engelsk"]],
+    why:["Redegjørelsen er lovpålagt og offentlig.","Innsynskrav må besvares innen tre uker.","Store kunder krever nå samme dokumentasjon fra dere."],
+    types:["Ja / nei","Flervalg","Fritekst","Filopplasting"],
+    examples:["Har dere skriftlige rutiner som forbyr barnearbeid hos egne underleverandører?","Har ansatte rett til å organisere seg?","Beskriv funnene og hvor i kjeden de oppsto."],
+    report:["Risiko per leverandør","Prioriterte funn","Tiltak med ansvarlig og frist","Redegjørelse etter OECDs modell"],
+    anonNote:"Ikke anonymt. Svarene knyttes til virksomhet og kontaktperson, med sporbar historikk.",
+    tipTitle:"Purr automatisk", tipBody:"Under halvparten svarer på første utsending. Slå på automatisk oppfølging med eskalering til innkjøpsansvarlig."
+  },
+  onboarding: {
+    tag:"Ledelse", title:"Oppstartssjekk", tint:"#CFE7E4", cadence:"30 · 60 · 90 dager", count:"8", minutes:"2 min",
+    intro:"Sendes automatisk etter startdatoen og fanger opp hva som var uklart mens inntrykket er ferskt. Det sterkeste enkelttiltaket mot tidlig turnover.",
+    setup:[["Utløser","Startdato i HR-systemet"],["Frekvens","Etter 30, 60 og 90 dager"],["Anonymitet","Kan være med navn"],["Eier","Nærmeste leder"]],
+    why:["Nyansatte husker friksjonen i tre måneder, ikke lenger.","Gir konkrete forbedringer i onboardingløpet.","Dokumenterer opplæring etter aml. § 3-2."],
+    types:["Skala 1–5","Ja / nei","Fritekst"],
+    examples:["Den første måneden svarte til forventningene","Hadde du en fadder den første uken?","Hva var forvirrende de første ukene?"],
+    report:["Score per kull og avdeling","Hva som hjalp mest","Fritekst gruppert i temaer","Tiltak i onboardingløpet"],
+    anonNote:"Kan sendes med navn, siden svarene brukes til individuell oppfølging.",
+    tipTitle:"La den gå av seg selv", tipBody:"Koble til HR-systemet, så sendes sjekken automatisk. Manuelle utsendinger glipper i praksis."
+  },
+  kunde: {
+    tag:"Kunder", title:"Kundeundersøkelse og NPS", tint:"#F3E7DB", cadence:"Løpende", count:"6", minutes:"1 min",
+    intro:"Spør rett etter kjøp, levering eller sak. Ett referansetall over tid, med frisvar som forklarer hvorfor tallet beveger seg.",
+    setup:[["Utløser","Etter levering eller lukket sak"],["Frekvens","Løpende"],["Anonymitet","Valgfritt per undersøkelse"],["Kanal","E-post, lenke eller QR"]],
+    why:["Ett tall dere kan følge fra måned til måned.","Frisvarene sier hva som må endres, ikke bare hvor dårlig det er.","Brukes i kvalitetsstyring og ISO-sertifisering."],
+    types:["NPS 0–10","Skala 1–5","Flervalg","Fritekst"],
+    examples:["Hvor sannsynlig er det at du vil anbefale oss?","Hvordan opplevde du leveringen?","Hva kunne vi gjort bedre?"],
+    report:["NPS over tid og per kanal","Fordeling av ambassadører og kritikere","Temaer i kommentarene","Saker som krever oppfølging"],
+    anonNote:"Dere velger selv. Med navn kan dere følge opp enkeltkunder direkte.",
+    tipTitle:"Spør tett på hendelsen", tipBody:"Svarprosenten faller raskt etter et døgn. Send undersøkelsen samme dag som saken lukkes."
+  },
+  exit: {
+    tag:"HR", title:"Exit-undersøkelse", tint:"#EDE9F7", cadence:"Ved avgang", count:"7", minutes:"2 min",
+    intro:"Kort skjema ved siste arbeidsdag. Svarene aggregeres over året og viser hvorfor folk faktisk slutter, ikke hva de sier i sluttsamtalen.",
+    setup:[["Utløser","Sluttdato i HR-systemet"],["Frekvens","Ved hver avgang"],["Anonymitet","Anonymt, aggregert per år"],["Terskel","Vises fra 5 svar"]],
+    why:["Sluttsamtalen med leder gir pyntede svar.","Aggregerte tall viser mønstre dere kan gjøre noe med.","Gir dokumentasjon i tvistesaker."],
+    types:["Flervalg","Skala 1–5","Fritekst"],
+    examples:["Hva var den viktigste grunnen til at du sluttet?","Ville du vurdert å komme tilbake?","Hva burde vi endret for å beholde deg?"],
+    report:["Sluttårsaker fordelt over året","Score per avdeling","Frisvar gruppert i temaer","Tiltak for å beholde folk"],
+    anonNote:"Anonymt og aggregert. Enkeltsvar vises aldri, uansett hvor få som slutter.",
+    tipTitle:"Send den etter siste dag", tipBody:"Folk svarer mer ærlig når arbeidsforholdet er avsluttet. Bruk privat e-post der dere har den."
+  }
+};
+
+const ORDER = ["puls","medarbeider","psykososial","trakassering","likestilling","aktsomhet","onboarding","kunde","exit"];
+
+class Component extends DCLogic {
+  state = { pick: "puls" };
+
+  componentDidMount(){
+    const h = String(window.location.hash || "").replace("#","");
+    if (UC[h]) this.setState({ pick: h });
+  }
+
+  choose(k){
+    this.setState({ pick: k });
+    try { window.location.hash = k; } catch(e){}
+    const el = document.getElementById("detalj");
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.pageYOffset - 16, behavior:"smooth" });
+  }
+
+  renderVals(){
+    const key = this.state.pick, u = UC[key] || UC.puls;
+    return {
+      cards: ORDER.map(k => { const c = UC[k], on = key === k;
+        return { tag:c.tag, title:c.title, cadence:c.cadence, count: c.count + " spørsmål",
+          isLegal: !!c.isLegal,
+          bg: on ? c.tint : "#FFFDF6", bd: on ? "#191510" : "#E8DFC9",
+          onPick: () => this.choose(k) }; }),
+
+      uc: { tag:u.tag, title:u.title, intro:u.intro, tint:u.tint, cadence:u.cadence,
+        count:u.count, minutes:u.minutes, isLegal: !!u.isLegal, law: u.law || "",
+        anonNote:u.anonNote, tipTitle:u.tipTitle, tipBody:u.tipBody },
+
+      ucSetup: u.setup.map(([label,value]) => ({ label, value })),
+      ucWhy: u.why.map(label => ({ label })),
+      ucTypes: u.types.map(label => ({ label })),
+      ucExamples: u.examples.map(label => ({ label })),
+      ucReport: u.report.map(label => ({ label }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>
