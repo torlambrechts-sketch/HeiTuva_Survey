@@ -16,5 +16,7 @@
   "tests/unit/absent-deps.test.ts": 2,
   "tests/invariants/threshold-policy.test.ts": 11,
   "tests/unit/anonymity-promise.test.ts": 6,
-  "tests/invariants/attributed-results.test.ts": 15
+  "tests/invariants/attributed-results.test.ts": 15,
+  "tests/unit/sentry-scrub.test.ts": 8,
+  "tests/unit/channel-registry.test.ts": 7
 }

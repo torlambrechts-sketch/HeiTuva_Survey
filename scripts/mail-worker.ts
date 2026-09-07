@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 import { invitationMessage, mailProvider } from '../lib/mail'
 import { invitationSms, smsProvider } from '../lib/sms'
+import type { Channel } from '../lib/send/registry'
 import { LOCAL_SUPABASE } from './verify/local-env'
 
 const useLocal = process.argv.includes('--local')
@@ -41,10 +42,20 @@ const BATCH = 10
 /** Give up after this many attempts and leave it for the dead-letter sweep. */
 const MAX_ATTEMPTS = 5
 
+/** The channels this worker can actually deliver. `link` and `qr` are share
+ *  links and are never queued; anything else is a job it must refuse. */
+const DELIVERABLE = ['email', 'sms'] as const satisfies readonly Channel[]
+type Deliverable = (typeof DELIVERABLE)[number]
+
 type Job = {
   kind: 'invitation' | 'test' | 'reminder'
-  /** Absent on jobs queued before migration 0027; those are email. */
-  channel?: 'email' | 'sms'
+  /**
+   * Typed from the database enum, not from the two values this worker handles,
+   * so a channel the schema gains but the worker cannot send is a value that
+   * reaches the check below rather than one the type system pretends away.
+   * Absent on jobs queued before migration 0027; those are email.
+   */
+  channel?: Channel
   round_id: string
   survey_id: string
   org_id: string
@@ -97,14 +108,27 @@ async function drain(): Promise<number> {
       continue
     }
 
+    // A job whose channel this worker cannot send is MALFORMED, not email.
+    // It used to fall through to the email branch — `job.channel === 'sms' ?
+    // phone : email` — so a channel added to the schema and to send_round but
+    // not to this file would have been "delivered" to a null address, silently,
+    // for every recipient. Archive it as evidence, like any other bad job.
+    const channel: Channel = job.channel ?? 'email'
+    if (!(DELIVERABLE as readonly Channel[]).includes(channel)) {
+      await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
+      console.error(`  archived msg ${m.msg_id}: no delivery path for channel '${channel}'`)
+      continue
+    }
+    const sendable = channel as Deliverable
+
     const url = `${appUrl}/s/${job.token}`
     const anonymous = anonymity.get(job.survey_id) !== 'named'
     const org = orgName.get(job.org_id) ?? 'HeiTuva'
     // One person is one address or one phone; the key follows whichever it is.
-    const reachedBy = job.channel === 'sms' ? job.phone : job.email
+    const reachedBy = sendable === 'sms' ? job.phone : job.email
 
     let result
-    if (job.channel === 'sms') {
+    if (sendable === 'sms') {
       if (!job.phone) {
         // A malformed job, not a transient: archive it as evidence.
         await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
@@ -141,11 +165,11 @@ async function drain(): Promise<number> {
         .from('survey_invitations')
         .update({ sent_at: new Date().toISOString() })
         .eq('round_id', job.round_id)
-      await (job.channel === 'sms' ? mark.eq('phone', job.phone!) : mark.eq('email', job.email!))
+      await (sendable === 'sms' ? mark.eq('phone', job.phone!) : mark.eq('email', job.email!))
       await svc.rpc('mail_outbox_delete', { p_msg_id: m.msg_id })
       sent++
       // The address or number is logged, the token is not — the token is the credential.
-      console.log(`  sent ${job.kind} by ${job.channel ?? 'email'} -> ${reachedBy}`)
+      console.log(`  sent ${job.kind} by ${sendable} -> ${reachedBy}`)
     } else if (result.retryable) {
       // Left on the queue: the visibility timeout returns it by itself.
       console.error(`  retrying msg ${m.msg_id}: ${result.error}`)

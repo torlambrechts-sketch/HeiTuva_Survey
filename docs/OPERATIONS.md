@@ -50,10 +50,30 @@ two secrets are typed once and never committed.
    refused. (No code reads this; Auth enforces it at sign-up and password change.)
 3. **`SUPABASE_SERVICE_ROLE_KEY`, then seed i18n** — Dashboard → Project
    Settings → API → service_role, into `.env.local` on the machine that runs
-   the seeds (never into Vercel for the app: the app does not use it at request
-   time, only the scripts do). Then `npm run seed:i18n` against production, so
-   `ui_messages` carries the Phase 6 and 7 keys. Verified by no raw
-   `namespace.key` on any screen.
+   the seeds. Then `npm run seed:i18n` against production, so `ui_messages`
+   carries the Phase 6 and 7 keys. Verified by no raw `namespace.key` on any
+   screen.
+
+   **Correction (G0, 2026-09-07).** This step used to read "never into Vercel
+   for the app: the app does not use it at request time, only the scripts do."
+   That is false, and it had been load-bearing for the threat model since Phase
+   7. Two server actions call `createAdminClient()` on the request path —
+   `app/(auth)/kom-i-gang/actions.ts:45` to create an organisation and
+   `app/(app)/administrasjon/actions.ts:390` to invite a colleague — and
+   `createAdminClient()` throws when the key is absent, so those flows cannot
+   work without it. Production bears this out: `heituva-prod` holds one
+   organisation whose `org_members` row shares its creation timestamp to the
+   microsecond and an `auth.users` row created 2.7 hours earlier, which is the
+   shape `/kom-i-gang` produces and nothing else does. Four surveys and no
+   groups, rounds or responses say it is a real signup rather than seed data.
+
+   What remains unconfirmed is only whether that ran on the deployed app or on
+   a developer machine pointed at production; `vercel env ls` settles it and
+   nothing in this repository can. **Assume the app runtime can read whatever
+   the service role can read** — including, once integrations exist,
+   `vault.decrypted_secrets`, which is granted to `service_role`. That is why
+   `docs/INTEGRATION_ARCHITECTURE.md` §1 puts the integration secret accessor
+   behind a role the app does not hold, rather than behind this key.
 4. **Turnstile + sign-up rate limit** — Cloudflare → Turnstile → new widget for
    the production hostname; set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
    `TURNSTILE_SECRET_KEY` on Vercel (Production). With both present the splash

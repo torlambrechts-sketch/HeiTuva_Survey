@@ -11,6 +11,7 @@ import {
   CADENCE_KEY,
   CHANNELS,
   CHANNEL_KEY,
+  FLAGGED_CHANNELS,
   IMPLEMENTED_SOURCES,
   IMPORT_KEY,
   IMPORT_SOURCES,
@@ -21,6 +22,7 @@ import {
   type Channel,
   type ImportSource,
 } from '@/lib/send/registry'
+import type { FlagKey } from '@/lib/flags'
 import { parseRecipients, type ImportedRecipient } from '@/lib/send/import'
 import { sendSurvey, sendTestToSelf } from './actions'
 
@@ -42,7 +44,7 @@ export function SendScreen({
   questionCount,
   alreadyOpen,
   canSend,
-  smsEnabled,
+  channelFlags,
   orgName,
   groups,
 }: {
@@ -60,7 +62,12 @@ export function SendScreen({
   questionCount: number
   alreadyOpen: boolean
   canSend: boolean
-  smsEnabled: boolean
+  /**
+   * Resolved `feature_flags` state for every key named in FLAGGED_CHANNELS.
+   * A map rather than a `smsEnabled` boolean, so gating a new channel is a
+   * registry row and never a new prop.
+   */
+  channelFlags: Partial<Record<FlagKey, boolean>>
   groups: Group[]
 }) {
   const t = useTranslations('send')
@@ -196,7 +203,10 @@ export function SendScreen({
             <h2 className={H2}>{t('title')}</h2>
             <div className="mt-3.5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
               {CHANNELS.map((c) => {
-                const available = c !== 'sms' || smsEnabled
+                // The registry decides what is gated; this reads it. Naming a
+                // channel here is what let FLAGGED_CHANNELS rot unused.
+                const gate = FLAGGED_CHANNELS[c]
+                const available = !gate || channelFlags[gate] === true
                 const on = channels.includes(c)
                 return (
                   <button

@@ -46,12 +46,39 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
 ]
 
+/**
+ * The two token-addressed routes must never be indexed.
+ *
+ * `/s/<token>` is a respondent's personal invitation and `/r/<token>` a report
+ * share link. Both are unguessable rather than authenticated, and both were
+ * relying on obscurity alone: there is no robots.txt in this project, no
+ * `robots` field in the root metadata, and `dynamic = 'force-dynamic'` on the
+ * respondent page is cache control, not crawler control.
+ *
+ * A GET on either mutates nothing — `get_survey_for_token` is STABLE, and
+ * `responded_at` and token rotation are only ever touched by the VOLATILE
+ * `submit_response` and `enqueue_reminders` — so this is not about protecting a
+ * token from being spent. It is that the page discloses a survey title, an
+ * organisation name and whether that individual has already answered, to
+ * anything that fetches the URL. Chat clients unfurl pasted links by default,
+ * which is exactly how such a URL reaches a crawler.
+ *
+ * `X-Robots-Tag` rather than a robots.txt: robots.txt is advisory, applies only
+ * to crawlers that read it, and publishing `Disallow: /s/` would announce the
+ * path shape to anyone who asks for it. A header travels with the response.
+ */
+const noIndexHeader = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' }]
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   typescript: { ignoreBuildErrors: false },
   eslint: { ignoreDuringBuilds: false },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }]
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      { source: '/s/:path*', headers: noIndexHeader },
+      { source: '/r/:path*', headers: noIndexHeader },
+    ]
   },
 }
 

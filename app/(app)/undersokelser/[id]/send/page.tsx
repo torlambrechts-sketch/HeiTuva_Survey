@@ -3,8 +3,23 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { isFlagEnabled } from '@/lib/flags'
+import { CHANNEL_FLAG_KEYS } from '@/lib/send/registry'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { SendScreen } from './SendScreen'
+
+/**
+ * Resolve every flag the channel registry gates on, in one place.
+ *
+ * Reading the registry rather than naming `sms_channel` is what keeps
+ * FLAGGED_CHANNELS the single source of truth: a gated channel added there is
+ * resolved here without this file changing.
+ */
+async function channelFlags(orgId: string) {
+  const entries = await Promise.all(
+    CHANNEL_FLAG_KEYS.map(async (key) => [key, await isFlagEnabled(key, orgId)] as const),
+  )
+  return Object.fromEntries(entries)
+}
 
 /** Canonical UUID shape; anything else cannot name a survey. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -106,7 +121,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         questionCount={questionCount ?? 0}
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}
-        smsEnabled={await isFlagEnabled('sms_channel', viewer.orgId)}
+        channelFlags={await channelFlags(viewer.orgId)}
         orgName={viewer.orgName}
         groups={(groups ?? []).map((g) => ({
           id: g.id,

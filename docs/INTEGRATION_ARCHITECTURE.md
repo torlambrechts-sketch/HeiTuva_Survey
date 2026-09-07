@@ -131,7 +131,7 @@ introduce a key HeiTuva must not lose.
 Ordered so each one is shippable alone and nothing later un-builds anything
 earlier. **G0 and G1 can start today.**
 
-### G0 — Truth-up and hygiene · 1–2 days · no dependencies
+### G0 — Truth-up and hygiene · **DONE 2026-09-07** · no dependencies
 
 Fixing what is already wrong, before anything is built on top of it. Every item
 has value with or without integrations.
@@ -182,6 +182,65 @@ has value with or without integrations.
 **Done when:** the two channel defects have tests, the scrubber has a test that
 a `refresh_token` key is dropped, the token routes send `X-Robots-Tag: noindex`,
 and OPERATIONS.md says something true about the service key.
+
+#### What shipped
+
+- **`Channel` derives from the database.** `lib/send/registry.ts` reads it off
+  `Database['public']['Tables']['survey_invitations']['Row']['channel']`
+  instead of a hand-written array, `CHANNELS` is `satisfies readonly Channel[]`,
+  and `CHANNEL_KEY` stays a total `Record<Channel, …>` — so a migration that
+  grows `app.channel` now breaks the build at the registry, which is where
+  someone should be made to look.
+- **`FLAGGED_CHANNELS` is the gate.** `SendScreen` reads
+  `FLAGGED_CHANNELS[c]` and a resolved flag map instead of
+  `c !== 'sms' || smsEnabled`; the `smsEnabled` prop is gone, replaced by
+  `channelFlags`, which `send/page.tsx` fills from the derived
+  `CHANNEL_FLAG_KEYS`. Gating a channel is now a registry row plus a seed row.
+- **The worker refuses what it cannot send.** `scripts/mail-worker.ts` types
+  `channel` from the database enum and archives any job outside
+  `DELIVERABLE = ['email','sms']` as malformed. It used to compute
+  `job.channel === 'sms' ? phone : email`, so an unhandled channel was
+  delivered *as email*, to a null address, silently, for every recipient.
+- **The Sentry scrubber catches credentials.** The key rule was one anchored
+  alternation containing `token`, which dropped a key called exactly `token`
+  and kept `access_token`, `refresh_token`, `bot_token`, `client_secret` and
+  `signing_secret` — and `MAX_STRING` is 200, so the length guard passed them
+  through as ordinary short strings. Credentials are now matched as substrings,
+  respondent content still exactly; `request.query_string` is dropped (it
+  carries the one-time auth code on `/auth/callback`) and signature headers go
+  with cookie and authorization.
+- **`X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`** on `/s/:path*`
+  and `/r/:path*`, verified against a running build: both token routes carry it
+  alongside all six existing security headers, and `/` does not. A header
+  rather than a robots.txt, which is advisory and would publish the path shape.
+- **`docs/OPERATIONS.md` step 3 corrected** with the evidence, and pointed at
+  §1 for the consequence.
+
+Census: **20 files / 407 tests**, up from 18 / 392. Both numbers may only move
+up and did.
+
+#### Logged, not built
+
+Three things surfaced that are real and are not G0's:
+
+- **The Send screen still hard-codes channels for its panels** —
+  `channels.includes('email') || channels.includes('sms')` decides whether the
+  recipient list shows, `includes('link') || includes('qr')` the share panel,
+  and `includes('sms')` the message preview. That is channel *shape*
+  (needs recipients / shares a link / has a preview) and it wants registry
+  fields, not another `includes`. It belongs with the first provider that adds
+  a card, because that is when the shape becomes decidable rather than guessed.
+- **The worker cannot be unit-tested.** `scripts/mail-worker.ts` calls `main()`
+  at import, so the refusal above is asserted by reading the code and by the
+  registry's compile-time break, not by a test. Extracting the per-job decision
+  into a pure function is a small change with no caller today; it belongs with
+  G6's worker hardening.
+- **`npm ci` fails on this checkout** with `Missing: image-size@ from lock
+  file` under npm 10.9.7 — the `overrides` → `stubs/image-size` link has moved
+  in the tree between npm versions. `npm install` succeeds and rewrites four
+  lines of `package-lock.json`; the lockfile was left untouched here because it
+  is not G0's to change. Worth pinning the npm version in CI before it bites
+  someone mid-phase.
 
 ### G1 — The custody decision · 2–3 days · gates G2
 
@@ -436,7 +495,7 @@ and this plan does not propose to unfreeze it. What it does add:
 ## 3. Sequence, and what it costs
 
 ```
-G0 truth-up & hygiene ......... 1–2 d   ── start now, no dependencies
+G0 truth-up & hygiene ......... DONE    ── shipped 2026-09-07
 G1 custody decision (spike) ... 2–3 d   ── start now, gates G2
 G2 secret custody ............. 4–6 d   ── gates G3, G4, G7
 G3 inbound edge ............... 4–5 d
@@ -474,7 +533,7 @@ wasted, and the provider work cannot start without it.**
 | Q18-a | The custody model — A, B or C from §1 | Tor, on G1's evidence | G2 |
 | Q18-b | Whether a bespoke Postgres role and its JWT are acceptable operationally | Tor | G2 |
 | Q18-c | What `organizations.privacy.eu_only` means — a control that refuses third-country providers, or a switch that comes out | Tor | G5 |
-| Q18-d | Whether the service key is on Vercel today, and whether it should be | operator + Tor | G0 |
+| Q18-d | Whether the service key is on Vercel today, and whether it should be | operator + Tor | **open** — needs `vercel env ls`; G0 established the app *can* read it and corrected OPERATIONS.md |
 | Q18-e | Whether an empty production `audit_events` means "nothing auditable happened" or "the trail is failing silently" | G3, from evidence | G3 |
 
 Q18-d is a question of fact and is now most of the way answered (§1, fact 3);
