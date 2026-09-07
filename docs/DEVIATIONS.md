@@ -2000,3 +2000,36 @@ forgotten.
 If the illustrations matter, the honest form is one per preset KEY rather than
 per index — an asset the seed names, like a template pack's icon — which is a
 data change and belongs with whoever decides the six presets are final.
+
+### D102 — the register panel's breach count is zero for a pre-M:0040 survey
+
+The dashboard's «Svar per virksomhet» panel counts three things, and the middle one — «har
+avdekket brudd eller risiko» — is derived from the pack's `brudd` ROLE (Q35,
+`lib/questions/roles.ts`), not from the bundle's `/brudd/i` match against the question
+text (NEW:3694).
+
+The role is the right rule and Q35 settled it: a text match calls any question mentioning
+«brudd» the breach question, and `tests/unit/question-roles.test.ts` asserts that a
+question whose text says «brudd» with no role is NOT it.
+
+**The consequence, stated rather than discovered.** Migration `20260906000040` wrote roles
+into `template_packs.questions` and **deliberately did not rewrite existing surveys** —
+that was the right call, because rewriting a live survey's questions changes what
+respondents were asked. So a supplier survey created before that migration has no `brudd`
+role on any question, and the panel counts **0** breaches for it. Not an error, not an
+empty state: the number zero, beside two counts that are correct.
+
+Today this affects nothing on the local stack or in the demo seed, both of which are
+created from the current pack. It affects any organisation survey on `heituva-prod` that
+predates `M:0040`, and there is no code path that repairs one.
+
+**Not fixed here, and the reason is the same one that made the migration right.** The
+repair is either a backfill that edits a live survey's questions (which the migration
+declined to do for good reason) or a per-survey re-designation in the Builder (which is a
+screen nobody has asked for). Both are decisions, not chores.
+
+**What would make it safe to leave:** the panel distinguishing "no breach question was
+designated" from "no breaches were found". It draws the same 0 for both today, and that is
+the fabricated-data rule in its quietest form — a real zero and an undefined numerator
+rendering identically. That is the fix worth doing, it belongs with whoever decides the
+repair, and it is one line of copy plus a null instead of a count.

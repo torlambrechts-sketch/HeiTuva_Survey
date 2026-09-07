@@ -160,6 +160,7 @@ with work still attached:
 | **D99** | Organisation surveys lose the aggregate half — **OPEN, not settled** | Nothing to do until a customer asks; the answer if one does is a named section, not a restored screen half | `DEVIATIONS.md:1930` |
 | **D100** | Two presets seeded without the stream panel, descriptions changed | Reverts as a seed change when Q26 lifts | `DEVIATIONS.md:1952` |
 | **D101** | First-run preset cards carry no illustration | The bundle's seven SVGs are keyed by array POSITION; the honest form is one per preset KEY | `DEVIATIONS.md:1983` |
+| **D102** | The register panel counts 0 breaches for a survey predating `M:0040` | Affects `heituva-prod` surveys only. The repair is a decision; the thing that makes it safe to leave is the panel distinguishing "no breach question designated" from "no breaches found", which it does not | `DEVIATIONS.md` (new) |
 
 ### Apparatus
 
@@ -239,7 +240,7 @@ scheduled rather than after.
 | | |
 |---|---|
 | Migrations | 76 (`supabase/migrations/*.sql`) |
-| Deviations logged | 103 (`docs/DEVIATIONS.md`) |
+| Deviations logged | 104 (`docs/DEVIATIONS.md`) |
 | Decisions in the register | 43, of which 29 are CONFIRMED (Tor) (`DECISIONS.md:5`) |
 | Decisions Q18-Q51 audited | 26 in the register + 8 staged only |
 | UI messages per language | 1532 (`messages/no.json`, `messages/en.json`) |
