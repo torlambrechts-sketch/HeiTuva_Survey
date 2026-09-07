@@ -325,6 +325,22 @@ async function main() {
           })
           console.log(`  ERROR    ${label} ${width}px: ${e instanceof Error ? e.message : e}`)
         } finally {
+          // A state that PERSISTED something undoes it here — in `finally`, so
+          // it runs even when the measurement above threw. Without this the
+          // fixture a writing state changed is what every later screen renders,
+          // in this run and in the capture run after it.
+          if (state.teardown) {
+            try {
+              await state.teardown(page)
+            } catch (e) {
+              findings.push({
+                route: label,
+                width,
+                severity: 'blocker',
+                detail: `teardown failed, so this state's write is still live: ${e instanceof Error ? e.message : e}`,
+              })
+            }
+          }
           await ctx.close()
         }
         }

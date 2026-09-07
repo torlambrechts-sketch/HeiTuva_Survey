@@ -208,6 +208,12 @@ async function main() {
             await page.screenshot({ path: `${base}.png`, fullPage: true, animations: 'disabled' })
             await writeFile(`${base}.log.json`, JSON.stringify(log, null, 2))
 
+            // After the capture, before the next state: a state that PERSISTED
+            // something undoes it here, or the fixture it changed is what every
+            // later screen renders. Errors are not swallowed — a teardown that
+            // fails silently leaves exactly the state this exists to prevent.
+            if (state.teardown) await state.teardown(page)
+
             const bad =
               log.consoleErrors.length +
               log.pageErrors.length +

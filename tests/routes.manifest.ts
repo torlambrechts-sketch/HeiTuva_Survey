@@ -18,6 +18,15 @@ export type RouteState = {
   /** Optional: skip this state on a viewport where it does not exist. */
   projects?: ('desktop' | 'mobile')[]
   setup?: (page: Page) => Promise<void>
+  /**
+   * Optional: undo what `setup` PERSISTED, after the capture or measurement.
+   *
+   * Most states are transient — a menu opened, a tab selected — and end when
+   * the page closes. A few WRITE, and a write that outlives its own state is
+   * not a state, it is a change to the fixture every later screen renders. The
+   * one that made this necessary is in `admin-sprak/egen-tekst` below.
+   */
+  teardown?: (page: Page) => Promise<void>
 }
 
 export type RouteSpec = {
@@ -393,6 +402,24 @@ export const ROUTES: RouteSpec[] = [
           await first.locator('textarea').fill('Vår egen formulering')
           await first.getByRole('button', { name: 'Lagre' }).click()
           await page.getByText('Egen tekst').first().waitFor()
+        },
+        teardown: async (page) => {
+          // PINNING THE KEY WAS HALF A FIX AND THE OTHER HALF WAS WORSE.
+          // Pinned to `nav.insight`, the override survived the capture and the
+          // header of every later screenshot read «Vår egen formulering»
+          // instead of «Innsikt» — which the visual gate caught as a diff in
+          // the wizard screen, a page this state has nothing to do with.
+          //
+          // A state that writes has to undo its write. Reaching into the
+          // database from here would be reaching past the app to unmake a
+          // state the app made, so it clicks the control a user would.
+          await page.goto(
+            new URL('/administrasjon/sprak?ns=nav&q=insight', page.url()).toString(),
+            { waitUntil: 'domcontentloaded' },
+          )
+          await page.waitForLoadState('load')
+          await page.getByRole('button', { name: 'Tilbakestill til standard' }).first().click()
+          await page.waitForTimeout(1200)
         },
       },
     ],
