@@ -1,5 +1,3 @@
-// GENERATED: supabase gen types typescript --db-url <local>
-// Do not edit by hand — regenerate after every migration.
 export type Json =
   | string
   | number
@@ -377,7 +375,7 @@ export type Database = {
           key: string
           law: string
           pack_key: string
-          policy: Json | null
+          policy?: Json | null
           publish?: boolean
           signer_roles: Json
           title: string
@@ -1428,9 +1426,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at: string
+          custom_every: number | null
+          custom_unit: string | null
+          custom_weekday: number | null
           id: string
           next_run_at: string | null
+          paused_at: string | null
           reminder_after_days: number
           rotate_questions: boolean
           runs_done: number
@@ -1448,9 +1452,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at?: string
+          custom_every?: number | null
+          custom_unit?: string | null
+          custom_weekday?: number | null
           id?: string
           next_run_at?: string | null
+          paused_at?: string | null
           reminder_after_days?: number
           rotate_questions?: boolean
           runs_done?: number
@@ -1468,9 +1478,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at?: string
+          custom_every?: number | null
+          custom_unit?: string | null
+          custom_weekday?: number | null
           id?: string
           next_run_at?: string | null
+          paused_at?: string | null
           reminder_after_days?: number
           rotate_questions?: boolean
           runs_done?: number
@@ -1777,17 +1793,17 @@ export type Database = {
       surveys: {
         Row: {
           anonymity: "anonymous" | "named" | "optional"
-          k_threshold: number
-          policy_locked: boolean
-          respondent_kind: string
           audience_label: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           engage: Json
           id: string
+          k_threshold: number
           langs: string[]
           org_id: string
+          policy_locked: boolean
+          respondent_kind: string
           results_scope: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang: string
           status: "utkast" | "aktiv" | "lukket"
@@ -1798,17 +1814,17 @@ export type Database = {
         }
         Insert: {
           anonymity?: "anonymous" | "named" | "optional"
-          k_threshold?: number
-          policy_locked?: boolean
-          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
           id?: string
+          k_threshold?: number
           langs?: string[]
           org_id: string
+          policy_locked?: boolean
+          respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
@@ -1819,17 +1835,17 @@ export type Database = {
         }
         Update: {
           anonymity?: "anonymous" | "named" | "optional"
-          k_threshold?: number
-          policy_locked?: boolean
-          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
           id?: string
+          k_threshold?: number
           langs?: string[]
           org_id?: string
+          policy_locked?: boolean
+          respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
@@ -1978,7 +1994,7 @@ export type Database = {
           lang: string
           namespace: string
           org_id: string | null
-          org_key: string
+          org_key: string | null
           updated_at: string
           updated_by: string | null
           value: string
@@ -1989,6 +2005,7 @@ export type Database = {
           lang: string
           namespace: string
           org_id?: string | null
+          org_key?: string | null
           updated_at?: string
           updated_by?: string | null
           value: string
@@ -1999,6 +2016,7 @@ export type Database = {
           lang?: string
           namespace?: string
           org_id?: string | null
+          org_key?: string | null
           updated_at?: string
           updated_by?: string | null
           value?: string
@@ -2022,12 +2040,12 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
-      claim_membership: { Args: never; Returns: string }
-      close_round: { Args: { p_round: string }; Returns: Json }
       attributed_results: {
         Args: { p_round?: string; p_survey: string }
         Returns: Json
       }
+      claim_membership: { Args: never; Returns: string }
+      close_round: { Args: { p_round: string }; Returns: Json }
       compose_report: {
         Args: {
           p_as_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"

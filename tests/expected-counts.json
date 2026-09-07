@@ -22,5 +22,7 @@
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/question-roles.test.ts": 12,
   "tests/db/pack-roles.test.ts": 5,
-  "tests/unit/refusal-copy.test.ts": 9
+  "tests/unit/refusal-copy.test.ts": 9,
+  "tests/db/recurrence.test.ts": 7,
+  "tests/db/schedules-rls.test.ts": 6
 }
