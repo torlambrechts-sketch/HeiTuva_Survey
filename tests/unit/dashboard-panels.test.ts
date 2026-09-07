@@ -72,15 +72,38 @@ describe('the dashboard panel vocabulary', () => {
     }
   })
 
-  it('no name exists for a key the dashboard does not offer', () => {
-    // The converse, which is the same rule from the other side: a leftover
-    // `panel_stream` would make the picker look reachable the day someone
-    // reads the message file to find out what exists.
+  it('no name exists for a key that is neither offered nor deliberately drawn absent', () => {
+    // The converse, from the other side. There is exactly ONE name without a
+    // registry row and it is deliberate: Q26 requires the stream panel to be
+    // DRAWN as unavailable rather than hidden, so it needs a label and a
+    // description while remaining unnamable by a layout. Naming it here is what
+    // stops a second such key arriving unnoticed.
+    const DRAWN_BUT_NOT_OFFERED = ['stream']
+
     const dash = no.dashboard as Record<string, string>
     const named = Object.keys(dash)
       .filter((k) => k.startsWith('panel_'))
       .map((k) => k.slice('panel_'.length))
     expect(named.sort(), 'a name without a registry row is a promise nothing keeps')
-      .toEqual([...keys].sort())
+      .toEqual([...keys, ...DRAWN_BUT_NOT_OFFERED].sort())
+
+    // And the drawn-absent one has its precondition stated in both languages —
+    // a greyed row with no reason is worse than no row.
+    for (const msgs of [no, en]) {
+      const d = msgs.dashboard as Record<string, string | undefined>
+      expect(d.reqStream, 'the stream panel states why it is unavailable').toBeTruthy()
+      expect(d.panel_stream).toBeTruthy()
+      expect(d.desc_stream).toBeTruthy()
+    }
+  })
+
+  it('(Q26) the drawn-absent panel is still unnamable — no renderer, no row', () => {
+    // The two mechanisms must say the same thing: the picker draws it, the
+    // database refuses it. A `case 'stream':` arm would mean someone had
+    // wired a renderer to a panel no layout can hold.
+    const screen = readFileSync(SCREEN, 'utf8')
+    expect(screen, 'no renderer for a panel no layout may contain')
+      .not.toContain("case 'stream':")
+    expect(keys, 'and no registry row').not.toContain('stream')
   })
 })

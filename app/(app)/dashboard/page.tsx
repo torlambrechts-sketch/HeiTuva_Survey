@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { readDashboard, readHeatmap, readThemes, readTrends } from '@/lib/results/read'
@@ -11,6 +11,8 @@ import {
   readPanels,
   type PanelEntry,
 } from '@/lib/dashboard/layout'
+import { readAttributed } from '@/lib/results/read'
+import { registerStats, dutyRows } from '@/lib/dashboard/panels'
 
 /**
  * Dashboard — HeiTuva.dc.html:808-901.
@@ -46,6 +48,7 @@ export default async function DashboardPage({
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('dashboard')
+  const locale = await getLocale()
 
   const period: Period = isPeriod(periode) ? periode : 'y'
 
@@ -56,6 +59,7 @@ export default async function DashboardPage({
     { data: panelTypes },
     { data: shipped },
     { data: savedLayouts },
+    { data: flags },
   ] = await Promise.all([
     supabase
       .from('surveys')
@@ -94,6 +98,9 @@ export default async function DashboardPage({
       .select('id, user_id, title, panels, filters')
       .eq('org_id', viewer.orgId)
       .order('title'),
+    // Org row wins over the global default; both are readable, so the "some
+    // row says enabled" test below is scoped to this organisation by RLS.
+    supabase.from('feature_flags').select('key, enabled').eq('key', 'event_stream_panel'),
   ])
 
   const available = allSurveys ?? []
@@ -156,6 +163,37 @@ export default async function DashboardPage({
     // from the picker.
     available: pt.key === 'per_virksomhet' ? hasOrgSurvey : true,
   }))
+
+  // Q26: THE ABSENCE IS DRAWN, NOT HIDDEN.
+  //
+  // The stream panel has no registry row on purpose, and that is what stops a
+  // layout naming it (M:0047). But the DECISION says more than "defer": «the
+  // panel appears in the picker as the bundle's own unavailable state, with its
+  // `req` chip. The bundle sanctions drawing its absence, so this is not hiding
+  // a feature.» Building only the refusal built the hiding.
+  //
+  // So the picker carries an entry the registry does not: drawn, greyed,
+  // «Ikke tilgjengelig», with the precondition stated. It is added here rather
+  // than seeded as an unavailable row, because a row is what a layout may name
+  // and this must remain unnamable — the two mechanisms stay separate and say
+  // the same thing.
+  //
+  // Lifting Q26 is a migration (the registry row) AND this flag, in that order.
+  // The flag alone changes nothing, which the test asserts.
+  const streamEnabled = (flags ?? []).some(
+    (f) => f.key === 'event_stream_panel' && f.enabled,
+  )
+  const streamOffered = offered.includes('stream')
+  if (!streamOffered) {
+    picker.push({
+      key: 'stream',
+      label: t('panel_stream'),
+      desc: t('desc_stream'),
+      req: t('reqStream'),
+      available: false,
+    })
+  }
+  void streamEnabled
 
   const labelOf = new Map(picker.map((i) => [i.key, i.label]))
   const presetChips = [
@@ -269,6 +307,39 @@ export default async function DashboardPage({
   }
   const themes = [...merged.values()].sort((a, b) => b.mentions - a.mentions)
 
+  // ── The two non-aggregate panels (NEW:1138-1163) ──────────────────────────
+  // Read only when the LAYOUT contains them: a panel nobody has added is a
+  // query nobody asked for, and the register RPC is not free.
+  const wants = new Set(panels.map((p) => p.key))
+
+  const orgSurvey = available.find(
+    (s) => selected.includes(s.id) && s.respondent_kind === 'organisation',
+  )
+  const register =
+    wants.has('per_virksomhet') && orgSurvey
+      ? registerStats(await readAttributed(orgSurvey.id), {
+          answered: t('regAnswered'),
+          breaches: t('regBreaches'),
+          overdue: t('regOverdue'),
+        })
+      : null
+
+  const duties = wants.has('duties')
+    ? await (async () => {
+        const [{ data: defs }, { data: rows }] = await Promise.all([
+          supabase
+            .from('duty_definitions')
+            .select('key, title, law')
+            .order('key'),
+          supabase
+            .from('duties')
+            .select('definition_key, next_due_at, owner_member_id, org_members(name)')
+            .eq('org_id', viewer.orgId),
+        ])
+        return dutyRows(defs ?? [], rows ?? [], locale)
+      })()
+    : []
+
   return (
     <DashboardScreen
       surveys={available}
@@ -293,6 +364,9 @@ export default async function DashboardPage({
       customizeOpen={tilpass !== undefined}
       canEdit={viewer.role === 'administrator' || viewer.role === 'redaktor'}
       layoutFilters={{ period, group_id: group, survey_ids: selected }}
+      register={register}
+      registerHref={orgSurvey ? `/undersokelser/${orgSurvey.id}/resultater` : null}
+      duties={duties}
     />
   )
 }

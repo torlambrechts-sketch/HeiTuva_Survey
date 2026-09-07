@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
@@ -5,12 +6,14 @@ import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/
 import { InsightTabs } from '@/components/InsightTabs'
 import { PinButton } from './PinButton'
 import { OpenPinnedButton } from './OpenPinnedButton'
+import { FreezeButton } from './FreezeButton'
 import { CustomizeCard, type PickerItem, type PresetChip } from './CustomizeCard'
 import { PanelControls } from './PanelControls'
 import { PresetChooser } from './PresetChooser'
 import { CustomizeToggle } from './CustomizeToggle'
 import { thresholdLine as thresholdLineOf } from '@/lib/dashboard/threshold-line'
 import type { LayoutFilters, PanelEntry } from '@/lib/dashboard/layout'
+import type { DutyRow, RegisterStat } from '@/lib/dashboard/panels'
 
 const CARD = 'rounded-2xl border border-line bg-sf p-[22px]'
 
@@ -33,6 +36,9 @@ export async function DashboardScreen({
   customizeOpen,
   canEdit,
   layoutFilters,
+  register,
+  registerHref,
+  duties,
 }: {
   surveys: { id: string; title: string; status: string }[]
   selected: string[]
@@ -67,6 +73,12 @@ export async function DashboardScreen({
    *  layout holds. They used to arrive as separate props too; passing the same
    *  fact twice is the drift shape this phase kept meeting, so there is one. */
   layoutFilters: LayoutFilters
+  /** Null when no organisation survey is in the selection — the panel then
+   *  states that, rather than drawing three zeros (Q42's k=0 lesson one
+   *  surface over: a real zero and an absent denominator look identical). */
+  register: RegisterStat[] | null
+  registerHref: string | null
+  duties: DutyRow[]
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
@@ -217,17 +229,73 @@ export async function DashboardScreen({
         )
       case 'per_virksomhet':
         return (
-          <Panel title={t('panel_per_virksomhet')} note={t('note_per_virksomhet')} action={controls}>
-            {/* D88: the register table itself is composed and exported but not
-                yet drawn. The panel states that rather than rendering an empty
-                grid that looks like "no suppliers have answered". */}
-            <Empty text={t('registerPending')} />
+          <Panel
+            title={t('panel_per_virksomhet')}
+            note={register ? t('registerNoteLive') : t('registerNoteNone')}
+            action={controls}
+          >
+            {register ? (
+              <>
+                <div className="mt-[14px] grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+                  {register.map((s) => (
+                    <div
+                      key={s.key}
+                      className="rounded-xl border border-line bg-bg px-4 py-[14px]"
+                    >
+                      <div className="font-display text-[26px] font-bold leading-none">
+                        {s.value}
+                      </div>
+                      <div className="mt-1 text-[12.5px] leading-[1.35] text-mut">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {registerHref ? (
+                  <Link
+                    href={registerHref}
+                    className="mt-3 inline-block text-[13px] font-semibold text-ink underline"
+                  >
+                    {t('openRegister')}
+                  </Link>
+                ) : null}
+              </>
+            ) : (
+              /* Not three zeros: a real zero and an absent denominator look
+                 identical, and «0 av 0 virksomheter har svart» reads as a
+                 finding rather than as the absence of a survey. */
+              <Empty text={t('registerNone')} />
+            )}
           </Panel>
         )
       case 'duties':
         return (
           <Panel title={t('panel_duties')} note={t('note_duties')} action={controls}>
-            <Empty text={t('dutiesPending')} />
+            {duties.length ? (
+              <div className="mt-[10px] flex flex-col">
+                {duties.map((d) => (
+                  <div
+                    key={d.key}
+                    className="flex items-center gap-3 border-b border-line py-[11px]"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="block h-[9px] w-[9px] flex-none rounded-full"
+                      style={{ background: d.tone }}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-semibold">{d.title}</span>
+                      <span className="mt-px block text-[12px] text-mut">
+                        {[d.law, d.owner ?? t('dutyNoOwner')].join(' · ')}
+                      </span>
+                    </span>
+                    <span className="whitespace-nowrap text-[12.5px]">
+                      {d.due ?? t('dutyNoDue')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty text={t('noData')} />
+            )}
           </Panel>
         )
       default:
@@ -273,6 +341,19 @@ export async function DashboardScreen({
             that forgot it would leave pins storing a fact nobody can use. */}
         <div className="flex flex-wrap items-center gap-[10px]">
         <CustomizeToggle label={t('customize')} open={customizeOpen} />
+        {/* Q29's other control. «Frys som rapport» reads the LAYOUT — the
+            board as arranged — while «Åpne rapport (n)» reads the PINS. Two
+            questions, two buttons, as the bundle draws (NEW:940). Only shown
+            once a layout exists: freezing an unchosen board is freezing
+            nothing. */}
+        {panels.length ? (
+          <FreezeButton
+            label={t('freeze')}
+            title={t('frozenReportTitle', {
+              date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+            })}
+          />
+        ) : null}
         <OpenPinnedButton
           count={pinned.length}
           label={t('openPinned')}

@@ -228,3 +228,59 @@ export async function resetLayout(): Promise<{ ok: boolean }> {
   revalidatePath('/dashboard')
   return { ok: true }
 }
+
+/**
+ * «Frys som rapport» — HeiTuva.dc.html:940, 3647-3650.
+ *
+ * The other half of DECISIONS Q29, and it is NOT the same button as «Åpne
+ * rapport (n)». The bundle is explicit about the difference and it matters:
+ *
+ *   «Åpne rapport (n)»  reads the PINS — the panels this member marked, one at
+ *                       a time, as belonging in a report.
+ *   «Frys som rapport»  reads the LAYOUT — the board as it is arranged right
+ *                       now, whether or not anything was pinned.
+ *
+ * Two different questions ("what did I choose to keep?" and "what am I looking
+ * at?"), so two controls. Q29 keeps the first because removing a working
+ * consumer to match a bundle that forgot it leaves pins storing a fact nobody
+ * can use; this adds the second because the bundle draws it and nothing had.
+ *
+ * Both end at `createReport`, which filters against the registry — so a layout
+ * containing `duties` freezes without it, and the report contains what it says
+ * it contains.
+ */
+export async function freezeLayoutReport(title: string): Promise<{ ok: boolean }> {
+  const viewer = await requireViewer()
+  const supabase = await createClient()
+
+  const { data: layout } = await supabase
+    .from('dashboard_layouts')
+    .select('panels')
+    .eq('org_id', viewer.orgId)
+    .eq('user_id', viewer.userId)
+    .eq('title', WORKING_TITLE)
+    .maybeSingle()
+
+  // Read from the table, not from the browser: the button says what is on
+  // screen, but what is frozen is what the database holds for this member.
+  // Same rule as openPinnedReport, and the same reason.
+  const keys = Array.isArray(layout?.panels)
+    ? (layout.panels as { key?: unknown }[])
+        .map((p) => p?.key)
+        .filter((k): k is string => typeof k === 'string')
+    : []
+
+  const { data: inReport } = await supabase
+    .from('report_section_types')
+    .select('key')
+    .eq('in_report', true)
+  const renderable = new Set((inReport ?? []).map((r) => r.key))
+
+  const sections = ['summary', ...keys.filter((k) => k !== 'summary' && renderable.has(k))]
+
+  return createReport({
+    title: z.string().trim().min(1).max(200).catch('Frosset dashboard').parse(title),
+    baseTemplate: 'Dashboard',
+    sections,
+  })
+}

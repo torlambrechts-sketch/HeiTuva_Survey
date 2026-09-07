@@ -132,12 +132,15 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **55 of 71 surfaces
-actively checked** by 5a3, and **27 files / 498 tests** in the census manifest.
+phase, not built. Two numbers carry forward and may only move up: **56 of 73 surfaces
+actively checked** by 5a3, and **31 files / 544 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
-(2026-09-06): 5a3 enumerates 42 RLS tables + 29 SECURITY DEFINER functions = 71,
-of which 16 are allowlisted by design, leaving 55 — every one protected AND
-guarded, none merely unproven. The census rose 392 → 395 with Q47's three tests,
+(2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
+of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
+`dashboard_layouts` and `dashboard_presets` are two new RLS tables, the second
+allowlisted with its reason (a shipped registry carrying no org id, no survey id
+and no number). Every checked surface is protected AND guarded, none merely
+unproven. The census rose 392 → 395 with Q47's three tests,
 395 → 399 with Q36's four, 399 → 417 with the policy panel's
 ten warning tests, its five guard tests and «valgfritt» gaining a derived
 promise, and 417 → 421 with Q30's four. V1-2 took it 421 → 463: Q43's CSV
@@ -145,7 +148,9 @@ serialiser (18), Q35's roles (12) and pack data (5), D94's round semantics (5)
 and the k=0 cell-shape invariant (3), then 464 → 475 in the acceptance pass
 with the CSV's no-address property (2) and the refusal-copy rule (9). V1-3 took
 it 475 → 498 with Q23's schedules RLS (6), Q20/Q22's recurrence (9) and the
-status sentence (8). 5a3 is unmoved by any of them: a CHECK constraint is
+status sentence (8). V1-4 took it 498 → 544: Q51's layout constraints and Q25's
+RLS (22), the layout model (14), Q42's threshold sentence (5) and the panel
+vocabulary's three-way binding (5). 5a3 is unmoved by any of them: a CHECK constraint is
 neither an RLS table nor a SECURITY DEFINER function, so it is not a catalogue
 surface — a recorded limit of that gate, not a gap in it.
 

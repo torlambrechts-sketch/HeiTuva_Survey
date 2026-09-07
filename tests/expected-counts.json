@@ -29,5 +29,5 @@
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/unit/threshold-line.test.ts": 5,
   "tests/unit/dashboard-layout.test.ts": 14,
-  "tests/unit/dashboard-panels.test.ts": 4
+  "tests/unit/dashboard-panels.test.ts": 5
 }
