@@ -39,6 +39,12 @@ needed them.
    it is the only reader that noticed the contract moved.** Standing question 5, added at
    the close. When the fix is one line, the question is what the value MEANS, not whether
    the types agree.
+5. **A clause that asserts what any artefact does must carry the line it does it on.** Two
+   instances, and they came from different people — «wizard step» (mine,
+   `01-briefs.md:263`) and «rather than the harness's personas» (Tor's, on the final
+   instruction). **Different authors is what makes it structural rather than a personal
+   habit**, and both were caught the same way: by someone going and reading the artefact.
+   Neither was caught by review. `DECISIONS.md`'s header carries both.
 
 ---
 
@@ -68,7 +74,7 @@ allowlisted) and the checked number never fell. The census rose 392 → 577.
 | # | Item | Why it is a decision |
 |---|---|---|
 | **1** | ~~Prod is nineteen migrations behind~~ — **DONE 2026-09-07.** All nineteen applied, ledger reconciled, schema now identical to local byte for byte. Two drifts found and repaired; seven invariants verified on prod; advisors clean. `docs/OPERATIONS.md` § "Prod sync" | **PITR** is not enabled — now the first item on the pre-launch gate, to be enabled before the first real send |
-| **1b** | **The disposable-remote run is BLOCKED on a plan change.** `create_branch` → `PaymentRequiredException: Branching is supported only on the Pro plan or above`. A free throwaway project ($0/month) would serve identically and was refused by the free tier's two-active-project limit, both slots held by `heituva-prod` and `gauge` | **Two ways to unblock, both Tor's:** upgrade the org to Pro, or pause `gauge` if idle. Pausing an unrelated project is not mine to do. What it would prove is narrower than it first appears — see § 5 |
+| **1b** | **`supabase db push` against a fresh remote — OPEN, DELIBERATELY, AND NOT FORGOTTEN.** `create_branch` returns `PaymentRequiredException` (branching needs Pro; the org is free) and a $0 throwaway project is refused by the two-active-project limit, both slots held by `heituva-prod` and `gauge` | **Tor's decision, 2026-09-07: do NOT upgrade the plan for this, and do not pause `gauge`. It is not worth a subscription on its own.** It closes when there is a Pro plan for other reasons, or when the next environment is created for real — at which point it comes free with the environment. Recorded with its reason so a later reader does not mistake a deliberate deferral for an oversight. What it would prove is narrower than it first sounds: § 5 |
 | **2** | **Launch readiness** — Turnstile, Entra, leaked-password protection, the remote load test | `docs/OPERATIONS.md:11-78` |
 | **3** | **Two deferred auth controls**, triggered by the first real organisation | D27; `docs/OPERATIONS.md:76-78` |
 | **4** | **Four unreviewed legal texts, DPIA not started** | `docs/LEGAL_DRAFTS.md` |
@@ -156,9 +162,22 @@ would re-run those same assertions against the same schema.
    versions rather than the container's (`pg_cron 1.6.4`, `pgmq 1.5.1`, `supabase_vault
    0.3.1`, `pgcrypto 1.3`).
 
-**A partial result already exists for (1), and it is not nothing.** Prod now carries all
-81 applied incrementally, and its fingerprint matches a freshly-reset local — where the
-same set was applied from scratch — byte for byte across columns, constraints, policies,
-RLS tables, normalised function bodies, grants and enums. **Two different application
-orders converge on an identical schema.** That is real evidence about the migration set;
-it is not evidence about `db push` against an empty remote, which is what remains open.
+**Most of (1) is already proven, and the proof is stronger than "partial".** Prod carries
+all 81 migrations applied **incrementally**, across five sessions and two different
+mechanisms, ending with nineteen applied one at a time through the MCP. Local carries the
+same 81 applied **from scratch in one `db reset`**. Their fingerprints match **byte for
+byte** — columns, constraints, policies, RLS tables, normalised function bodies, grants,
+enums.
+
+**That is a real property of the migration set, not a coincidence of two databases: the set
+is CONVERGENT.** Order of application does not change the schema it produces. That is the
+property anyone actually wants from a migration set, it is the property a fresh-remote
+`db push` would be evidence *for*, and it is now established independently of the
+transport — established, in fact, by the harder of the two paths, since the incremental
+side is where drift accumulates and where this pass found two.
+
+**What remains open is narrow and it is about the TRANSPORT, not the schema:** whether
+`db push` delivers all 81 files intact to an empty remote in one invocation. The 2026-09-07
+truncation is the whole reason that residue is worth anything at all — a file was altered
+between the repository and the database, and no property of the migration set could have
+caught it. That is one command's reliability, not an unknown about the product.

@@ -35,6 +35,25 @@ DOES MUST CARRY THE LINE IT DOES IT ON.** An uncited clause is the one that
 drifts, and it drifts by inheritance — copied forward from a document written
 before the code was read, past two other documents that had it right.
 
+**SECOND INSTANCE, 2026-09-07, and it generalises the rule past the bundle.**
+Instructing the disposable-remote run, Tor asked for the three behaviours proven
+«under real JWTs rather than the test harness's personas». The harness's personas
+ARE real JWTs: `tests/db/clients.ts:303` signs each one in with
+`signInWithPassword` against a genuine GoTrue, and the file's own comment says
+so. Cross-org isolation, leser refusals and token replay had been proven that way
+on every run for six phases. The clause carried no citation, and it was inherited
+forward from an earlier framing of the same request.
+
+**The two instances came from DIFFERENT people, and that is what makes the rule
+structural rather than a personal habit.** «Wizard step» was mine (this header
+records it: `01-briefs.md:263`); «rather than the harness's personas» was Tor's.
+Tor recalled both as theirs when noting the second; the register says otherwise
+about the first, and a register that lets a misattribution stand is not doing its
+job. **So the rule widens by one word and loses none of its bite: A CLAUSE THAT
+ASSERTS WHAT ANY ARTEFACT DOES — the bundle, the schema, the harness — MUST CARRY
+THE LINE IT DOES IT ON.** Both instances were caught by someone going and reading
+the artefact; neither was caught by review.
+
 48 decisions carried here. Q11, Q15, Q17, Q18, Q19, Q20, Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28, Q29, Q30, Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q42, Q43, Q44, Q45, Q46, Q47, Q48, Q49, Q50 and Q51 are confirmed by Tor; Q11/Q15 shape verification scope, Q17 and Q47 the security kernel, Q28 the k-gate's boundary. The rest are defaults shaping the build.
 
 **The v1 bundle raises twenty-nine more (Q18–Q46, plus Q47), staged in `docs/v1/04-decisions.md`.** Twelve are confirmed and appear below; the remaining seventeen are confirmed in batches tied to the phase where each bites, because a decision taken out of context is taken badly. Nine of the twenty-nine touch the security core — six on the k-gate or an aggregate path (Q26, Q28, Q30, Q36, Q41, Q42), three on RLS or role semantics (Q23, Q25, Q43).
