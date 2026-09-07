@@ -23,6 +23,31 @@ import type { File, Reporter } from 'vitest'
  * A new file must be added to the manifest. That is the point rather than a
  * chore: it is the same rule Gate 5a3 applies to database surfaces — new things
  * arrive failing until someone states what they are worth.
+ *
+ * ---------------------------------------------------------------------------
+ * KNOWN LIMIT, AND THE FIX, TO BE APPLIED THE NEXT TIME THIS FILE IS TOUCHED
+ * (Tor, 2026-09-07, after V1-3). Not a separate errand — do it in the same
+ * commit as whatever brings you here next.
+ *
+ * Because only a DROP fails, a manifest entry that drifts UPWARD is invisible.
+ * V1-3 found two: `recurrence.test.ts` was committed at 7 while collecting 9,
+ * and the run stayed green for a fortnight. So the number this reporter defends
+ * is evidence that tests were not DELETED. It is not evidence that they were
+ * all counted, and the phase reports must not claim otherwise.
+ *
+ * THE FIX IS TO GENERATE THE MANIFEST RATHER THAN MAINTAIN IT, so a stale entry
+ * cannot exist. A hand-kept number can be wrong; a written-back one cannot.
+ * Add a `--write` mode that serialises the observed counts back to MANIFEST and
+ * wire it to a script; committing the regenerated file is then the ceremony,
+ * replacing the hand edit. This is a change to something that already runs, not
+ * a new gate — the freeze permits it on exactly that ground.
+ *
+ * ONE THING THE FIX MUST NOT DO: regenerate on an ordinary run. If every run
+ * rewrote the file, a file that shrank would have its number quietly lowered
+ * and the floor — the whole purpose of this reporter — would be gone. Writing
+ * back is an explicit act; the default path still reads the committed file and
+ * still fails on a drop.
+ * ---------------------------------------------------------------------------
  */
 const MANIFEST = 'tests/expected-counts.json'
 
