@@ -55,6 +55,26 @@ Below `md`: **card per row**, by the wide-row rule above — the attributed tabl
 - **No overflow menu**, even though the row is wide. The general rule bans a menu only for consequential controls, and this row has none — the reason here is simpler: the only action is "expand", and hiding one affordance behind a second tap costs more than it saves.
 - The expand control keeps its 44px area against the card's own tap target; a card that is itself a link with an expander inside it needs the two separated, not nested.
 
+**The «Tilpass» card (Dashboard, DECISIONS Q33)**
+Below `md`: **it stacks in place.** The card is inline content on the Dashboard, not a
+pane, so the Builder's full-screen-sheet pattern does not apply to it — inline content
+keeps its position in reading order and its width collapses.
+- Its three tabs («Utvalg og periode» / «Paneler» / «Oppsett») **wrap as a Tab rail**, by
+  the Tab rails rule above. They are chips in a `--sf2` pill group; the group loses its
+  width constraint and wraps, and every constraint of that rule applies unchanged — no
+  horizontal scroll, no `<select>`, no chip hidden, 4px minimum vertical gap for hit areas.
+- The data tab's `1.3fr .7fr` and the layout tab's `1fr 1fr` **become one column**, in
+  content order: selection chips, then the threshold line, then period, then group; and
+  save-a-preset before switch-preset.
+- The panel picker's `repeat(auto-fill, minmax(320px, 1fr))` already collapses to one
+  column at 390px and needs no rule — do not add one.
+- The threshold line stays **directly under the survey chips it describes**. It is the
+  sentence saying which gate the panels on screen were drawn under (Q42), and separating
+  it from the selection it belongs to would make it read as a property of the page.
+- No panel, preset or filter is removed on any viewport. The card is the only way to reach
+  the filters after Q46 moved them out of the header, so hiding any part of it would hide
+  a feature, which the global rules forbid.
+
 **Heatmap (team × question)**
 Below `md`: switch to a grouped list — one section per team, each question as a row with its coloured cell and value. Same colour scale, same `insufficient_data` treatment ("—"). Do not shrink cells below 44px or allow pinch-zoom as the reading mechanism.
 

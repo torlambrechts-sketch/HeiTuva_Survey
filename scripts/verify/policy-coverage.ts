@@ -42,6 +42,7 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   ui_messages: 'UI copy; i18n_sel is using(true) so a signed-out page renders',
   duty_definitions: 'the four statutory duties; identical for every organisation',
   report_section_types: 'section registry; data-not-code',
+  dashboard_presets: 'the six shipped dashboard presets; data-not-code, DECISIONS Q25/Q27 — a preset names panel keys and carries no org id, no survey id and no number',
   report_templates: 'the five standard templates; data-not-code',
   quality_rules: 'question-quality heuristics; data-not-code',
   theme_rules: 'free-text theme stems; data-not-code',

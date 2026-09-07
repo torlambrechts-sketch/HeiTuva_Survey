@@ -52,7 +52,12 @@ export default async function ReportsPage({
           .maybeSingle(),
         supabase
           .from('report_section_types')
-          .select('key, label, description, supports_group_filter').order('sort_order'),
+          // `in_report` is the report subset of the registry (M:0047). Without
+          // it the editor would offer «Lovpålagte frister», a dashboard panel
+          // with no prose form, as a section anyone could add to a report.
+          .select('key, label, description, supports_group_filter')
+          .eq('in_report', true)
+          .order('sort_order'),
         supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
         supabase
           .from('surveys')
@@ -186,7 +191,11 @@ export default async function ReportsPage({
         .eq('org_id', viewer.orgId)
         .eq('status', 'active')
         .order('name'),
-      supabase.from('report_section_types').select('key, label').order('sort_order'),
+      supabase
+        .from('report_section_types')
+        .select('key, label')
+        .eq('in_report', true)
+        .order('sort_order'),
     ])
 
   const dutyByKey = new Map((duties ?? []).map((d) => [d.definition_key, d]))

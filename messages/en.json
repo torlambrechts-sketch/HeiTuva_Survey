@@ -1232,7 +1232,9 @@
     "themeMentions": "{label} · mentioned {count} times",
     "heatNoteGeneric": "Green ≥ 4.2 · yellow ≥ 3.6 · red below. Groups below the threshold are not shown.",
     "liveNumbers": "Live figures",
-    "thresholdLine": "strictest threshold among the selected surveys: {k}"
+    "thresholdLine": "strictest threshold among the selected surveys: {k}",
+    "thresholdLineOrg": "organisations answer by name — no threshold applies to this selection",
+    "thresholdLineNone": "no surveys are selected"
   },
   "splash": {
     "langLabel": "Choose language",

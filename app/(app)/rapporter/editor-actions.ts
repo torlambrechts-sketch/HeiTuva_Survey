@@ -70,7 +70,10 @@ export async function createReport(input: z.input<typeof CreateInput>): Promise<
   // Every section key must exist in the registry. `reports.sections` is jsonb,
   // so nothing in the schema stops an unknown key being written, and the
   // renderer would then have a section it has never heard of.
-  const { data: known } = await supabase.from('report_section_types').select('key')
+  const { data: known } = await supabase
+    .from('report_section_types')
+    .select('key')
+    .eq('in_report', true)
   const valid = new Set((known ?? []).map((r) => r.key))
   const sections = parsed.data.sections.filter((s) => valid.has(s))
 
@@ -164,7 +167,10 @@ export async function saveReport(input: z.input<typeof SaveInput>): Promise<Edit
   if (parsed.data.title !== undefined) patch.title = parsed.data.title
 
   if (parsed.data.sections !== undefined) {
-    const { data: known } = await supabase.from('report_section_types').select('key')
+    const { data: known } = await supabase
+      .from('report_section_types')
+      .select('key')
+      .eq('in_report', true)
     const valid = new Set((known ?? []).map((r) => r.key))
     patch.sections = parsed.data.sections.filter((s) => valid.has(s))
   }

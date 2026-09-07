@@ -135,6 +135,47 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_layouts: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          org_id: string
+          panels: Json
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          org_id: string
+          panels?: Json
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          org_id?: string
+          panels?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_layouts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_pins: {
         Row: {
           created_at: string
@@ -173,6 +214,33 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      dashboard_presets: {
+        Row: {
+          description: string
+          key: string
+          panels: Json
+          sort_order: number
+          tint: string | null
+          title: string
+        }
+        Insert: {
+          description: string
+          key: string
+          panels: Json
+          sort_order?: number
+          tint?: string | null
+          title: string
+        }
+        Update: {
+          description?: string
+          key?: string
+          panels?: Json
+          sort_order?: number
+          tint?: string | null
+          title?: string
+        }
+        Relationships: []
       }
       demo_requests: {
         Row: {
@@ -1126,22 +1194,28 @@ export type Database = {
       report_section_types: {
         Row: {
           description: string
+          in_report: boolean
           key: string
           label: string
+          on_dashboard: boolean
           sort_order: number
           supports_group_filter: boolean
         }
         Insert: {
           description: string
+          in_report?: boolean
           key: string
           label: string
+          on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean
         }
         Update: {
           description?: string
+          in_report?: boolean
           key?: string
           label?: string
+          on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean
         }
@@ -2155,11 +2229,15 @@ export type Database = {
           p_cadence?: string
           p_channels: string[]
           p_closes_at?: string
+          p_custom_every?: number
+          p_custom_unit?: string
+          p_custom_weekday?: number
           p_group_ids?: string[]
           p_recipients?: Json
           p_reminder_days?: number
           p_rotate?: boolean
           p_runs?: number
+          p_send_at_local?: string
           p_survey: string
           p_test_only?: boolean
         }

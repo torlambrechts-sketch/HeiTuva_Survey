@@ -1232,7 +1232,9 @@
     "themeMentions": "{label} · nevnt {count} ganger",
     "heatNoteGeneric": "Grønn ≥ 4,2 · gul ≥ 3,6 · rød under. Grupper under terskelen vises ikke.",
     "liveNumbers": "Levende tall",
-    "thresholdLine": "strengeste terskel blant valgte undersøkelser: {k}"
+    "thresholdLine": "strengeste terskel blant valgte undersøkelser: {k}",
+    "thresholdLineOrg": "virksomheter svarer med navn — ingen terskel gjelder for dette utvalget",
+    "thresholdLineNone": "ingen undersøkelser er valgt"
   },
   "splash": {
     "langLabel": "Velg språk",

@@ -411,6 +411,44 @@ async function main() {
     if (pinError) throw new Error(`seed dashboard_pins: ${pinError.message}`)
   }
 
+  // dashboard_layouts — V1-4/Q25. Two rows, because the table has two shapes
+  // and 5a3 can only prove a policy that was asked to refuse a real row:
+  // one ORGANISATION preset (user_id null, readable by every member) and one
+  // PERSONAL layout (the administrator's own, invisible to a colleague). The
+  // personal one is what makes `dashboard_layouts_sel`'s user check provable.
+  //
+  // Written as the administrator, so `dashboard_layouts_ins` is what admits
+  // them — a service-role insert would seed the row while proving nothing
+  // about the policy that is supposed to guard it.
+  if (adminUser) {
+    const { error: layoutError } = await asAdmin.from('dashboard_layouts').insert([
+      {
+        org_id: org.id,
+        user_id: null,
+        title: 'Arbeidsmiljø',
+        panels: [
+          { key: 'trend', wide: false },
+          { key: 'heatmap', wide: true },
+          { key: 'drivers', wide: false },
+        ],
+        // No group_id: an organisation preset may not carry one (Q51) — the
+        // seed obeys the constraint rather than working around it.
+        filters: { period: 'y', group_id: null, survey_ids: [] },
+      },
+      {
+        org_id: org.id,
+        user_id: adminUser.userId,
+        title: 'Mitt oppsett',
+        panels: [
+          { key: 'drivers', wide: false },
+          { key: 'themes', wide: false },
+        ],
+        filters: { period: 'q', group_id: null, survey_ids: [] },
+      },
+    ])
+    if (layoutError) throw new Error(`seed dashboard_layouts: ${layoutError.message}`)
+  }
+
   // loop_actions — produced by "Lukket sløyfen" on Oversikt, written by the
   // member so `loop_cud_ins` is what admits it.
   const { error: loopError } = await asAdmin.from('loop_actions').insert({
