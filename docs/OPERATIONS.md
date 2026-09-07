@@ -278,3 +278,132 @@ applied that way has its repo version inserted into
 the ledger the repo expects. Verified 2026-09-05 (after 0034): 62 repo migrations,
 0 missing on prod. If `db push` ever lists migrations as pending that are in fact applied,
 that ledger row is what is missing — do not re-run the migration.
+
+---
+
+## Prod sync, 2026-09-07 — migrations 0035–0053 applied to `heituva-prod`
+
+**Authorised by Tor** as one deliberate pass, after V1-6's close-out reported that prod
+was nineteen migrations behind. `heituva-prod` = `jmhhszsnjfqgclxzhciq`, eu-central-1.
+
+### 1. The snapshot, and what it was NOT
+
+**PITR was not taken and could not be.** This session reaches prod only through the
+Supabase MCP's SQL surface; there is no management-API token and no database password, so
+neither a PITR restore point nor a `pg_dump` was available, and PITR's enablement state
+could not even be read. **Stated rather than worked around.**
+
+What was taken instead:
+
+- A **complete logical snapshot** of every non-seed table (`organizations`, `org_members`,
+  `profiles`, `surveys`, `survey_questions`, `groups`, `share_links`, `schedules`) plus the
+  full migration ledger, as JSON. Complete because prod is small: **1 organisation, 1
+  member, 1 profile, 4 draft surveys, 10 questions.** Everything else is regenerable from
+  `supabase/seed.sql` and `scripts/seed-i18n.ts`.
+- **`responses` = 0, `answers` = 0, `survey_invitations` = 0, `audit_events` = 0.** There
+  is no respondent data on prod and never has been. That is what made this safe to do
+  without PITR, and it will not be true again.
+- A **destructive-statement scan** of all nineteen files, comments stripped and multiline:
+  zero `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` or `DELETE FROM`. Every `drop` is a
+  constraint, policy, trigger, function or index recreated in the same file.
+
+**Next time this is done, prod will hold answers, and a logical snapshot through an RPC is
+not an adequate substitute for PITR.** Enabling PITR belongs on the launch list.
+
+### 2. Applied
+
+All nineteen, in order, via `apply_migration`, **zero failures**: 0035 `peer_results_org_rule`
+· 0036 `survey_threshold_ceiling` · 0037 `quality_rules_lang_key` · 0038
+`per_virksomhet_share_scope` · 0039 `survey_target_from_round` · 0040 `pack_question_roles`
+· 0041 `empty_group_is_not_a_number` · 0042 `empty_cell_sweep` · 0043 `cadence_values` ·
+0044 `recurrence` · 0045 `send_round_interval` · 0046 `dashboard_layouts` · 0047
+`panel_registry` · 0048 `preset_title_unique` · 0049 `use_cases` · 0050 `trends_count` ·
+0051 `org_timezone` · 0052 `timezone_sites` · 0053 `trends_participation`.
+
+0043 was applied alone before 0044, as its own header requires — `ALTER TYPE … ADD VALUE`
+cannot be used in the transaction that adds it.
+
+### 3. The ledger
+
+`apply_migration` stamps its OWN version (a fresh timestamp), not the file's, so the
+nineteen landed as `20260907132222`…`20260907133104`. Rewritten to the repository's
+filename versions in one statement keyed on the migration name, so `supabase db push` now
+sees a ledger that matches `supabase/migrations/` exactly.
+
+### 4. TWO DRIFTS FOUND, and neither could have been found by any gate
+
+A full schema fingerprint of prod against local — columns, constraints, policies, RLS
+tables, functions, grants, enums — found two differences. **This comparison is the actual
+deliverable of the exercise**, and it is why "apply the migrations" was not the whole job.
+
+**(a) `public.schedules.paused_at` was missing. MY ERROR, made during this very pass.**
+Migration 0044's header was stripped with a hard-coded `lines[20:]` offset instead of the
+comment-detecting scan used for every other file, cutting off its first two statements —
+`add column paused_at` and its comment. **Nothing failed at apply time**, because every
+later reference to the column lives inside a plpgsql body and PostgreSQL does not resolve
+those at creation. Repaired by re-applying the lost statements.
+
+> The general form, and it is the same shape as every other finding this project has
+> turned on: **a mechanical shortcut that succeeds is more dangerous than one that fails.**
+> Nineteen `{"success": true}` results said nothing about whether nineteen files had
+> actually been applied.
+
+**(b) `public.overview_activity` on prod was never the committed version, and predates
+this session.** Prod's body declared `i int`; the committed migration
+(`20260904000013`) deliberately does not, and carries a comment saying why — `for i in
+reverse …` declares its own loop variable, and declaring one shadows it, which
+`supabase db lint` reports twice. The file has ONE commit in git history, so it was not
+edited after the fact: **prod carried a hand-applied variant that never matched the
+repository.** Prod would have failed Gate 1's lint. Re-applied verbatim from the committed
+file.
+
+Found by normalising away comments and whitespace: 29 of 74 function bodies differed raw
+(expected — headers are stripped when applying through the MCP), and exactly **one**
+differed in substance. The raw hash alone would have buried it in noise.
+
+**After both repairs every fingerprint matches local byte for byte**: columns (367),
+constraints, policies, RLS tables (45), normalised function bodies (74), grants, enums.
+
+### 5. Invariants verified ON PROD (read-only)
+
+First time any of these has been checked against prod rather than local.
+
+| Invariant | Result on prod |
+|---|---|
+| No SELECT policy on `responses` / `answers` | **none** — `[]` |
+| RLS on the vault | `responses` true, `answers` true |
+| Anonymity CHECK | `CHECK ((anonymity_at_submission <> 'anonymous') OR (invitation_id IS NULL))` present |
+| Tables without RLS | **none** — `[]` |
+| `app.k_threshold()` | 5; the one organisation's default is 5 |
+| `anon`-executable functions | exactly the six by-design: `compose_report`, `get_peer_results`, `get_survey_for_token`, `report_for_share_token`, `request_demo`, `submit_response` |
+| SECURITY DEFINER without a pinned `search_path` | **none** — `[]` |
+
+### 6. Advisors, re-read against the synced schema
+
+**No new security finding.** Every one matches the expected-findings table above:
+`rls_enabled_no_policy` on `responses`/`answers`/`demo_requests` (INFO — invariant 1
+working), the six `anon` SECURITY DEFINER executables, and the `authenticated` SECURITY
+DEFINER executables (lint 0029 now enumerates all of them rather than the three recorded
+in 2026-09-03; same class, same rationale). One WARN that is not in the table and is
+already on the launch list: **`auth_leaked_password_protection` is disabled.**
+
+### 7. NOT DONE, and why — the invariant suite against prod
+
+Tor asked for the invariant suite to run against prod. **It was not run, and this is a
+decision to take rather than an omission to fix.**
+
+The suite is a fixture GENERATOR, not a read-only checker: 28 `asUser` call sites create
+real `auth.users` rows through `auth.admin.createUser`, and there are 70 `organizations`
+inserts plus surveys, rounds, invitations, responses and answers. Pointing it at prod is
+one environment variable, and it would write all of that into the production database
+permanently. Teardown is known to be imperfect — V1-5's own finding, now standing question
+4 in `tests/db/clients.ts`, was a test that leaked exactly the rows it existed to prevent.
+
+Cleaning up afterwards would itself be bulk row deletion on the remote project, which
+CLAUDE.md makes a stop-and-ask.
+
+**What was done instead answers most of the question**: the schema is now proven identical
+to local byte for byte, so a suite green on local is green on this schema; and the seven
+invariants above were checked on prod directly. What remains unproven on prod is
+BEHAVIOUR under real RLS with real JWTs — cross-org isolation, leser refusals, token
+replay. **The clean way to get that is a disposable database, not production.**

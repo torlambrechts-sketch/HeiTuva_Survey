@@ -183,7 +183,7 @@ here says "a future phase".
 | **React #418** on `bibliotek-maler/liste/mobile` | **Unowned by design** — one failure, no reproduction in V1-4, V1-5 or V1-6. Not called a flake, and nothing to do until it recurs | `reports/V1-3.md:236-268` |
 | **D99** — resAttrib/resAggregate | **Waits for a customer.** Open, not settled; the answer if one asks is a named report section, not a restored screen half | `DEVIATIONS.md:1930` |
 
-### Prod is nineteen migrations behind — **the largest open item in this file**
+### Prod is nineteen migrations behind — **CLOSED 2026-09-07**
 
 Measured 2026-09-07 while running D102's scope query. `heituva-prod`'s newest applied
 migration is `20260905220242`; the repository's is `20260907000053`. **Nineteen migrations
@@ -192,11 +192,33 @@ schema change from V1-1's tail onward: the threshold ceiling, the quality-rules 
 attributed-share scope, the pack roles, D94's k=0 fix and its sweep, the whole recurrence
 series, `dashboard_layouts` and its registry, `use_cases`, Q49's count and Q50's clock.
 
-**Owner: Tor.** Applying them is a production deployment, which CLAUDE.md makes a decision
-rather than a chore, and it is the gate every other launch-readiness item sits behind — a
-remote load test against a schema nineteen migrations old measures nothing. Prod currently
-holds four surveys, all `person` and all `utkast`, so nothing live depends on the old
-schema; that is what makes this cheap to do and expensive to keep forgetting.
+**Applied on Tor's authorisation, 2026-09-07.** All nineteen, in order, zero failures.
+Full record in `docs/OPERATIONS.md` § "Prod sync, 2026-09-07". Prod's schema is now
+**identical to local byte for byte** across columns, constraints, policies, RLS tables,
+normalised function bodies, grants and enums.
+
+**The sync found two drifts that no gate could have seen**, which is the reason the
+comparison mattered more than the applying:
+
+1. `schedules.paused_at` was lost while applying 0044 — a hard-coded line offset stripped
+   the file's first two statements, and nothing failed, because every later reference to
+   the column is inside a plpgsql body. **A mechanical shortcut that succeeds is more
+   dangerous than one that fails.**
+2. `overview_activity` on prod was never the committed version and predates this session —
+   a hand-applied variant declaring an `i int` the committed migration deliberately omits.
+   Prod would have failed Gate 1's lint.
+
+Both repaired. Seven security invariants verified on prod directly, advisors re-read with
+no new finding. **One thing was NOT done and is a decision, not an omission: the invariant
+suite was not run against prod**, because it is a fixture generator (28 `asUser` sites, 70
+org inserts) and would write test users and organisations permanently into the production
+database. `OPERATIONS.md` § 7 states what that leaves unproven and why a disposable
+database is the right place for it.
+
+**Also carried out of the sync:** PITR could not be taken — this session has no
+management-API access — so a complete logical snapshot stood in, which was adequate only
+because prod holds zero responses. **Enabling PITR belongs on the launch list**; the next
+time this is done that substitute will not be adequate.
 
 ### From `docs/DEVIATIONS.md`
 

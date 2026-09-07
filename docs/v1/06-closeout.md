@@ -67,7 +67,7 @@ allowlisted) and the checked number never fell. The census rose 392 → 577.
 
 | # | Item | Why it is a decision |
 |---|---|---|
-| **1** | **Prod is nineteen migrations behind.** `heituva-prod` is at `20260905220242`; the repo is at `20260907000053`. Measured 2026-09-07 | Applying them is a production deployment. It is also the gate the other launch items sit behind: a remote load test against a nineteen-migration-old schema measures nothing. Prod holds four surveys, all `person`/`utkast`, so nothing live depends on the old schema |
+| **1** | ~~Prod is nineteen migrations behind~~ — **DONE 2026-09-07.** All nineteen applied, ledger reconciled, schema now identical to local byte for byte. Two drifts found and repaired; seven invariants verified on prod; advisors clean. `docs/OPERATIONS.md` § "Prod sync" | **Two things came out of it and are still Tor's:** PITR is not enabled (a logical snapshot stood in, adequate only because prod holds zero responses), and the invariant suite was NOT run against prod because it writes fixtures — behaviour under real RLS remains unproven and wants a disposable database |
 | **2** | **Launch readiness** — Turnstile, Entra, leaked-password protection, the remote load test | `docs/OPERATIONS.md:11-78` |
 | **3** | **Two deferred auth controls**, triggered by the first real organisation | D27; `docs/OPERATIONS.md:76-78` |
 | **4** | **Four unreviewed legal texts, DPIA not started** | `docs/LEGAL_DRAFTS.md` |
