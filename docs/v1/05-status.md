@@ -217,8 +217,18 @@ database is the right place for it.
 
 **Also carried out of the sync:** PITR could not be taken — this session has no
 management-API access — so a complete logical snapshot stood in, which was adequate only
-because prod holds zero responses. **Enabling PITR belongs on the launch list**; the next
-time this is done that substitute will not be adequate.
+because prod holds zero responses. **PITR is now the first item on the pre-launch gate**
+(`docs/OPERATIONS.md`), to be enabled by Tor before the first real send; the substitute
+expires the moment respondent data exists, because that is the one thing in this product
+that cannot be regenerated.
+
+**The remaining gap — behaviour under real RLS — is BLOCKED on a plan change.** Tor
+directed it be closed on a disposable Supabase branch. Branching returned
+`PaymentRequiredException: Branching is supported only on the Pro plan or above`, and a
+throwaway free project (which would have served the same purpose at $0) was refused by the
+free tier's two-active-project limit, both slots being held by `heituva-prod` and `gauge`.
+Neither a plan upgrade nor pausing an unrelated project is mine to do. See the report for
+the two ways to unblock it.
 
 ### From `docs/DEVIATIONS.md`
 

@@ -2133,3 +2133,48 @@ same shape — «{count} svar» and «{count} svar · under terskel».
 that `roundsNote` no longer carries the withdrawn promise. The second is asserted
 as the ABSENCE of the old claim rather than as the new wording, so rewording the
 sentence later does not have to come back through this file.
+
+---
+
+### D104 — prod carried a hand-applied `overview_activity` that never matched the repository
+
+**Found 2026-09-07**, during the sync of migrations 0035–0053, by a normalised body-level
+diff of all 74 functions between `heituva-prod` and a freshly reset local database.
+
+**What was different.** Prod's `public.overview_activity` declared a variable `i int`. The
+committed migration `20260904000013_overview_activity.sql` deliberately does not, and
+carries a comment saying why: `for i in reverse … loop` declares its own integer loop
+variable, so declaring one shadows it, and `supabase db lint` reports both the shadowing
+and the now-unused declaration. **Prod would have failed Gate 1's lint**, on a repository
+whose CI has been green for six phases.
+
+**Why this is a deviation and not a bug fix.** The behaviour was identical — an unused
+declaration changes nothing at runtime — so nothing was broken for any user. What is
+recorded here is the PRACTICE, because the practice is still available:
+
+> **A function on prod came from somewhere other than the committed migration.** The file
+> has exactly ONE commit in git history (`96983b8`), so it was not edited after being
+> applied. Prod's copy was applied by hand — through the MCP or the dashboard — from a
+> draft that was later corrected in the repository and never re-applied.
+
+**If it happened once, the thing that allowed it has not gone away.** Nothing in this
+project prevents a function being applied to prod directly; the MCP's `apply_migration` and
+`execute_sql` both reach it, and both were used legitimately on the same day. The guard is
+not a prohibition, it is the fingerprint: **an apply is not evidence, a comparison is** —
+now written at the head of the remote-apply procedure in `docs/OPERATIONS.md`.
+
+**Why no gate could see it.** Every gate runs against local. `supabase db lint` in Gate 1
+lints the local database; the invariant suite queries the local database; 5a3 enumerates
+the local catalogue. **There has never been a check that reads prod at all**, which is why
+a divergence introduced by hand survived six phases of green CI. That is the same shape as
+this project's other findings — a gate green for something it structurally could not see,
+one environment over.
+
+**Detection detail worth keeping.** Raw `md5(prosrc)` reported **29 of 74** function bodies
+as differing; after stripping comments and collapsing whitespace, exactly **one** did. The
+28 were header comments removed in transit. A raw comparison would have buried this finding
+in noise and been abandoned as "expected drift" — which is how a real difference hides
+inside a plausible one.
+
+**Repaired** by re-applying the committed definition verbatim, including its `revoke`,
+`grant` and `comment`. Every fingerprint category now matches local byte for byte.

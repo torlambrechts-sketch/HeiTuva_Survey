@@ -15,6 +15,84 @@ where it is verified afterwards. The migrations are applied from this
 repository; the settings are clicks in the Supabase and Vercel dashboards; the
 two secrets are typed once and never committed.
 
+> ## ⚠ AN APPLY IS NOT EVIDENCE. A COMPARISON IS.
+>
+> **Read this before running any migration against a remote project, and fingerprint
+> afterwards, always.**
+>
+> On 2026-09-07 nineteen migrations were applied to prod and returned nineteen
+> `{"success": true}` results. One of them had been **silently truncated** — its first two
+> statements were cut off before it was sent, and `public.schedules.paused_at` was never
+> created. Nothing failed, and nothing could have: **every later reference to that column
+> lives inside a plpgsql body, and PostgreSQL does not resolve those at function creation
+> time.** A schema can be missing a column for as long as nobody executes the line that
+> touches it.
+>
+> The same run found a SECOND drift the apply could not see — `overview_activity` on prod
+> was a hand-applied variant that never matched the committed migration and would have
+> failed Gate 1's lint (D104).
+>
+> **Neither was found by applying. Both were found by comparing.** So the procedure is:
+>
+> 1. Apply.
+> 2. **Fingerprint the remote against a freshly reset local**, and diff. Not "spot-check
+>    the thing you changed" — the whole catalogue, because the failure mode is a change
+>    you did not know you had made or had failed to make.
+> 3. Only a matching fingerprint is evidence that the apply landed.
+>
+> **Normalise comments and whitespace before comparing function bodies**, or the signal
+> drowns: raw `md5(prosrc)` reported 29 of 74 functions as differing, of which exactly ONE
+> differed in substance. The other 28 were header comments stripped in transit.
+>
+> ```sql
+> -- Run on BOTH, diff the JSON. Any difference is a finding until explained.
+> select jsonb_build_object(
+>   'n_columns',  (select count(*) from information_schema.columns
+>                   where table_schema in ('public','app')),
+>   'columns',    (select md5(string_agg(x,'|' order by x)) from (
+>                   select c.table_schema||'.'||c.table_name||'.'||c.column_name||':'
+>                          ||c.data_type||':'||c.is_nullable||':'||coalesce(c.column_default,'-') as x
+>                   from information_schema.columns c
+>                   where c.table_schema in ('public','app')) t),
+>   'constraints',(select md5(string_agg(x,'|' order by x)) from (
+>                   select n.nspname||'.'||rel.relname||'.'||con.conname||':'
+>                          ||pg_get_constraintdef(con.oid) as x
+>                   from pg_constraint con
+>                   join pg_class rel on rel.oid = con.conrelid
+>                   join pg_namespace n on n.oid = rel.relnamespace
+>                   where n.nspname in ('public','app')) t),
+>   'policies',   (select md5(string_agg(x,'|' order by x)) from (
+>                   select schemaname||'.'||tablename||'.'||policyname||':'||cmd||':'
+>                          ||coalesce(qual,'-')||':'||coalesce(with_check,'-') as x
+>                   from pg_policies where schemaname in ('public','app')) t),
+>   'rls_tables', (select md5(string_agg(x,'|' order by x)) from (
+>                   select n.nspname||'.'||c.relname from pg_class c
+>                   join pg_namespace n on n.oid=c.relnamespace
+>                   where n.nspname in ('public','app')
+>                     and c.relkind='r' and c.relrowsecurity) t(x)),
+>   'functions',  (select md5(string_agg(x,'|' order by x)) from (
+>                   select n.nspname||'.'||p.proname||'('
+>                          ||pg_get_function_identity_arguments(p.oid)||'):'||p.prosecdef::text||':'
+>                          ||md5(lower(regexp_replace(regexp_replace(p.prosrc,'--[^\n]*',' ','g'),
+>                                                     '\s+',' ','g'))) as x
+>                   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+>                   where n.nspname in ('public','app')) t),
+>   'grants',     (select md5(string_agg(x,'|' order by x)) from (
+>                   select grantee||':'||routine_schema||'.'||routine_name||':'||privilege_type as x
+>                   from information_schema.routine_privileges
+>                   where routine_schema in ('public','app')
+>                     and grantee in ('anon','authenticated','service_role')) t),
+>   'enums',      (select md5(string_agg(x,'|' order by x)) from (
+>                   select n.nspname||'.'||t.typname||'='||e.enumlabel as x
+>                   from pg_type t join pg_namespace n on n.oid=t.typnamespace
+>                   join pg_enum e on e.enumtypid=t.oid
+>                   where n.nspname in ('public','app')) z));
+> ```
+>
+> **And prefer `supabase db push` over pasting file contents through a tool.** The
+> truncation above was possible only because the file was read, transformed and re-sent by
+> hand. `db push` sends the file.
+
 1. **Apply the Phase 7 migrations to `heituva-prod`** — `0029_sso_break_glass`,
    `0030_split_for_all_policies`, `0031_ui_messages_org_lang_idx`. **DONE on
    2026-09-05** through the Supabase MCP (`apply_migration`), with the repo
@@ -75,6 +153,27 @@ two secrets are typed once and never committed.
 Administrator MFA (Q14) is deliberately NOT on this list: it is deferred
 (docs/DEVIATIONS.md D27), so there is nothing to enable and no lockout hazard —
 no "enable TOTP before the first admin signs in" step any more.
+
+### Point-in-time recovery — NOT ENABLED. Tor to enable.
+
+**Status 2026-09-07: off, and the substitute used on that date will not be adequate again.**
+
+The prod sync of 0035–0053 was taken without a restore point, because this session reaches
+prod only through the Supabase MCP's SQL surface — no management-API token, no database
+password — so PITR could neither be taken nor its state read. What stood in was a complete
+logical snapshot of every non-seed table as JSON.
+
+**That was adequate for exactly one reason and it expires:** prod held 1 organisation, 1
+member, 1 profile, 4 draft surveys and **zero responses, zero answers, zero invitations,
+zero audit events**. A JSON dump through an RPC can stand in for a restore point when the
+entire database is a handful of rows and everything else is regenerable from
+`supabase/seed.sql`. **The moment the first real organisation answers the first real
+survey, it cannot** — respondent data is the one thing in this product that cannot be
+regenerated, recollected or reconstructed, and the anonymity design means nobody can be
+asked to submit again.
+
+**Enable PITR before the first real send.** It belongs above every other item on this list,
+because the others fail visibly and this one fails once, silently, and permanently.
 
 ### The pre-launch gate — why (Q5, Q14)
 
