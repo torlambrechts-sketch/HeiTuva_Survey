@@ -2191,12 +2191,16 @@ cannot be made that way and are logged here rather than dressed up:
    `organizations` has no INSERT policy and `org_members` needs an administrator
    to exist before one can be added. A real organisation is born at signup; a
    seed has no signup to run.
-2. **The administrator's dashboard pins.** `dashboard_pins_ins` is
+2. **The administrator's dashboard pins and working layout.** Both
+   `dashboard_pins_ins` and `dashboard_layouts_ins` key on
    `user_id = auth.uid()`, and the seed does not hold a real person's session.
-   The operator's own pins go through the operator's session; the human's are
-   written with the service role, and only when their auth user already exists.
-   The alternative was a saved layout that exists for a synthetic account and
-   not for the person the demo is for.
+   The operator's own go through the operator's session; the human's are written
+   with the service role, and only when their auth user already exists. The
+   alternative was a saved layout that exists for a synthetic account and not
+   for the person the demo is for. The ORGANISATION preset (`user_id NULL`) needs
+   no such exception — an editor may write it, and the operator is one — and it
+   carries no `group_id`, because a preset with a group in it is refused for a
+   leser at `get_quotes` and presents as a broken panel (Q51).
 3. **Schedule bookkeeping.** `send_round` creates the schedule with
    `runs_done = 1`; four rounds have since been sent, and `app.run_due_schedules`
    is what would have written that down as cron opened each one. The seed sets

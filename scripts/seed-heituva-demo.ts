@@ -35,12 +35,12 @@
  *    written as the signed-in administrator and marked SYNTHETIC in a field a
  *    human reads.
  *
- * Three writes are made with the service role because no member client can
- * make them, and each says why at the call site: the organisation itself (there
- * is no INSERT policy on `organizations` — a real org is born at signup), the
- * seed operator's own membership, and the pins belonging to the real
- * administrator (dashboard_pins is `user_id = auth.uid()`, and this script does
- * not hold that person's session).
+ * A few writes are made with the service role because no member client can make
+ * them, and each says why at the call site: the organisation itself (there is no
+ * INSERT policy on `organizations` — a real org is born at signup), the seed
+ * operator's own membership, and the real administrator's pins and working
+ * layout (both are keyed `user_id = auth.uid()`, and this script does not hold
+ * that person's session).
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
@@ -703,6 +703,7 @@ const PLAN = [
   ['duty_versions', 1],
   ['template_packs (org-scoped)', 1],
   ['dashboard_pins', 4],
+  ['dashboard_layouts', 2],
   ['dsr_requests', 2],
   ['loop_actions', 2],
 ] as const
@@ -1218,13 +1219,58 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
     author_member_id: operatorMember.id,
   }).select('id').single())
 
-  // --- a saved dashboard layout -------------------------------------------
-  // Pins are per person (`dashboard_pins_ins` is `user_id = auth.uid()`), so
-  // the operator's are written through the operator's own session — the real
-  // path — and the administrator's cannot be, because this script does not
-  // hold their session. Theirs is the one place the service role stands in for
-  // a click, and only when their auth user already exists; without it the
-  // human would sign in to an empty dashboard the seed claimed to have filled.
+  // --- a saved dashboard layout and an organisation preset -----------------
+  // Three rows, three different things (lib/dashboard/layout.ts): the WORKING
+  // layout is one member's own and reappears next time; an ORGANISATION preset
+  // has `user_id NULL` and is shared; the six SHIPPED presets live in
+  // `dashboard_presets` and this seed does not touch them.
+  //
+  // Panels are `{key, wide}` objects whose keys must be `on_dashboard` registry
+  // rows — a layout SELECTS AMONG GATED READERS, it never introduces a query —
+  // and `wide` follows the bundle's default of a full-width heatmap.
+  const WORKING_TITLE = 'Mitt oppsett'
+  const WORKING_PANELS = [
+    { key: 'trend', wide: false },
+    { key: 'heatmap', wide: true },
+    { key: 'themes', wide: false },
+  ]
+
+  // An organisation preset may not carry a group filter: one saved by an
+  // administrator with a group selected, then picked by a leser, would send
+  // p_group to get_quotes and be refused — correctly — and present as a broken
+  // panel. `group_id` therefore stays null, as the constraint and
+  // `filtersForPreset` both require.
+  ok('organisation preset', await as.from('dashboard_layouts').insert({
+    org_id: org.id,
+    user_id: null,
+    // Not one of the six shipped titles: `app.preset_title_free` refuses a
+    // shared preset that takes a shipped preset's name.
+    title: 'Månedlig ledergjennomgang',
+    panels: [
+      { key: 'trend', wide: false },
+      { key: 'heatmap', wide: true },
+      { key: 'drivers', wide: false },
+      { key: 'duties', wide: false },
+    ] as never,
+    filters: { period: 'h', group_id: null, survey_ids: [] } as never,
+  }).select('id').single())
+
+  ok('operator working layout', await as.from('dashboard_layouts').insert({
+    org_id: org.id,
+    user_id: a.operatorUser,
+    title: WORKING_TITLE,
+    panels: WORKING_PANELS as never,
+    filters: { period: 'q', group_id: null, survey_ids: [] } as never,
+  }).select('id').single())
+
+  // --- the pinned panels ---------------------------------------------------
+  // Pins are per person (`dashboard_pins_ins` is `user_id = auth.uid()`), so the
+  // operator's go through the operator's own session — the real path — and the
+  // administrator's cannot, because this script does not hold their session.
+  // Theirs is the one place the service role stands in for a click, and only
+  // when their auth user already exists; without it the human would sign in to
+  // an empty dashboard the seed claimed to have filled. Their working layout is
+  // written the same way, for the same reason.
   const PANELS = ['summary', 'trend', 'heatmap', 'themes']
   ok('operator pins', await as.from('dashboard_pins').insert(
     PANELS.map((panel_key) => ({ org_id: org.id, user_id: a.operatorUser, panel_key })),
@@ -1233,6 +1279,13 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
     ok('administrator pins', await s.from('dashboard_pins').insert(
       PANELS.map((panel_key) => ({ org_id: org.id, user_id: a.realUser!, panel_key })),
     ).select('id'))
+    ok('administrator working layout', await s.from('dashboard_layouts').insert({
+      org_id: org.id,
+      user_id: a.realUser,
+      title: WORKING_TITLE,
+      panels: WORKING_PANELS as never,
+      filters: { period: 'q', group_id: null, survey_ids: [] } as never,
+    }).select('id').single())
   }
 
   // --- two data-subject requests ------------------------------------------
@@ -1333,6 +1386,7 @@ async function summarise(
     ['dsr requests', await count('dsr_requests', 'org_id', a.org.id)],
     ['org template packs', await count('template_packs', 'org_id', a.org.id)],
     ['dashboard pins', await count('dashboard_pins', 'org_id', a.org.id)],
+    ['dashboard layouts', await count('dashboard_layouts', 'org_id', a.org.id)],
     ['loop actions', await count('loop_actions', 'org_id', a.org.id)],
     ['published report', reports.published],
     ['report ready for review', reports.ready],
@@ -1368,8 +1422,8 @@ function printPlan(): void {
     total += n
   }
   console.log(`  ${'—'.repeat(34)} ${String(total).padStart(5)}`)
-  console.log(`\n  Plus 4 more dashboard_pins if ${REAL_ADMIN_EMAIL} already has an`)
-  console.log('  auth user. Nothing outside this organisation is touched: no row is added')
+  console.log(`\n  Plus 4 dashboard_pins and 1 dashboard_layout if ${REAL_ADMIN_EMAIL}`)
+  console.log('  already has an auth user. Nothing outside this org is touched: no row is added')
   console.log('  to template_packs, question_bank, duty_definitions or report_section_types')
   console.log('  with org_id NULL, so the standard content CI counts does not move.')
   console.log('\n  Every address except the administrator is @example.invalid, which RFC 6761')
