@@ -2180,7 +2180,7 @@ inside a plausible one.
 `grant` and `comment`. Every fingerprint category now matches local byte for byte.
 
 ### D105 — the named demo seed: three writes the real producers cannot make
-`scripts/seed-heituva-demo.ts` builds "HeiTuva AS (DEMO)" through the product's
+`scripts/seed-heituva-demo.ts` builds its content through the product's
 own paths — `send_round` for rounds, invitations and schedules,
 `submit_response` for every one of its 183 responses, `close_round` for the
 snapshots, `sign_duty` + `publish_duty` for the archive version — and does the
@@ -2232,3 +2232,52 @@ survey rather than a second round on the existing one on purpose —
 there would have pushed the existing fixture over the threshold and turned the
 assertion that it reports `insufficient_data` into an assertion about nothing.
 `tests/routes.manifest.ts` gains the matching state (`for-fa-svar-flere-runder`).
+
+### D107 — the demo shares the real organisation, so the org name stops being the marker
+The seed built its own "HeiTuva AS (DEMO)" organisation beside the real one, and
+that was wrong for a reason the schema states plainly: `readViewer`
+(`lib/auth/session.ts`) resolves a person's organisation with
+`.eq(user_id).eq(status,'active').limit(1).maybeSingle()` and **no ORDER BY**,
+and there is no organisation switcher. Somebody active in two organisations
+lands in an arbitrary one, and which one can change between requests. A demo you
+cannot reliably reach is not a demo. So the content moves into `HeiTuva AS`
+itself — adopted when it exists, created only when it does not.
+
+Three things follow, and each is a change to something previously stated:
+
+1. **The demo marker leaves the organisation name.** The brief asked for it "in
+   the organisation name or a visible field"; sharing the organisation spends the
+   first option. It moves to every row a human reads — survey titles on
+   Undersøkelser, report titles on Rapporter, group names down the heatmap, the
+   library template, the shared preset — as the prefix `DEMO – `, and to every
+   person as an `@example.invalid` address. The same strings are the purge key,
+   deliberately: a marker a person can see and a marker the cleanup can find
+   should be one string, or one of them drifts. **The one surface with no marker
+   is `duties`** — the rows are registry-driven and carry no title — which is why
+   the rule below exists.
+
+2. **Purge stops being `delete from organizations`.** It now deletes by the
+   marker, and where a row carries none it REFUSES and names what it left. A
+   duty is the seed's only if every named actor on it — owner, ticked checks,
+   assigned signers, published versions — is a synthetic member; one real
+   signature and it is somebody's statutory record. Afterwards it re-counts the
+   real members, surveys, reports and groups and throws if any number moved. A
+   cleanup running inside somebody's live organisation should not be taken on
+   trust, including from itself. Proven by planting a real member, four real
+   drafts, a real group and a real report, seeding over them, and purging: all
+   five real rows survived every cycle.
+
+3. **Nothing is written into a real person's own state.** The previous version
+   seeded the human's `dashboard_pins` and working layout with the service role,
+   because in a separate organisation their dashboard would otherwise be empty.
+   Inside their real organisation that trade is bad twice over — it manufactures
+   UI state on a live account, and the purge would later delete a layout they may
+   have edited by hand. The shared preset (`user_id NULL`) reaches them without
+   anything of theirs being written or removed, and the service-role exception
+   for pins in D105 is retired.
+
+`ensureDuty` also adopts rather than inserts, matching the screen's own action.
+That is load-bearing here: `duties` is unique on (org, definition_key), so a card
+a purge deliberately left behind would otherwise make the next run die on a
+constraint violation. An adopted duty is reported and skipped — the demo has one
+card fewer rather than writing fixture state over somebody's evidence.

@@ -1,6 +1,15 @@
 /**
- * Seeds "HeiTuva AS (DEMO)" — the named demo organisation for the product
- * owner's own account.
+ * Seeds the demo content into "HeiTuva AS" — the product owner's own
+ * organisation, shared with whatever is already in it.
+ *
+ * IT DOES NOT CREATE AN ORGANISATION OF ITS OWN, and the reason is in
+ * `lib/auth/session.ts`: `readViewer` resolves a person's organisation with
+ * `.eq(user_id).eq(status,'active').limit(1).maybeSingle()` and no ORDER BY,
+ * and there is no organisation switcher. Somebody active in two organisations
+ * lands in an arbitrary one, and which one can change between requests. So the
+ * demo moves in with the real content and marks every row it writes with the
+ * `DEMO – ` prefix or an `@example.invalid` address — the same strings the
+ * purge uses to find them again.
  *
  * This is NOT the fixture seed. `scripts/seed-demo.ts` (Nordisk Studio) stays
  * exactly as it is: it is what the verification harness and CI assert against,
@@ -52,13 +61,33 @@ import { LOCAL_SUPABASE } from './verify/local-env'
 // ---------------------------------------------------------------------------
 
 /**
- * The demo marker lives in the organisation name, not in a comment.
+ * The demo lives INSIDE the real organisation, not beside it.
  *
- * The name is what the sidebar, the user list, the report header and any future
- * admin list render, so this is the one field that makes it impossible to
- * mistake this org for a customer while looking at a screen.
+ * It used to build its own "HeiTuva AS (DEMO)" org, and that was wrong for a
+ * reason the schema makes plain: `readViewer` picks a member's organisation
+ * with `.eq(user_id).eq(status,'active').limit(1).maybeSingle()` and NO ORDER BY
+ * (lib/auth/session.ts), and there is no organisation switcher. A person active
+ * in two organisations lands in an arbitrary one, and which one can change
+ * between requests. A demo you cannot reliably reach is not a demo.
+ *
+ * Adopted if it already exists, created if it does not, so the same script
+ * works against a local stack and against the real project.
  */
-const ORG_NAME = 'HeiTuva AS (DEMO)'
+const ORG_NAME = 'HeiTuva AS'
+
+/**
+ * What marks the demo now that the organisation name cannot.
+ *
+ * The brief asked for a marker "in the organisation name or a visible field so
+ * nobody mistakes it for a customer in a list". Sharing the real organisation
+ * spends the first option, so the marker moves to every row a human reads: the
+ * survey titles on Undersøkelser, the report titles on Rapporter, the group
+ * names down the heatmap, the library template, the shared dashboard preset.
+ *
+ * It is also the purge key. That is deliberate: a marker a person can see and a
+ * marker the cleanup can find should be the same string, or one of them drifts.
+ */
+const DEMO = 'DEMO – '
 
 /** The only deliverable address anywhere in this seed. */
 const REAL_ADMIN_EMAIL = 'tor.lambrechts@gmail.com'
@@ -314,49 +343,148 @@ async function drainOutbox(orgId: string, expected: number): Promise<QueuedMail[
 // ---------------------------------------------------------------------------
 
 /**
- * Removes the demo organisation and everything that hangs off it.
+ * Removes the demo content from the shared organisation.
  *
- * Deleting the organisation row is the whole cascade: members, groups, surveys,
- * rounds, invitations, responses, answers, snapshots, duties, versions,
- * reports, DSR rows, pins, the org's own template pack. What does NOT cascade
- * is the mail queue (pgmq holds no foreign key) and the operator's auth user,
- * so both are swept explicitly.
+ * This used to be one statement — delete the organisation, let the cascade do
+ * the rest. Sharing the real organisation takes that away: the org row, the
+ * human's membership and the four surveys that were already there must all
+ * survive, so the cleanup has to find exactly its own rows instead of trusting
+ * a foreign key to know what belongs to it.
  *
- * The real administrator's auth user is never touched — it is a person's
- * account that happens to be a member here, not something this seed created.
+ * Two rules make that safe rather than clever:
+ *
+ *   1. EVERY seeded row is findable by something the seed itself wrote — the
+ *      `DEMO – ` title prefix, an `@example.invalid` address, or the synthetic
+ *      operator's id. Nothing is deleted by position, by recency, or by "all
+ *      rows in this table".
+ *   2. Where a row carries no marker of its own (a `duties` row has no title —
+ *      the duties are registry-driven and the same for every employer) the
+ *      cleanup REFUSES rather than guesses, and says which row it refused.
+ *
+ * Afterwards it re-counts what it promised not to touch and throws if the
+ * number moved. A cleanup inside somebody's real organisation should not be
+ * taken on trust, including from itself.
  */
 async function purge(s: Client): Promise<void> {
-  const orgs = ok('lookup org', await s.from('organizations').select('id').eq('name', ORG_NAME))
+  const org = (ok('lookup org', await s.from('organizations').select('id').eq('name', ORG_NAME)))[0]
+  if (!org) return
 
-  for (const org of orgs ?? []) {
-    // Anything still queued for this org dies with it, so a later worker run
-    // cannot post an invitation into a survey that no longer exists.
-    for (let pass = 0; pass < 40; pass++) {
-      const batch = ok(
-        'mail_outbox_read',
-        await s.rpc('mail_outbox_read', { p_batch: 100, p_visibility: 5 }),
-      ) as { msg_id: number; message: Record<string, unknown> }[]
-      if (!batch.length) break
-      let mine = 0
-      for (const row of batch) {
-        if (row.message?.org_id !== org.id) continue
-        mine++
-        done('mail_outbox_delete', await s.rpc('mail_outbox_delete', { p_msg_id: row.msg_id }))
-      }
-      if (mine === 0) break
+  // What must survive, counted before anything is deleted.
+  const survivors = async () => ({
+    members: (await s.from('org_members').select('*', { count: 'exact', head: true })
+      .eq('org_id', org.id).not('email', 'like', `%@${SYNTHETIC_DOMAIN}`)).count ?? 0,
+    surveys: (await s.from('surveys').select('*', { count: 'exact', head: true })
+      .eq('org_id', org.id).not('title', 'like', `${DEMO}%`)).count ?? 0,
+    reports: (await s.from('reports').select('*', { count: 'exact', head: true })
+      .eq('org_id', org.id).not('title', 'like', `${DEMO}%`)).count ?? 0,
+    groups: (await s.from('groups').select('*', { count: 'exact', head: true })
+      .eq('org_id', org.id).not('name', 'like', `${DEMO}%`)).count ?? 0,
+  })
+  const before = await survivors()
+
+  // Queued mail for this organisation. The queue holds no foreign key, so
+  // nothing cascades here — and a message left behind is an invitation into a
+  // survey that is about to stop existing.
+  for (let pass = 0; pass < 40; pass++) {
+    const batch = ok(
+      'mail_outbox_read',
+      await s.rpc('mail_outbox_read', { p_batch: 100, p_visibility: 5 }),
+    ) as { msg_id: number; message: Record<string, unknown> }[]
+    if (!batch.length) break
+    let mine = 0
+    for (const row of batch) {
+      if (row.message?.org_id !== org.id) continue
+      mine++
+      done('mail_outbox_delete', await s.rpc('mail_outbox_delete', { p_msg_id: row.msg_id }))
     }
-
-    // The error is checked, not swallowed. A seed that cannot replace its own
-    // data must say so rather than quietly append to it — an append-only
-    // trigger blocking a cascade is exactly how that goes unnoticed.
-    const { error } = await s.from('organizations').delete().eq('id', org.id)
-    if (error) throw new Error(`purge ${ORG_NAME}: ${error.message}`)
+    if (mine === 0) break
   }
 
-  const operator = await findAuthUser(s, OPERATOR_EMAIL)
-  if (operator) {
-    const { error } = await s.auth.admin.deleteUser(operator)
+  const synthetic = ok('synthetic members', await s.from('org_members')
+    .select('id, user_id, email').eq('org_id', org.id).like('email', `%@${SYNTHETIC_DOMAIN}`))
+  const syntheticIds = new Set(synthetic.map((m) => m.id))
+  const operator = synthetic.find((m) => m.email === OPERATOR_EMAIL)
+
+  // Duties: the one table whose rows carry no marker. A duty is the seed's only
+  // if every trace of activity on it — owner, ticked checks, assigned signers,
+  // published versions — belongs to a synthetic member. One real signature and
+  // it is somebody's statutory record, not ours to delete.
+  const duties = ok('duties', await s.from('duties')
+    .select('id, definition_key, owner_member_id').eq('org_id', org.id))
+  const refused: string[] = []
+  for (const duty of duties) {
+    const actors: (string | null)[] = [duty.owner_member_id]
+    for (const row of ok('duty checks', await s.from('duty_checks')
+      .select('done_by').eq('duty_id', duty.id).not('done_by', 'is', null))) actors.push(row.done_by)
+    for (const row of ok('duty signers', await s.from('duty_signers')
+      .select('member_id').eq('duty_id', duty.id).not('member_id', 'is', null))) actors.push(row.member_id)
+    for (const row of ok('duty versions', await s.from('duty_versions')
+      .select('archived_by').eq('duty_id', duty.id).not('archived_by', 'is', null))) actors.push(row.archived_by)
+
+    const named = actors.filter((id): id is string => id !== null)
+    // No named actor at all means an untouched card the seed did not create.
+    if (!named.length || !named.every((id) => syntheticIds.has(id))) {
+      refused.push(duty.definition_key)
+      continue
+    }
+    // The archive goes with the duty: `duty_versions` is append-only, and D50
+    // wrote the cascade exemption that lets the parent delete take it along.
+    done(`purge duty ${duty.definition_key}`, await s.from('duties').delete().eq('id', duty.id))
+  }
+
+  // Everything else, by the marker it was written with. Surveys cascade to
+  // rounds, invitations, responses, answers, snapshots, schedules and editors.
+  done('purge reports', await s.from('reports').delete()
+    .eq('org_id', org.id).like('title', `${DEMO}%`))
+  done('purge surveys', await s.from('surveys').delete()
+    .eq('org_id', org.id).like('title', `${DEMO}%`))
+  done('purge template packs', await s.from('template_packs').delete()
+    .eq('org_id', org.id).like('title', `${DEMO}%`))
+  done('purge loop actions', await s.from('loop_actions').delete()
+    .eq('org_id', org.id).like('text', `${DEMO}%`))
+  done('purge dsr', await s.from('dsr_requests').delete()
+    .eq('org_id', org.id).like('subject_email', `%@${SYNTHETIC_DOMAIN}`))
+  done('purge shared presets', await s.from('dashboard_layouts').delete()
+    .eq('org_id', org.id).is('user_id', null).like('title', `${DEMO}%`))
+  if (operator?.user_id) {
+    done('purge operator layouts', await s.from('dashboard_layouts').delete()
+      .eq('org_id', org.id).eq('user_id', operator.user_id))
+    done('purge operator pins', await s.from('dashboard_pins').delete()
+      .eq('org_id', org.id).eq('user_id', operator.user_id))
+  }
+  done('purge synthetic members', await s.from('org_members').delete()
+    .eq('org_id', org.id).like('email', `%@${SYNTHETIC_DOMAIN}`))
+  // Groups last: `org_members.group_id` is ON DELETE SET NULL, so a group
+  // dropped while a real person still sits in it would silently unfile them.
+  for (const g of ok('demo groups', await s.from('groups')
+    .select('id, name').eq('org_id', org.id).like('name', `${DEMO}%`))) {
+    const { count } = await s.from('org_members').select('*', { count: 'exact', head: true })
+      .eq('group_id', g.id)
+    if ((count ?? 0) > 0) {
+      refused.push(`group ${g.name} (still has members)`)
+      continue
+    }
+    done(`purge group ${g.name}`, await s.from('groups').delete().eq('id', g.id))
+  }
+
+  const operatorUser = await findAuthUser(s, OPERATOR_EMAIL)
+  if (operatorUser) {
+    const { error } = await s.auth.admin.deleteUser(operatorUser)
     if (error) throw new Error(`purge operator user: ${error.message}`)
+  }
+
+  const after = await survivors()
+  for (const [what, n] of Object.entries(before)) {
+    const now = after[what as keyof typeof after]
+    if (now !== n) {
+      throw new Error(
+        `purge removed something it does not own: ${what} went ${n} -> ${now}. ` +
+          `The organisation is shared with real content — inspect before running again.`,
+      )
+    }
+  }
+  if (refused.length) {
+    console.log(`\n  Left alone (not attributable to the seed): ${refused.join(', ')}`)
   }
 }
 
@@ -537,11 +665,14 @@ async function surveyFromPack(
       .is('org_id', null).eq('key', packKey).single(),
   )
 
+  // Prefixed here rather than at each call site, so a survey added later cannot
+  // arrive unmarked — and so the purge key and the thing a human reads on
+  // Undersøkelser are produced by the same line.
   const survey = ok(
     `create survey ${title}`,
     await s.from('surveys').insert({
       org_id: orgId,
-      title,
+      title: `${DEMO}${title}`,
       audience_label: pack.audience,
       template_pack_key: pack.key,
       created_by: memberId,
@@ -688,9 +819,8 @@ async function sendAndAnswer(
  * the administrator's auth user already exists (they get their own four).
  */
 const PLAN = [
-  ['organizations', 1],
   ['groups', GROUPS.length],
-  ['org_members', GROUPS.reduce((n, g) => n + g.members.length, 0) + 2],
+  ['org_members (synthetic)', GROUPS.reduce((n, g) => n + g.members.length, 0) + 1],
   ['auth.users (synthetic operator)', 1],
   ['surveys', 5],
   ['survey_rounds', 8],
@@ -716,9 +846,19 @@ async function seed(): Promise<void> {
   await purge(s)
 
   // --- the organisation ---------------------------------------------------
-  // Service role by necessity: `organizations` has no INSERT policy, because a
-  // real organisation is created at signup by the platform, not by a member.
-  const org = ok(
+  // ADOPTED if it exists, created only if it does not. The real project already
+  // has this organisation with the human in it, and standing up a second one is
+  // the mistake this script used to make.
+  //
+  // Nothing about an adopted organisation is edited — not its name, not its
+  // contact fields, not its threshold. Those are the customer's settings, and a
+  // seed that "tidies" them has changed something nobody asked it to. The demo
+  // marks the rows it creates instead.
+  const existingOrg = (ok('lookup org',
+    await s.from('organizations').select('id').eq('name', ORG_NAME)))[0]
+  const org = existingOrg ?? ok(
+    // Service role by necessity: `organizations` has no INSERT policy, because
+    // a real organisation is created at signup by the platform, not by a member.
     'create org',
     await s.from('organizations').insert({
       name: ORG_NAME,
@@ -768,19 +908,26 @@ async function seed(): Promise<void> {
   // Attached if the address already has an auth user; otherwise left INVITED,
   // which is a first-class state: `claim_membership` binds the row to the user
   // on their first sign-in, so nothing has to be clicked in Supabase.
+  // Their membership is adopted too when it already exists. Re-inserting would
+  // collide with `org_members_org_id_email_key`, and overwriting would reset a
+  // role or a group somebody had set.
   const realUser = await findAuthUser(s, REAL_ADMIN_EMAIL)
-  ok(
-    'invite real administrator',
-    await s.from('org_members').insert({
-      org_id: org.id,
-      user_id: realUser,
-      email: REAL_ADMIN_EMAIL,
-      name: REAL_ADMIN_NAME,
-      role: 'administrator',
-      status: realUser ? 'active' : 'invited',
-      invited_by: operatorMember.id,
-    }).select('id').single(),
-  )
+  const existingAdmin = (ok('lookup administrator', await s.from('org_members')
+    .select('id, status').eq('org_id', org.id).eq('email', REAL_ADMIN_EMAIL)))[0]
+  if (!existingAdmin) {
+    ok(
+      'invite real administrator',
+      await s.from('org_members').insert({
+        org_id: org.id,
+        user_id: realUser,
+        email: REAL_ADMIN_EMAIL,
+        name: REAL_ADMIN_NAME,
+        role: 'administrator',
+        status: realUser ? 'active' : 'invited',
+        invited_by: operatorMember.id,
+      }).select('id').single(),
+    )
+  }
 
   // Everything from here runs as a signed-in administrator, so each write goes
   // past the same RLS policy a person's browser would.
@@ -793,7 +940,7 @@ async function seed(): Promise<void> {
   for (const spec of GROUPS) {
     const group = ok(
       `create group ${spec.name}`,
-      await as.from('groups').insert({ org_id: org.id, name: spec.name }).select('id').single(),
+      await as.from('groups').insert({ org_id: org.id, name: `${DEMO}${spec.name}` }).select('id').single(),
     )
     ok(
       `add members to ${spec.name}`,
@@ -1031,12 +1178,23 @@ async function ensureDuty(
   s: Client,
   orgId: string,
   key: string,
-): Promise<{ id: string; def: DutyDefinition }> {
+): Promise<{ id: string; def: DutyDefinition; adopted: boolean }> {
   const def = ok(
     `read duty definition ${key}`,
     await s.from('duty_definitions')
       .select('checks, signer_roles, title, default_interval_months').eq('key', key).single(),
   ) as unknown as DutyDefinition
+
+  // Adopt rather than insert, exactly as the screen's own `ensureDuty` does —
+  // and here it is load-bearing for a second reason. `duties` is unique on
+  // (org, definition_key), so a card the purge deliberately left behind (one a
+  // real person had signed) would otherwise make the next run die on a
+  // constraint violation with nothing useful to say. `adopted` tells the caller
+  // to keep its hands off: a duty somebody real has touched is their statutory
+  // record, and the demo does not get to tick its boxes.
+  const existing = (ok(`lookup duty ${key}`, await s.from('duties')
+    .select('id').eq('org_id', orgId).eq('definition_key', key)))[0]
+  if (existing) return { id: existing.id, def, adopted: true }
 
   const duty = ok(
     `create duty ${key}`,
@@ -1055,7 +1213,7 @@ async function ensureDuty(
     (def.signer_roles ?? []).map((r) => ({ duty_id: duty.id, role_key: r.key, label: r.label })),
   ).select('role_key'))
 
-  return { id: duty.id, def }
+  return { id: duty.id, def, adopted: false }
 }
 
 /**
@@ -1105,78 +1263,112 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
   const deadline = (days: number) =>
     new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
 
+  /**
+   * A duty the seed did not create is left exactly as it is.
+   *
+   * The only way one can be adopted is if a previous purge refused to delete it
+   * because a real person had signed or ticked it. Writing the demo's state over
+   * that would be overwriting somebody's statutory evidence with fixture data —
+   * the one thing this seed must never do — so it is reported and skipped, and
+   * the demo simply has one card fewer.
+   */
+  const adopted: string[] = []
+  const mine = (duty: { id: string; def: DutyDefinition; adopted: boolean }, key: string) => {
+    if (duty.adopted) adopted.push(key)
+    return !duty.adopted
+  }
+
   // --- duty 1: nothing done yet -------------------------------------------
-  // The row exists because someone opened the card; no owner, no ticks, no
-  // signatures. This is the state every duty starts in and the one a compliance
-  // screen must be able to show without pretending.
-  await ensureDuty(as, org.id, 'arbeidsmiljo')
+  // No ticks, no signatures, no deadline. This is the state every duty starts
+  // in and the one a compliance screen must be able to show without pretending.
+  //
+  // It DOES get an owner, and that is a concession to sharing the organisation:
+  // `duties` is unique on (org, definition_key) and carries no title, so a card
+  // with no named actor anywhere on it is one the purge cannot prove is the
+  // seed's — it would refuse to delete it, and the next run would then collide
+  // with its own leftover. An assigned owner who has done nothing is a real
+  // state and an honest one; an unattributable row in someone's statutory
+  // register is not.
+  const arbeidsmiljo = await ensureDuty(as, org.id, 'arbeidsmiljo')
+  if (mine(arbeidsmiljo, 'arbeidsmiljo')) {
+    done('arbeidsmiljo owner', await as.from('duties')
+      .update({ owner_member_id: operatorMember.id }).eq('id', arbeidsmiljo.id))
+  }
 
   // --- duty 2: started ----------------------------------------------------
   const trakassering = await ensureDuty(as, org.id, 'trakassering')
-  done('trakassering settings', await as.from('duties').update({
-    owner_member_id: operatorMember.id, next_due_at: deadline(38),
-  }).eq('id', trakassering.id))
-  await tickChecks(as, trakassering, 2, operatorMember.id)
-  done('trakassering signer', await as.from('duty_signers')
-    .update({ member_id: operatorMember.id }).eq('duty_id', trakassering.id))
+  if (mine(trakassering, 'trakassering')) {
+    done('trakassering settings', await as.from('duties').update({
+      owner_member_id: operatorMember.id, next_due_at: deadline(38),
+    }).eq('id', trakassering.id))
+    await tickChecks(as, trakassering, 2, operatorMember.id)
+    done('trakassering signer', await as.from('duty_signers')
+      .update({ member_id: operatorMember.id }).eq('duty_id', trakassering.id))
+  }
 
   // --- duty 3: complete and signed, not published -------------------------
   const likestilling = await ensureDuty(as, org.id, 'likestilling')
-  done('likestilling settings', await as.from('duties').update({
-    owner_member_id: operatorMember.id, next_due_at: deadline(96),
-  }).eq('id', likestilling.id))
+  let readyReport: string | null = null
+  if (mine(likestilling, 'likestilling')) {
+    done('likestilling settings', await as.from('duties').update({
+      owner_member_id: operatorMember.id, next_due_at: deadline(96),
+    }).eq('id', likestilling.id))
 
-  // The report is created BEFORE the checks are ticked and the signatures
-  // taken, because `app.duty_content_hash` covers the report's title, sections
-  // and filters. Sign first and the signature is stale before anyone reads it.
-  const readyReport = ok('ready report', await as.from('reports').insert({
-    org_id: org.id,
-    title: 'Likestillingsredegjørelse 2026 (ARP)',
-    kind: 'lov',
-    status: 'klar',
-    base_template: 'styresak',
-    duty_id: likestilling.id,
-    created_by: operatorMember.id,
-    // A narrative statutory report with no survey behind it: the ARP
-    // redegjørelse is largely prose, and `publish_duty` tolerates `no_survey`
-    // for exactly this shape.
-    sections: ['method', 'actions'] as never,
-  }).select('id').single())
+    // The report is created BEFORE the checks are ticked and the signatures
+    // taken, because `app.duty_content_hash` covers the report's title, sections
+    // and filters. Sign first and the signature is stale before anyone reads it.
+    readyReport = ok('ready report', await as.from('reports').insert({
+      org_id: org.id,
+      title: `${DEMO}Likestillingsredegjørelse 2026 (ARP)`,
+      kind: 'lov',
+      status: 'klar',
+      base_template: 'styresak',
+      duty_id: likestilling.id,
+      created_by: operatorMember.id,
+      // A narrative statutory report with no survey behind it: the ARP
+      // redegjørelse is largely prose, and `publish_duty` tolerates `no_survey`
+      // for exactly this shape.
+      sections: ['method', 'actions'] as never,
+    }).select('id').single()).id
 
-  await tickChecks(as, likestilling, 4, operatorMember.id)
-  done('likestilling signer', await as.from('duty_signers')
-    .update({ member_id: operatorMember.id }).eq('duty_id', likestilling.id))
-  for (const role of likestilling.def.signer_roles ?? []) {
-    rpcOk(`sign_duty(likestilling, ${role.key})`, ok('sign_duty',
-      await as.rpc('sign_duty', { p_duty: likestilling.id, p_role_key: role.key })))
+    await tickChecks(as, likestilling, 4, operatorMember.id)
+    done('likestilling signer', await as.from('duty_signers')
+      .update({ member_id: operatorMember.id }).eq('duty_id', likestilling.id))
+    for (const role of likestilling.def.signer_roles ?? []) {
+      rpcOk(`sign_duty(likestilling, ${role.key})`, ok('sign_duty',
+        await as.rpc('sign_duty', { p_duty: likestilling.id, p_role_key: role.key })))
+    }
   }
 
   // --- duty 4: published, with an archive version -------------------------
   const apenhet = await ensureDuty(as, org.id, 'apenhet')
-  done('apenhet settings', await as.from('duties').update({
-    owner_member_id: operatorMember.id, next_due_at: deadline(12), publish: true,
-  }).eq('id', apenhet.id))
+  let publishedReport: string | null = null
+  if (mine(apenhet, 'apenhet')) {
+    done('apenhet settings', await as.from('duties').update({
+      owner_member_id: operatorMember.id, next_due_at: deadline(12), publish: true,
+    }).eq('id', apenhet.id))
 
-  const publishedReport = ok('published report', await as.from('reports').insert({
-    org_id: org.id,
-    title: 'Aktsomhetsvurdering 2026 — Åpenhetsloven §§ 4–5',
-    kind: 'lov',
-    status: 'klar',
-    base_template: 'styresak',
-    duty_id: apenhet.id,
-    created_by: operatorMember.id,
-    // Every source is an organisation survey, which is the only condition
-    // under which «Svar per virksomhet» is allowed to render at all.
-    filters: { surveys: [a.supplier.id], rounds: [a.supplierRound] } as never,
-    sections: ['method', 'participation', 'per_virksomhet', 'actions', 'summary'] as never,
-  }).select('id').single())
+    publishedReport = ok('published report', await as.from('reports').insert({
+      org_id: org.id,
+      title: `${DEMO}Aktsomhetsvurdering 2026 — Åpenhetsloven §§ 4–5`,
+      kind: 'lov',
+      status: 'klar',
+      base_template: 'styresak',
+      duty_id: apenhet.id,
+      created_by: operatorMember.id,
+      // Every source is an organisation survey, which is the only condition
+      // under which «Svar per virksomhet» is allowed to render at all.
+      filters: { surveys: [a.supplier.id], rounds: [a.supplierRound] } as never,
+      sections: ['method', 'participation', 'per_virksomhet', 'actions', 'summary'] as never,
+    }).select('id').single()).id
 
-  await tickChecks(as, apenhet, 4, operatorMember.id)
-  done('apenhet signers', await as.from('duty_signers')
-    .update({ member_id: operatorMember.id }).eq('duty_id', apenhet.id))
-  for (const role of apenhet.def.signer_roles ?? []) {
-    rpcOk(`sign_duty(apenhet, ${role.key})`, ok('sign_duty',
-      await as.rpc('sign_duty', { p_duty: apenhet.id, p_role_key: role.key })))
+    await tickChecks(as, apenhet, 4, operatorMember.id)
+    done('apenhet signers', await as.from('duty_signers')
+      .update({ member_id: operatorMember.id }).eq('duty_id', apenhet.id))
+    for (const role of apenhet.def.signer_roles ?? []) {
+      rpcOk(`sign_duty(apenhet, ${role.key})`, ok('sign_duty',
+        await as.rpc('sign_duty', { p_duty: apenhet.id, p_role_key: role.key })))
+    }
   }
   // Publishing freezes the document into a snapshot, writes the archive
   // version, and flips the report to `publisert`. It is the only path that
@@ -1187,7 +1379,7 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
   // --- the third report: a draft ------------------------------------------
   ok('draft report', await as.from('reports').insert({
     org_id: org.id,
-    title: 'Arbeidsmiljø — status Q3',
+    title: `${DEMO}Arbeidsmiljø — status Q3`,
     kind: 'egen',
     status: 'utkast',
     base_template: 'kort',
@@ -1206,7 +1398,7 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
     org_id: org.id,
     key: `${a.pulse.id}-demo`,
     category: 'Ansatte',
-    title: 'Vår månedlige arbeidsmiljøpuls',
+    title: `${DEMO}Vår månedlige arbeidsmiljøpuls`,
     audience: 'Hele selskapet',
     questions: pulseQuestions.map((q) => ({
       text: q.text,
@@ -1245,7 +1437,7 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
     user_id: null,
     // Not one of the six shipped titles: `app.preset_title_free` refuses a
     // shared preset that takes a shipped preset's name.
-    title: 'Månedlig ledergjennomgang',
+    title: `${DEMO}Månedlig ledergjennomgang`,
     panels: [
       { key: 'trend', wide: false },
       { key: 'heatmap', wide: true },
@@ -1264,29 +1456,21 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
   }).select('id').single())
 
   // --- the pinned panels ---------------------------------------------------
-  // Pins are per person (`dashboard_pins_ins` is `user_id = auth.uid()`), so the
-  // operator's go through the operator's own session — the real path — and the
-  // administrator's cannot, because this script does not hold their session.
-  // Theirs is the one place the service role stands in for a click, and only
-  // when their auth user already exists; without it the human would sign in to
-  // an empty dashboard the seed claimed to have filled. Their working layout is
-  // written the same way, for the same reason.
+  // The operator's own, through the operator's own session, which is the real
+  // path (`dashboard_pins_ins` is `user_id = auth.uid()`).
+  //
+  // NOTHING is written into the human's personal state any more. While the demo
+  // had its own organisation, seeding their pins and working layout was the only
+  // way their dashboard would not be empty, and it cost a service-role write
+  // standing in for a click. Inside their REAL organisation that trade is a bad
+  // one twice over: it manufactures UI state on somebody's live account, and
+  // the purge would later delete a layout they may have since edited by hand.
+  // The shared preset above is readable by every member, so it reaches them
+  // without anything of theirs being written or removed.
   const PANELS = ['summary', 'trend', 'heatmap', 'themes']
   ok('operator pins', await as.from('dashboard_pins').insert(
     PANELS.map((panel_key) => ({ org_id: org.id, user_id: a.operatorUser, panel_key })),
   ).select('id'))
-  if (a.realUser) {
-    ok('administrator pins', await s.from('dashboard_pins').insert(
-      PANELS.map((panel_key) => ({ org_id: org.id, user_id: a.realUser!, panel_key })),
-    ).select('id'))
-    ok('administrator working layout', await s.from('dashboard_layouts').insert({
-      org_id: org.id,
-      user_id: a.realUser,
-      title: WORKING_TITLE,
-      panels: WORKING_PANELS as never,
-      filters: { period: 'q', group_id: null, survey_ids: [] } as never,
-    }).select('id').single())
-  }
 
   // --- two data-subject requests ------------------------------------------
   // No producer exists for these yet, so they are written as the signed-in
@@ -1315,15 +1499,22 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
   ok('loop actions', await as.from('loop_actions').insert([
     {
       org_id: org.id, survey_id: a.pulse.id, owner_member_id: operatorMember.id,
-      text: 'Fokusblokker i kalenderen tirsdag og torsdag formiddag',
+      text: `${DEMO}Fokusblokker i kalenderen tirsdag og torsdag formiddag`,
     },
     {
       org_id: org.id, survey_id: a.pulse.id, owner_member_id: operatorMember.id,
-      text: 'Kutte ukentlig statusmøte i Kundeservice til 20 minutter',
+      text: `${DEMO}Kutte ukentlig statusmøte i Kundeservice til 20 minutter`,
     },
   ]).select('id'))
 
-  await summarise(s, a, { published: publishedReport.id, ready: readyReport.id })
+  if (adopted.length) {
+    console.log(
+      `\n  Left as they were (a real person had touched them, so the demo did not` +
+        `\n  write its state over theirs): ${adopted.join(', ')}`,
+    )
+  }
+
+  await summarise(s, a, { published: publishedReport, ready: readyReport })
 }
 
 // ---------------------------------------------------------------------------
@@ -1339,7 +1530,7 @@ async function finish(s: Client, as: Client, a: FinishArgs): Promise<void> {
  * on reporting it after the plan stops being true.
  */
 async function summarise(
-  s: Client, a: FinishArgs, reports: { published: string; ready: string },
+  s: Client, a: FinishArgs, reports: { published: string | null; ready: string | null },
 ): Promise<void> {
   const count = async (table: string, column: string, value: string): Promise<number> => {
     const { count: n, error } = await s
@@ -1350,7 +1541,13 @@ async function summarise(
     return n ?? 0
   }
 
-  const surveys = ok('surveys', await s.from('surveys').select('id').eq('org_id', a.org.id))
+  // Everything below counts DEMO rows, never the organisation's totals. The
+  // organisation is shared now, so `count(*) where org_id = …` would quietly
+  // credit the seed with the human's own surveys and members — a summary that
+  // reports somebody else's rows as its own is exactly the fabricated number
+  // this project forbids on screen, and a terminal is not an exemption.
+  const surveys = ok('surveys', await s.from('surveys')
+    .select('id').eq('org_id', a.org.id).like('title', `${DEMO}%`))
   const surveyIds = surveys.map((r) => r.id)
   const rounds = ok('rounds', await s.from('survey_rounds').select('id, status').in('survey_id', surveyIds))
   const roundIds = rounds.map((r) => r.id)
@@ -1372,9 +1569,24 @@ async function summarise(
     )
   }
 
+  const demoRows = async (table: string, column: string): Promise<number> => {
+    const { count: n, error } = await s
+      .from(table as 'surveys')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', a.org.id)
+      .like(column as 'title', `${DEMO}%`)
+    if (error) throw new Error(`count ${table}: ${error.message}`)
+    return n ?? 0
+  }
+  const { count: synthetic } = await s.from('org_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('org_id', a.org.id).like('email', `%@${SYNTHETIC_DOMAIN}`)
+  const untouched = (await count('org_members', 'org_id', a.org.id)) - (synthetic ?? 0)
+
   const lines: [string, string | number][] = [
-    ['organisation', ORG_NAME],
-    ['members', await count('org_members', 'org_id', a.org.id)],
+    ['organisation', `${ORG_NAME} (shared with its real content)`],
+    ['synthetic members', `${synthetic ?? 0} (all @${SYNTHETIC_DOMAIN})`],
+    ['real members left alone', untouched],
     ['groups', a.groups.map((g) => `${g.name} (${g.size})`).join(', ')],
     ['surveys', surveys.length],
     ['rounds', `${rounds.length} (${rounds.filter((r) => r.status === 'closed').length} closed)`],
@@ -1382,17 +1594,17 @@ async function summarise(
     ['responses', `${responses ?? 0}, none of the anonymous ones linked to an invitation`],
     ['snapshots', await count('result_snapshots', 'org_id', a.org.id)],
     ['duties', await count('duties', 'org_id', a.org.id)],
-    ['reports', await count('reports', 'org_id', a.org.id)],
+    ['reports', await demoRows('reports', 'title')],
     ['dsr requests', await count('dsr_requests', 'org_id', a.org.id)],
-    ['org template packs', await count('template_packs', 'org_id', a.org.id)],
+    ['org template packs', await demoRows('template_packs', 'title')],
     ['dashboard pins', await count('dashboard_pins', 'org_id', a.org.id)],
     ['dashboard layouts', await count('dashboard_layouts', 'org_id', a.org.id)],
-    ['loop actions', await count('loop_actions', 'org_id', a.org.id)],
-    ['published report', reports.published],
-    ['report ready for review', reports.ready],
+    ['loop actions', await demoRows('loop_actions', 'text')],
+    ['published report', reports.published ?? '— (its duty was left alone)'],
+    ['report ready for review', reports.ready ?? '— (its duty was left alone)'],
   ]
 
-  console.log(`\nSeeded ${ORG_NAME}\n`)
+  console.log(`\nSeeded the demo into ${ORG_NAME}\n`)
   for (const [k, v] of lines) console.log(`  ${String(k).padEnd(22)} ${v}`)
 
   if (a.counts.shareToken) {
@@ -1401,7 +1613,8 @@ async function summarise(
   console.log(`\n  operator (synthetic)       ${OPERATOR_EMAIL} / ${OPERATOR_PASSWORD}`)
   console.log(
     a.realUser
-      ? `  ${REAL_ADMIN_EMAIL} is attached as an ACTIVE administrator — just sign in.`
+      ? `  ${REAL_ADMIN_EMAIL} keeps the membership they already had — nothing\n` +
+        `  about it was changed, and there is one organisation to land in.`
       : `  ${REAL_ADMIN_EMAIL} has no Supabase Auth user yet, so the membership is\n` +
         `  INVITED. Sign in once with that address (magic link or password) and\n` +
         `  claim_membership attaches it automatically. Nothing to click in Supabase.`,
@@ -1422,9 +1635,12 @@ function printPlan(): void {
     total += n
   }
   console.log(`  ${'—'.repeat(34)} ${String(total).padStart(5)}`)
-  console.log(`\n  Plus 4 dashboard_pins and 1 dashboard_layout if ${REAL_ADMIN_EMAIL}`)
-  console.log('  already has an auth user. Nothing outside this org is touched: no row is added')
-  console.log('  to template_packs, question_bank, duty_definitions or report_section_types')
+  console.log(`\n  Plus one org_members row if ${REAL_ADMIN_EMAIL} is not already`)
+  console.log(`  a member. NOTHING EXISTING IS CHANGED: the organisation is adopted, not`)
+  console.log(`  created, its settings are left as they are, an existing membership is left`)
+  console.log(`  as it is, and no personal pin or layout is written for a real person.`)
+  console.log('  Nothing outside the organisation is touched either — no row is added to')
+  console.log('  template_packs, question_bank, duty_definitions or report_section_types')
   console.log('  with org_id NULL, so the standard content CI counts does not move.')
   console.log('\n  Every address except the administrator is @example.invalid, which RFC 6761')
   console.log('  guarantees can never resolve. No mail is sent and none is left queued.\n')
@@ -1464,9 +1680,12 @@ async function main(): Promise<void> {
   const s = svc()
   if (purgeOnly) {
     await purge(s)
-    console.log(`Purged ${ORG_NAME} from ${URL} — the organisation, everything cascading`)
-    console.log(`from it, its queued mail, and the synthetic operator's auth user.`)
-    console.log(`${REAL_ADMIN_EMAIL}'s own auth user was not touched.`)
+    console.log(`Purged the demo content from ${ORG_NAME} on ${URL}:`)
+    console.log(`everything titled "${DEMO}…", every @${SYNTHETIC_DOMAIN} member, the duties`)
+    console.log(`only synthetic members had touched, the queued mail, and the operator's`)
+    console.log(`auth user. The organisation itself, ${REAL_ADMIN_EMAIL}'s`)
+    console.log(`membership and auth user, and every unprefixed row were left alone —`)
+    console.log(`re-counted afterwards, and the run fails if any of those numbers moved.`)
     return
   }
 
