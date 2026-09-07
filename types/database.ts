@@ -921,6 +921,7 @@ export type Database = {
           plan: string
           privacy: Json
           retention_months: number
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -939,6 +940,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -957,6 +959,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          timezone?: string
           updated_at?: string
         }
         Relationships: []

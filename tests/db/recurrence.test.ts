@@ -89,6 +89,29 @@ const runScheduler = () => {
   return Number((r.stdout ?? '').trim())
 }
 
+/** Rows of columns, like `threshold-policy.test.ts`'s `psql`. Deliberately
+ *  positional rather than named: a catalogue sweep must read the database's own
+ *  view of itself, and inventing a column-name parser to make the call sites
+ *  prettier is more code than the assertions it serves. */
+function sql(query: string): string[][] {
+  const r = spawnSync(
+    'psql',
+    [
+      process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+      '-tAF|',
+      '-c',
+      query,
+    ],
+    { encoding: 'utf8' },
+  )
+  if (r.status !== 0) throw new Error(`sql: ${r.stderr || r.stdout}`)
+  return (r.stdout ?? '')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => line.split('|'))
+}
+
 beforeAll(async () => {
   svc = serviceClient()
   const { data: orgs } = await svc.from('organizations').select('id, name')
@@ -331,7 +354,18 @@ describe('(Q22) pause skips the series and leaves the round alone', () => {
       paused_at: new Date().toISOString(),
     })
 
-    await svc.from('schedules').update({ paused_at: null }).eq('id', s.id)
+    // The error is CHECKED, and that is not decoration. Written without this
+    // line, the test failed as "paused_at is still set" — which reads as a
+    // trigger declining to act, and sent me looking at the trigger's logic.
+    // The truth was `permission denied for function local_send_at`: V1-6
+    // revoked a pure helper from every role and then called it from a
+    // NON-definer trigger. An unchecked error on a mutation turns a permission
+    // failure into a behaviour mystery.
+    const { error: resumeError } = await svc
+      .from('schedules')
+      .update({ paused_at: null })
+      .eq('id', s.id)
+    expect(resumeError, 'resuming must not error').toBeNull()
 
     const { data } = await svc
       .from('schedules').select('next_run_at, paused_at').eq('id', s.id).single()
@@ -340,5 +374,98 @@ describe('(Q22) pause skips the series and leaves the round alone', () => {
     expect(next.getTime(), 'the next run is in the future, not the stale timestamp')
       .toBeGreaterThan(Date.now())
     expect(next.getUTCDay(), 'and it is still a Wednesday').toBe(past.getUTCDay())
+  })
+})
+
+describe('(Q50) the organisation clock', () => {
+  /**
+   * DECISIONS Q50 — timezone on the ORGANISATION, computed `at time zone`,
+   * never a stored offset.
+   *
+   * The defect this closes was SILENT and SEASONAL: `send_at_local` is a bare
+   * `time`, the schema modelled no timezone, and every scheduled send ran on
+   * UTC. «09:00» arrived at 10:00 in winter and 11:00 in summer, with nothing
+   * in the product saying UTC and «09:00» displayed back exactly as typed.
+   *
+   * `at time zone` and not an offset is the load-bearing half: an offset is
+   * right for half the year, which reproduces the intermittent presentation
+   * the decision exists to remove. The test that proves it is the one that
+   * crosses a DST boundary — a stored `+01:00` passes every test taken in
+   * January.
+   */
+  it('every organisation has a timezone, defaulting to Europe/Oslo', async () => {
+    const { data, error } = await svc.from('organizations').select('id, timezone')
+    expect(error, 'the column exists').toBeNull()
+    expect(data!.length).toBeGreaterThan(0)
+    for (const o of data!) {
+      expect(o.timezone, `org ${o.id} has a timezone`).toBeTruthy()
+    }
+    const { data: def } = await svc
+      .from('organizations')
+      .insert({ name: `Klokke-${Date.now()}` } as never)
+      .select('id, timezone')
+      .single()
+    expect(def!.timezone, 'a new organisation defaults to the Nordic zone').toBe('Europe/Oslo')
+    await svc.from('organizations').delete().eq('id', def!.id)
+  })
+
+  it('THE ONE THAT MATTERS: 09:00 local is 09:00 local on BOTH sides of a DST boundary', async () => {
+    // A stored offset passes in January and fails in July. `at time zone`
+    // passes both, and this is the only assertion that can tell them apart.
+    const rows = sql(`
+      select
+        to_char(app.local_send_at('2026-01-15'::date, '09:00'::time, 'Europe/Oslo')
+                  at time zone 'Europe/Oslo', 'HH24:MI'),
+        to_char(app.local_send_at('2026-07-15'::date, '09:00'::time, 'Europe/Oslo')
+                  at time zone 'Europe/Oslo', 'HH24:MI')
+    `)
+    expect(rows[0], 'the query returned a row').toBeTruthy()
+    const [winter, summer] = rows[0]!
+    expect(winter, 'January').toBe('09:00')
+    expect(summer, 'July — a stored offset fails here').toBe('09:00')
+  })
+
+  it('and the two are ONE HOUR APART in UTC, which is what makes the test above real', async () => {
+    // The positive control. Without it, a helper that ignored the time
+    // entirely and returned midnight would satisfy both assertions above.
+    const utc = sql(`
+      select
+        to_char(app.local_send_at('2026-01-15'::date, '09:00'::time, 'Europe/Oslo')
+                  at time zone 'UTC', 'HH24:MI'),
+        to_char(app.local_send_at('2026-07-15'::date, '09:00'::time, 'Europe/Oslo')
+                  at time zone 'UTC', 'HH24:MI')
+    `)
+    expect(utc[0], 'the query returned a row').toBeTruthy()
+    const [w, su] = utc[0]!
+    expect(w, 'CET is UTC+1').toBe('08:00')
+    expect(su, 'CEST is UTC+2').toBe('07:00')
+  })
+
+  it('THE SET: every site that computes next_run_at goes through the helper', async () => {
+    // V1-3's lesson applied before it can bite a fourth time. The interval CASE
+    // existed in three places and one disagreed with the enum; the decision
+    // named three sites for `next_run_at` and required one helper. Derived
+    // from the catalogue, not remembered — a fourth site added later is caught
+    // by this query and not by anyone's memory.
+    const offenders = sql(`
+      select p.proname
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname in ('app', 'public')
+         and p.proname <> 'local_send_at'
+         -- ASSIGNS next_run_at, in any form. The first version of this sweep
+         -- also required send_at_local in the body, and that was too narrow in
+         -- exactly the direction of the bug: send_round and run_due_schedules
+         -- both computed now() + interval and never read the local time at
+         -- all, so a sweep keyed on the column would have missed the two sites
+         -- that most needed finding. The property is "every assignment goes
+         -- through the helper", so the query asks that.
+         and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') ~ 'next_run_at\\s*(:?=|,)'
+         and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') !~ 'local_send_at'
+       order by 1
+    `)
+    expect(
+      offenders.map(([name]) => name),
+      'these compute a send time from send_at_local without the timezone helper',
+    ).toEqual([])
   })
 })

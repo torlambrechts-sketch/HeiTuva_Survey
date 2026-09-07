@@ -350,6 +350,19 @@ describe('(Q17 #8) every aggregate path routes through app.k_for — none kept t
     //     someone adds it here deliberately, with a reason. Failing first is
     //     the point — it forces the question "is this participation, or is it
     //     derived from what they said?" to be answered by a person.
+    // DECISIONS Q49 (V1-6) DOES NOT APPEAR IN THIS LIST, and the reason is
+    // worth stating because the decision's own draft got it wrong.
+    //
+    // `get_trends` now emits `n` on a gated point. That does NOT make it a
+    // count-only function: it CALLS `app.k_for` and gates everything derived
+    // behind it, so it never qualified for this list and adding a count does
+    // not change that. The list is for a vault reader that gates on NOTHING.
+    //
+    // What Q49 needed instead is a tighter assertion, and it lives beside the
+    // trends tests rather than here: the gated payload must carry the count and
+    // NOTHING DERIVED. See `(Q49) a gated point carries the count and nothing
+    // else` — Tor's narrowing, enforced as a closed key set rather than as a
+    // sentence someone wrote once.
     const DO_NOT_GATE: Record<string, string> = {
       overview_activity: 'activity/participation counts, never answer content',
       survey_response_counts: 'per-survey response counts (svarprosent), not answer distributions',
