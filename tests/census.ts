@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import type { File, Reporter } from 'vitest'
 
 /**
@@ -41,9 +41,8 @@ import type { File, Reporter } from 'vitest'
  * arrive failing until someone states what they are worth.
  *
  * ---------------------------------------------------------------------------
- * KNOWN LIMIT, AND THE FIX, TO BE APPLIED THE NEXT TIME THIS FILE IS TOUCHED
- * (Tor, 2026-09-07, after V1-3). Not a separate errand — do it in the same
- * commit as whatever brings you here next.
+ * THE LIMIT, AND THE FIX — APPLIED 2026-09-07 IN V1-6, as instructed. Kept in
+ * full because the reasoning is what makes the `--write` mode safe.
  *
  * Because only a DROP fails, a manifest entry that drifts UPWARD is invisible.
  * V1-3 found two: `recurrence.test.ts` was committed at 7 while collecting 9,
@@ -53,16 +52,21 @@ import type { File, Reporter } from 'vitest'
  *
  * THE FIX IS TO GENERATE THE MANIFEST RATHER THAN MAINTAIN IT, so a stale entry
  * cannot exist. A hand-kept number can be wrong; a written-back one cannot.
- * Add a `--write` mode that serialises the observed counts back to MANIFEST and
- * wire it to a script; committing the regenerated file is then the ceremony,
- * replacing the hand edit. This is a change to something that already runs, not
- * a new gate — the freeze permits it on exactly that ground.
+ * `CENSUS_WRITE=1` serialises the observed counts back to MANIFEST; committing
+ * the regenerated file is the ceremony, replacing the hand edit. A change to
+ * something that already runs, not a new gate — the freeze permits it on
+ * exactly that ground.
  *
- * ONE THING THE FIX MUST NOT DO: regenerate on an ordinary run. If every run
- * rewrote the file, a file that shrank would have its number quietly lowered
- * and the floor — the whole purpose of this reporter — would be gone. Writing
- * back is an explicit act; the default path still reads the committed file and
- * still fails on a drop.
+ * WHAT THE FIX MUST NOT DO, and does not: regenerate on an ordinary run. If
+ * every run rewrote the file, a file that shrank would have its number quietly
+ * lowered and the floor — the whole purpose of this reporter — would be gone.
+ * Writing back is an explicit act behind an environment variable; the default
+ * path still reads the committed file and still fails on a drop.
+ *
+ * AND IT REFUSES TO WRITE A PARTIAL RUN. `verify:db` runs two directories and
+ * never touches `tests/unit`; regenerating from that would delete every unit
+ * file's entry and hand back a manifest that passes because it expects nothing.
+ * A write only proceeds when every file already in the manifest ran.
  * ---------------------------------------------------------------------------
  */
 const MANIFEST = 'tests/expected-counts.json'
@@ -113,6 +117,30 @@ export default class CensusReporter implements Reporter {
       if (!(file in expected)) {
         problems.push(`${file}: ${got} tests, not in ${MANIFEST} — add it with its count`)
       }
+    }
+
+    // ── CENSUS_WRITE=1: regenerate rather than hand-maintain ────────────────
+    if (process.env.CENSUS_WRITE === '1') {
+      const missing = Object.keys(expected).filter((f) => !seen.has(f))
+      if (missing.length) {
+        console.error(
+          `\ncensus: refusing to write from a PARTIAL run — ${missing.length} manifest ` +
+            `file(s) did not run (${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''}).\n` +
+            'Run the full suite (npm run verify:hermetic, or vitest with no filter) and write from that.\n' +
+            'Writing from a partial run would drop every entry it did not see, and the ' +
+            'resulting manifest would pass because it expects nothing.',
+        )
+        process.exitCode = 1
+        return
+      }
+      const next = Object.fromEntries([...seen.entries()].sort(([a], [b]) => a.localeCompare(b)))
+      writeFileSync(MANIFEST, `${JSON.stringify(next, null, 2)}\n`)
+      const total = Object.values(next).reduce((a, b) => a + b, 0)
+      console.error(
+        `\ncensus: wrote ${MANIFEST} — ${Object.keys(next).length} files / ${total} tests.\n` +
+          'Commit it. This is the ceremony that replaces the hand edit.',
+      )
+      return
     }
 
     if (problems.length) {

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { QUESTION_ROLES } from '@/lib/questions/roles'
+import { PackQuestion, surveyQuestionFrom } from '@/lib/questions/pack'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 
@@ -11,15 +11,9 @@ export type LibraryResult = { ok: true } | { ok: false; error: 'forbidden' | 'in
 
 /** A pack's `questions` jsonb. Only `text` and `type` are guaranteed; the rest
  *  is per-type config the builder understands. */
-const PackQuestion = z.object({
-  text: z.string(),
-  type: z.string(),
-  options: z.array(z.string()).optional(),
-  required: z.boolean().optional(),
-  help: z.string().optional(),
-  role: z.enum(QUESTION_ROLES).optional(),
-  short: z.string().optional(),
-})
+// PackQuestion moved to lib/questions/pack.ts. It used to be declared here
+// too, WITHOUT `statements` and `multi` — which is why «Bruk mal» silently
+// dropped both while the wizard kept them. One definition, two callers.
 
 async function requireEditor() {
   const viewer = await requireViewer()
@@ -69,24 +63,10 @@ export async function createSurveyFromPack(packId: string): Promise<LibraryResul
   const parsed = z.array(PackQuestion).safeParse(pack.questions)
   if (parsed.success && parsed.data.length) {
     const { error: qError } = await supabase.from('survey_questions').insert(
-      parsed.data.map((q, i) => ({
-        survey_id: survey.id,
-        position: i,
-        type: q.type as never,
-        text: q.text,
-        help: q.help ?? null,
-        required: q.required ?? false,
-        // Q35 travels with the question here too. NOTE for the next phase's
-        // list, not fixed in this one: this path builds `config` by hand while
-        // the wizard's uses `configFor`, so a pack question's `statements` and
-        // `multi` are lost when the survey is created from «Bruk mal» and kept
-        // when it is created from the wizard. Same pack, two shapes.
-        config: {
-          ...(q.options ? { options: q.options } : {}),
-          ...(q.role ? { role: q.role } : {}),
-          ...(q.short ? { short: q.short } : {}),
-        } as never,
-      })),
+      // The SAME builder the wizard uses (lib/questions/pack.ts). This path
+      // built `config` by hand from three fields, so `statements` and `multi`
+      // were lost here and kept there — same pack, two surveys.
+      parsed.data.map((q, i) => surveyQuestionFrom(q, survey.id, i) as never),
     )
     if (qError) {
       // Leave no half-built survey behind for someone to find later.

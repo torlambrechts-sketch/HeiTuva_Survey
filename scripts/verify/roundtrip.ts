@@ -113,6 +113,17 @@ async function main() {
 
     // profiles — Om meg.
     {
+      // V1-6: the value is RESTORED afterwards, for the same reason the group
+      // is deleted. The group probe was fixed when its litter turned up in a
+      // capture; these two were left because neither reaches a rendered screen
+      // — which is the argument that quietly licenses exceptions. Gate 5a2's
+      // rule is "do not become what else exists", and a harness that enforces
+      // it while breaking it is the worst place for the exception to live.
+      const { data: before } = await admin
+        .from('profiles')
+        .select('user_id, job_title')
+        .limit(1)
+        .single()
       const title = `Tittel ${Date.now()}`
       await page.goto(`${BASE_URL}/profil`, { waitUntil: 'domcontentloaded' })
       await page.fill('input[name="job_title"]', title)
@@ -120,6 +131,15 @@ async function main() {
       await page.waitForTimeout(1500)
       const { data } = await admin.from('profiles').select('job_title').limit(1).single()
       show('profiles', data?.job_title === title, data)
+
+      // Restored, not deleted: a profile row must keep existing, so putting the
+      // previous value back is the only shape of cleanup available.
+      if (before?.user_id) {
+        await admin
+          .from('profiles')
+          .update({ job_title: before.job_title })
+          .eq('user_id', before.user_id)
+      }
     }
 
     // dsr_requests.
@@ -135,6 +155,12 @@ async function main() {
         .select('id, type, subject_email, due_at')
         .eq('subject_email', email)
       show('dsr_requests', (data?.length ?? 0) === 1, data?.[0] ?? null)
+
+      // V1-6: removed after the assertion. A DSR request is not inert — it
+      // carries a statutory deadline, appears on Administrasjon → Personvern
+      // and counts toward «Krever handling», so one per run accumulated into a
+      // demo organisation with a growing pile of overdue subject requests.
+      for (const r of data ?? []) await admin.from('dsr_requests').delete().eq('id', r.id)
     }
 
     console.log('\n== Phase 2 ==')

@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { audit } from '@/lib/auth/audit'
-import { NEW_QUESTION_TEXT, QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
-import { QUESTION_ROLES } from '@/lib/questions/roles'
+import { NEW_QUESTION_TEXT, specOf } from '@/lib/questions/registry'
+import { PackQuestion, configFor } from '@/lib/questions/pack'
 import { SHARE_SCOPES, WIZARD_CADENCES } from './keys'
 
 export type SurveyResult = { ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
@@ -18,19 +18,8 @@ const Uuid = z.string().uuid()
  * A pack's `questions` jsonb. Only text and type are guaranteed; everything
  * else is per-type config the Builder understands.
  */
-const PackQuestion = z.object({
-  text: z.string(),
-  type: z.enum(QUESTION_TYPE_KEYS as [string, ...string[]]),
-  options: z.array(z.string()).optional(),
-  statements: z.array(z.string()).optional(),
-  multi: z.boolean().optional(),
-  required: z.boolean().optional(),
-  help: z.string().optional(),
-  /** DECISIONS Q35 — what the question IS in an attributed register. */
-  role: z.enum(QUESTION_ROLES).optional(),
-  /** The column heading for a roled question; the text itself when absent. */
-  short: z.string().optional(),
-})
+// PackQuestion and configFor moved to lib/questions/pack.ts — see the note
+// there: two copies of this produced two different surveys from one pack.
 
 /**
  * 'leser' may see the list but never change it. RLS enforces this too
@@ -44,21 +33,6 @@ async function requireEditor() {
   return viewer
 }
 
-/** Config for a pack question: the type's defaults, overridden by what the pack states. */
-function configFor(q: z.infer<typeof PackQuestion>): Record<string, unknown> {
-  const spec = specOf(q.type as never)
-  const config: Record<string, unknown> = { ...spec.defaultConfig }
-  if (q.options?.length) config.options = q.options
-  if (q.statements?.length) config.statements = q.statements
-  if (q.multi !== undefined) config.multi = q.multi
-  // Q35: the designation travels with the question into the survey. A survey is
-  // a record of what was asked, so the role is COPIED rather than looked up
-  // from the pack at read time — editing the pack later must not silently
-  // reclassify a survey that has already been sent.
-  if (q.role) config.role = q.role
-  if (q.short) config.short = q.short
-  return config
-}
 
 /**
  * "Tom undersøkelse" — a draft with a single scale question, matching the
