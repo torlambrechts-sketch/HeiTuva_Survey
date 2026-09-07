@@ -77,18 +77,32 @@ Oversikt surfaces were its only drawn scope and moved to V1-1. Its content is §
 of this file plus whatever V1-5's fix pass adds. Its size is not knowable now,
 which is why it keeps a phase rather than being folded into V1-5.
 
-### V1-7 — Stream panel
+### V1-7 — DESCHEDULED 2026-09-07. **The v1 bundle finishes at V1-6.**
 
-`docs/v1/03-plan.md:464-489`. Conditional on Q26 being reopened as *build*.
-Decision batch **Q41** (`04-decisions.md:48`), DEFAULT, unconfirmed and
-contingent. The only phase that adds a k-gate surface: a new SECURITY DEFINER
-reader over the answers vault with a rolling window, which
-`tests/invariants/threshold-policy.test.ts:355-374` fails by construction until
-it calls `app.k_for`.
+Moved, not dropped, and it changed shape on the way. Tor's call after the V1-5
+batch: the stream panel and the expansion catalogue's **R4 (event ingestion) are
+the same subject**. The panel is a READER over transactional events; R4 is the
+INGESTION of them — a panel with no events shows nothing, and events with no
+panel are invisible. They become one feature in two halves, **ingestion first,
+panel second**, scheduled after the catalogue lands and R4 has its own decision
+line. That makes the panel depend on R4, which is why it leaves this plan: a
+phase here cannot depend on a document not in this repository.
 
-Lifting Q26 needs **two** changes in order — the `stream` registry row (a
-migration) and the flag — and the flag alone changes nothing, which
-`tests/unit/dashboard-panels.test.ts` asserts.
+**Q41 travels with it** (`04-decisions.md:48`, still DEFAULT and unconfirmed).
+A window-step gate rule is a property of the ingestion side — how events are
+bucketed, and how adjacent windows may differ without leaking a difference below
+k — so it belongs to the half that produces the series.
+
+**Nothing a customer sees changes.** Q26's full effect shipped in V1-4: no
+`stream` row, so no layout can name the panel; the flag seeded false; and the
+picker DRAWS the absence with its precondition. Lifting it needs the migration
+first and the flag second, which `tests/unit/dashboard-panels.test.ts` asserts.
+
+The scope this phase would have carried is kept verbatim in
+`docs/v1/03-plan.md` so it is not re-derived: the `stream_series` SECURITY
+DEFINER reader, its four k-gate negative tests, and the two-sided `app.k_for`
+catalogue assertion that fails by construction until the new function calls it.
+It remains the only surface in this plan that would add a k-gate reader.
 
 ---
 
@@ -226,12 +240,14 @@ nothing, and `docs/HeiTuva_Implementation_Plan.md`'s headings (`:1-260`) contain
 no expansion catalogue. Their content is named in the request as: R2 twelve
 packs, R3 contacts/accounts, R4 event ingestion.
 
-**Recorded here as a gap in the documentation rather than as scheduled work.**
-Whatever defines them lives outside the repo, so nothing here can be checked
-against them and no phase can pick them up. If they are to be planned, the
-catalogue needs to land in `docs/` first — and R4 (event ingestion) is the same
-subject as V1-7's stream panel, so the two should be reconciled before either is
-scheduled rather than after.
+**Tor's, not a gap in the build:** the catalogue was produced in conversation
+and never committed — the same failure as Q17 — and he is supplying it. Nothing
+here can be checked against them until it lands.
+
+**R4 and the stream panel are reconciled as of 2026-09-07**, and the reconciling
+changed the plan: they are one feature in two halves, ingestion first and panel
+second, and **V1-7 is descheduled out of the v1 bundle** because the panel now
+depends on a document not in this repository. See § 1.
 
 ---
 
@@ -247,5 +263,5 @@ scheduled rather than after.
 | Gate 5a3 | 56 of 73 surfaces actively checked (44 RLS tables + 29 SECURITY DEFINER functions, 17 allowlisted) |
 | Census manifest | 544 tests across 31 files (`tests/expected-counts.json`) |
 | Capture states | 153 before V1-4; V1-4 adds three |
-| v1 phases closed | 5 of 8 (V1-0 … V1-4) |
+| v1 phases closed | 5 of **7** (V1-0 … V1-4) — V1-7 descheduled, so the bundle finishes at V1-6 |
 | Phase reports on disk | 3 of 5 closed phases |

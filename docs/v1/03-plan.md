@@ -461,7 +461,51 @@ V1-7 or to the post-v1 list — the two-pass rule does not restart here.
 
 ---
 
-## V1-7 — Stream panel (only if Q26 = build)
+## V1-7 — DESCHEDULED (2026-09-07). The v1 bundle finishes at V1-6.
+
+**This is not dropped. It is moved, and it changed shape on the way.**
+
+Tor's call, after the V1-5 batch: the stream panel and the expansion catalogue's
+**R4 (event ingestion) are the same subject**, and treating them as two features
+was the error. A stream panel is a READER over transactional events; R4 is the
+INGESTION of them. Build the panel first and it has nothing to show; build
+ingestion first and the events are invisible. So they become one feature in two
+halves, **ingestion first and the panel second**, scheduled after the expansion
+catalogue lands and R4 has its own decision line.
+
+That ordering makes the panel depend on R4 rather than the reverse, which is why
+it leaves the v1 bundle: a phase of this plan cannot depend on a document that is
+not in this repository. `docs/v1/05-status.md` § 4 records that the catalogue was
+produced in conversation and never committed — Tor's, not a gap in the build —
+and that it is being supplied.
+
+**Q41 travels with it.** The window-step rule it decides is a property of the
+INGESTION side — how events are bucketed and how adjacent windows may differ
+without leaking a difference below k — so it belongs to the half that produces
+the series, not to the half that draws it. It stays DEFAULT and unconfirmed in
+`04-decisions.md` until R4 is written.
+
+**Q26 stays exactly as it is**, and V1-4 already built its full effect: no
+`stream` row in `report_section_types`, so no layout can name the panel; the flag
+`event_stream_panel` seeded false; and the picker DRAWS the absence with its
+precondition rather than hiding it. Lifting it needs the migration first and the
+flag second, which `tests/unit/dashboard-panels.test.ts` asserts. Nothing about
+this deschedule changes what a customer sees today.
+
+**What was planned here, kept so it is not re-derived:** a
+`public.stream_series(p_org, p_surveys, p_window_days)` SECURITY DEFINER reader
+over the answers vault, per-day volume and a rolling average gated at the
+strictest `app.k_for` of the selection, revoked from `anon`; four negative tests
+in `k-surface.test.ts` (n=4 → gap, n=5 → value, adjacent windows whose difference
+is below k → the later suppressed, leser and outsider refused); and the two-sided
+`app.k_for` catalogue assertion, which fails by construction until the new
+function calls it (`threshold-policy.test.ts:355–374`). It remains the only
+surface in this plan that would add a k-gate reader, and that is the reason it
+was always the last phase.
+
+---
+
+## V1-7 — Stream panel (superseded by the section above; kept for the scope it names)
 
 **Scope.** Stream panel (NEW:1163–1201; data NEW:3285–3294, 3707–3732) — NOT
 BUILT. Presets that lead with it (Q27).
