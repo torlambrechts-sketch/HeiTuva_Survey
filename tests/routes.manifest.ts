@@ -447,6 +447,33 @@ export const ROUTES: RouteSpec[] = [
           await page.locator('h2:visible', { hasText: 'Engasjement og svarprosent' }).first().waitFor()
         },
       },
+      {
+        // The policy panel open (v1, NEW:577-635). Its closed state rides along
+        // in `innstillinger`; this is the one that shows the chips, the notes
+        // and the threshold row.
+        name: 'policy-open',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Innstillinger')
+          await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
+          await page.locator('button:visible', { hasText: 'Fysiske personer' }).first().waitFor()
+        },
+      },
+      {
+        // Threshold 3: the `--sbg` box explaining what a low threshold costs.
+        // The state worth capturing is the WARNING, not the chip — it is the
+        // only place the product argues with the person setting it.
+        name: 'policy-low-warning',
+        setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await openBuilderPane(page, 'Innstillinger')
+          await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
+          await page.locator('button:visible', { hasText: '3' }).first().click()
+          await page.locator(':visible', { hasText: 'Med terskel 3 kan svar' }).first().waitFor()
+        },
+      },
     ],
   },
   {
@@ -775,8 +802,15 @@ export const ROUTES: RouteSpec[] = [
       {
         // The seeded second team never reaches five, so every cell of its
         // heatmap row must render as n<5 rather than as a number.
+        //
+        // V1-4/Q46 moved the period and group selects OUT of the header and
+        // into the «Tilpass» card, so reaching them now means opening the card
+        // first. Both this state and `siste-runde` failed the first V1-4 run
+        // for exactly that reason — the harness catching a relocation nothing
+        // else would have noticed.
         name: 'gruppe-under-terskel',
         setup: async (page) => {
+          await page.getByRole('button', { name: 'Tilpass' }).click()
           await page.getByLabel('Gruppe').selectOption({ label: 'Utvikling' })
           await page.waitForURL((u) => u.searchParams.has('gruppe'))
           await page.waitForLoadState('load')
@@ -785,9 +819,36 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'siste-runde',
         setup: async (page) => {
+          await page.getByRole('button', { name: 'Tilpass' }).click()
           await page.getByLabel('Periode').selectOption('q')
           await page.waitForURL((u) => u.searchParams.get('periode') === 'q')
           await page.waitForLoadState('load')
+        },
+      },
+      // V1-4's own states. The card's tab is a URL parameter (see
+      // CustomizeToggle) so each opens directly, without a click path that
+      // depends on hydration.
+      {
+        name: 'tilpass-utvalg',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Tilpass' }).click()
+          await page.getByText('Undersøkelser i utvalget').waitFor()
+        },
+      },
+      {
+        name: 'tilpass-paneler',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Tilpass' }).click()
+          await page.getByRole('button', { name: 'Paneler' }).click()
+          await page.getByText('Gruppert etter spørsmålet').waitFor()
+        },
+      },
+      {
+        name: 'tilpass-oppsett',
+        setup: async (page) => {
+          await page.getByRole('button', { name: 'Tilpass' }).click()
+          await page.getByRole('button', { name: 'Oppsett' }).click()
+          await page.getByPlaceholder('Navn på oppsettet').waitFor()
         },
       },
     ],

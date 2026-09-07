@@ -18,14 +18,47 @@ import { pathToFileURL } from 'node:url'
 import { chromium, type Page } from '@playwright/test'
 import { serveCdnFromCache } from './cdn-cache'
 
-const DESIGN = 'design-reference/heituva-survey-app-design/project/HeiTuva.dc.html'
 /**
- * The splash is a SECOND prototype file. It shares the DCLogic base and the
- * fiber trick, but nothing else — its own state shape, its own copy object,
- * and no `screen` key at all — so it is named per screen rather than assumed.
+ * TWO bundles, both rendered, both kept (DECISIONS Q18).
+ *
+ * `design-reference/` is the first handoff and remains the reference for
+ * Phase 1–7 work AS BUILT: a fidelity question about a screen no v1 phase has
+ * touched is answered against the bundle it was built from, not against a
+ * later one that moved the frame under it.
+ *
+ * `design-reference-v1/` is the second handoff and is the TARGET for every
+ * screen a v1 phase touches.
+ *
+ * So the renders are two sets side by side, named for what they are rather
+ * than by which ran last. Overwriting the first set would have destroyed the
+ * only evidence of what Phases 1–7 were built against.
  */
-const SPLASH = 'design-reference/heituva-survey-app-design/project/HeiTuva Splash.dc.html'
-const OUT = 'artifacts/reference'
+type Bundle = {
+  key: string
+  /** What this render set is FOR, printed in the run so the reader need not infer. */
+  role: string
+  design: string
+  splash: string
+  out: string
+}
+
+const BUNDLES: Bundle[] = [
+  {
+    key: 'legacy',
+    role: 'first handoff — the baseline Phases 1–7 were built against',
+    design: 'design-reference/heituva-survey-app-design/project/HeiTuva.dc.html',
+    splash: 'design-reference/heituva-survey-app-design/project/HeiTuva Splash.dc.html',
+    out: 'artifacts/reference',
+  },
+  {
+    key: 'v1',
+    role: 'second handoff — the target for every screen a v1 phase touches',
+    design: 'design-reference-v1/heituva-survey-app-design/project/HeiTuva.dc.html',
+    splash: 'design-reference-v1/heituva-survey-app-design/project/HeiTuva Splash.dc.html',
+    out: 'artifacts/reference-v1',
+  },
+]
+
 const WIDTH = 1440
 
 /** Screens, keyed by the prototype's own `screen` state value. Extra state is
@@ -34,8 +67,11 @@ type Screen = {
   name: string
   state: Record<string, unknown>
   width?: number
-  /** Which prototype file this screen lives in. Defaults to the app bundle. */
-  source?: string
+  /** The splash is a SECOND prototype file in each bundle. It shares the
+   *  DCLogic base and the fiber trick, but nothing else — its own state shape,
+   *  its own copy object, and no `screen` key at all — so it is named per
+   *  screen rather than assumed. Marked here, resolved per bundle below. */
+  splash?: true
 }
 
 const SCREENS: Screen[] = [
@@ -69,9 +105,9 @@ const SCREENS: Screen[] = [
   // Phase 6's splash. Three states, because two of its controls change the
   // page rather than a detail: the billing toggle changes every price, and the
   // auth tab changes which form is on the page.
-  { name: 'splash', state: {}, source: SPLASH },
-  { name: 'splash-priser-manedlig', state: { billing: 'mnd' }, source: SPLASH },
-  { name: 'splash-logg-inn', state: { mode: 'login' }, source: SPLASH },
+  { name: 'splash', state: {}, splash: true },
+  { name: 'splash-priser-manedlig', state: { billing: 'mnd' }, splash: true },
+  { name: 'splash-logg-inn', state: { mode: 'login' }, splash: true },
 ]
 
 /** Reaches the prototype's logic instance through the React fiber and merges a
@@ -98,14 +134,52 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
   }, patch)
 }
 
+/**
+ * Which bundles this run renders. Default: the v1 set only.
+ *
+ * The legacy set is FROZEN, and not by discipline: re-rendering it moved five
+ * PNGs the first time this ran, with no design change behind them — a newer
+ * Chromium paints them slightly differently. A baseline that drifts with the
+ * browser build is a baseline that silently stops being the thing Phases 1-7
+ * were judged against, which is the whole reason Q18 keeps it. So it is
+ * regenerated only when someone asks for it by name:
+ *
+ *   npx tsx scripts/verify/reference.ts              v1 only (default)
+ *   npx tsx scripts/verify/reference.ts --all        both
+ *   npx tsx scripts/verify/reference.ts --bundle=legacy
+ *
+ * Either way both sets stay on disk, named, side by side.
+ */
+function selectedBundles(): Bundle[] {
+  const args = process.argv.slice(2)
+  if (args.includes('--all')) return BUNDLES
+  const named = args.find((a) => a.startsWith('--bundle='))?.split('=')[1]
+  if (named) {
+    const hit = BUNDLES.filter((b) => b.key === named)
+    if (!hit.length) throw new Error(`unknown bundle "${named}" — try ${BUNDLES.map((b) => b.key).join(' | ')}`)
+    return hit
+  }
+  return BUNDLES.filter((b) => b.key === 'v1')
+}
+
 async function main() {
-  await mkdir(OUT, { recursive: true })
   const browser = await chromium.launch()
   let captured = 0
   let failed = 0
-  const hashes = new Map<string, string>()
+  const bundles = selectedBundles()
+  const skipped = BUNDLES.filter((b) => !bundles.includes(b))
+  for (const b of skipped) {
+    console.log(`   (${b.key} not rendered this run — ${b.out}/ kept as committed; --all to regenerate)`)
+  }
 
   try {
+  for (const bundle of bundles) {
+    await mkdir(bundle.out, { recursive: true })
+    console.log(`\n== ${bundle.key} — ${bundle.role}\n   ${bundle.design}\n   -> ${bundle.out}/`)
+    // Per bundle: two bundles rendering the same unchanged screen are not a
+    // silent failure, but two SCREENS rendering identically within one bundle
+    // still are.
+    const hashes = new Map<string, string>()
     for (const s of SCREENS) {
       const width = s.width ?? WIDTH
       const ctx = await browser.newContext({
@@ -119,7 +193,7 @@ async function main() {
 
       try {
         await serveCdnFromCache(page)
-        await page.goto(pathToFileURL(resolve(s.source ?? DESIGN)).href, {
+        await page.goto(pathToFileURL(resolve(s.splash ? bundle.splash : bundle.design)).href, {
           waitUntil: 'domcontentloaded',
         })
 
@@ -141,7 +215,7 @@ async function main() {
         await page.waitForTimeout(400)
         await page.evaluate(() => document.fonts.ready)
 
-        const file = `${OUT}/${s.name}.png`
+        const file = `${bundle.out}/${s.name}.png`
         await page.screenshot({ path: file, fullPage: true })
 
         // A patch that changed nothing produces a byte-identical capture. That
@@ -164,11 +238,15 @@ async function main() {
         await ctx.close()
       }
     }
+  }
   } finally {
     await browser.close()
   }
 
-  console.log(`\nreference: captured ${captured}, failed ${failed} -> ${OUT}/`)
+  console.log(
+    `\nreference: captured ${captured}, failed ${failed} across ${bundles.length} bundle(s)` +
+      `\n  ${BUNDLES.map((b) => `${b.out}/ = ${b.key}`).join('\n  ')}`,
+  )
   process.exit(failed ? 1 : 0)
 }
 

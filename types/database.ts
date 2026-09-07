@@ -1,5 +1,3 @@
-// GENERATED: supabase gen types typescript --db-url <local>
-// Do not edit by hand — regenerate after every migration.
 export type Json =
   | string
   | number
@@ -137,6 +135,47 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_layouts: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          org_id: string
+          panels: Json
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          org_id: string
+          panels?: Json
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          org_id?: string
+          panels?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_layouts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_pins: {
         Row: {
           created_at: string
@@ -175,6 +214,33 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      dashboard_presets: {
+        Row: {
+          description: string
+          key: string
+          panels: Json
+          sort_order: number
+          tint: string | null
+          title: string
+        }
+        Insert: {
+          description: string
+          key: string
+          panels: Json
+          sort_order?: number
+          tint?: string | null
+          title: string
+        }
+        Update: {
+          description?: string
+          key?: string
+          panels?: Json
+          sort_order?: number
+          tint?: string | null
+          title?: string
+        }
+        Relationships: []
       }
       demo_requests: {
         Row: {
@@ -377,7 +443,7 @@ export type Database = {
           key: string
           law: string
           pack_key: string
-          policy: Json | null
+          policy?: Json | null
           publish?: boolean
           signer_roles: Json
           title: string
@@ -855,6 +921,7 @@ export type Database = {
           plan: string
           privacy: Json
           retention_months: number
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -873,6 +940,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -891,6 +959,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -1128,22 +1197,28 @@ export type Database = {
       report_section_types: {
         Row: {
           description: string
+          in_report: boolean
           key: string
           label: string
+          on_dashboard: boolean
           sort_order: number
           supports_group_filter: boolean
         }
         Insert: {
           description: string
+          in_report?: boolean
           key: string
           label: string
+          on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean
         }
         Update: {
           description?: string
+          in_report?: boolean
           key?: string
           label?: string
+          on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean
         }
@@ -1428,9 +1503,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at: string
+          custom_every: number | null
+          custom_unit: string | null
+          custom_weekday: number | null
           id: string
           next_run_at: string | null
+          paused_at: string | null
           reminder_after_days: number
           rotate_questions: boolean
           runs_done: number
@@ -1448,9 +1529,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at?: string
+          custom_every?: number | null
+          custom_unit?: string | null
+          custom_weekday?: number | null
           id?: string
           next_run_at?: string | null
+          paused_at?: string | null
           reminder_after_days?: number
           rotate_questions?: boolean
           runs_done?: number
@@ -1468,9 +1555,15 @@ export type Database = {
             | "quarterly"
             | "biannual"
             | "annual"
+            | "biennial"
+            | "custom"
           created_at?: string
+          custom_every?: number | null
+          custom_unit?: string | null
+          custom_weekday?: number | null
           id?: string
           next_run_at?: string | null
+          paused_at?: string | null
           reminder_after_days?: number
           rotate_questions?: boolean
           runs_done?: number
@@ -1777,17 +1870,17 @@ export type Database = {
       surveys: {
         Row: {
           anonymity: "anonymous" | "named" | "optional"
-          k_threshold: number
-          policy_locked: boolean
-          respondent_kind: string
           audience_label: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           engage: Json
           id: string
+          k_threshold: number
           langs: string[]
           org_id: string
+          policy_locked: boolean
+          respondent_kind: string
           results_scope: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang: string
           status: "utkast" | "aktiv" | "lukket"
@@ -1798,17 +1891,17 @@ export type Database = {
         }
         Insert: {
           anonymity?: "anonymous" | "named" | "optional"
-          k_threshold?: number
-          policy_locked?: boolean
-          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
           id?: string
+          k_threshold?: number
           langs?: string[]
           org_id: string
+          policy_locked?: boolean
+          respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
@@ -1819,17 +1912,17 @@ export type Database = {
         }
         Update: {
           anonymity?: "anonymous" | "named" | "optional"
-          k_threshold?: number
-          policy_locked?: boolean
-          respondent_kind?: string
           audience_label?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
           id?: string
+          k_threshold?: number
           langs?: string[]
           org_id?: string
+          policy_locked?: boolean
+          respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
@@ -1899,6 +1992,7 @@ export type Database = {
           questions: Json
           sort_order: number
           title: string
+          use_case: string | null
         }
         Insert: {
           audience?: string | null
@@ -1914,6 +2008,7 @@ export type Database = {
           questions: Json
           sort_order?: number
           title: string
+          use_case?: string | null
         }
         Update: {
           audience?: string | null
@@ -1929,6 +2024,7 @@ export type Database = {
           questions?: Json
           sort_order?: number
           title?: string
+          use_case?: string | null
         }
         Relationships: [
           {
@@ -1944,6 +2040,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_packs_use_case_fkey"
+            columns: ["use_case"]
+            isOneToOne: false
+            referencedRelation: "use_cases"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -1978,7 +2081,7 @@ export type Database = {
           lang: string
           namespace: string
           org_id: string | null
-          org_key: string
+          org_key: string | null
           updated_at: string
           updated_by: string | null
           value: string
@@ -1989,6 +2092,7 @@ export type Database = {
           lang: string
           namespace: string
           org_id?: string | null
+          org_key?: string | null
           updated_at?: string
           updated_by?: string | null
           value: string
@@ -1999,6 +2103,7 @@ export type Database = {
           lang?: string
           namespace?: string
           org_id?: string | null
+          org_key?: string | null
           updated_at?: string
           updated_by?: string | null
           value?: string
@@ -2013,6 +2118,44 @@ export type Database = {
           },
         ]
       }
+      use_cases: {
+        Row: {
+          description: string
+          key: string
+          label: string
+          preset_key: string | null
+          short: string
+          sort_order: number
+          tint: string | null
+        }
+        Insert: {
+          description: string
+          key: string
+          label: string
+          preset_key?: string | null
+          short: string
+          sort_order?: number
+          tint?: string | null
+        }
+        Update: {
+          description?: string
+          key?: string
+          label?: string
+          preset_key?: string | null
+          short?: string
+          sort_order?: number
+          tint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "use_cases_preset_key_fkey"
+            columns: ["preset_key"]
+            isOneToOne: false
+            referencedRelation: "dashboard_presets"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2022,12 +2165,12 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
-      claim_membership: { Args: never; Returns: string }
-      close_round: { Args: { p_round: string }; Returns: Json }
       attributed_results: {
         Args: { p_round?: string; p_survey: string }
         Returns: Json
       }
+      claim_membership: { Args: never; Returns: string }
+      close_round: { Args: { p_round: string }; Returns: Json }
       compose_report: {
         Args: {
           p_as_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
@@ -2137,11 +2280,15 @@ export type Database = {
           p_cadence?: string
           p_channels: string[]
           p_closes_at?: string
+          p_custom_every?: number
+          p_custom_unit?: string
+          p_custom_weekday?: number
           p_group_ids?: string[]
           p_recipients?: Json
           p_reminder_days?: number
           p_rotate?: boolean
           p_runs?: number
+          p_send_at_local?: string
           p_survey: string
           p_test_only?: boolean
         }

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import {
   readAggregate,
+  readAttributed,
   readBenchmarks,
   readQuotes,
   readSummary,
@@ -11,6 +12,7 @@ import {
   readTrends,
 } from '@/lib/results/read'
 import { isGated, type Quotes } from '@/lib/results/types'
+import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { ResultsScreen } from './ResultsScreen'
 
@@ -93,12 +95,19 @@ export default async function ResultsPage({
         .order('created_at', { ascending: false }),
     ])
 
-  const [summary, aggregate, trends, themes, benchmarks] = await Promise.all([
+  const [summary, aggregate, trends, themes, benchmarks, attributed] = await Promise.all([
     readSummary(id),
     readAggregate(id),
     readTrends(id),
     readThemes(id),
     readBenchmarks(id, industry),
+    // Only asked for when the survey IS attributed. `attributed_results` would
+    // refuse a person survey anyway (`not_attributed`, M:0034:180) and the
+    // reader would flatten that to null — but a refusal per page load is a
+    // refusal in the logs, and a leser opening any results screen would generate
+    // one. The condition is here so the question is only asked where it has an
+    // answer, not to make the RPC's own rule optional.
+    survey.respondent_kind === 'organisation' ? readAttributed(id) : Promise.resolve(null),
   ])
 
   // Quotes are one read per free-text question, and each one is independently
@@ -134,6 +143,7 @@ export default async function ResultsPage({
         title={survey.title}
         audience={survey.audience_label}
         status={survey.status}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
         current="resultater"
       />
       <ResultsScreen
@@ -163,6 +173,8 @@ export default async function ResultsPage({
         quotes={Object.fromEntries(
           [...quotes].map(([qid, q]) => [qid, q && !isGated(q) ? q : null]),
         )}
+        attributed={attributed}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
       />
     </>
   )

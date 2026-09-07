@@ -43,7 +43,7 @@ export default async function ProfilePage() {
   ) as Record<NotifyKey, boolean>
 
   return (
-    <main className="animate-enter max-w-[900px] pt-[34px]">
+    <main className="animate-enter pt-[34px]">
       <div className="flex items-center gap-[18px]">
         <span className="flex h-16 w-16 flex-none items-center justify-center rounded-full bg-ac3 text-[22px] font-bold">
           {initialsOf(viewer.displayName)}

@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
-import { ANONYMITY_MODES, CADENCES, CHANNELS } from '@/lib/send/registry'
+import { audit } from '@/lib/auth/audit'
+import { ANONYMITY_MODES, CADENCES, CHANNELS, CUSTOM_UNITS } from '@/lib/send/registry'
 
 /**
  * Sending is one RPC call (migration 0008), not a sequence of writes from here.
@@ -32,6 +33,16 @@ const SendInput = z.object({
   groupIds: z.array(z.string().uuid()).max(200),
   anonymity: z.enum(ANONYMITY_MODES),
   cadence: z.enum(CADENCES),
+  /**
+   * Q20's custom settings. Bounded here to the same ranges as
+   * `schedules_custom_shape` (M:0044) — not as a second opinion but so the
+   * action answers `invalid` instead of handing the caller a constraint
+   * violation it would have to translate. The CHECK is the enforcement.
+   */
+  customEvery: z.number().int().min(1).max(52).optional(),
+  customUnit: z.enum(CUSTOM_UNITS).optional(),
+  customWeekday: z.number().int().min(1).max(5).optional(),
+  sendAtLocal: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   runs: z.number().int().min(0).max(52),
   reminderDays: z.union([z.literal(0), z.literal(2), z.literal(5)]),
   rotate: z.boolean(),
@@ -75,6 +86,17 @@ export async function sendSurvey(input: unknown): Promise<SendResult> {
     p_group_ids: v.groupIds,
     p_anonymity: v.anonymity,
     p_cadence: v.cadence,
+    // All three or none: the CHECK refuses a partial set, so a cadence that is
+    // not `custom` must not carry settings that would become live if someone
+    // later switched it.
+    ...(v.cadence === 'custom'
+      ? {
+          p_custom_every: v.customEvery ?? 1,
+          p_custom_unit: v.customUnit ?? 'weeks',
+          p_custom_weekday: v.customWeekday ?? 1,
+          p_send_at_local: v.sendAtLocal ?? '09:00',
+        }
+      : {}),
     p_runs: v.runs,
     p_reminder_days: v.reminderDays,
     p_rotate: v.rotate,
@@ -152,4 +174,88 @@ export async function sendTestToSelf(surveyId: unknown): Promise<SendResult> {
   if (result.error === 'no_questions') return { ok: false, error: 'no_questions' }
   if (!result.ok) return { ok: false, error: 'failed' }
   return { ok: true, roundId: result.round_id!, invited: 1, shareToken: null }
+}
+
+export type ScheduleResult = { ok: true } | { ok: false; error: 'invalid' | 'forbidden' | 'failed' }
+
+/**
+ * Q22 — pause and resume a series.
+ *
+ * A plain UPDATE through RLS, not an RPC. `schedules_all_upd` already restricts
+ * the write to editors (`app.can_edit_survey`, M:0044), so a SECURITY DEFINER
+ * wrapper would add a Gate 5a3 catalogue surface to re-implement a control that
+ * already exists — and every such wrapper is a place the two can disagree.
+ *
+ * The recomputation of `next_run_at` on resume is a TRIGGER
+ * (`app.resume_schedule`), for the reason D94's writer is one: the rule belongs
+ * to the column, and a rule in an action covers only the callers that go
+ * through it. A future bulk resume, or a fix applied in psql, gets it too.
+ */
+export async function setSchedulePaused(
+  surveyId: unknown,
+  paused: unknown,
+): Promise<ScheduleResult> {
+  const id = z.string().uuid().safeParse(surveyId)
+  const on = z.boolean().safeParse(paused)
+  if (!id.success || !on.success) return { ok: false, error: 'invalid' }
+
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('schedules')
+    .update({ paused_at: on.data ? new Date().toISOString() : null })
+    .eq('survey_id', id.data)
+    .select('id')
+
+  if (error) {
+    console.error(`setSchedulePaused failed: ${error.code ?? 'unknown'}`)
+    return { ok: false, error: 'failed' }
+  }
+  // RLS filters rather than raising, so zero rows is the denial — and it is
+  // also what a survey with no schedule looks like. Both are `forbidden` to the
+  // caller: the screen only draws this control when a schedule exists, so a
+  // press that matched nothing means the viewer may not write it.
+  if ((data ?? []).length === 0) return { ok: false, error: 'forbidden' }
+
+  await audit(viewer.orgId, on.data ? 'schedule.pause' : 'schedule.resume', id.data, {})
+  revalidatePath(`/undersokelser/${id.data}/send`)
+  revalidatePath('/undersokelser')
+  return { ok: true }
+}
+
+/**
+ * Q22 — stop the series. `active = false`, which the UI does not undo.
+ *
+ * Kept separate from pause rather than made a third state of it, because it is
+ * not reversible: one control that toggles and one that ends is what makes the
+ * confirmation on the second one meaningful.
+ */
+export async function stopSchedule(surveyId: unknown): Promise<ScheduleResult> {
+  const id = z.string().uuid().safeParse(surveyId)
+  if (!id.success) return { ok: false, error: 'invalid' }
+
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('schedules')
+    // `paused_at` is cleared with it: a stopped series that is also flagged
+    // paused would show «Pauset» on a survey that will never run again.
+    .update({ active: false, paused_at: null })
+    .eq('survey_id', id.data)
+    .select('id')
+
+  if (error) {
+    console.error(`stopSchedule failed: ${error.code ?? 'unknown'}`)
+    return { ok: false, error: 'failed' }
+  }
+  if ((data ?? []).length === 0) return { ok: false, error: 'forbidden' }
+
+  await audit(viewer.orgId, 'schedule.stop', id.data, {})
+  revalidatePath(`/undersokelser/${id.data}/send`)
+  revalidatePath('/undersokelser')
+  return { ok: true }
 }

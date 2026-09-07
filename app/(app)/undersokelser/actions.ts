@@ -6,8 +6,9 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { audit } from '@/lib/auth/audit'
-import { NEW_QUESTION_TEXT, QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
-import { SHARE_SCOPES } from './keys'
+import { NEW_QUESTION_TEXT, specOf } from '@/lib/questions/registry'
+import { PackQuestion, configFor } from '@/lib/questions/pack'
+import { SHARE_SCOPES, WIZARD_CADENCES } from './keys'
 
 export type SurveyResult = { ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
 
@@ -17,15 +18,8 @@ const Uuid = z.string().uuid()
  * A pack's `questions` jsonb. Only text and type are guaranteed; everything
  * else is per-type config the Builder understands.
  */
-const PackQuestion = z.object({
-  text: z.string(),
-  type: z.enum(QUESTION_TYPE_KEYS as [string, ...string[]]),
-  options: z.array(z.string()).optional(),
-  statements: z.array(z.string()).optional(),
-  multi: z.boolean().optional(),
-  required: z.boolean().optional(),
-  help: z.string().optional(),
-})
+// PackQuestion and configFor moved to lib/questions/pack.ts — see the note
+// there: two copies of this produced two different surveys from one pack.
 
 /**
  * 'leser' may see the list but never change it. RLS enforces this too
@@ -39,15 +33,6 @@ async function requireEditor() {
   return viewer
 }
 
-/** Config for a pack question: the type's defaults, overridden by what the pack states. */
-function configFor(q: z.infer<typeof PackQuestion>): Record<string, unknown> {
-  const spec = specOf(q.type as never)
-  const config: Record<string, unknown> = { ...spec.defaultConfig }
-  if (q.options?.length) config.options = q.options
-  if (q.statements?.length) config.statements = q.statements
-  if (q.multi !== undefined) config.multi = q.multi
-  return config
-}
 
 /**
  * "Tom undersøkelse" — a draft with a single scale question, matching the
@@ -95,7 +80,10 @@ const WizardInput = z.object({
   packId: Uuid,
   count: z.coerce.number().int().min(2).max(7),
   groupIds: z.array(Uuid).max(50),
-  cadence: z.enum(['once', 'weekly', 'monthly']),
+  // The wizard's six (NEW:4220), not the registry's eight: `keys.ts` explains
+  // which and why. Validated against the same list the chips render from, so a
+  // chip can never be offered that the action refuses.
+  cadence: z.enum(WIZARD_CADENCES),
 })
 
 /**
@@ -179,9 +167,21 @@ export async function createSurveyFromWizard(formData: FormData): Promise<Survey
   // 'once' needs no schedule row; a recurring survey does, and Phase 3's pgmq
   // worker reads it. runs_total 0 means "until stopped" per the column comment.
   if (cadence !== 'once') {
-    const { error: schedError } = await supabase
-      .from('schedules')
-      .insert({ survey_id: survey.id, cadence, runs_total: 0 })
+    const { error: schedError } = await supabase.from('schedules').insert({
+      survey_id: survey.id,
+      cadence,
+      runs_total: 0,
+      // Q20: `custom` needs its three settings or `schedules_custom_shape`
+      // refuses the row. The wizard has no editor for them — it is the
+      // four-step path for someone who has not thought about frequency — so it
+      // seeds the same defaults the Send screen opens with, and Send is where
+      // they are changed. Without this the insert failed silently (the error is
+      // logged, not surfaced) and a wizard survey chose «Tilpasset» and got no
+      // schedule at all.
+      ...(cadence === 'custom'
+        ? { custom_every: 1, custom_unit: 'weeks', custom_weekday: 1 }
+        : {}),
+    })
     if (schedError) console.error(`createSurveyFromWizard: schedule failed: ${schedError.message}`)
   }
 

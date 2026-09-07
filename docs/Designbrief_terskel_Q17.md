@@ -130,7 +130,13 @@ For hver skjerm over: normaltilstand, låst-av-mal, låst-av-svar, terskel under
 
 - Ingen bekreftelsesdialog for å senke terskelen. Setningen om konsekvensen holder.
 - Ingen rød feilfarge noe sted i dette. Alt her er lovlige valg med ulike konsekvenser; `--sbg` og `--ac3` bærer alvoret godt nok.
-- Ingen visning av faktisk antall svar under terskelen, noe sted, uansett rolle.
+- Ingen visning av et **svarutledet tall** under terskelen, noe sted, uansett rolle.
+  Snitt, fordelinger, temaer og sitater er utledet av hva folk *svarte*, og skjules.
+  Antall svar og svarprosent er derimot *deltakelse* — hvor mange **personer** som
+  har deltatt, ikke hva noen sa — og vises som før, på undersøkelseslisten, på
+  Oversikt og i deltakelsesseksjonen i rapporten. Briefen sa tidligere «faktisk
+  antall svar», som motsier både produktet og designbundelen (radens «N av T»);
+  DECISIONS Q28 avgjorde skillet 2026-09-06.
 - Ingen ny innstilling for å slå av terskelen helt for personer. Den finnes ikke, og skal ikke finnes i grensesnittet heller.
 
 ---

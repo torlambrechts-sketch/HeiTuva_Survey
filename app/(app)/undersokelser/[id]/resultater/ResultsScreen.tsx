@@ -11,9 +11,11 @@ import {
   scaleKeys,
   teamTone,
 } from '@/lib/results/present'
+import { attributedColumns, isNegative } from '@/lib/questions/roles'
 import { isGated } from '@/lib/results/types'
 import type {
   Aggregate,
+  Attributed,
   Benchmarks,
   Insight,
   QuestionResult,
@@ -21,6 +23,8 @@ import type {
   Themes,
   Trends,
 } from '@/lib/results/types'
+import { AttributedTable } from './AttributedTable'
+import { RoundsPanel } from './RoundsPanel'
 import { SurveyPicker } from './SurveyPicker'
 import { ShareThemes } from './ShareThemes'
 
@@ -57,6 +61,8 @@ export async function ResultsScreen({
   industry,
   activeTheme,
   quotes,
+  attributed: attributedData,
+  recurrence,
 }: {
   surveyId: string
   status: 'utkast' | 'aktiv' | 'lukket'
@@ -78,6 +84,10 @@ export async function ResultsScreen({
   industry: string
   activeTheme: string | null
   quotes: Record<string, QuoteSet | null>
+  /** Q17 §5 — the named register, present only for an organisation survey. */
+  attributed: Attributed | null
+  /** The ↻ sentence, or '' when the survey has no series (Q22). */
+  recurrence: string
 }) {
   const t = await getTranslations('results')
   const tNav = await getTranslations('surveyNav')
@@ -115,7 +125,81 @@ export async function ResultsScreen({
   // (its data is a local array), so this is the minimal consistent one.
   const unavailable = summary === null
   const completion = summary?.completion ?? null
-  const stats = [
+
+  /*
+    An organisation survey counts different things (bundle :4882-4886). «Snitt»
+    and «svarprosent» are the wrong questions to ask of a supplier register:
+    what the Åpenhetsloven reader needs is who answered, who reported a breach,
+    who has no policy, and who has not answered at all.
+
+    The two middle numbers come from the roles the pack designated (Q35), so
+    they are absent when the survey designates none — a card reading "0
+    avdekket brudd" on a survey that never asked about breaches is a fabricated
+    number, and CLAUDE.md rules that out more firmly than it rules out a gap.
+  */
+  const attributedRows = attributedData?.rows ?? []
+  const attributedQuestions = (attributedData?.questions ?? []).map((q) => ({
+    id: q.id,
+    text: q.text,
+    config: (q as unknown as { config?: Record<string, unknown> }).config ?? null,
+  }))
+  const roleCols = attributedColumns(attributedQuestions)
+  const answerFor = (row: (typeof attributedRows)[number], questionId: string) =>
+    (row.answers ?? []).find((a) => a.question_id === questionId)?.value ?? null
+  const countByRole = (role: 'brudd' | 'policy') => {
+    const col = roleCols.find((c) => c.role === role)
+    if (!col) return null
+    return attributedRows.filter((r) => isNegative(role, answerFor(r, col.id))).length
+  }
+  const breachCount = countByRole('brudd')
+  const missingPolicy = countByRole('policy')
+
+  const attributedStats = [
+    {
+      key: 'answered',
+      label: t('attribStatAnswered'),
+      value: `${attributedRows.filter((r) => r.status === 'svart').length} ${t('attribStatOf')} ${attributedRows.length}`,
+      note: t('attribStatAnsweredNote'),
+      bg: 'var(--sf)',
+      fg: 'var(--ink)',
+      title: '',
+    },
+    breachCount === null
+      ? null
+      : {
+          key: 'breach',
+          label: t('attribStatBreach'),
+          value: String(breachCount),
+          note: t('attribStatBreachNote'),
+          bg: 'var(--ac3)',
+          fg: 'var(--ink)',
+          title: '',
+        },
+    missingPolicy === null
+      ? null
+      : {
+          key: 'policy',
+          label: t('attribStatPolicy'),
+          value: String(missingPolicy),
+          note: t('attribStatPolicyNote'),
+          bg: 'var(--sf)',
+          fg: 'var(--ink)',
+          title: '',
+        },
+    {
+      key: 'missing',
+      label: t('attribStatMissing'),
+      value: String(attributedRows.filter((r) => r.status !== 'svart').length),
+      note: t('attribStatMissingNote', {
+        count: attributedRows.filter((r) => r.status === 'paaminnet').length,
+      }),
+      bg: 'var(--sf)',
+      fg: 'var(--ink)',
+      title: '',
+    },
+  ].filter((s): s is NonNullable<typeof s> => s !== null)
+
+  const personStats = [
     {
       key: 'responses',
       label: t('statResponses'),
@@ -123,6 +207,7 @@ export async function ResultsScreen({
       note: summary ? t('statResponsesNote', { invited: summary.invited }) : DASH,
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
     {
       key: 'rate',
@@ -131,6 +216,7 @@ export async function ResultsScreen({
       note: unavailable ? DASH : t('statRateNote'),
       bg: 'var(--ac)',
       fg: 'var(--acf)',
+      title: '',
     },
     {
       key: 'avg',
@@ -139,6 +225,11 @@ export async function ResultsScreen({
       note: t('statAvgNote'),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      // :2530. Only this card can be withheld — Q28 keeps the response count
+      // and the rate visible below the threshold, because they are counts of
+      // people rather than svarutledete tall — so it is the only one with a
+      // reason to give.
+      title: (summary?.avg ?? null) === null ? gatedTitle : '',
     },
     {
       key: 'status',
@@ -151,11 +242,37 @@ export async function ResultsScreen({
         : t('statusNotSent'),
       bg: 'var(--sf)',
       fg: 'var(--ink)',
+      title: '',
     },
   ]
 
+  /*
+    A viewer this survey has nothing to show. `attributed_results` refuses a
+    leser outright (`forbidden`, M:0034:180 — attributed rows are named data
+    and a leser reads aggregates only), and `readAttributed` flattens that to
+    null like every other reader on this screen.
+
+    Without this branch the four stat cards rendered from an empty array: "0 av
+    0 virksomheter har svart", "0 avdekket brudd". Every one of those is a
+    fabricated number — indistinguishable in a screenshot from a supplier
+    survey nobody answered, which is exactly the case CLAUDE.md rules out. So
+    the cards are not drawn at all and the reason is said out loud.
+
+    Neither bundle draws this: a leser opening an organisation survey is a
+    state the prototype has no roles to have. Minimal consistent option, logged
+    as D98.
+  */
+  const attributedDenied = attributed && attributedData === null
+
+  // Q28 note, because the bundle disagrees and the disagreement is deliberate:
+  // its person stat set blanks «Svar» and «Svarprosent» to "—" below the
+  // threshold (`below ? "—"`, :4888-4889). Q28 keeps them — the threshold hides
+  // svarutledete tall, not counts of people — so only «Snittscore» goes to the
+  // em dash here, which it already does because the RPC withholds `avg`.
+  const stats = attributed && attributedData ? attributedStats : personStats
+
   return (
-    <div className="flex animate-enter flex-col gap-[18px] pt-[26px]">
+    <div className="flex animate-enter flex-col gap-[18px] pt-[28px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[26px] font-medium">{t('title')}</h1>
@@ -185,12 +302,34 @@ export async function ResultsScreen({
         </div>
       ) : null}
 
-      {/* RESPONSIVE.md: the four stat cards keep their design size and reflow
-          to two columns below xl and one below md. */}
-      <div className="grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
+      {attributedDenied ? (
+        <div className={CARD}>
+          <p className="font-display text-[23px] font-bold">{t('attribDeniedTitle')}</p>
+          <p className="mt-2 max-w-[520px] text-[13px] leading-relaxed text-mut">
+            {t('attribDeniedBody')}
+          </p>
+        </div>
+      ) : null}
+
+      {/* The v1 bundle changed this grid from `repeat(4, 1fr)` (OLD:2156) to
+          `repeat(auto-fill, minmax(200px, 1fr))` (:2528), which is why the
+          explicit breakpoints are gone: auto-fill reflows continuously from
+          four tracks to one as the frame narrows, so RESPONSIVE.md's rule is
+          satisfied by the design's own grid rather than by columns layered on
+          top of it. It also handles the case the old grid could not — an
+          organisation survey whose pack designates no key questions has two
+          stat cards, not four, and they keep their size instead of stretching
+          to half the row each. */}
+      {attributedDenied ? null : (
+      <div
+        className="grid gap-[15px]"
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
+      >
         {stats.map((s) => (
           <div
             key={s.key}
+            // :2530 — the card carries the reason when its value is withheld.
+            title={s.title || undefined}
             className="rounded-2xl border border-line px-5 py-[18px]"
             style={{ background: s.bg, color: s.fg }}
           >
@@ -200,283 +339,379 @@ export async function ResultsScreen({
           </div>
         ))}
       </div>
+      )}
 
-      {questions.map((q) => {
-        const result = byQuestion.get(q.id)
-        if (!result) return null
-        return (
-          <section key={q.id} className={CARD}>
-            <div className="flex items-baseline justify-between gap-[14px]">
-              <h2 className="text-[15.5px] font-semibold">{q.text}</h2>
-              <span className="shrink-0 text-[13px] text-mut" title={isGated(result) ? gatedTitle : undefined}>
-                {questionMeta(q, result, quotes[q.id] ?? null)}
-              </span>
-            </div>
-            {isGated(result) ? (
-              <p className="mt-[15px] rounded-[10px] bg-sf2 px-[15px] py-[13px] text-[13.5px] text-mut" title={gatedTitle}>
-                {gatedText}
-              </p>
-            ) : q.type === 'text' ? (
-              <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={gatedText} />
-            ) : (
-              <div className="mt-[15px] flex flex-col gap-[10px]">
-                {questionBars(
-                  result,
-                  optionKeys(q, tResp('yes'), tResp('no'), {
-                    low: tResp('scaleLowDefault'),
-                    high: tResp('scaleHighDefault'),
-                    enpsLow: tResp('enpsLowDefault'),
-                    enpsHigh: tResp('enpsHighDefault'),
-                  }),
-                ).map((b) => (
-                  <div key={b.key} className="flex items-center gap-3">
-                    <span className="w-[126px] flex-none text-right text-[13px] text-mut">
-                      {b.label}
-                    </span>
-                    <span className="block h-6 flex-1 overflow-hidden rounded-lg bg-sf2">
-                      <span
-                        className="block h-full rounded-lg"
-                        style={{ background: b.color, width: `${b.pct}%` }}
-                      />
-                    </span>
-                    <span className="w-[70px] flex-none text-[12.5px] font-semibold">{b.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )
-      })}
-
-      <section className={`${CARD} mb-[18px]`}>
-        <h2 className="font-display text-[23px] font-bold">{t('whatAnswersTell')}</h2>
-        {summary && summary.insights.length > 0 ? (
-          <div className="mt-[14px] flex flex-col gap-[10px]">
-            {summary.insights.map((i, idx) => (
-              <InsightRow key={`${i.key}-${idx}`} insight={i} questions={questions} />
-            ))}
-          </div>
-        ) : null}
-        <p className="mt-3 text-[13px] text-mut">
-          {summary && summary.n >= (summary.k ?? 5) ? t('insightNote') : t('insightNoteWaiting', { kWord })}
-        </p>
-        <div className="mt-[14px] flex flex-wrap gap-2 border-t border-line pt-[14px]">
-          {(
-            [
-              ['reportLineSummary', 'reportLineSummaryMeta'],
-              ['reportLineGroups', 'reportLineGroupsMeta'],
-              ['reportLineThemes', 'reportLineThemesMeta'],
-              ['reportLineActions', 'reportLineActionsMeta'],
-              ['reportLineMethod', 'reportLineMethodMeta'],
-            ] as const
-          ).map(([label, meta]) => (
-            <span
-              key={label}
-              className="rounded-full bg-sf2 px-[13px] py-[7px] text-[13px] text-mut"
-            >
-              {t(label, { k })} · {t(meta)}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {benchmarks && benchmarks.rows.length > 0 ? (
-        <section className={`${CARD} mb-[18px]`}>
-          <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
-            <h2 className="font-display text-[23px] font-bold">{t('vsIndustry')}</h2>
-            <div className="flex flex-wrap gap-[6px]">
-              {industries.map((ind) => (
-                <Link
-                  key={ind}
-                  href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(ind)}`}
-                  scroll={false}
-                  aria-current={ind === industry ? 'true' : undefined}
-                  className="touch-44 rounded-full border border-line px-[13px] py-[7px] text-[12.5px] text-ink no-underline"
-                  style={{ background: ind === industry ? 'var(--ac)' : 'transparent' }}
-                >
-                  {ind}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="mt-[18px] flex flex-col gap-4">
-            {benchmarks.rows.map((row) => {
-              const gated = isGated(row)
-              const mine = gated ? null : row.mine
-              const minePct =
-                mine === null
-                  ? 0
-                  : row.scale === 'enps'
-                    ? pctOfEnps(mine)
-                    : row.scale === 'rate'
-                      ? Math.round(mine * 100)
-                      : pctOf5(mine)
-              const benchPct =
-                row.scale === 'enps'
-                  ? pctOfEnps(row.bench)
-                  : row.scale === 'rate'
-                    ? Math.round(row.bench * 100)
-                    : pctOf5(row.bench)
-              const show = (v: number) =>
-                row.scale === 'rate' ? `${Math.round(v * 100)} %` : row.scale === 'enps' ? String(Math.round(v)) : no(v)
-              const diff = mine === null ? null : mine - row.bench
-              return (
-                <div key={row.metric_key}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-semibold">
-                      {t(
-                        row.metric_key === 'engagement_avg'
-                          ? 'benchEngagement'
-                          : row.metric_key === 'response_rate'
-                            ? 'benchResponseRate'
-                            : 'benchEnps',
-                      )}
-                    </span>
-                    <span className="flex items-baseline gap-[10px]">
-                      <span className="text-sm font-semibold">
-                        {mine === null ? t('benchInsufficient') : show(mine)}
-                      </span>
-                      <span className="text-[13px] text-mut">
-                        {t('benchIndustryValue', { value: show(row.bench) })}
-                      </span>
-                      {diff === null ? null : (
-                        <span
-                          className="rounded-full px-[10px] py-1 text-xs font-semibold"
-                          style={{ background: diff >= 0 ? 'var(--ac2)' : 'var(--ac3)' }}
-                        >
-                          {diff >= 0 ? '+' : ''}
-                          {/* A difference between two percentages is percentage
-                              POINTS, which is what the design writes (…" pp").
-                              "−16 %" would read as a relative change. */}
-                          {row.scale === 'rate'
-                            ? `${Math.round(diff * 100)} pp`
-                            : show(diff)}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="mt-[7px] h-[10px] overflow-hidden rounded-full bg-sf2">
-                    <div className="h-full rounded-full bg-ac" style={{ width: `${minePct}%` }} />
-                  </div>
-                  <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-sf2">
-                    <div
-                      className="h-full rounded-full bg-mut opacity-45"
-                      style={{ width: `${benchPct}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <p className="mt-[14px] text-[13px] leading-[1.55] text-mut">
-            {t('benchSource', { source: benchmarks.rows[0]?.source ?? '' })}
-          </p>
-        </section>
+      {attributed && attributedData ? (
+        <AttributedTable
+          surveyId={surveyId}
+          data={attributedData}
+          labels={{
+            title: t('attribTitle'),
+            count: t('attribCount', {
+              answered: attributedRows.filter((r) => r.status === 'svart').length,
+              total: attributedRows.length,
+              reminded: attributedRows.filter((r) => r.status === 'paaminnet').length,
+            }),
+            exportCsv: t('attribExport'),
+            colOrg: t('attribColOrg'),
+            colDate: t('attribColDate'),
+            colStatus: t('attribColStatus'),
+            filterAll: t('attribFilterAll'),
+            filterBreach: t('attribFilterBreach'),
+            filterPolicy: t('attribFilterPolicy'),
+            filterNot: t('attribFilterNot'),
+            statusAnswered: t('attribStatusAnswered'),
+            statusReminded: t('attribStatusReminded'),
+            statusNot: t('attribStatusNot'),
+            notAnswered: t('attribNotAnswered'),
+            note: t('attribNote'),
+          }}
+        />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-[18px] xl:grid-cols-2">
-        <section className={CARD}>
-          <h2 className="text-[15.5px] font-semibold">{t('vsPrevious')}</h2>
-          <div className="mt-[14px] flex flex-wrap items-end gap-[22px]">
-            <div>
-              <div className="font-display text-[40px] font-medium leading-none">{fmt(thisAvg)}</div>
-              <div className="mt-[3px] text-[13px] text-mut">{t('thisRound')}</div>
-            </div>
-            <div className="pb-[6px]">
-              <div className="text-[22px] font-semibold text-mut">{fmt(prevAvg)}</div>
-              <div className="text-[13px] text-mut">{t('previousRound')}</div>
-            </div>
-            <div className="mb-2 rounded-full bg-ac2 px-[13px] py-[7px] text-[12.5px] font-semibold">
-              {delta === null
-                ? prevRound
-                  ? t('trendNone')
-                  : t('noPreviousRound')
-                : t('trendDelta', { value: `${delta >= 0 ? '+' : '−'}${no(Math.abs(delta))}` })}
-            </div>
-          </div>
-          <div className="mt-[18px] flex flex-col gap-[11px]">
-            {(summary?.teams ?? []).map((team) => {
-              const gated = isGated(team)
-              return (
-                <div key={team.group_id}>
-                  <div className="flex justify-between text-[13px]">
-                    <span>{team.label}</span>
-                    <span className="font-semibold" title={gated ? gatedTitle : undefined}>
-                      {gated ? t('gatedCell', { k }) : no(team.avg)}
-                    </span>
-                  </div>
-                  <div className="mt-[5px] h-[9px] overflow-hidden rounded-full bg-sf2">
-                    <div
-                      className="h-full rounded-full"
-                      style={
-                        gated
-                          ? { background: 'var(--sf2)', width: '0%' }
-                          : { background: teamTone(team.avg), width: `${pctOf5(team.avg)}%` }
-                      }
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
+      {/* «Runde for runde» (:2592). The bundle's own condition is more than one
+          round — a single bar says nothing the stat cards have not said. An
+          attributed survey has no averages to plot, so it does not get one. */}
+      {!attributed && trends && (trends.points?.length ?? 0) > 1 ? (
+        <RoundsPanel
+          trends={trends}
+          labels={{
+            title: t('roundsTitle'),
+            // NEW:2596 — the panel's right-hand line is the RECURRENCE status
+            // when there is a series, and the round count otherwise. Same
+            // sentence as the row chip and the Send screen's status row.
+            status: recurrence || t('roundsStatus', { count: trends.points.length }),
+            round: (n) => t('roundsLabel', { n }),
+            answers: (n) => t('roundsAnswers', { count: n }),
+            belowThreshold: (n) => t('roundsBelow', { count: n }),
+            note: t('roundsNote'),
+          }}
+        />
+      ) : null}
 
-        <section className={CARD}>
-          <h2 className="text-[15.5px] font-semibold">{t('textThemes')}</h2>
-          {themes && themes.themes.length > 0 ? (
-            <div className="mt-[14px] flex flex-wrap gap-2">
-              {activeTheme ? (
-                <Link
-                  href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(industry)}`}
-                  scroll={false}
-                  className="touch-44 rounded-full border border-line px-[14px] py-2 text-[13px] text-ink no-underline"
-                >
-                  {t('allThemes')}
-                </Link>
-              ) : null}
-              {themes.themes.map((theme) => (
-                <Link
-                  key={theme.key}
-                  href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(industry)}&tema=${encodeURIComponent(theme.key)}`}
-                  scroll={false}
-                  aria-current={theme.key === activeTheme ? 'true' : undefined}
-                  className="touch-44 rounded-full px-[14px] py-2 text-[13px] text-ink no-underline"
-                  style={{ background: theme.key === activeTheme ? 'var(--ac)' : 'var(--sbg)' }}
-                >
-                  {t('themeMentions', { label: theme.label, count: theme.mentions })}
-                </Link>
+      {/* The bundle switches the whole lower half on respondent kind:
+          `resAttrib` and `resAggregate` are `pol.kind === "org"` and its
+          negation (:4861), and an organisation survey shows the register
+          instead of — not beside — the aggregate panels. That is right on its
+          own terms: a supplier register has no group breakdown to draw, no
+          trend of averages, and no themes, because each row IS the finding.
+
+          It also removes a crash rather than hiding one. `results_summary`
+          returns team rows as `{n: null, avg: null}` when a group has nothing
+          to average — neither a number nor `insufficient_data` — and the two
+          call sites below took the union at its word and called `.toFixed` on
+          it. Both are fixed to render the em dash; this switch is the design,
+          not the fix. */}
+      {!attributed ? (
+        <>
+        {questions.map((q) => {
+          const result = byQuestion.get(q.id)
+          if (!result) return null
+          return (
+            <section key={q.id} className={CARD}>
+              <div className="flex items-baseline justify-between gap-[14px]">
+                <h2 className="text-[15.5px] font-semibold">{q.text}</h2>
+                <span className="shrink-0 text-[13px] text-mut" title={isGated(result) ? gatedTitle : undefined}>
+                  {questionMeta(q, result, quotes[q.id] ?? null)}
+                </span>
+              </div>
+              {isGated(result) ? (
+                /* v1 bundle :2617-2622. The first bundle had no hidden state on a
+                   question block at all (`resultBlocks` carried no `hidden`,
+                   OLD:4090), so the grey paragraph here was ours for a state the
+                   drawing lacked — D48. The v1 bundle specifies it: an em dash at
+                   display size with the reason beside it, which reads as a value
+                   that is withheld rather than as a notice about the card. */
+                <div className="mt-3 flex items-baseline gap-3" title={gatedTitle}>
+                  <span className="font-display text-[30px] font-medium leading-none">{DASH}</span>
+                  <span className="text-[13px] text-mut">{gatedText}</span>
+                </div>
+              ) : q.type === 'text' ? (
+                <QuoteList set={quotes[q.id] ?? null} anonymous={anonymity === 'anonymous'} anonLabel={t('anonymous')} empty={gatedText} />
+              ) : (
+                <div className="mt-[15px] flex flex-col gap-[10px]">
+                  {questionBars(
+                    result,
+                    optionKeys(q, tResp('yes'), tResp('no'), {
+                      low: tResp('scaleLowDefault'),
+                      high: tResp('scaleHighDefault'),
+                      enpsLow: tResp('enpsLowDefault'),
+                      enpsHigh: tResp('enpsHighDefault'),
+                    }),
+                  ).map((b) => (
+                    <div key={b.key} className="flex items-center gap-3">
+                      <span className="w-[126px] flex-none text-right text-[13px] text-mut">
+                        {b.label}
+                      </span>
+                      <span className="block h-6 flex-1 overflow-hidden rounded-lg bg-sf2">
+                        <span
+                          className="block h-full rounded-lg"
+                          style={{ background: b.color, width: `${b.pct}%` }}
+                        />
+                      </span>
+                      <span className="w-[70px] flex-none text-[12.5px] font-semibold">{b.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )
+        })}
+
+        <section className={`${CARD} mb-[18px]`}>
+          <h2 className="font-display text-[23px] font-bold">{t('whatAnswersTell')}</h2>
+          {summary && summary.insights.length > 0 ? (
+            <div className="mt-[14px] flex flex-col gap-[10px]">
+              {summary.insights.map((i, idx) => (
+                <InsightRow key={`${i.key}-${idx}`} insight={i} questions={questions} />
               ))}
             </div>
-          ) : (
-            <p className="mt-[14px] text-[13px] text-mut">
-              {themes?.insufficient_data ? gatedText : t('themesEmpty')}
-            </p>
-          )}
-          <p className="mt-[14px] text-[13px] leading-[1.6] text-mut">{t('themesNote')}</p>
-          <ShareThemes
-            label={t('shareWithTeam')}
-            copiedLabel={t('shareCopied')}
-            summary={(themes?.themes ?? [])
-              .map((x) => t('themeMentions', { label: x.label, count: x.mentions }))
-              .join('\n')}
-          />
+          ) : null}
+          <p className="mt-3 text-[13px] text-mut">
+            {summary && summary.n >= (summary.k ?? 5) ? t('insightNote') : t('insightNoteWaiting', { kWord })}
+          </p>
+          <div className="mt-[14px] flex flex-wrap gap-2 border-t border-line pt-[14px]">
+            {(
+              [
+                ['reportLineSummary', 'reportLineSummaryMeta'],
+                ['reportLineGroups', 'reportLineGroupsMeta'],
+                ['reportLineThemes', 'reportLineThemesMeta'],
+                ['reportLineActions', 'reportLineActionsMeta'],
+                ['reportLineMethod', 'reportLineMethodMeta'],
+              ] as const
+            ).map(([label, meta]) => (
+              <span
+                key={label}
+                className="rounded-full bg-sf2 px-[13px] py-[7px] text-[13px] text-mut"
+              >
+                {t(label, { k })} · {t(meta)}
+              </span>
+            ))}
+          </div>
         </section>
-      </div>
 
-      <div className="flex flex-wrap gap-[10px]">
-        <Link
-          href={`/undersokelser/${surveyId}/send`}
-          className="touch-44 cursor-pointer rounded-[10px] bg-ac px-[22px] py-[13px] text-sm font-bold text-acf no-underline"
-        >
-          {t('addAnswer')}
-        </Link>
-        <Link
-          href="/oversikt"
-          className="touch-44 cursor-pointer rounded-[10px] border border-line px-[22px] py-[13px] text-sm font-semibold text-ink no-underline"
-        >
-          {t('backToOverview')}
-        </Link>
-      </div>
+        {benchmarks && benchmarks.rows.length > 0 ? (
+          <section className={`${CARD} mb-[18px]`}>
+            <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
+              <h2 className="font-display text-[23px] font-bold">{t('vsIndustry')}</h2>
+              <div className="flex flex-wrap gap-[6px]">
+                {industries.map((ind) => (
+                  <Link
+                    key={ind}
+                    href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(ind)}`}
+                    scroll={false}
+                    aria-current={ind === industry ? 'true' : undefined}
+                    className="touch-44 rounded-full border border-line px-[13px] py-[7px] text-[12.5px] text-ink no-underline"
+                    style={{ background: ind === industry ? 'var(--ac)' : 'transparent' }}
+                  >
+                    {ind}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="mt-[18px] flex flex-col gap-4">
+              {benchmarks.rows.map((row) => {
+                const gated = isGated(row)
+                const mine = gated ? null : row.mine
+                const minePct =
+                  mine === null
+                    ? 0
+                    : row.scale === 'enps'
+                      ? pctOfEnps(mine)
+                      : row.scale === 'rate'
+                        ? Math.round(mine * 100)
+                        : pctOf5(mine)
+                const benchPct =
+                  row.scale === 'enps'
+                    ? pctOfEnps(row.bench)
+                    : row.scale === 'rate'
+                      ? Math.round(row.bench * 100)
+                      : pctOf5(row.bench)
+                const show = (v: number) =>
+                  row.scale === 'rate' ? `${Math.round(v * 100)} %` : row.scale === 'enps' ? String(Math.round(v)) : no(v)
+                const diff = mine === null ? null : mine - row.bench
+                return (
+                  <div key={row.metric_key}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold">
+                        {t(
+                          row.metric_key === 'engagement_avg'
+                            ? 'benchEngagement'
+                            : row.metric_key === 'response_rate'
+                              ? 'benchResponseRate'
+                              : 'benchEnps',
+                        )}
+                      </span>
+                      <span className="flex items-baseline gap-[10px]">
+                        <span className="text-sm font-semibold">
+                          {mine === null ? t('benchInsufficient') : show(mine)}
+                        </span>
+                        <span className="text-[13px] text-mut">
+                          {t('benchIndustryValue', { value: show(row.bench) })}
+                        </span>
+                        {diff === null ? null : (
+                          <span
+                            className="rounded-full px-[10px] py-1 text-xs font-semibold"
+                            style={{ background: diff >= 0 ? 'var(--ac2)' : 'var(--ac3)' }}
+                          >
+                            {diff >= 0 ? '+' : ''}
+                            {/* A difference between two percentages is percentage
+                                POINTS, which is what the design writes (…" pp").
+                                "−16 %" would read as a relative change. */}
+                            {row.scale === 'rate'
+                              ? `${Math.round(diff * 100)} pp`
+                              : show(diff)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="mt-[7px] h-[10px] overflow-hidden rounded-full bg-sf2">
+                      <div className="h-full rounded-full bg-ac" style={{ width: `${minePct}%` }} />
+                    </div>
+                    <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-sf2">
+                      <div
+                        className="h-full rounded-full bg-mut opacity-45"
+                        style={{ width: `${benchPct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-[14px] text-[13px] leading-[1.55] text-mut">
+              {t('benchSource', { source: benchmarks.rows[0]?.source ?? '' })}
+            </p>
+          </section>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-[18px] xl:grid-cols-2">
+          <section className={CARD}>
+            <h2 className="text-[15.5px] font-semibold">{t('vsPrevious')}</h2>
+            <div className="mt-[14px] flex flex-wrap items-end gap-[22px]">
+              <div>
+                <div className="font-display text-[40px] font-medium leading-none">{fmt(thisAvg)}</div>
+                <div className="mt-[3px] text-[13px] text-mut">{t('thisRound')}</div>
+              </div>
+              <div className="pb-[6px]">
+                <div className="text-[22px] font-semibold text-mut">{fmt(prevAvg)}</div>
+                <div className="text-[13px] text-mut">{t('previousRound')}</div>
+              </div>
+              <div className="mb-2 rounded-full bg-ac2 px-[13px] py-[7px] text-[12.5px] font-semibold">
+                {delta === null
+                  ? prevRound
+                    ? t('trendNone')
+                    : t('noPreviousRound')
+                  : t('trendDelta', { value: `${delta >= 0 ? '+' : '−'}${no(Math.abs(delta))}` })}
+              </div>
+            </div>
+            <div className="mt-[18px] flex flex-col gap-[11px]">
+              {(summary?.teams ?? []).map((team) => {
+                const gated = isGated(team)
+                /*
+                  A THIRD STATE the union does not name, found by V1-2's first
+                  organisation-survey fixture. `results_summary` returns a team
+                  as `{n: null, avg: null}` when the group has nothing to
+                  average — not gated, not a number — and `no(team.avg)` then
+                  called `.toFixed` on null and took the whole screen down with
+                  a digest and no message.
+
+                  It is NOT an attributed-only bug, which is why it is fixed
+                  here rather than avoided by the switch above: a person survey
+                  made only of yes/no questions has no scale answers either, so
+                  every group returns a null average once anyone answers. No
+                  seeded survey had that shape, so nothing had ever asked.
+
+                  Rendered as the em dash: "there is no average here" is a real
+                  state and is not the same as "withheld", which is why it does
+                  not borrow the gated wording.
+                */
+                const value = gated ? null : team.avg
+                return (
+                  <div key={team.group_id}>
+                    <div className="flex justify-between text-[13px]">
+                      <span>{team.label}</span>
+                      <span className="font-semibold" title={gated ? gatedTitle : undefined}>
+                        {gated ? t('gatedCell', { k }) : fmt(value)}
+                      </span>
+                    </div>
+                    <div className="mt-[5px] h-[9px] overflow-hidden rounded-full bg-sf2">
+                      <div
+                        className="h-full rounded-full"
+                        style={
+                          value === null || value === undefined
+                            ? { background: 'var(--sf2)', width: '0%' }
+                            : { background: teamTone(value), width: `${pctOf5(value)}%` }
+                        }
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className={CARD}>
+            <h2 className="text-[15.5px] font-semibold">{t('textThemes')}</h2>
+            {themes && themes.themes.length > 0 ? (
+              <div className="mt-[14px] flex flex-wrap gap-2">
+                {activeTheme ? (
+                  <Link
+                    href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(industry)}`}
+                    scroll={false}
+                    className="touch-44 rounded-full border border-line px-[14px] py-2 text-[13px] text-ink no-underline"
+                  >
+                    {t('allThemes')}
+                  </Link>
+                ) : null}
+                {themes.themes.map((theme) => (
+                  <Link
+                    key={theme.key}
+                    href={`/undersokelser/${surveyId}/resultater?bransje=${encodeURIComponent(industry)}&tema=${encodeURIComponent(theme.key)}`}
+                    scroll={false}
+                    aria-current={theme.key === activeTheme ? 'true' : undefined}
+                    className="touch-44 rounded-full px-[14px] py-2 text-[13px] text-ink no-underline"
+                    style={{ background: theme.key === activeTheme ? 'var(--ac)' : 'var(--sbg)' }}
+                  >
+                    {t('themeMentions', { label: theme.label, count: theme.mentions })}
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-[14px] text-[13px] text-mut">
+                {themes?.insufficient_data ? gatedText : t('themesEmpty')}
+              </p>
+            )}
+            <p className="mt-[14px] text-[13px] leading-[1.6] text-mut">{t('themesNote')}</p>
+            <ShareThemes
+              label={t('shareWithTeam')}
+              copiedLabel={t('shareCopied')}
+              summary={(themes?.themes ?? [])
+                .map((x) => t('themeMentions', { label: x.label, count: x.mentions }))
+                .join('\n')}
+            />
+          </section>
+        </div>
+
+        {/* Inside the switch, as the bundle has them (:2739-2742, within
+            `resAggregate`). «Legg til et svar» is wrong on a supplier register
+            in any case: an organisation's answer comes from the organisation,
+            not from whoever is reading the table. */}
+        <div className="flex flex-wrap gap-[10px]">
+          <Link
+            href={`/undersokelser/${surveyId}/send`}
+            className="touch-44 cursor-pointer rounded-[10px] bg-ac px-[22px] py-[13px] text-sm font-bold text-acf no-underline"
+          >
+            {t('addAnswer')}
+          </Link>
+          <Link
+            href="/oversikt"
+            className="touch-44 cursor-pointer rounded-[10px] border border-line px-[22px] py-[13px] text-sm font-semibold text-ink no-underline"
+          >
+            {t('backToOverview')}
+          </Link>
+        </div>
+        </>
+      ) : null}
     </div>
   )
 

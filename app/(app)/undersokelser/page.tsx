@@ -14,6 +14,8 @@ import {
 } from './keys'
 import { SurveySearch } from './SurveySearch'
 import { SurveyRow, type SurveyListItem } from './SurveyRow'
+import { hasScheduleStatus, scheduleStatus } from '@/lib/schedules/status'
+import { CADENCE_KEY } from '@/lib/send/registry'
 import { SharePanel, type ShareCandidate } from './SharePanel'
 import { BlankSurveyButton } from './BlankSurveyButton'
 
@@ -30,6 +32,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
   const viewer = await requireViewer()
   const sp = await searchParams
   const t = await getTranslations('surveys')
+  const tSend = await getTranslations('send')
   const tNav = await getTranslations('nav')
 
   const filter: Filter = FILTERS.includes(sp.filter as Filter) ? (sp.filter as Filter) : 'alle'
@@ -72,6 +75,15 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     (countRows ?? []).map((c) => [c.survey_id, Number(c.responses)]),
   )
 
+  // The series behind each row (Q22, Q23). One read for the page rather than a
+  // per-row embed: `schedules` is org-scoped through `can_view_survey`, so this
+  // returns exactly the rows the viewer may see — a leser included, which is
+  // what puts the ↻ chip on their list.
+  const { data: scheduleRows } = await supabase
+    .from('schedules')
+    .select('survey_id, cadence, runs_total, runs_done, paused_at, active, next_run_at, custom_every, custom_unit')
+  const schedules = new Map((scheduleRows ?? []).map((x) => [x.survey_id, x]))
+
   const surveys: SurveyListItem[] = (rows ?? []).map((r) => ({
     id: r.id,
     title: r.title,
@@ -86,6 +98,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     updatedAt: r.updated_at,
     kThreshold: r.k_threshold,
     respondentKind: r.respondent_kind === 'organisation' ? 'organisation' : 'person',
+    schedulePaused: Boolean(schedules.get(r.id)?.paused_at),
   }))
 
   const pctOf = (s: SurveyListItem) =>
@@ -157,7 +170,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div className="animate-enter max-w-[1080px] pt-[34px]">
+    <div className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
@@ -255,6 +268,36 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
                 menuCopy: t('menuCopy'),
                 menuClose: t('menuClose'),
                 menuDelete: t('menuDelete'),
+                menuPause: schedules.get(s.id)?.paused_at ? t('menuResume') : t('menuPause'),
+                menuStop: t('menuStopRecurrence'),
+                stopConfirm: tSend('recurStopConfirm'),
+                // The status sentence, formatted here because `SurveyRow` is a
+                // client component and next-intl's `t` does not cross that
+                // boundary. Same function as the Send screen's status row and
+                // the rounds panel — one definition, four readers.
+                recurrence: (() => {
+                  const row = schedules.get(s.id)
+                  if (!row) return ''
+                  const st = scheduleStatus(
+                    {
+                      cadence: row.cadence as never,
+                      runsTotal: row.runs_total,
+                      runsDone: row.runs_done,
+                      pausedAt: row.paused_at,
+                      active: row.active,
+                      nextRunAt: row.next_run_at,
+                      customEvery: row.custom_every,
+                      customUnit: row.custom_unit as never,
+                    },
+                    s.status,
+                    (c) => tSend(CADENCE_KEY[c].label as 'cadOnce').toLowerCase(),
+                    (iso) =>
+                      new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+                  )
+                  return hasScheduleStatus(st)
+                    ? tSend(st.key, ('values' in st ? st.values : {}) as never)
+                    : ''
+                })(),
                 statusDraft: t('statusDraft', { count: s.questionCount }),
                 // No denominator, no percentage: the pill falls back to the
                 // response count rather than reporting a 0 % that is not true

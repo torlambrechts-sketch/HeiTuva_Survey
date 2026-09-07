@@ -37,6 +37,8 @@ export default async function ReportsPage({
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('reports')
+  const tDuty = await getTranslations('duty')
+  const tSection = await getTranslations('section')
 
   // ---------------------------------------------------------------------
   // The editor
@@ -52,7 +54,12 @@ export default async function ReportsPage({
           .maybeSingle(),
         supabase
           .from('report_section_types')
-          .select('key, label, description, supports_group_filter').order('sort_order'),
+          // `in_report` is the report subset of the registry (M:0047). Without
+          // it the editor would offer «Lovpålagte frister», a dashboard panel
+          // with no prose form, as a section anyone could add to a report.
+          .select('key, label, description, supports_group_filter')
+          .eq('in_report', true)
+          .order('sort_order'),
         supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
         supabase
           .from('surveys')
@@ -151,7 +158,10 @@ export default async function ReportsPage({
           })),
           orgName: viewer.orgName,
         }}
-        sectionLabels={Object.fromEntries((sectionTypes ?? []).map((s) => [s.key, s.label]))}
+        // Q48(b): keyed by the registry key, same as the duties above.
+        sectionLabels={Object.fromEntries(
+          (sectionTypes ?? []).map((s) => [s.key, tSection(`label_${s.key}` as never)]),
+        )}
         counts={t('counts', {
           lov: dutyCount ?? 0,
           maler: templateCount ?? 0,
@@ -186,7 +196,11 @@ export default async function ReportsPage({
         .eq('org_id', viewer.orgId)
         .eq('status', 'active')
         .order('name'),
-      supabase.from('report_section_types').select('key, label').order('sort_order'),
+      supabase
+        .from('report_section_types')
+        .select('key, label')
+        .eq('in_report', true)
+        .order('sort_order'),
     ])
 
   const dutyByKey = new Map((duties ?? []).map((d) => [d.definition_key, d]))
@@ -226,8 +240,13 @@ export default async function ReportsPage({
     const status = (statusByKey.get(def.key) ?? null) as DutyCardData['status']
     return {
       definitionKey: def.key,
-      title: def.title,
-      law: def.law,
+      // Q48(b): the STRING comes from next-intl, keyed by the registry key.
+      // `duty_definitions.title` and `.law` remain in the table as the
+      // canonical Norwegian and as what a migration seeds; nothing reads them
+      // for display any more. `tests/unit/registry-strings.test.ts` binds the
+      // two over the set, including the converse.
+      title: tDuty(`title_${def.key}` as never),
+      law: tDuty(`law_${def.key}` as never),
       basis: def.basis,
       packKey: def.pack_key,
       checks: (def.checks ?? []) as { key: string; label: string }[],

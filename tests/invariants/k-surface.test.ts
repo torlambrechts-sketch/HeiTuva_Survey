@@ -298,8 +298,11 @@ describe('get_trends — the gate is per round', () => {
 
     const second = out.points.find((p) => p.round_id === ctx.round2.id)
     expect(second?.insufficient_data).toBe(true)
-    expect(second?.avg ?? null).toBeNull()
-    expect(second?.n ?? null).toBeNull()
+    expect(second?.avg ?? null, 'nothing derived from what they said').toBeNull()
+    // DECISIONS Q49 (V1-6): the COUNT now survives its own threshold. Was
+    // asserted null here; a count of people is participation, and Q28's line is
+    // people-versus-derived rather than population size.
+    expect(second?.n, 'Q49: the count survives the gate').toBe(4)
   })
 
   it('gates every round when the group filter puts each one below the threshold', async () => {
@@ -311,8 +314,53 @@ describe('get_trends — the gate is per round', () => {
     // round may report a number, including the round it did not participate in.
     for (const p of out.points) {
       expect(p.insufficient_data, `round ${p.round_id} leaked`).toBe(true)
-      expect(p.n ?? null).toBeNull()
+      // Q49: a count may travel; nothing derived may. The round Bravo did not
+      // answer reports 0, which is a true count of people and not a number
+      // about anything anyone said.
+      expect(typeof p.n, `round ${p.round_id} must carry a count`).toBe('number')
     }
+  })
+
+  it('(Q49) THE NARROWING: a gated point carries the count and NOTHING DERIVED', async () => {
+    // Tor's narrowing is the decision, so it is enforced as a CLOSED KEY SET
+    // rather than as a sentence: `n` is the count only, never accompanied by
+    // anything derived from what those people said, and never a breakdown that
+    // turns two counts into a difference.
+    //
+    // Asserted over the keys rather than over the values I thought to check —
+    // an `avg` arriving beside the count would pass `expect(avg).toBeNull()`
+    // only if I had remembered to write it, and the next field nobody thought
+    // of would pass silently. The set is the assertion.
+    type Point = Record<string, unknown>
+    const out = await rpc<{ points: Point[] }>(ctx.admin, 'get_trends', {
+      p_survey: ctx.survey.id, p_group: ctx.groupB.id,
+    })
+
+    const GATED_KEYS = [
+      'round_id', 'round_no', 'opens_at', 'closes_at', 'status', 'n', 'insufficient_data',
+    ].sort()
+
+    const gated = out.points.filter((p) => p.insufficient_data === true)
+    expect(gated.length, 'or this asserts nothing').toBeGreaterThan(0)
+
+    for (const p of gated) {
+      expect(Object.keys(p).sort(), `a gated point carries exactly the permitted keys`)
+        .toEqual(GATED_KEYS)
+    }
+  })
+
+  it('(Q49) an UNGATED point is unchanged — the narrowing is about the gated one', async () => {
+    // The positive control the narrowing needs: without it, a change that
+    // stripped `avg` from every point would satisfy the test above.
+    type Point = Record<string, unknown>
+    const out = await rpc<{ points: Point[] }>(ctx.admin, 'get_trends', {
+      p_survey: ctx.survey.id,
+    })
+    const open = out.points.find((p) => p.insufficient_data !== true)
+    expect(open, 'a survey with an ungated round').toBeTruthy()
+    expect(Object.keys(open!).sort()).toEqual(
+      ['round_id', 'round_no', 'opens_at', 'closes_at', 'status', 'n', 'avg'].sort(),
+    )
   })
 
   it('shows the five-person group as real data in the round it answered', async () => {

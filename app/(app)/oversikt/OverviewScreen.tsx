@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { ComplianceCard } from './ComplianceCard'
 import { LoopActionForm } from './LoopActionForm'
 
 export type ActionItem = {
@@ -16,8 +17,15 @@ export type ComplianceChip = {
   title: string
   law: string
   due: string
+  /** Long form, "Neste om 6 måneder" — the chip row's wording. */
   days: string
+  /** Short form, "6 mnd" — the compliance card's chip (HeiTuva.dc.html:355). */
+  when: string
   tone: string
+  /** Not started, past its date, or due inside the current year. */
+  urgent: boolean
+  /** Percentage along the card's twelve-month axis; derived per render. */
+  pos: number
 }
 
 export type Activity = {
@@ -53,6 +61,7 @@ export async function OverviewScreen({
   totalSurveys,
   actions,
   compliance,
+  complianceUrgent,
   activity,
   loop,
   showOnboard,
@@ -64,6 +73,7 @@ export async function OverviewScreen({
   totalSurveys: number
   actions: ActionItem[]
   compliance: ComplianceChip[]
+  complianceUrgent: number
   activity: Activity
   loop: { id: string; text: string; when: string | null; done: boolean }[]
   showOnboard: boolean
@@ -83,7 +93,7 @@ export async function OverviewScreen({
   const card = 'rounded-[18px] border border-line bg-sf px-6 py-6'
 
   return (
-    <main className="max-w-[1140px] animate-enter pt-[26px]">
+    <main className="animate-enter pt-[26px]">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="text-[12.5px] text-mut">{t('overline')}</div>
@@ -114,84 +124,9 @@ export async function OverviewScreen({
         ) : null}
       </div>
 
-      {/* Krever handling */}
-      <div className={`mt-[26px] rounded-[18px] border border-line bg-sf px-6 py-6 shadow-[0_10px_28px_rgba(25,21,16,.06)]`}>
-        <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
-          <h2 className="font-display text-[25px] font-medium">{t('requiresAction')}</h2>
-          <span className="text-[13px] text-mut">{t('updatedNow')}</span>
-        </div>
-
-        {actions.length === 0 && !showOnboard ? (
-          <div className="mt-[10px] py-4">
-            <p className="text-[15px] font-semibold">{t('nothingRequiresAction')}</p>
-            <p className="mt-[2px] text-[13px] text-mut">{t('nothingRequiresActionSub')}</p>
-          </div>
-        ) : null}
-
-        <div className="mt-[10px] flex flex-col gap-[2px]">
-          {actions.map((a) => (
-            <div
-              key={a.key}
-              className="flex flex-wrap items-center gap-[15px] border-b border-line py-[15px]"
-            >
-              <span
-                className="block h-10 w-10 flex-none rounded-xl"
-                style={{ background: a.tint }}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold">{a.title}</span>
-                <span className="mt-[2px] block text-[13px] text-mut">{a.sub}</span>
-              </span>
-              <Link
-                href={a.href}
-                className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-acf no-underline"
-              >
-                {a.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-
-        {showOnboard ? (
-          <div className="flex flex-wrap items-center gap-[15px] pt-[15px]">
-            <span className="block h-10 w-10 flex-none rounded-xl border border-dashed border-line" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold">{t('onboardTitle')}</span>
-              <span className="mt-[2px] block text-[13px] text-mut">{t('onboardSub')}</span>
-            </span>
-            <Link
-              href="/undersokelser/ny"
-              className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[10px] border border-line bg-transparent px-5 py-[11px] text-[13px] font-semibold text-ink no-underline"
-            >
-              {t('start')}
-            </Link>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Lovpålagte frister */}
-      <div className="mt-[18px] flex flex-wrap items-center gap-3">
-        <span className="mr-[2px] text-[11px] uppercase tracking-[.1em] text-mut">
-          {t('statutoryDeadlines')}
-        </span>
-        {compliance.map((c) => (
-          <Link
-            key={c.key}
-            href="/rapporter"
-            title={`${c.law} · ${c.due}`}
-            className="touch-44 inline-flex cursor-pointer items-center gap-[9px] rounded-full border border-line bg-sf px-[15px] py-[9px] text-[12.5px] text-ink no-underline"
-          >
-            <span
-              className="block h-[9px] w-[9px] flex-none rounded-full"
-              style={{ background: c.tone }}
-            />
-            <span className="font-semibold">{c.title}</span>
-            <span className="text-mut">{c.days}</span>
-          </Link>
-        ))}
-      </div>
-
-      <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
+      {/* HeiTuva.dc.html:258 — 26px under the greeting, where "Krever
+          handling" used to sit. */}
+      <div className="mt-[26px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
         {/* Sløyfen lukket */}
         <div className={card}>
           <h2 className="font-display text-[23px] font-medium">{t('loopClosed')}</h2>
@@ -286,6 +221,68 @@ export async function OverviewScreen({
             </span>
           </div>
         </div>
+      </div>
+
+
+      {/* The v1 bundle moves "Krever handling" out of the top slot and pairs
+          it with the compliance card in a second grid below the two panels
+          (HeiTuva.dc.html:305). The chip row it replaces is gone. */}
+      <div className="mt-[18px] grid grid-cols-1 items-stretch gap-[18px] xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.9fr)]">
+        {/* Krever handling */}
+        <div className="min-w-0 rounded-[18px] border border-line bg-sf px-[26px] py-6 shadow-[0_10px_28px_rgba(25,21,16,.06)]">
+          <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
+            <h2 className="font-display text-[25px] font-medium">{t('requiresAction')}</h2>
+            <span className="text-[13px] text-mut">{t('updatedNow')}</span>
+          </div>
+
+          {actions.length === 0 && !showOnboard ? (
+            <div className="mt-[10px] py-4">
+              <p className="text-[15px] font-semibold">{t('nothingRequiresAction')}</p>
+              <p className="mt-[2px] text-[13px] text-mut">{t('nothingRequiresActionSub')}</p>
+            </div>
+          ) : null}
+
+          <div className="mt-[10px] flex flex-col gap-[2px]">
+            {actions.map((a) => (
+              <div
+                key={a.key}
+                className="flex flex-wrap items-center gap-[15px] border-b border-line py-[15px]"
+              >
+                <span
+                  className="block h-10 w-10 flex-none rounded-xl"
+                  style={{ background: a.tint }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold">{a.title}</span>
+                  <span className="mt-[2px] block text-[13px] text-mut">{a.sub}</span>
+                </span>
+                <Link
+                  href={a.href}
+                  className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-acf no-underline"
+                >
+                  {a.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          {showOnboard ? (
+            <div className="flex flex-wrap items-center gap-[15px] pt-[15px]">
+              <span className="block h-10 w-10 flex-none rounded-xl border border-dashed border-line" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold">{t('onboardTitle')}</span>
+                <span className="mt-[2px] block text-[13px] text-mut">{t('onboardSub')}</span>
+              </span>
+              <Link
+                href="/undersokelser/ny"
+                className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[10px] border border-line bg-transparent px-5 py-[11px] text-[13px] font-semibold text-ink no-underline"
+              >
+                {t('start')}
+              </Link>
+            </div>
+          ) : null}
+        </div>
+        <ComplianceCard compliance={compliance} urgent={complianceUrgent} />
       </div>
 
       <span className="sr-only">{orgName}</span>

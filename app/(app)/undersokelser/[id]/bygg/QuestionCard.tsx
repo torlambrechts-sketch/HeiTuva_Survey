@@ -97,7 +97,14 @@ export function QuestionCard({
           onChange={(e) => onChange({ text: e.target.value })}
           disabled={disabled}
           aria-label={t('questionText', { n: index + 1 })}
-          className="touch-44-field min-w-0 flex-1 rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-sm font-medium text-ink outline-none disabled:opacity-60"
+          // `flex: 1 1 220px`, not `flex-1` (HeiTuva.dc.html:387). The basis is
+          // what makes the row wrap: at 220px the controls no longer fit beside
+          // the input, so they drop to their own line and the question text gets
+          // the width instead. With a zero basis nothing wraps and the input
+          // takes only what the fixed-width controls leave — measured at 104px
+          // in a 622px row, which is not a field you can read a question in.
+          // The v1 bundle changed this from the first handoff's `flex:1`.
+          className="touch-44-field min-w-0 flex-[1_1_220px] rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-sm font-medium text-ink outline-none disabled:opacity-60"
         />
         <select
           value={question.type}

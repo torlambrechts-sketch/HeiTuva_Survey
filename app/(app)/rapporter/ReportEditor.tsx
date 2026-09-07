@@ -48,7 +48,7 @@ export async function ReportEditor({
     : t('docFilterAllGroups')
 
   return (
-    <div className="max-w-[1080px] animate-enter pt-[34px]">
+    <div className="animate-enter pt-[34px]">
       {/* The design keeps the screen's own header while editing and puts the
           back control top-right as a bordered button (HeiTuva.dc.html:1065). */}
       <div className="flex flex-wrap items-start justify-between gap-4">

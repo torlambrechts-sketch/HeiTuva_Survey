@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { DELETE_FG, PRIMARY_ACTION, STATUS_COLORS, type ShareScope, type SurveyStatus } from './keys'
 import { closeSurvey, copyAsNewRound, deleteSurvey } from './actions'
+import { setSchedulePaused, stopSchedule } from './[id]/send/actions'
 
 export type SurveyListItem = {
   id: string
@@ -22,6 +23,8 @@ export type SurveyListItem = {
   /** Q17 — the share panel's «bare der minst {k} har svart» line. */
   kThreshold: number
   respondentKind: 'person' | 'organisation'
+  /** Whether the series is paused, so the menu knows which verb to offer. */
+  schedulePaused: boolean
 }
 
 type Labels = {
@@ -31,6 +34,16 @@ type Labels = {
   menuAnswer: string; menuShare: string; menuCopy: string; menuClose: string; menuDelete: string
   statusDraft: string; statusActive: string; statusClosed: string
   responses: string; sharedWith: string; failed: string; people: string
+  /**
+   * The ↻ recurrence chip (NEW:873-875). Empty when the survey has no series —
+   * a one-off shows no chip rather than a chip saying it is a one-off.
+   *
+   * Formatted by the PAGE, from `lib/schedules/status.ts`, because this is a
+   * client component and next-intl's `t` does not cross that boundary. Same
+   * function the Send screen, the context bar and the rounds panel read.
+   */
+  recurrence: string
+  menuPause: string; menuStop: string; stopConfirm: string
 }
 
 // The rows are ~37px tall in a gap-[2px] stack, so their 44px touch areas
@@ -152,11 +165,25 @@ export function SurveyRow({
           <span className="mt-[2px] block text-[13px] text-mut">
             {[survey.audience, labels.people].filter(Boolean).join(' · ')}
           </span>
-          {labels.sharedWith ? (
-            <span className="mt-[6px] inline-block rounded-full bg-ac2 px-[10px] py-1 text-[11.5px] font-semibold">
-              {labels.sharedWith}
-            </span>
-          ) : null}
+          <span className="mt-[6px] flex flex-wrap gap-1.5">
+            {labels.sharedWith ? (
+              <span className="inline-block rounded-full bg-ac2 px-[10px] py-1 text-[11.5px] font-semibold">
+                {labels.sharedWith}
+              </span>
+            ) : null}
+            {/* NEW:873-875. The chip a leser can also see, which is the whole
+                of Q23: without the RLS swap it would render from a row they
+                read as absent — indistinguishable from a survey that does not
+                repeat. */}
+            {labels.recurrence ? (
+              <span
+                className="inline-block rounded-full px-[10px] py-1 text-[11.5px] font-semibold"
+                style={{ background: 'var(--sbg)' }}
+              >
+                ↻ {labels.recurrence}
+              </span>
+            ) : null}
+          </span>
         </span>
         <span className="flex flex-wrap items-center gap-2">
           <Link
@@ -285,6 +312,40 @@ export function SurveyRow({
               >
                 {labels.menuCopy}
               </button>
+              {/* NEW:899-902 — «Pause gjentakelsen» / «Stopp gjentakelsen».
+                  Drawn only when there IS a series: a menu item that does
+                  nothing on most rows teaches people to stop reading the menu.
+                  `labels.recurrence` is empty exactly when no schedule exists,
+                  so it doubles as the condition rather than a second flag that
+                  could disagree with the chip. */}
+              {labels.recurrence && survey.status === 'aktiv' ? (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={pending}
+                    onClick={() => run(() => setSchedulePaused(survey.id, !survey.schedulePaused))}
+                    className={`${menuItem} disabled:opacity-60`}
+                  >
+                    {labels.menuPause}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={pending}
+                    onClick={() => {
+                      // Stop is not reversible (Q22). Same confirmation as the
+                      // Send screen's, from the same message — two wordings for
+                      // one irreversible act is how one of them ends up softer.
+                      if (!window.confirm(labels.stopConfirm)) return
+                      run(() => stopSchedule(survey.id))
+                    }}
+                    className={`${menuItem} disabled:opacity-60`}
+                  >
+                    {labels.menuStop}
+                  </button>
+                </>
+              ) : null}
               {survey.status === 'aktiv' ? (
                 <button
                   type="button"

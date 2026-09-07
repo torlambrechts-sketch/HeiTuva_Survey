@@ -13,6 +13,7 @@ import { BASE_URL, ensureServer } from './server'
 import { LOCAL_SUPABASE } from './local-env'
 import { signIn } from '../../tests/helpers/session'
 import { personaClient, serviceClient } from '../../tests/db/clients'
+import { requireDependencies, reachable } from './deps'
 
 config({ path: '.env.local', quiet: true })
 
@@ -24,6 +25,20 @@ function check(label: string, ok: boolean, detail: string) {
 }
 
 async function main() {
+  // Mailpit is not in the CLI's default service set and CI excludes it
+  // outright (`ci.yml`: `supabase start -x …,mailpit`), so the mail half of
+  // this pipeline runs nowhere but here. Without it the worker's SMTP connect
+  // fails and three checks report FAIL as though the worker were broken.
+  await requireDependencies('verify:send', [
+    {
+      name: 'Mailpit (the local SMTP sink the mail worker delivers to)',
+      where: `${MAILPIT} (HTTP API) and 127.0.0.1:54325 (SMTP)`,
+      probe: () => reachable(`${MAILPIT}/api/v1/messages?limit=1`),
+      howto:
+        'supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor',
+    },
+  ])
+
   // Re-seed first. This gate SENDS the seeded draft, which flips it to `aktiv`
   // and consumes it — so a second run in a row has nothing to send, and a run
   // that follows any other verifier inherits whatever that one left behind.
@@ -375,15 +390,32 @@ async function main() {
       const capture = 'artifacts/.sms-capture.jsonl'
       const { rmSync, readFileSync, existsSync } = await import('node:fs')
       if (existsSync(capture)) rmSync(capture)
-      const smsWorker = spawnSync('npx', ['tsx', 'scripts/mail-worker.ts', '--local', '--once'], {
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          MAIL_PROVIDER: 'smtp', SMTP_HOST: '127.0.0.1', SMTP_PORT: '54325',
-          SMS_PROVIDER: 'capture', SMS_CAPTURE_FILE: capture,
-        },
-      })
-      const smsOut = `${smsWorker.stdout ?? ''}${smsWorker.stderr ?? ''}`
+      /*
+        `--once` drains ONE BATCH, and the batch is ten (`mail-worker.ts:40`).
+        By this point the run has enqueued ten reminders, so a single pass
+        drained those and stopped before reaching the SMS job — and the three
+        SMS checks below failed reporting "nothing captured", which reads like a
+        broken SMS provider rather than a queue the check never got to the end
+        of. It surfaced when V1-2's demo fixture added five more invitations;
+        the assumption that one batch empties the queue was always there.
+
+        So: drain until the worker reports nothing left, and assert on the
+        combined output. The checks are unchanged — this is about reaching them.
+      */
+      let smsOut = ''
+      for (let pass = 0; pass < 10; pass++) {
+        const w = spawnSync('npx', ['tsx', 'scripts/mail-worker.ts', '--local', '--once'], {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            MAIL_PROVIDER: 'smtp', SMTP_HOST: '127.0.0.1', SMTP_PORT: '54325',
+            SMS_PROVIDER: 'capture', SMS_CAPTURE_FILE: capture,
+          },
+        })
+        const out = `${w.stdout ?? ''}${w.stderr ?? ''}`
+        smsOut += out
+        if (/drained 0 message\(s\)/.test(out)) break
+      }
       check('the worker sends by SMS', /sent invitation by sms -> \+4791827364/.test(smsOut), smsOut.split('\n').find((l) => l.includes('by sms')) ?? smsOut.trim().split('\n').pop() ?? '')
       check('the worker never logs a token (SMS)', !/[0-9a-f]{64}/.test(smsOut), 'no 64-hex string in worker output')
 

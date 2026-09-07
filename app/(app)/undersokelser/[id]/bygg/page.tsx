@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import type { QualityRule } from '@/lib/questions/quality'
 import { parseEngagement } from '@/lib/engagement'
+import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { Builder } from './Builder'
 import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
@@ -29,7 +30,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, org_id, engage')
+    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -72,6 +73,20 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     message: r.message,
   }))
 
+  // The pack that governs the policy, when one does. `guard_survey_policy`
+  // (M:0034:93-99) refuses a policy change for a global pack whose own policy
+  // is `locked`; the panel needs the pack's legal reference to say WHICH law,
+  // so it reads the same row the guard tests.
+  const { data: pack } = survey.template_pack_key
+    ? await supabase
+        .from('template_packs')
+        .select('legal_ref, policy')
+        .eq('key', survey.template_pack_key)
+        .is('org_id', null)
+        .maybeSingle()
+    : { data: null }
+  const packLocks = Boolean((pack?.policy as { locked?: boolean } | null)?.locked)
+
   const draft: BuilderDraft = {
     title: survey.title,
     audience: survey.audience_label ?? '',
@@ -88,6 +103,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         title={survey.title}
         audience={survey.audience_label}
         status={survey.status}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
         current="bygg"
       />
       <Builder
@@ -100,6 +116,22 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         // set, so editing after sending would leave the live round and the
         // Builder disagreeing.
         locked={survey.status !== 'utkast'}
+        policy={{
+          respondentKind: survey.respondent_kind === 'organisation' ? 'organisation' : 'person',
+          anonymity: survey.anonymity,
+          kThreshold: survey.k_threshold,
+          // `surveys.target` is the recipient count the panel's first warning
+          // needs. Nothing writes it yet — recipients are chosen on the Send
+          // screen — so it is null for every real survey and the warning stays
+          // silent rather than firing on an invented number (D94).
+          target: survey.target ?? 0,
+          // Either lock stops a policy change, and the guard raises the same
+          // error for both; the pack's legal reference is what distinguishes
+          // the two sentences the panel shows.
+          locked: survey.policy_locked || packLocks || survey.status !== 'utkast',
+          lockedByPackLegal: packLocks ? (pack?.legal_ref ?? null) : null,
+          canEdit: viewer.role === 'administrator',
+        }}
       />
     </>
   )

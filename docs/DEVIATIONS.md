@@ -1682,7 +1682,504 @@ report row that names the section over person sources composes it as
 `unavailable` with no rows, and the test proves no organisation name leaks
 through the refused section.
 
-### D89 — the named demo seed: three writes the real producers cannot make
+### D89 — the wide toggle renders at `xl` and above only
+`HeiTuva.dc.html:181-183` puts a round icon button between «Ny undersøkelse» and
+the language globe; `4007-4011` is its handler — it flips a `wide` flag that
+releases the frame's 1120px cap. DECISIONS **Q32** (confirmed 2026-09-06) is to
+render it at `xl` and above only, and the control carries that in one class:
+`hidden … xl:inline-flex` (`components/WideToggle.tsx:55`).
+
+The reason is arithmetic, not taste. The frame is `calc(100% - 72px)` capped at
+1120px, so the cap binds only from 1192px up. Below that the viewport is already
+narrower than the cap and the button would be a control that visibly does
+nothing on press — which D26 settled is worse than a control that is absent.
+`docs/RESPONSIVE.md` rule 4 ("no feature may be hidden on mobile") is the rule
+this bends, and it bends by its own escape clause: a control whose *only* effect
+is a desktop-width layout choice has nothing to offer a 390px viewport. The
+media query is the same 1280px `xl` breakpoint everything else uses rather than
+a bespoke 1192px one, so there is one breakpoint vocabulary, not two.
+
+The preference is per viewer and lives in `localStorage` exactly as the bundle
+has it — nothing about a personal window-width choice belongs in the database —
+and is applied before paint by the inline script at `app/layout.tsx` so a wide
+viewer does not see the narrow frame flash first. The component reads the
+attribute back on mount rather than seeding React state from it, because the
+server cannot know the preference and rendering it into the first HTML would be
+a hydration mismatch.
+
+### D90 — the frame keeps a 20px gutter on mobile where the bundle draws 36px
+`HeiTuva.dc.html` gives `.frame` `width: calc(100% - 72px)` at every width — a
+36px gutter each side, unconditionally. The v1 bundle is a desktop artefact and
+never renders below 1280px, so that number was never tested against a phone: at
+390px it spends 18.5% of the viewport on margin, and the cards inside then carry
+their own 16–20px padding on top of it, leaving ~250px of content.
+
+`app/globals.css` therefore gives `.frame` `calc(100% - 40px)` and restores the
+bundle's `calc(100% - 72px)` at `md` (768px) and up. Above `md` the rendering is
+the bundle's, exactly; below it there is no design to match and
+`docs/RESPONSIVE.md` governs, where 20px is the gutter every Phase 1–7 screen
+already used (the per-screen `px-5` this frame replaced). This is the smaller
+deviation of the two available: keeping 36px would have changed every screen's
+mobile rendering, which no decision asked for.
+
+### D91 — the Phase 1–7 reference renders are frozen and re-rendered on request
+`scripts/verify/reference.ts` now drives both bundles
+(`BUNDLES`, `reference.ts:21`): `design-reference-v1/` → `artifacts/reference-v1/`
+and `design-reference/` → `artifacts/reference/`. Per **Q18** both sets stay, and
+they are named for their bundle so which-is-which needs no inference.
+
+Only the v1 set renders by default (`npm run verify:reference`); the legacy set
+needs `--bundle=legacy` or `--all`. That is not a convenience — it is what keeps
+the older set trustworthy. The renders are browser screenshots, and a Chromium
+upgrade repaints them: re-rendering the legacy bundle on this container's
+Chromium moved five PNGs that no code change had touched. A baseline that drifts
+whenever the toolchain moves cannot be evidence for "Phase 1–7 as built" (Q18's
+whole purpose), so the legacy set is committed, restored (`git checkout --
+artifacts/reference/`), and re-rendered only when someone asks for it and can say
+why. The v1 set, which is the live target, re-renders every run.
+
+### D92 — the compliance timeline's three undrawn states
+`HeiTuva.dc.html:334-357` draws the dark "Lovpålagte frister" card from a
+hard-coded four-row array (`complianceTimeline`, :4272–4277) and a literal
+summary ("2 av 4 plikter krever handling i år", :4278). Every one of those rows
+is due in the future, so three states a real organisation reaches are undrawn.
+Each is decided here and none invents a treatment:
+
+**Overdue.** `pos` is `months / 12` over an axis labelled «nå» → «12 mnd», so a
+duty past its date computes negative and would render off the left end — half
+the 16px dot outside the bar, or clipped entirely. It is clamped to the axis
+start (3%, the offset that keeps a `margin-left:-8px` marker fully on a 6px
+bar), because "at or before now" is where the axis begins. The chip reads «Over
+fristen», the wording the screen already used before this card existed.
+
+**Never instantiated.** Duties are rows created on first touch (Phase 5), so a
+new organisation has none — and `duty_definitions` is a global table of four, so
+the card still lists four rows, each «Ikke startet», each at the axis start. The
+four dots then overlap into one, which is accurate rather than unfortunate: they
+are at the same point in time. The bundle's own first row is «Ikke startet» at
+pos 4, so this is its treatment, applied four times.
+
+**Nothing due this year.** The bundle's summary always names a number, and
+"0 av 4 plikter krever handling i år" is true but reads as a warning that is not
+one. The zero case gets its own sentence instead — «Ingen plikter krever
+handling i år» — which is one invented string and the minimal consistent option;
+the alternative was a number that misreads.
+
+Verified by setting duty dates in the local database and screenshotting the card
+in each state: four «Ikke startet» stacked at 3%; the clear case spread across
+42/50/67/92% with «Ingen plikter …»; the overdue case at 3% reading «2 av 4
+plikter krever handling i år», which is the bundle's own summary shape.
+
+### D93 — the compliance card's chip foregrounds are the bundle's literal hexes
+The theme has tokens for the three tints (`--ac`, `--ac2`, `--ac3`) but none for
+text ON them. The bundle carries three literal foregrounds — `#8A4B22`,
+`#2F5D2A`, `#8A6A12` (`HeiTuva.dc.html:4273–4276`) — chosen so the deadline chip
+stays legible on each tint. They are carried verbatim into `ComplianceCard.tsx`
+rather than substituted for `--ink` or `--mut`, because substituting a control's
+colour is restyling and because `--ink` on `--ac3` is the pairing the design
+specifically avoided here. If a "text on tint" token is ever added, this is the
+first place it belongs.
+
+### D94 — the policy panel's first warning cannot fire in the Builder yet
+`polWarnings`' first rule (HeiTuva.dc.html:3528) compares the recipient count
+with the threshold: "Gruppen har 4 mottakere. Med terskel 5 vil resultatet aldri
+vises." In the bundle that comparison is always available, because its mock
+survey carries a `target` at build time.
+
+The app does not. Recipients are chosen on the **Send** screen, and
+`surveys.target` — the column that means exactly what the bundle means — has no
+writer: it is null on every real survey. So the rule is implemented, tested
+(`tests/unit/policy-warnings.test.ts`) and wired, and in practice stays silent
+in the Builder because the number it needs does not exist there yet.
+
+The alternative was to invent one — derive a target from the audience string, or
+count group members the survey is not yet addressed to — and render a warning
+computed from a guess. CLAUDE.md's never-fabricate rule covers exactly that: a
+made-up denominator is indistinguishable from a real one in review.
+
+**Status: CLOSED in V1-2** (migration 0039). `surveys.target` now has a writer,
+and the writer is a trigger on `survey_invitations` rather than the Send action,
+because recipients reach a round by several paths and an action-level writer
+covers the one it is written in.
+
+**Which count, decided explicitly:** the LATEST round's recipient count — not
+the first, not the largest, not the sum. Tor's case is the reason: threshold 5,
+round 1 to 40, round 2 to 4. A survey-level number that stayed at 40 is silent
+in exactly the situation the rule exists for, and a sum (44) is a number nobody
+will ever compare with a threshold, because the threshold is applied per round
+(`aggregate_results(p_survey, p_group, p_round)`). Proven both ways in
+`tests/db/policy-panel.test.ts` — "latest" and "largest" agree on every fixture
+where rounds grow and disagree only here, so the test asserts that 40 and 44 are
+both wrong rather than only that 4 is right. Four of its five assertions were
+proven failing with the triggers dropped before the migration was kept.
+
+Two edge cases decided with it: a round with no recipients does not move the
+number (so creating round 2 does not blank what round 1 earned), and emptying a
+round falls back to the previous round rather than to 0 — 0 means "nobody chosen
+yet" to `policyWarnings`, and a survey that has been sent is not in that state.
+
+The rule got its second home at the same time. `SendScreen` computes it from
+`reach` — the recipients being chosen right now, before anyone is invited, which
+is the last moment where changing the count costs nothing — through the same
+`policyWarnings` the Builder's panel and readiness list use, so the three cannot
+disagree. Its copy (`send.reachBelowThreshold`) names the two ways out. The card
+already had a treatment for "a sentence to read before pressing send", so the
+warning reuses it rather than introducing a second one; neither bundle draws a
+warning on this screen.
+
+### D95 — «Valgfritt» now carries the threshold, and the banner grew to fit
+The respondent banner for `optional` used to be a bare invitation to choose
+(«Du velger selv …»), which said nothing about what choosing anonymity would
+get. Q17's rule is that the promise is generated from the settings or it lies,
+and the v1 bundle's own copy carries the number (`choose:n =>`, :2949), so
+`anonymityPromise` now returns `promiseChoose` / `promiseChooseLow` with the
+same `kWord` and the same small-group caveat as the anonymous branch.
+
+The banner chrome follows the v1 change with it (NEW:2327-2330): top-aligned
+rather than centred, 13px at 1.5 rather than 12.5 at 1.45, and `text-pretty` so
+a longer promise does not end on a one-word line. D85 still stands for the
+per-choice consequence text under the banner, which remains a design-brief
+refinement neither bundle draws.
+
+### D96 — The attributed CSV's format is decided, because the bundle has none
+The v1 bundle draws the «Eksporter CSV» button (NEW:2553) but its handler is a
+toast: `onAttribExport` sets `attribNote:"CSV lastet ned"` and clears it after
+two seconds (:4880). There is no file in the prototype and therefore nothing to
+be pixel-perfect to, so the format is a stop-and-choose under CLAUDE.md's
+"minimal consistent option" rule. Three choices, all made to agree with code
+that already exists rather than with a preference:
+
+- **Semicolon, not comma.** Norwegian Excel's list separator, which is what a
+  Norwegian customer opens this in. The app's own importer also detects `,`, `;`
+  or tab (`lib/send/import.ts:86`), but **the export is deliberately not an
+  import source** — see the address decision below — so that is now a
+  coincidence rather than a reason.
+- **A UTF-8 BOM.** Without it Excel renders æ, ø and å as mojibake, and the
+  importer already strips one on the way in (`import.ts:107`).
+- **CRLF.** RFC 4180, and what Excel writes.
+
+**No contact address (Tor, 2026-09-06).** The first version carried an «E-post»
+column. It is gone, and this is not a formatting choice: a supplier register
+export is a legal artefact, and an address is administrative data that leaves the
+organisation the moment the file is forwarded. What an aktsomhetsvurdering — and
+the redegjørelse built from it — needs is which supplier answered what, and when.
+Chasing a non-responder happens in the app, where access is role-scoped and the
+read is auditable; a spreadsheet on someone's desktop is neither.
+
+The one path that can still emit an address is a row with no `name` at all,
+where the alternative is an unidentifiable blank first column. Asserted as the
+only path over the WHOLE serialised file rather than by naming the columns — a
+column list stops covering this the day someone adds a column, and every
+address is still on the payload for anyone who reaches for one.
+
+**Consequence, stated rather than discovered later:** the export no longer
+round-trips through the import step at all. `parseRecipients` needs an address
+or a phone column to recognise a header row, so a re-imported register yields
+zero recipients rather than a partial list. That is the decision working as
+intended, not a defect, and it retires the V1-6 finding about adding a
+«Virksomhet» synonym to `HEADER_NAME` — there is no longer an address column for
+such a file to carry.
+
+Two further behaviours are deliberate and are not merely serialisation:
+
+- A field beginning `=`, `+`, `-` or `@` is prefixed with a single quote.
+  Spreadsheets evaluate such a cell, and respondent free text is exactly the
+  untrusted input a formula-injection needs; the quote is the convention every
+  spreadsheet reads as "this is text". Tested in
+  `tests/unit/attributed-csv.test.ts`.
+- `responded_at` is written as a date, not a timestamp. The hour-truncation
+  rule in the anonymity CHECK governs ANONYMOUS responses and does not reach an
+  attributed row, so this is editorial rather than structural: a supplier
+  register is read by date, and a minute invites someone to reason about who
+  answered just after whom.
+
+### D97 — Q43's stated reason for the audit clause is one step off, and the test says so
+The decision line reads "an audit row that logged what was exported would put
+respondent content into a table `leser` can read". `audit_events` is not
+readable by a leser: `audit_sel` (M:0008:190) admits administrators only, which
+`scripts/verify/export.ts` now asserts directly — a leser session reads 0 of the
+2 rows that exist.
+
+The clause is kept, and the property it asserts is unchanged, because the two
+real reasons are at least as strong: CLAUDE.md invariant 7 keeps respondent free
+text out of logs and analytics entirely, and `audit_events` is append-only
+(M:0007:38) — a row that captured an answer could never be corrected or removed
+while the organisation exists. Recorded here rather than silently rewriting the
+rationale in DECISIONS, because a decision's stated reason is part of the
+decision.
+
+### D98 — A leser opening an organisation survey: a refusal, not four zeros
+Neither bundle draws this state, because the prototype has no roles. The app
+does: `attributed_results` refuses a leser (`forbidden`, M:0034:180 — attributed
+rows are named data and a leser reads aggregates only), and `readAttributed`
+flattens the refusal to null like every other reader on the results screen.
+
+The first version then rendered the four organisation stat cards from an empty
+array: «0 av 0 virksomheter har svart», «0 avdekket brudd», «0 mangler policy».
+Every one of those is a fabricated number, and in a screenshot it is
+indistinguishable from a supplier survey nobody answered — the case CLAUDE.md's
+never-fabricate rule exists for.
+
+So the cards are not drawn at all and the reason is stated:
+«Navngitte svar vises ikke for din rolle», with what the role does see and who
+to ask. Minimal consistent option, in the screen's existing card chrome; no new
+pattern, no new interaction. The Q43 export control is inside the register and
+therefore also absent — the route would refuse it with 403 either way, but a
+button that always fails is not an honest affordance.
+
+### D99 — OPEN: the aggregate half is removed for organisation surveys, not settled
+The v1 bundle switches the whole lower half of Resultater on respondent kind —
+`resAttrib` and `resAggregate` are `pol.kind === "org"` and its negation (:4861)
+— so an organisation survey shows the register INSTEAD of the aggregate panels.
+V1-2 built it that way, and it is right for the primary case: a per-supplier
+register is what the duty is, and a supplier survey has no group breakdown, no
+trend of averages and no themes, because each row is the finding.
+
+**Logged as OPEN rather than settled (Tor, 2026-09-06).** «How many of our 200
+suppliers have a whistleblowing channel» is a legitimate aggregate over
+organisations, and Åpenhetsloven reporting at scale will ask it. The answer, if
+a customer does, is **a section — not a restored screen half**: a named panel
+over the roles the pack already designates (`brudd`, `policy`, `key`), which is
+a different thing from the person-survey aggregate that was removed. Reinstating
+`resAggregate` for organisation surveys would bring back the group breakdown,
+the trend of averages and the themes, none of which mean anything here.
+
+Nothing to do until a customer asks. Recorded so that the next person to meet
+this reads a decision with a stated boundary rather than a screen half that
+looks accidentally missing.
+
+
+### D100 — Two shipped presets lose the panel they were drawn to lead with
+
+`DASH_PRESETS` gives «Kundeopplevelse» `["stream","themes","drivers"]` and
+«Intern tjenestekvalitet» `["stream","drivers","themes"]` (NEW:2976–2978). Both
+lead with the event-stream panel, which Q26 defers behind
+`feature_flags.event_stream_panel`. They are seeded without it.
+
+The descriptions changed too, and that is the part worth stating. The bundle
+writes «Løpende tilfredshet etter sak, med volum per dag og temaer i
+kommentarene» and «Servicedesk og støttefunksjoner: løpende strøm, høyest og
+lavest, frisvar». A description promising «løpende» beside a preset that cannot
+show it is the fabricated-data rule one level up: it is copy asserting a
+capability the product does not have. So the two read «Tilfredshet over tid, hva
+som trekker opp og ned, og temaer i kommentarene» and «Servicedesk og
+støttefunksjoner: utvikling, høyest og lavest, frisvar» — the same three panels
+they now contain, named.
+
+«Medlem og frivillig» also carried `stream` as its third panel and now carries
+`heatmap`; its description never mentioned the stream, so it is unchanged.
+
+**Not remembered, enforced.** A preset naming a panel the dashboard does not
+offer is refused by the same trigger that guards a member's own layout
+(`app.preset_keys_registered`, M:0047). A shipped default that cannot be applied
+is worse than a missing one, so the constraint applies to the seed as well as to
+the user.
+
+**Reverting is a seed change, not a code change.** When Q26 lifts, `stream`
+gains a `report_section_types` row with `on_dashboard`, and the three presets
+get their drawn panels and descriptions back in the same migration.
+
+### D101 — The first-run preset cards carry no illustration
+
+The bundle draws seven inline SVG illustrations for the «Velg et oppsett å
+starte fra» cards, selected by index (`p.il0`–`p.il6`, NEW:1047–1053): an
+ellipse ground shadow and a scene above it, one per preset.
+
+They are omitted. Recreating a rendering is what CLAUDE.md asks for; copying the
+prototype's internal structure is what it forbids, and these are seven distinct
+drawings keyed to six presets by position — so the seventh is a fallback for a
+preset that does not exist, and a member's OWN saved preset would land on
+whichever illustration its index happened to select. An illustration chosen by
+array position is decoration that claims to be about the thing it sits on.
+
+The cards keep everything that carries meaning: the tint (which is the bundle's
+own per-preset colour), the title, the description, the panel chips and the
+button. What is missing is ornament, and it is missing deliberately rather than
+forgotten.
+
+If the illustrations matter, the honest form is one per preset KEY rather than
+per index — an asset the seed names, like a template pack's icon — which is a
+data change and belongs with whoever decides the six presets are final.
+
+### D102 — the register panel's breach count is zero for a pre-M:0040 survey
+
+The dashboard's «Svar per virksomhet» panel counts three things, and the middle one — «har
+avdekket brudd eller risiko» — is derived from the pack's `brudd` ROLE (Q35,
+`lib/questions/roles.ts`), not from the bundle's `/brudd/i` match against the question
+text (NEW:3694).
+
+The role is the right rule and Q35 settled it: a text match calls any question mentioning
+«brudd» the breach question, and `tests/unit/question-roles.test.ts` asserts that a
+question whose text says «brudd» with no role is NOT it.
+
+**The consequence, stated rather than discovered.** Migration `20260906000040` wrote roles
+into `template_packs.questions` and **deliberately did not rewrite existing surveys** —
+that was the right call, because rewriting a live survey's questions changes what
+respondents were asked. So a supplier survey created before that migration has no `brudd`
+role on any question, and the panel counts **0** breaches for it. Not an error, not an
+empty state: the number zero, beside two counts that are correct.
+
+Today this affects nothing on the local stack or in the demo seed, both of which are
+created from the current pack. It affects any organisation survey on `heituva-prod` that
+predates `M:0040`, and there is no code path that repairs one.
+
+**Not fixed here, and the reason is the same one that made the migration right.** The
+repair is either a backfill that edits a live survey's questions (which the migration
+declined to do for good reason) or a per-survey re-designation in the Builder (which is a
+screen nobody has asked for). Both are decisions, not chores.
+
+**What would make it safe to leave:** the panel distinguishing "no breach question was
+designated" from "no breaches were found". It draws the same 0 for both today, and that is
+the fabricated-data rule in its quietest form — a real zero and an undefined numerator
+rendering identically.
+
+---
+
+### D102 — the repair options, for Tor (V1-6). **RESOLVED 2026-09-07: the scope is ZERO. Option D taken.**
+
+**Scope, to be measured rather than estimated.** Every organisation survey on
+`heituva-prod` created before migration `20260906000040` — the one that wrote roles into
+`template_packs.questions` and deliberately did NOT rewrite existing surveys. Locally and
+in the demo seed this is zero surveys, both being built from the current pack. The number
+on prod is one query and nobody has run it. **Run it first, because option D may be the
+whole answer.**
+
+**Common to all four, and not one of the options:** the panel must stop drawing the same
+`0` for two different states. That is the thing that makes any repair safe, and it is one
+null instead of a count plus one line of copy. Recommended regardless of which is chosen —
+including D.
+
+| | Repair | What it costs | What it risks |
+|---|---|---|---|
+| **A** | **Backfill the role onto existing surveys' questions**, matching each survey's questions to its pack's by text | One idempotent migration, no UI | **Edits a live survey's `config` after it was sent.** Q35's own reasoning is that the role is COPIED at creation precisely so editing the pack later cannot reclassify a sent survey; a backfill does what that rule forbids, from the other direction. Text-matching is fuzzy too: a question edited in the Builder no longer matches its pack |
+| **B** | **A re-designation control in the Builder** — an editor marks the breach question on any survey | A screen nobody has asked for, a write path, RLS, tests | The honest answer if this affects several customers, over-built if it affects one. Also the only option that handles a survey whose questions were edited away from the pack |
+| **C** | **Derive at read time** — fall back to the bundle's `/brudd/i` text match when no role is designated | Small, contained in `registerStats` | **Reintroduces exactly what Q35 removed.** A question mentioning «brudd» that is not the breach question would be counted, and the panel would be confidently wrong rather than visibly empty. `tests/unit/question-roles.test.ts` asserts against this by name |
+| **D** | **Nothing but the copy fix** — «ingen bruddspørsmål er utpekt», and the count absent rather than zero | One null, one string | Leaves pre-`M:0040` surveys without a breach count. **Correct if the scope query says "one or two, all finished"** — an aktsomhetsvurdering is annual, so the next round creates a new survey from the current pack and the problem ages out |
+
+**Recommendation: run the scope query, then D — and B only if the query says several
+customers are affected and their surveys are still live.**
+
+A does what Q35 exists to prevent, and does it fuzzily. C reintroduces the regex Q35
+removed and is wrong in the direction that looks right. B is real work for a population
+nobody has counted. D plus the copy fix is honest at every size — it never claims a number
+it does not have — and if the population turns out to be large, B is still available and D
+is not wasted, because the copy fix is B's empty state too.
+
+**THE SCOPE QUERY, RUN 2026-09-07 on `heituva-prod` (`jmhhszsnjfqgclxzhciq`) on Tor's
+instruction. Read-only.** The affected population is **zero surveys**:
+
+| | |
+|---|---|
+| Surveys on prod, all kinds | **4** |
+| Of which `respondent_kind = 'organisation'` | **0** |
+| Organisation surveys with no `brudd` role | **0** |
+
+All four are `person` / `utkast`. There is no organisation survey on prod, so there is no
+survey the defect can reach — the population is not small, it is empty.
+
+**Option D taken, and the copy fix with it** (which was recommended regardless of the
+option chosen). `lib/dashboard/panels.ts` — `registerStats` returns `value: null` with the
+label «ingen bruddspørsmål er utpekt» when no question carries the role, and
+`DashboardScreen.tsx` draws «—» for a null value, the same treatment a gated cell gets.
+`tests/unit/register-stats.test.ts` binds it in five tests, two of which were proven
+failing against the previous behaviour before the change was kept.
+
+**A, B and C are NOT taken and the reasons stand unchanged.** B remains available if the
+population ever becomes non-trivial, and this copy fix is B's empty state, so nothing here
+is wasted work.
+
+**WHAT THE QUERY ALSO FOUND, and it is larger than D102.** `M:0040` is not applied on
+prod. Prod's newest migration is `20260905220242`; the repository's is
+`20260907000053`. **Nineteen migrations are unapplied** — everything from `0035` (Q47)
+through `0053`, which is the whole v1 series from V1-1's tail onward. That is why
+`packs_with_brudd_role` is also 0 there: the pack edit has not landed either. Applying
+them is a production deployment and therefore a decision, not a chore — carried in
+`docs/v1/05-status.md` § 3.
+
+---
+
+### D103 — the note under «Runde for runde» no longer promises what the panel does
+
+**Bundle:** `HeiTuva.dc.html:2608` sets the sentence under the rounds panel:
+«Hver runde er sitt eget datasett. **Runder under terskelen vises som — uten
+antall.**» It was implemented verbatim as `results.roundsNote`.
+
+**Deviation:** the second clause is replaced. `no`: «Runder under terskelen viser
+antall svar, men ikke snittet.» `en`: "Rounds below the threshold show the
+response count, but not the average."
+
+**Why:** DECISIONS Q49 (V1-6, confirmed by Tor) puts the participation count on a
+gated round, so the panel now renders «3 svar · under terskel» where it used to
+render «under terskel» alone. The bundle's sentence promises the opposite, on the
+same screen, eight pixels below the thing it describes. Leaving it was not an
+option: a screen that contradicts itself is a defect whichever half is right.
+
+**Why this is not restyling.** The bundle predates the decision that governs it.
+Q28 amended the threshold brief's absolute prohibition — «Ingen visning av
+faktisk antall svar under terskelen» became «Ingen visning av et **svarutledet
+tall** under terskelen» (`docs/Designbrief_terskel_Q17.md:132`) — because a count
+of people is participation and not a number about what anyone said. Q49 extended
+that from the survey to the round. The bundle's copy was written against the
+un-amended brief; the copy inside `design-reference-v1/` still carries the old
+line, and it is a handoff artifact and stays untouched.
+
+**Scope:** two strings, both languages. The panel's structure, the em dash on the
+bar, the grey stub and every token are unchanged. The count is appended to the
+sub-label the bundle already had, so the ungated and gated sub-labels keep the
+same shape — «{count} svar» and «{count} svar · under terskel».
+
+**Guard:** `tests/unit/refusal-copy.test.ts` asserts that `roundsBelow` carries a
+`{count}` placeholder (a fixed string cannot render a count in any language) and
+that `roundsNote` no longer carries the withdrawn promise. The second is asserted
+as the ABSENCE of the old claim rather than as the new wording, so rewording the
+sentence later does not have to come back through this file.
+
+---
+
+### D104 — prod carried a hand-applied `overview_activity` that never matched the repository
+
+**Found 2026-09-07**, during the sync of migrations 0035–0053, by a normalised body-level
+diff of all 74 functions between `heituva-prod` and a freshly reset local database.
+
+**What was different.** Prod's `public.overview_activity` declared a variable `i int`. The
+committed migration `20260904000013_overview_activity.sql` deliberately does not, and
+carries a comment saying why: `for i in reverse … loop` declares its own integer loop
+variable, so declaring one shadows it, and `supabase db lint` reports both the shadowing
+and the now-unused declaration. **Prod would have failed Gate 1's lint**, on a repository
+whose CI has been green for six phases.
+
+**Why this is a deviation and not a bug fix.** The behaviour was identical — an unused
+declaration changes nothing at runtime — so nothing was broken for any user. What is
+recorded here is the PRACTICE, because the practice is still available:
+
+> **A function on prod came from somewhere other than the committed migration.** The file
+> has exactly ONE commit in git history (`96983b8`), so it was not edited after being
+> applied. Prod's copy was applied by hand — through the MCP or the dashboard — from a
+> draft that was later corrected in the repository and never re-applied.
+
+**If it happened once, the thing that allowed it has not gone away.** Nothing in this
+project prevents a function being applied to prod directly; the MCP's `apply_migration` and
+`execute_sql` both reach it, and both were used legitimately on the same day. The guard is
+not a prohibition, it is the fingerprint: **an apply is not evidence, a comparison is** —
+now written at the head of the remote-apply procedure in `docs/OPERATIONS.md`.
+
+**Why no gate could see it.** Every gate runs against local. `supabase db lint` in Gate 1
+lints the local database; the invariant suite queries the local database; 5a3 enumerates
+the local catalogue. **There has never been a check that reads prod at all**, which is why
+a divergence introduced by hand survived six phases of green CI. That is the same shape as
+this project's other findings — a gate green for something it structurally could not see,
+one environment over.
+
+**Detection detail worth keeping.** Raw `md5(prosrc)` reported **29 of 74** function bodies
+as differing; after stripping comments and collapsing whitespace, exactly **one** did. The
+28 were header comments removed in transit. A raw comparison would have buried this finding
+in noise and been abandoned as "expected drift" — which is how a real difference hides
+inside a plausible one.
+
+**Repaired** by re-applying the committed definition verbatim, including its `revoke`,
+`grant` and `comment`. Every fingerprint category now matches local byte for byte.
+
+### D105 — the named demo seed: three writes the real producers cannot make
 `scripts/seed-heituva-demo.ts` builds "HeiTuva AS (DEMO)" through the product's
 own paths — `send_round` for rounds, invitations and schedules,
 `submit_response` for every one of its 183 responses, `close_round` for the
@@ -1718,7 +2215,7 @@ people answering four rounds is sixteen rows and an unfiltered heatmap adds
 them up and shows a number. A demo whose small team answers every round
 photographs the gate not firing.
 
-### D90 — V1-6: a below-threshold survey that has a history
+### D106 — V1-6: a below-threshold survey that has a history
 The fixture seed's below-threshold survey ("Psykososial kartlegging") has one
 round, so the harness could only ever capture "nobody has answered yet" — never
 the different screen a small team actually sees, where the survey HAS a history

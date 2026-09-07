@@ -287,13 +287,82 @@ describe('(Q17 #8) every aggregate path routes through app.k_for — none kept t
       `these functions still call app.k_threshold(): ${callsOldConstant.join(', ') || '(none)'}`,
     ).toEqual([])
 
+    // (a2) The SAME SHAPE, for a different constant — DECISIONS Q20, added in
+    //      V1-3 because the pattern earned a second instance.
+    //
+    //      How long a cadence step is has exactly one definition,
+    //      `app.cadence_interval` (M:0044). It got that definition after a CASE
+    //      with four arms and `else interval '7 days'` was found making an
+    //      ANNUAL survey re-send weekly — and then a SECOND copy of the same
+    //      CASE was found in `send_round` (M:0045), because 0044 fixed the site
+    //      that had the symptom rather than the set of sites that could have it.
+    //
+    //      0044's comment predicted the second copy in as many words and the
+    //      second copy still survived it. A comment warning about a class of
+    //      bug does not go looking for other instances; only a query does. So
+    //      this is the query: any function that does interval arithmetic on a
+    //      cadence, other than the one definition, fails on the PR that adds it.
+    //      COMMENTS ARE STRIPPED FIRST, and that is not a detail: `prosrc` is
+    //      the whole body, so the first version of this query flagged
+    //      `send_round` for the comment explaining what it had stopped doing —
+    //      a function quoting `else interval '7 days'` to say why it no longer
+    //      does that. A sweep that reads prose as code produces exactly the
+    //      false positive that gets a check switched off.
+    const doesOwnIntervalMath = psql(
+      `select n.nspname || '.' || p.proname
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('public','app')
+          and p.proname <> 'cadence_interval'
+          and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') ~ 'cadence'
+          and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') ~ 'interval\\s'
+        order by 1`,
+    ).map((r) => r[0])
+    expect(
+      doesOwnIntervalMath,
+      `these compute a cadence interval themselves instead of calling app.cadence_interval(): ${
+        doesOwnIntervalMath.join(', ') || '(none)'
+      }`,
+    ).toEqual([])
+
     // (b) The other side, derived from the catalogue too: every SECURITY
     //     DEFINER function a caller can reach that READS the vault must consult
     //     app.k_for. This catches the likelier mistake in a phase that adds
     //     surfaces — a NEW aggregate that gates on nothing at all — because it
-    //     fails by construction, without being named here. The only exceptions
-    //     are functions that read responses/answers for participation counts,
-    //     never answer content; each needs a reason, not just an entry.
+    //     fails by construction, without being named here.
+    //
+    //     THE RULE THE EXEMPTIONS FOLLOW (DECISIONS Q28, confirmed 2026-09-06).
+    //     A count of PEOPLE is participation and is not gated: how many were
+    //     invited, how many took part, what share that is. Anything derived
+    //     from what those people SAID is gated: averages, distributions,
+    //     themes, quotes, per-group breakdowns. The line is the subject of the
+    //     number, not its size — "42 answered" says nothing about any answer,
+    //     while "3.8 average" is the answers themselves in one figure. The
+    //     design brief's § "Hva som ikke skal designes" was amended to match
+    //     ("aldri et svarutledet tall"), and the survey list's own "N av T"
+    //     stays for the same reason.
+    //
+    //     A pair of grandfathered names decays into "these two are special
+    //     because they always were". A stated rule does not, and it is what a
+    //     third entry must argue against.
+    //
+    //     THE LIST IS ENUMERATED AND CLOSED, like the k_for allowlist above: a
+    //     new count-only function reading the vault FAILS this assertion until
+    //     someone adds it here deliberately, with a reason. Failing first is
+    //     the point — it forces the question "is this participation, or is it
+    //     derived from what they said?" to be answered by a person.
+    // DECISIONS Q49 (V1-6) DOES NOT APPEAR IN THIS LIST, and the reason is
+    // worth stating because the decision's own draft got it wrong.
+    //
+    // `get_trends` now emits `n` on a gated point. That does NOT make it a
+    // count-only function: it CALLS `app.k_for` and gates everything derived
+    // behind it, so it never qualified for this list and adding a count does
+    // not change that. The list is for a vault reader that gates on NOTHING.
+    //
+    // What Q49 needed instead is a tighter assertion, and it lives beside the
+    // trends tests rather than here: the gated payload must carry the count and
+    // NOTHING DERIVED. See `(Q49) a gated point carries the count and nothing
+    // else` — Tor's narrowing, enforced as a closed key set rather than as a
+    // sentence someone wrote once.
     const DO_NOT_GATE: Record<string, string> = {
       overview_activity: 'activity/participation counts, never answer content',
       survey_response_counts: 'per-survey response counts (svarprosent), not answer distributions',
@@ -404,5 +473,116 @@ describe('(Q17 #8) every aggregate path routes through app.k_for — none kept t
       | { sections?: { key: string }[] } | null
     expect(doc?.sections?.length ?? 0, 'compose_report produced no sections').toBeGreaterThanOrEqual(1)
     ungated(doc, 'compose_report')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Q47 — peer results on an organisation survey (DECISIONS Q47, was v1 conflict C1)
+// ---------------------------------------------------------------------------
+/**
+ * `app.k_for` returns 0 for an organisation survey: attribution is the whole
+ * point, so there is no threshold to clear. `get_peer_results` gated on exactly
+ * that number, which made the thank-you screen's "slik svarte de andre" panel
+ * hand a supplier the distribution of its COMPETITORS' answers — and, because
+ * the RPC is anon-executable by design, hand it to anyone holding a live token
+ * whatever the screen chooses to draw.
+ *
+ * The rule therefore lives in the function, not in the component: a client that
+ * lies about what it renders gets nothing back either way.
+ *
+ * Written before the migration and proven failing against it.
+ */
+describe('(Q47) an organisation respondent learns nothing about the other organisations', () => {
+  /** An organisation survey with `n` suppliers, all of whom answered the same
+   *  numeric question with a distinctive value, plus their raw tokens. */
+  async function orgSurveyWithSuppliers(n: number) {
+    const survey = await insert(ctx.a, 'surveys', {
+      org_id: ctx.org.id, title: uniq('Leverandørkjede'), status: 'aktiv',
+      anonymity: 'named', respondent_kind: 'organisation',
+    })
+    const q = await insert(ctx.a, 'survey_questions', {
+      survey_id: survey.id, position: 1, type: 'scale',
+      text: 'Hvor mange ledd bakover kartlegger dere?',
+    })
+    const round = await insert(ctx.a, 'survey_rounds', {
+      survey_id: survey.id, round_no: 1, status: 'open',
+      question_snapshot: [{ id: q.id, type: 'scale', text: 'Hvor mange ledd bakover kartlegger dere?' }],
+    })
+    const suppliers: { raw: string; name: string; value: number }[] = []
+    for (let i = 0; i < n; i++) {
+      const raw = uniq(`lev-${i}`)
+      const name = `Leverandør ${i + 1} AS`
+      // Distinct values, so a leaked distribution is identifiable rather than
+      // a coincidence: supplier i answered i + 1.
+      const value = i + 1
+      await insert(ctx.a, 'survey_invitations', {
+        round_id: round.id, email: `${raw}@example.test`, name,
+        token_hash: hashToken(raw), group_id: ctx.group.id, channel: 'email',
+      })
+      const { error } = await ctx.an.rpc('submit_response', {
+        p_token: raw, p_lang: 'no', p_answers: { [q.id]: { value } },
+      })
+      if (error) throw new Error(`submit_response: ${error.message}`)
+      suppliers.push({ raw, name, value })
+    }
+    return { survey, q, round, suppliers }
+  }
+
+  it('refuses the peer distribution to a supplier holding a live token', async () => {
+    const s = await orgSurveyWithSuppliers(3)
+    const { data, error } = await ctx.an.rpc('get_peer_results', { p_token: s.suppliers[0]!.raw })
+    expect(error, 'the RPC itself must answer, not fail').toBeNull()
+
+    const body = (data ?? {}) as {
+      hidden?: boolean; n?: number; buckets?: { value: number; count: number }[]
+      insufficient_data?: boolean; question?: string
+    }
+    expect(body.hidden, 'an organisation survey has no peer view at all').toBe(true)
+
+    // Nothing about any other respondent, stated as a property of the whole
+    // payload rather than of the fields we happen to know about: no bucket
+    // list, no count of participants, and none of the other suppliers' values.
+    expect(body.buckets, 'no distribution').toBeUndefined()
+    expect(body.n, 'not even how many answered').toBeUndefined()
+    const payload = JSON.stringify(data)
+    for (const other of s.suppliers.slice(1)) {
+      expect(payload, `supplier ${other.name}'s answer leaked`).not.toContain(`"value":${other.value}`)
+      expect(payload, `supplier ${other.name} named`).not.toContain(other.name)
+    }
+  })
+
+  it('POSITIVE CONTROL: the supplier\'s own submission is still there, on the paths that own it', async () => {
+    const s = await orgSurveyWithSuppliers(2)
+    const mine = s.suppliers[0]!
+
+    // (a) The respondent surface still resolves the supplier's own token and
+    //     reports its own participation. If this broke, "hidden" would be
+    //     indistinguishable from a dead link.
+    const { data: tokenView } = await ctx.an.rpc('get_survey_for_token', { p_token: mine.raw })
+    const view = (tokenView ?? {}) as { error?: string; already_responded?: boolean; survey_id?: string }
+    expect(view.error, 'the token still resolves').toBeUndefined()
+    expect(view.already_responded, 'and knows this supplier answered').toBe(true)
+    expect(view.survey_id).toBe(s.survey.id)
+
+    // (b) The answer itself is readable on the path that is meant to carry it —
+    //     the attributed view, for the organisation running the survey. So the
+    //     refusal above is a scoping decision, not the data being absent.
+    const { data: attributed } = await ctx.adminU.client
+      .rpc('attributed_results', { p_survey: s.survey.id })
+    const rows = (attributed as { rows?: { name: string | null; answers: { value: unknown }[] | null }[] } | null)?.rows ?? []
+    const row = rows.find((r) => r.name === mine.name)
+    expect(row, 'the supplier appears in the attributed view').toBeTruthy()
+    expect(row?.answers?.[0]?.value, 'with the answer it gave').toBe(mine.value)
+  })
+
+  it('POSITIVE CONTROL: a PERSON survey still shows peer results above its threshold', async () => {
+    // The rule must narrow to organisation surveys only. Without this, turning
+    // peer results off everywhere would pass the denial above.
+    const s = await personSurveyWithResponses('Peer-person', 5)
+    const { data } = await ctx.an.rpc('get_peer_results', { p_token: s.tokens[0]! })
+    const body = (data ?? {}) as { hidden?: boolean; n?: number; buckets?: unknown[] }
+    expect(body.hidden, 'a person survey keeps its peer panel').toBeUndefined()
+    expect(body.n, 'and reports the real number of answers').toBe(5)
+    expect((body.buckets ?? []).length, 'with a real distribution').toBeGreaterThan(0)
   })
 })

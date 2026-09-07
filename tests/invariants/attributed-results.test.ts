@@ -405,3 +405,266 @@ describe('(P9 C) «Svar per virksomhet» — refused with a reason wherever a pe
     expect(psec?.extra?.rows ?? null).toBeNull()
   })
 })
+
+describe('(Q30) «Svar per virksomhet» is refused to a share-link reader', () => {
+  /**
+   * Åpenhetsloven obliges publishing the redegjørelse, not the per-supplier
+   * answers. A share link is the one path where "who may see this" stops being
+   * a question about org membership, so the section is refused for token
+   * readers below `ledelse` — and refused HERE, in `compose_report`, not in the
+   * editor: the payload is server-rendered, so a screen that declined to draw
+   * the rows would still ship them.
+   */
+  const shareFor = async (reportId: string, scope: 'ledelse' | 'ledere_eget_team' | 'alle_ansatte') => {
+    const raw = uniq(`share-${scope}`)
+    await insert(ctx.a, 'report_shares', {
+      report_id: reportId, token_hash: hashToken(raw), scope,
+      // `ledere_eget_team` without a group is refused outright (M:0034:255),
+      // so the share needs one — otherwise the payload is `{error:forbidden}`
+      // and this would "pass" on a document that has no sections at all.
+      group_id: scope === 'ledere_eget_team' ? ctx.group.id : null,
+    })
+    return raw
+  }
+
+  const composeAs = async (reportId: string, token: string) => {
+    const { data, error } = await anon().rpc('compose_report', { p_report: reportId, p_token: token })
+    if (error) throw new Error(`compose_report(token): ${error.message}`)
+    return data as Composed
+  }
+
+  it('refuses it to an alle_ansatte token, and the WHOLE payload names no organisation', async () => {
+    const s = await surveyWith('Leverandør', 2, 2,
+      { respondent_kind: 'organisation', anonymity: 'named' },
+      { names: ['Hemmelig Leverandør AS', 'Nabo Trelast AS'] })
+    const rep = await report(['per_virksomhet', 'summary', 'method'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'alle_ansatte'))
+
+    const sec = doc.sections?.find((x) => x.key === 'per_virksomhet')
+    expect(sec, 'shown as unavailable, not silently dropped').toBeDefined()
+    expect(sec?.unavailable).toBe(true)
+    expect(sec?.reason).toBe('share_scope')
+    expect(sec?.extra?.rows ?? null).toBeNull()
+
+    // The whole document, not the section. A `reason` that named which sources
+    // were excluded would leak exactly what the refusal hides, and so would a
+    // source list, a method footnote or a title carrying the supplier's name.
+    const whole = JSON.stringify(doc)
+    expect(whole, 'no organisation name anywhere in the payload').not.toMatch(/Hemmelig Leverandør/)
+    expect(whole, 'not the second one either').not.toMatch(/Nabo Trelast/)
+  })
+
+  it('refuses it to a ledere_eget_team token too', async () => {
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Skjult AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'ledere_eget_team'))
+
+    expect(doc.sections?.find((x) => x.key === 'per_virksomhet')?.reason).toBe('share_scope')
+    expect(JSON.stringify(doc)).not.toMatch(/Skjult AS/)
+  })
+
+  it('POSITIVE CONTROL: a ledelse token still gets the rows', async () => {
+    // Without this, the refusal would pass with the section broken for
+    // everyone — which is the failure mode a one-sided denial test invites.
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Synlig AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await composeAs(rep.id, await shareFor(rep.id, 'ledelse'))
+
+    const sec = doc.sections?.find((x) => x.key === 'per_virksomhet')
+    expect(sec?.unavailable).not.toBe(true)
+    expect((sec?.extra?.rows ?? []).map((r) => r.name)).toContain('Synlig AS')
+  })
+
+  it('POSITIVE CONTROL: a signed-in member at ledelse is unaffected', async () => {
+    // The rule is about the SHARE SCOPE, not about the section. A redaktør
+    // reading their own report must still see it, or "refuse for token
+    // readers" has quietly become "refuse".
+    const s = await surveyWith('Leverandør', 2, 1,
+      { respondent_kind: 'organisation', anonymity: 'named' }, { names: ['Intern AS'] })
+    const rep = await report(['per_virksomhet'], [s.survey.id], [s.round.id])
+    const doc = await compose(ctx.redaktorU.client, rep.id)
+
+    expect(doc.sections?.find((x) => x.key === 'per_virksomhet')?.unavailable).not.toBe(true)
+  })
+})
+
+/**
+ * The shape an aggregate cell is allowed to have — found in V1-2, when the
+ * first organisation-survey fixture put a real screen in front of `k = 0`.
+ *
+ * `lib/results/types.ts` says a cell is EITHER `{n, avg}` or
+ * `{insufficient_data}` and there is "no third state where `avg` is present but
+ * meaningless". `results_summary` and `get_trends` both violated that at k = 0:
+ * `coalesce(st.n, 0) >= v_k` reads `0 >= 0` when there is no stats row, so a
+ * group nobody answered for took the "here is your number" branch and returned
+ * `{n: null, avg: null}`. The screen called `.toFixed` on it.
+ *
+ * Asserted as a property of every cell rather than of the one group that
+ * happened to be empty: a cell that claims a number must have one. That form
+ * keeps holding when a fixture changes shape.
+ */
+describe('an aggregate cell is a number or a refusal, never a null wearing a number’s clothes', () => {
+  it('results_summary: a group nobody answered for is a refusal, not {n: null, avg: null}', async () => {
+    const survey = await surveyWith('Tom gruppe', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+
+    // THE CELL THAT MATTERS: a second group in the same organisation that this
+    // survey never reached. Without it every group has a stats row, the
+    // `coalesce` is never exercised, and the test passes against the broken
+    // function — which is exactly what it did on the first attempt.
+    const empty = await insert(ctx.a, 'groups', { org_id: ctx.org.id, name: uniq('Ingen svar') })
+
+    const { data } = await ctx.adminU.client.rpc('results_summary', {
+      p_survey: survey.survey.id,
+      p_round: null,
+      p_group: null,
+    })
+    const payload = data as { k: number; teams: Record<string, unknown>[] }
+    expect(payload.k, 'this only bites at k = 0, so prove the fixture is there').toBe(0)
+
+    const row = payload.teams.find((t) => t.group_id === empty.id)
+    expect(row, 'the empty group must appear at all').toBeDefined()
+    expect(row!.insufficient_data, 'a group with no answers is withheld, not numbered').toBe(true)
+    expect(row!.n, 'and carries no n').toBeUndefined()
+    expect(row!.avg, 'and no avg').toBeUndefined()
+
+    // The property, stated over every row rather than only the one arranged:
+    // a cell that claims a number must have one. This keeps holding when the
+    // fixture changes shape.
+    for (const t of payload.teams) {
+      if (t.insufficient_data === true) continue
+      expect(typeof t.n, `n on ${t.label}`).toBe('number')
+      expect(typeof t.avg, `avg on ${t.label}`).toBe('number')
+    }
+  })
+
+  it('get_trends: a round nobody answered is a refusal too', async () => {
+    const survey = await surveyWith('Runde uten svar', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+
+    const empty = await insert(ctx.a, 'survey_rounds', {
+      survey_id: survey.survey.id,
+      round_no: 2,
+      status: 'open',
+      question_snapshot: [],
+    })
+
+    const { data } = await ctx.adminU.client.rpc('get_trends', {
+      p_survey: survey.survey.id,
+      p_group: null,
+    })
+    const payload = data as { k: number; points: Record<string, unknown>[] }
+    expect(payload.k).toBe(0)
+
+    const point = payload.points.find((p) => p.round_id === empty.id)
+    expect(point, 'the empty round must appear').toBeDefined()
+    expect(point!.insufficient_data).toBe(true)
+    // CHANGED BY DECISIONS Q49 (V1-6), and the change is the point of the line.
+    // This assertion was written under D94, when a gated point carried neither
+    // `n` nor `avg` and the union was {n, avg} | Gated. Q49 widened the gated
+    // arm to carry the COUNT, so `n` is now present and the honest value for a
+    // round nobody answered is 0 — zero PEOPLE took part, which is a true
+    // statement about participation and not a number about anything anyone
+    // said. D94's property is untouched and is asserted below: a cell that
+    // claims a DERIVED number must have one.
+    expect(point!.n, 'Q49: zero people is a count, not an absence').toBe(0)
+    expect(point!.avg, 'and nothing derived, which is D94 unchanged').toBeUndefined()
+
+    for (const p of payload.points) {
+      if (p.insufficient_data === true) continue
+      expect(typeof p.n, `n on round ${p.round_no}`).toBe('number')
+      expect(typeof p.avg, `avg on round ${p.round_no}`).toBe('number')
+    }
+  })
+  it('get_trends: the gated count counts RESPONDENTS, not scale-answerers', async () => {
+    // Q49 puts `n` on a gated point ALONE, with no `avg` beside it to say what
+    // it is the denominator of. «under terskel · 4 svar» is read by everyone as
+    // "four people answered this round", so that is what the number must be.
+    //
+    // `get_trends`' stats CTE counts responses joined to answers on SCALE-type
+    // questions with a numeric value. That is the correct denominator for an
+    // average and the wrong one for participation, and the two coincide in
+    // every fixture where each respondent answers every question — which is
+    // why this needed an arrangement of its own rather than being caught by
+    // the tests already here. Four people who answered the yes/no question and
+    // skipped the scale produce NO stats row at all, and the count that
+    // reaches the panel was `coalesce(st.n, 0)` = 0.
+    //
+    // Zero is the worst possible wrong answer here: it is indistinguishable
+    // from "nobody took part", which is the other thing this function says
+    // with the same number. CLAUDE.md's rule about never rendering a value
+    // derived from an unknown denominator is exactly this case.
+    const survey = await surveyWith('Svarte men ikke skala', 4, 0, {}, { groupId: ctx.group.id })
+
+    for (const inv of survey.invitations) {
+      const { data, error } = await ctx.an.rpc('submit_response', {
+        p_token: inv.raw, p_lang: 'no',
+        p_answers: { [survey.qYes.id]: { value: true } },
+      })
+      if (error) throw new Error(`submit_response: ${error.message}`)
+      const failed = (data as { error?: string })?.error
+      if (failed) throw new Error(`submit_response: ${failed}`)
+    }
+
+    const { data } = await ctx.adminU.client.rpc('get_trends', {
+      p_survey: survey.survey.id,
+      p_group: null,
+    })
+    const payload = data as { k: number; points: Record<string, unknown>[] }
+    expect(payload.k, 'a person survey carries a real threshold').toBeGreaterThan(0)
+
+    const point = payload.points.find((p) => p.round_id === survey.round.id)
+    expect(point, 'the round must appear on the axis').toBeDefined()
+    expect(point!.insufficient_data, 'no scale answers, so nothing derived may show').toBe(true)
+    expect(point!.avg, 'and none does').toBeUndefined()
+    expect(point!.n, 'four people took part and the panel must say four').toBe(4)
+  })
+
+  it('get_heatmap and get_benchmarks too — the sweep, not just the crash site', async () => {
+    // 0041 fixed the two functions the crash came through. This asserts the two
+    // its catalogue sweep found (migration 0042): fixing a defect without
+    // looking for its siblings is how the second one is found by a customer.
+    const survey = await surveyWith('Feie-sveip', 2, 1, {
+      respondent_kind: 'organisation',
+      anonymity: 'named',
+    }, { groupId: ctx.group.id })
+    await insert(ctx.a, 'groups', { org_id: ctx.org.id, name: uniq('Ingen svar heatmap') })
+
+    const { data: heat } = await ctx.adminU.client.rpc('get_heatmap', {
+      p_org: ctx.org.id,
+      p_surveys: [survey.survey.id],
+      p_group: null,
+      p_rounds: null,
+    })
+    const rows = (heat as { k: number; rows: { label: string; cells: Record<string, unknown>[] }[] })
+    expect(rows.k, 'a heatmap over organisation surveys alone runs at k = 0').toBe(0)
+    const cells = rows.rows.flatMap((r) => r.cells)
+    expect(cells.length, 'there must be a cell to inspect').toBeGreaterThan(0)
+    for (const c of cells) {
+      if (c.insufficient_data === true) continue
+      expect(typeof c.n, 'n').toBe('number')
+      expect(typeof c.avg, 'avg').toBe('number')
+    }
+
+    const { data: bench } = await ctx.adminU.client.rpc('get_benchmarks', {
+      p_survey: survey.survey.id,
+      p_industry: 'Alle bransjer',
+      p_round: null,
+      p_group: null,
+    })
+    const b = bench as { k: number; rows: Record<string, unknown>[] }
+    expect(b.k).toBe(0)
+    for (const row of b.rows) {
+      if (row.insufficient_data === true) continue
+      // `mine` is this survey's own value; `bench` is the seeded reference. A
+      // row that claims to have compared must have both.
+      if ('mine' in row) expect(row.mine, `mine on ${row.metric_key}`).not.toBeNull()
+    }
+  })
+})

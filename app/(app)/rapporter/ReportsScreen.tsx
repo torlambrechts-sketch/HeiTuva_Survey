@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { InsightTabs } from '@/components/InsightTabs'
 import { DutyCard } from './DutyCard'
 import { DeleteReportButton, NewReportButton, ShareReportButton } from './ReportRowActions'
 import type { DutyCardData, ReportTemplate, SavedReport } from './types'
@@ -56,13 +57,27 @@ export async function ReportsScreen({
   sectionLabels: Record<string, string>
 }) {
   const t = await getTranslations('reports')
+  const tNav = await getTranslations('nav')
 
   return (
-    <div className="max-w-[1080px] animate-enter pt-[34px]">
+    <div className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
-          <p className="mt-[3px] text-[13px] text-mut">{t('counts', counts)}</p>
+          {/* Same merged heading as Dashboard (HeiTuva.dc.html:1205-1214): one
+              "Innsikt", the rail choosing which half of it you are on. */}
+          <div className="flex flex-wrap items-center gap-[14px]">
+            <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
+            <InsightTabs
+              label={tNav('insightTabs')}
+              tabs={[
+                { href: '/dashboard', label: tNav('dashboard') },
+                { href: '/rapporter', label: tNav('reports') },
+              ]}
+            />
+          </div>
+          <p className="mt-[6px] text-[13px] text-mut">
+            {t('frozenShared')} · {t('counts', counts)}
+          </p>
         </div>
         {/* RESPONSIVE.md § Tab rails: wraps below md, chips keep their size. */}
         {/* The rail wraps below md (RESPONSIVE.md § Tab rails). Wrapping puts

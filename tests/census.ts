@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import type { File, Reporter } from 'vitest'
 
 /**
@@ -15,6 +15,22 @@ import type { File, Reporter } from 'vitest'
  *
  * A committed count makes that impossible to miss and costs one number per file.
  *
+ * IT HAS NOW PAID FOR ITSELF TWICE, both times on the SKIPPED path, which is
+ * the one it exists for — a skipped test is green to vitest and absent to the
+ * surface it was meant to cover:
+ *
+ *   Phase 7  `report-rls` collected 27 as SKIPPED on a UNIQUE collision, and
+ *            `policy-coverage` collected 46 as zero when a helper read the
+ *            fixture before `beforeAll` built it.
+ *   V1-5     `use-cases.test.ts` came back 9 SKIPPED after a `supabase db
+ *            reset` wiped the demo personas, so `personaClient` threw in
+ *            `beforeAll`. Every other file passed; the run would have read as
+ *            success with an entire decision unverified.
+ *
+ * Which is why `countTests` counts skipped tests as EXISTING. Counting them as
+ * absent would hide precisely the failure this reporter is for, and both
+ * occasions above would have been silent.
+ *
  * Growth is fine and needs no ceremony — adding tests must never fail a run.
  * A DROP fails, and so does a file that has vanished from the run entirely,
  * because "the file stopped existing" and "the file stopped collecting" look
@@ -23,6 +39,35 @@ import type { File, Reporter } from 'vitest'
  * A new file must be added to the manifest. That is the point rather than a
  * chore: it is the same rule Gate 5a3 applies to database surfaces — new things
  * arrive failing until someone states what they are worth.
+ *
+ * ---------------------------------------------------------------------------
+ * THE LIMIT, AND THE FIX — APPLIED 2026-09-07 IN V1-6, as instructed. Kept in
+ * full because the reasoning is what makes the `--write` mode safe.
+ *
+ * Because only a DROP fails, a manifest entry that drifts UPWARD is invisible.
+ * V1-3 found two: `recurrence.test.ts` was committed at 7 while collecting 9,
+ * and the run stayed green for a fortnight. So the number this reporter defends
+ * is evidence that tests were not DELETED. It is not evidence that they were
+ * all counted, and the phase reports must not claim otherwise.
+ *
+ * THE FIX IS TO GENERATE THE MANIFEST RATHER THAN MAINTAIN IT, so a stale entry
+ * cannot exist. A hand-kept number can be wrong; a written-back one cannot.
+ * `CENSUS_WRITE=1` serialises the observed counts back to MANIFEST; committing
+ * the regenerated file is the ceremony, replacing the hand edit. A change to
+ * something that already runs, not a new gate — the freeze permits it on
+ * exactly that ground.
+ *
+ * WHAT THE FIX MUST NOT DO, and does not: regenerate on an ordinary run. If
+ * every run rewrote the file, a file that shrank would have its number quietly
+ * lowered and the floor — the whole purpose of this reporter — would be gone.
+ * Writing back is an explicit act behind an environment variable; the default
+ * path still reads the committed file and still fails on a drop.
+ *
+ * AND IT REFUSES TO WRITE A PARTIAL RUN. `verify:db` runs two directories and
+ * never touches `tests/unit`; regenerating from that would delete every unit
+ * file's entry and hand back a manifest that passes because it expects nothing.
+ * A write only proceeds when every file already in the manifest ran.
+ * ---------------------------------------------------------------------------
  */
 const MANIFEST = 'tests/expected-counts.json'
 
@@ -72,6 +117,30 @@ export default class CensusReporter implements Reporter {
       if (!(file in expected)) {
         problems.push(`${file}: ${got} tests, not in ${MANIFEST} — add it with its count`)
       }
+    }
+
+    // ── CENSUS_WRITE=1: regenerate rather than hand-maintain ────────────────
+    if (process.env.CENSUS_WRITE === '1') {
+      const missing = Object.keys(expected).filter((f) => !seen.has(f))
+      if (missing.length) {
+        console.error(
+          `\ncensus: refusing to write from a PARTIAL run — ${missing.length} manifest ` +
+            `file(s) did not run (${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ', …' : ''}).\n` +
+            'Run the full suite (npm run verify:hermetic, or vitest with no filter) and write from that.\n' +
+            'Writing from a partial run would drop every entry it did not see, and the ' +
+            'resulting manifest would pass because it expects nothing.',
+        )
+        process.exitCode = 1
+        return
+      }
+      const next = Object.fromEntries([...seen.entries()].sort(([a], [b]) => a.localeCompare(b)))
+      writeFileSync(MANIFEST, `${JSON.stringify(next, null, 2)}\n`)
+      const total = Object.values(next).reduce((a, b) => a + b, 0)
+      console.error(
+        `\ncensus: wrote ${MANIFEST} — ${Object.keys(next).length} files / ${total} tests.\n` +
+          'Commit it. This is the ceremony that replaces the hand edit.',
+      )
+      return
     }
 
     if (problems.length) {

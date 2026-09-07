@@ -49,6 +49,38 @@ Two constraints that override the card treatment in either case:
 - **Consequential controls stay visible.** Anything that changes permissions, access, state, or deletes data — a role select, a deactivate action, a retention setting — is never placed behind an overflow menu on any viewport. Burying it is a safety regression, not a layout choice.
 - **Never nest a card in a card.** Where the table already sits on a card surface, the rows keep the surface they have; the bundle contains no nested-card treatment and inventing one is restyling.
 
+**Expandable rows (the attributed table, DECISIONS Q34)**
+Below `md`: **card per row**, by the wide-row rule above — the attributed table carries organisation, status, date and an answer summary, which is past four fields before the expand affordance. Three constraints specific to it:
+- The detail grid opens **inside** the card, as a single column, in the same order it uses on desktop. It does not become a sheet, a dialog, or a second screen: the row's detail is the row's detail, and moving it elsewhere loses which organisation it belonged to.
+- **No overflow menu**, even though the row is wide. The general rule bans a menu only for consequential controls, and this row has none — the reason here is simpler: the only action is "expand", and hiding one affordance behind a second tap costs more than it saves.
+- The expand control keeps its 44px area against the card's own tap target; a card that is itself a link with an expander inside it needs the two separated, not nested.
+
+**The «Tilpass» card (Dashboard, DECISIONS Q33)**
+Below `md`: **it stacks in place.** The card is inline content on the Dashboard, not a
+pane, so the Builder's full-screen-sheet pattern does not apply to it — inline content
+keeps its position in reading order and its width collapses.
+- Its three tabs («Utvalg og periode» / «Paneler» / «Oppsett») **wrap as a Tab rail**, by
+  the Tab rails rule above. They are chips in a `--sf2` pill group; the group loses its
+  width constraint and wraps, and every constraint of that rule applies unchanged — no
+  horizontal scroll, no `<select>`, no chip hidden, 4px minimum vertical gap for hit areas.
+- The data tab's `1.3fr .7fr` and the layout tab's `1fr 1fr` **become one column**, in
+  content order: selection chips, then the threshold line, then period, then group; and
+  save-a-preset before switch-preset.
+- The panel picker's `repeat(auto-fill, minmax(320px, 1fr))` already collapses to one
+  column at 390px and needs no rule — do not add one.
+- The threshold line stays **directly under the survey chips it describes**. It is the
+  sentence saying which gate the panels on screen were drawn under (Q42), and separating
+  it from the selection it belongs to would make it read as a property of the page.
+- **A panel card's control row uses `.touch-cluster`.** Five controls at 30px
+  with 44px hit areas need 14px between painted edges (7px overflow each side);
+  the design draws 6px, which is right above `md` where there is no overlay and
+  wrong below it. One shared utility, not a per-instance gap — Gate 3e reported
+  228 blockers from this single cause, which is what global rule 2 means by
+  "a finding count in the hundreds is one systemic fix".
+- No panel, preset or filter is removed on any viewport. The card is the only way to reach
+  the filters after Q46 moved them out of the header, so hiding any part of it would hide
+  a feature, which the global rules forbid.
+
 **Heatmap (team × question)**
 Below `md`: switch to a grouped list — one section per team, each question as a row with its coloured cell and value. Same colour scale, same `insufficient_data` treatment ("—"). Do not shrink cells below 44px or allow pinch-zoom as the reading mechanism.
 
@@ -61,8 +93,11 @@ Below `md`: channel cards stack full-width; the recipient import panel becomes a
 **Modals and the wizard**
 Below `md`: full-screen sheets with a close affordance in the top-right, not centred dialogs. Step indicator stays.
 
-**Charts**
-Maintain aspect ratio, minimum height 200px, legend below rather than beside. Axis labels may rotate; never truncate to unreadability.
+**Charts** (amended per DECISIONS Q40)
+Maintain aspect ratio; legend below rather than beside. Axis labels may rotate; never truncate to unreadability.
+- **Never smaller than the design draws it**, and never below **44px per interactive mark** — a bar, point or cell a reader can tap or focus is a control and carries the same hit-area rule as any other (global rule 2).
+- **The old "minimum height 200px" floor is dropped.** It was a number with no source: it let a chart with twelve interactive bars satisfy the file at 200px while every bar was 16px tall, and it forbade a two-bar chart that would have been perfectly readable at 120px. A floor on the container answers the wrong question; the mark is what a thumb has to hit.
+- A chart with no interactive marks (a pure sparkline, a static illustration) has no 44px obligation and keeps the design's own height.
 
 ## Verification bar (feeds VERIFY.md Gate 3)
 Because there is no mobile reference image for app screens, mobile verification of app routes is **rule-based, not comparison-based**. For each app route at 390px, check:

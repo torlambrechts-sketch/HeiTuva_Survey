@@ -100,10 +100,30 @@ async function main() {
       await page.waitForTimeout(1500)
       const { data } = await admin.from('groups').select('id, name').eq('name', name)
       show('groups', (data?.length ?? 0) === 1, data?.[0] ?? null)
+
+      // …and then take it away again. The assertion has already run, so nothing
+      // is weakened — but a group is not an inert row: it appears in the
+      // Resultater team panel, in the heatmap and in the group pickers, so one
+      // per run accumulated in the DEMO organisation and turned up in a V1-2
+      // capture as «Gruppe 1788725988772 · n<5». Same rule as
+      // `tests/db/policy-panel.test.ts`'s cleanup: a check must not become part
+      // of what the next check sees.
+      for (const g of data ?? []) await admin.from('groups').delete().eq('id', g.id)
     }
 
     // profiles — Om meg.
     {
+      // V1-6: the value is RESTORED afterwards, for the same reason the group
+      // is deleted. The group probe was fixed when its litter turned up in a
+      // capture; these two were left because neither reaches a rendered screen
+      // — which is the argument that quietly licenses exceptions. Gate 5a2's
+      // rule is "do not become what else exists", and a harness that enforces
+      // it while breaking it is the worst place for the exception to live.
+      const { data: before } = await admin
+        .from('profiles')
+        .select('user_id, job_title')
+        .limit(1)
+        .single()
       const title = `Tittel ${Date.now()}`
       await page.goto(`${BASE_URL}/profil`, { waitUntil: 'domcontentloaded' })
       await page.fill('input[name="job_title"]', title)
@@ -111,6 +131,15 @@ async function main() {
       await page.waitForTimeout(1500)
       const { data } = await admin.from('profiles').select('job_title').limit(1).single()
       show('profiles', data?.job_title === title, data)
+
+      // Restored, not deleted: a profile row must keep existing, so putting the
+      // previous value back is the only shape of cleanup available.
+      if (before?.user_id) {
+        await admin
+          .from('profiles')
+          .update({ job_title: before.job_title })
+          .eq('user_id', before.user_id)
+      }
     }
 
     // dsr_requests.
@@ -126,6 +155,12 @@ async function main() {
         .select('id, type, subject_email, due_at')
         .eq('subject_email', email)
       show('dsr_requests', (data?.length ?? 0) === 1, data?.[0] ?? null)
+
+      // V1-6: removed after the assertion. A DSR request is not inert — it
+      // carries a statutory deadline, appears on Administrasjon → Personvern
+      // and counts toward «Krever handling», so one per run accumulated into a
+      // demo organisation with a growing pile of overdue subject requests.
+      for (const r of data ?? []) await admin.from('dsr_requests').delete().eq('id', r.id)
     }
 
     console.log('\n== Phase 2 ==')
@@ -326,17 +361,24 @@ async function main() {
       once from the table, and once from a different screen, because a row that
       persists but never reaches a page is not a working editor.
 
-      The key edited is `nav.reports`, which the header renders on every screen
+      The key edited is `nav.insight`, which the header renders on every screen
       — so the second read is a genuine end-to-end check of the whole chain
       (row → `ui_messages` overlay → `unstable_cache` → the rendered header),
       including the `revalidateTag` that has to fire for the change to be
       visible before the 300-second expiry.
+
+      It used to be `nav.reports`, and that key stopped being a header item when
+      the v1 bundle merged Dashboard and Rapporter into "Innsikt" — the row still
+      stored, the header simply no longer rendered it, so the probe failed while
+      the behaviour it exists to prove was intact. The lesson is the probe's, not
+      the app's: an end-to-end check must name a key the surface it reads
+      actually renders.
     */
     {
       const page = await ctx.newPage()
-      const MINE = 'Våre rapporter'
+      const MINE = 'Vår innsikt'
 
-      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=insight`, {
         waitUntil: 'domcontentloaded',
       })
       await page.waitForLoadState('load')
@@ -348,7 +390,7 @@ async function main() {
       const { data: row, error } = await admin
         .from('ui_messages')
         .select('value, org_id')
-        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .eq('namespace', 'nav').eq('key', 'insight').eq('lang', 'no').eq('org_id', orgId)
         .maybeSingle()
 
       await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
@@ -365,7 +407,7 @@ async function main() {
 
       // And undone: the shipped copy has to come back, or an org could paint
       // itself into a corner it cannot leave.
-      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=reports`, {
+      await page.goto(`${BASE_URL}/administrasjon/sprak?ns=nav&q=insight`, {
         waitUntil: 'domcontentloaded',
       })
       await page.waitForLoadState('load')
@@ -375,7 +417,7 @@ async function main() {
       const { data: gone } = await admin
         .from('ui_messages')
         .select('id')
-        .eq('namespace', 'nav').eq('key', 'reports').eq('lang', 'no').eq('org_id', orgId)
+        .eq('namespace', 'nav').eq('key', 'insight').eq('lang', 'no').eq('org_id', orgId)
         .maybeSingle()
 
       await page.goto(`${BASE_URL}/oversikt`, { waitUntil: 'domcontentloaded' })
@@ -384,8 +426,8 @@ async function main() {
 
       show(
         'ui_messages (reset)',
-        !gone && restored.includes('Rapporter') && !restored.includes(MINE),
-        { row_removed: !gone, header_back_to_shipped: restored.includes('Rapporter') && !restored.includes(MINE) },
+        !gone && restored.includes('Innsikt') && !restored.includes(MINE),
+        { row_removed: !gone, header_back_to_shipped: restored.includes('Innsikt') && !restored.includes(MINE) },
       )
 
       /*

@@ -5,6 +5,8 @@ export type TemplatePack = {
   id: string
   key: string
   category: string
+  /** Q24: the registry key this pack belongs to, or null for an org's own. */
+  useCase: string | null
   legalRef: string | null
   /** The statutory policy the pack brings with it (Q17); null for ordinary packs. */
   policy: { anonymity?: string; respondent_kind?: string; k_threshold?: number; locked?: boolean } | null
@@ -74,7 +76,8 @@ export function TemplateCard({
           {pack.legalRef}
         </span>
       ) : null}
-      {policyLine ? <p className="mt-1.5 text-[12px] text-mut">{policyLine}</p> : null}
+      {/* 11.5px, 6px above (NEW:1944-1946) — it stepped down from 12px in v1. */}
+      {policyLine ? <p className="mt-1.5 text-[11.5px] text-mut">{policyLine}</p> : null}
 
       <h3 className="mt-2 font-display text-[21px] font-medium leading-[1.25]">{pack.title}</h3>
       <p className="mt-1 text-[13px] text-mut">{labels.meta}</p>

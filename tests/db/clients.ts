@@ -2,6 +2,271 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
 
+/**
+ * ── THE STANDING QUESTIONS ──────────────────────────────────────────────────
+ *
+ * Ask these before writing a check — and ask 5 before EDITING one. The first
+ * two are halves of one thing — a check that reaches the wrong control, and a
+ * check that reaches the wrong row — and V1-2 hit each of them twice. The third
+ * is about a check that reaches the right thing and only looks at part of it;
+ * V1-3 found it, and V1-4 found it again rotated onto a new axis (see 2b). The
+ * fifth is the only one that fires when a test is already RED and the fix looks
+ * like one line.
+ *
+ *   1. What ELSE could refuse this before the check I am testing gets a chance?
+ *   2. What could have MOVED the state my selector assumes?
+ *   2b. Which ROWS can my roles reach — not just which roles read?
+ *   3. Am I asserting over the SET — of values, AND of the sites that can
+ *      violate the property — or over the ones I happened to pick?
+ *   4. What does my test LEAVE BEHIND when it fails to fail?
+ *   5. This assertion is red because MY OWN change moved the contract. Before
+ *      I update it: what does the new value MEAN?
+ *
+ * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
+ *
+ * Twice in two phases the answer was "something", and both times the test
+ * believed it was exercising the last control when an earlier one had already
+ * ended the request:
+ *
+ *   V1-1  A guard test for `threshold_admin_only` ran as a redaktør on a survey
+ *         RLS would not show them. `surveys_upd` filtered the row, the update
+ *         matched nothing, PostgREST returned NO error — and the assertion was
+ *         simply wrong about which control had acted. Written the other way
+ *         round it would have passed with the guard deleted.
+ *
+ *   V1-2  A Q30 test used a `ledere_eget_team` share with no group. Such a
+ *         share is refused outright at `M:0034:255`, so the payload was
+ *         `{error:forbidden}` and the assertion ran against a document with no
+ *         sections at all.
+ *
+ *   V1-4  A Q25 test asserted that a member cannot write a colleague's layout,
+ *         using `insert(...).select('id')` and an error assertion. It passed
+ *         with `dashboard_layouts_ins` widened to `is_org_member` alone,
+ *         because PostgreSQL applies the SELECT policy to an INSERT's
+ *         RETURNING — the refusal came from `_sel` wearing a write test's
+ *         name. A BARE insert is accepted under the widened policy, measured
+ *         rather than reasoned about. Mutation caught it; reading it did not.
+ *
+ * THREE VARIANTS OF ONE ROOT CAUSE, AND THE GENERAL FORM IS THE USEFUL PART:
+ * THE THING THAT REFUSED IS NOT THE THING UNDER TEST. It was refused by an
+ * EARLIER check (V1-1's guard, behind RLS), by an OUTER control (V1-2's
+ * group-less share, refused before the payload existed), and by a CO-LOCATED
+ * policy (V1-4's SELECT policy, invoked by the RETURNING of an INSERT). The
+ * third is the one reading cannot find: nothing in the statement mentions the
+ * read policy. Only removing the control you believe is acting, and watching
+ * the test go red, tells you which one was.
+ *
+ * Three of three says the answer is rarely nothing. The layers in this schema
+ * stack: auth → RLS → a guard trigger → a CHECK → the function's own rule, and
+ * a fixture that trips an early one never reaches the late one. So arrange the
+ * fixture so ONLY the rule under test can produce the result, and where both
+ * layers matter, write two tests — one proving the outer control acts (and
+ * that zero rows is not a denial, Gate 2b), one removing it so the inner one
+ * has to.
+ *
+ * The same question has a positive form, and V1-2 needed it twice: what else
+ * could SATISFY this assertion? `.every()` over an empty table is true, a
+ * serialised `[]` contains no forbidden substring, and "the body has no
+ * supplier name" is satisfied by a 404 page, by a login form and by the route
+ * not existing. Three audit assertions passed against a route that had not
+ * been written. A check that cannot fail is not a check, so guard the ones
+ * whose subject might be absent on the subject EXISTING — `written`,
+ * `rows.length > 0`, a positive control beside the denial.
+ *
+ * ── 2. WHAT COULD HAVE MOVED THE STATE MY SELECTOR ASSUMES? ─────────────────
+ *
+ * The first question is about a request reaching the wrong control. This one
+ * is about a check reaching the wrong ROW, and it bites hardest in the
+ * harness, where a selector runs against whatever the database happens to hold
+ * rather than against a fixture the check built.
+ *
+ *   V1-2  `verify:respondent` chose its round as "the oldest OPEN round in the
+ *         database" — no organisation filter, no anonymity filter — and then
+ *         asserted the anonymity banner, an anonymous response row and an
+ *         hour-truncated timestamp. On a stack where the db suite had run
+ *         first it picked an ATTRIBUTED fixture in another organisation, and
+ *         three checks failed for the only reason they could.
+ *
+ *   V1-2  `verify:send` drained the queue with `mail-worker --once`, which
+ *         drains ONE BATCH of ten, and then asserted that a specific SMS job
+ *         had been sent. Ten reminders queued earlier filled the batch, so the
+ *         SMS job was never reached and three checks reported "nothing
+ *         captured" — which reads like a broken provider rather than a queue
+ *         the check never got to the end of.
+ *
+ * Neither was caused by the change that exposed it. Both had been fragile for
+ * phases; V1-2's fixtures only changed which row was oldest and how full the
+ * queue was. That is the tell: a selector that depends on ORDERING or on
+ * COUNT, rather than on the properties the assertions need, is already broken
+ * and simply has not been unlucky yet.
+ *
+ * So: name every property the assertions depend on, in the query. If the check
+ * needs an anonymous survey in the demo organisation with questions and an
+ * open round, say all four — and fail loudly when nothing matches, rather than
+ * silently testing something else. If the check needs a queue drained, drain
+ * until it reports empty rather than assuming one pass is enough.
+ *
+ * ── 2b. THE SAME QUESTION ROTATED: THE ROWS, NOT THE ROLES ──────────────────
+ *
+ * Question 2 asks what could have MOVED the row my check reads. This is its
+ * other axis, and V1-4 walked into it: I asserted over the ROLES THAT READ and
+ * not over the ROWS THEY MAY REACH.
+ *
+ *   V1-4  `dashboard_layouts_sel` is `is_org_member AND (user_id is null OR
+ *         user_id = auth.uid())` — two clauses, because a member sees the
+ *         organisation's shared presets AND their own layouts, and nobody
+ *         else's. Every read assertion covered a role: an outsider sees
+ *         nothing, a redaktør reads a preset, a leser reads a preset. Widening
+ *         the policy to `is_org_member` alone failed NO test, because no
+ *         assertion had ever tried to read a COLLEAGUE'S PERSONAL row — the
+ *         only row the second clause exists to hide.
+ *
+ * THE RULE: WHEN A POLICY PROTECTS A ROW RATHER THAN A TABLE, ENUMERATING THE
+ * ROLES IS NOT ENUMERATING THE CASES. A predicate with a disjunction has one
+ * case per branch and one for the rows no branch admits, and it is that last
+ * one the policy is usually for. Read the predicate, list the row shapes it
+ * distinguishes, and write an assertion per shape — the same discipline
+ * question 3 applies to values, applied to rows.
+ *
+ * This will recur wherever a table holds rows of more than one ownership. It
+ * already applies to `dashboard_pins`, and it will apply to anything that
+ * mixes shared and personal rows in one table.
+ *
+ * ── 3. ASSERT THE RELATION OVER THE SET, NOT THE MEMBERS ────────────────────
+ *
+ * Where a set of values must each satisfy the same relation, write the
+ * assertion over the SET. Sampling two of them tests two of them.
+ *
+ *   V1-3  `app.run_due_schedules` computed the next run from a CASE with four
+ *         arms and `else interval '7 days'`, so `annual` — in the enum since
+ *         M:0001:20 — re-sent every seven days. Q20 was adding two cadences,
+ *         and a test of the two NEW values would have passed: they were about
+ *         to be given correct arms. The assertion that caught it was the
+ *         relation — "a cadence whose next run is sooner than its own name is
+ *         wrong" — evaluated over every value in the vocabulary, including the
+ *         four that had been wrong for months and were in nobody's sample.
+ *
+ * This is the enumeration-versus-sampling rule arriving in test design rather
+ * than in coverage, and it is the same rule Gate 5a3 applies to the catalogue
+ * and Q28 applies to its exemption list: enumerate the set from its source,
+ * assert the property over all of it, and let a new member fail until someone
+ * adds it deliberately. A list of examples grows only when someone remembers
+ * to grow it, which is exactly when it stops covering the case that matters.
+ *
+ * ── 3b. THERE ARE TWO SETS, AND THE SECOND ONE IS THE SITES ─────────────────
+ *
+ * The same phase then made the same mistake one level up, which is why this
+ * half is written out separately.
+ *
+ *   V1-3  The cadence test enumerated the VALUES correctly — every cadence, the
+ *         relation asserted over all of them — and drove ONE of the two places
+ *         that compute a next run. `send_round` held a second copy of the CASE
+ *         with the same `else interval '7 days'`, so after the fix the sweep
+ *         advanced an annual survey by a year while its FIRST next run was
+ *         still a week out. Enumerating the values while sampling the call
+ *         sites is the same error in a different dimension.
+ *
+ * So, the general form:
+ *
+ *   A property that must hold EVERYWHERE must be asserted at every site that
+ *   can violate it, and THE SET OF SITES IS DERIVED, NOT REMEMBERED.
+ *
+ * Derived means a query against the catalogue, not a list in a test file and
+ * not a note in a comment. `tests/invariants/threshold-policy.test.ts` has two
+ * of these now — nothing may still call `app.k_threshold()`, and nothing but
+ * `app.cadence_interval` may do interval arithmetic on a cadence — and both are
+ * `select … from pg_proc`, so a function added next month is in the set without
+ * anyone adding it.
+ *
+ * Worth knowing why that matters more than it sounds: migration 0044's comment
+ * PREDICTED the second copy, in as many words, and the second copy survived it
+ * anyway. A comment warning about a class of bug does not go looking for other
+ * instances of the class. Only a query does. If you find yourself writing "and
+ * make sure nobody does this elsewhere" in a comment, that sentence is the
+ * specification for a sweep, not a substitute for one.
+ *
+ * ── AND THE CONVERSE, WHICH IS THE SAME RULE FROM THE OTHER SIDE ────────────
+ *
+ * Do not BECOME what else exists. Gate 5a2's rule is usually read as "do not
+ * depend on a pristine database"; its other half is that a check must not leave
+ * the database changed for the next one. `tests/db/policy-panel.test.ts` cleans
+ * up because its fixtures changed which survey `/resultater` opened and broke a
+ * focus assertion four steps away; `verify:roundtrip` now deletes the group it
+ * creates, because one accumulated per run in the DEMO organisation and turned
+ * up in a V1-2 capture as a team row nobody had made.
+ * ── 4. WHAT DOES MY TEST LEAVE BEHIND WHEN IT FAILS TO FAIL? ────────────────
+ *
+ * A denial test creates something it expects to be REFUSED. Cleanup written
+ * after the assertion runs only on the path where the refusal happened — which
+ * is the path where there is nothing to clean. On the path that matters, the
+ * one where the control is missing, the insert SUCCEEDS and the row stays.
+ *
+ * THE SYMPTOM IS WHAT MAKES THIS FINDABLE, because the failure never looks like
+ * itself:
+ *
+ *   A MUTATION ROUND LEAVES LITTER THAT READS AS A REAL FAILURE IN THE RESTORED
+ *   SUITE, AND YOU DIAGNOSE A PHANTOM BEFORE FINDING YOUR OWN.
+ *
+ *   V1-5  `use-cases.test.ts` inserts a pack with an unknown `use_case` and
+ *         expects the foreign key to refuse it. Under the mutation that DROPS
+ *         the key — the mutation the test exists to catch — the insert
+ *         succeeded and left the row. Four `probe-` rows survived the round.
+ *         The restored suite then failed "the mapping is TOTAL over every
+ *         shipped pack", which is true and alarming and had nothing to do with
+ *         the code: the unmapped packs were mine. I re-added the constraint,
+ *         watched it fail again (the leftover rows violated it), and only then
+ *         looked at what was in the table.
+ *
+ * THE RULE: a test must clean up after the outcome it is trying to PREVENT, not
+ * only the one it expects. Choose the identifier BEFORE the insert and register
+ * it for teardown immediately, so a row that should not exist is removed
+ * whether or not it does. Gate 5a2's "do not become what else exists", one step
+ * earlier than usual — the row you must not leave behind is the one you hoped
+ * would never be created.
+ *
+ * This is also why teardown keys on something the test CHOSE rather than on
+ * something the database returned: a row that was refused has no id to
+ * remember, and an id-based cleanup silently skips exactly the rows that need
+ * it.
+ *
+ * ── 5. THE ONE-LINE FIX TO A RED ASSERTION ──────────────────────────────────
+ *
+ * The other four fire while a test is being WRITTEN. This one fires while a
+ * test is being EDITED, which is the moment nobody treats as dangerous — the
+ * suite is red, the cause looks obvious, and the change is one line.
+ *
+ *   A TEST THAT FAILS BECAUSE YOUR OWN CHANGE ALTERED THE CONTRACT IS NOT A
+ *   STALE TEST. IT IS THE ONLY READER THAT NOTICED THE CONTRACT MOVED.
+ *
+ *   V1-6  `attributed-results.test.ts` asserted `point.n` was undefined on a
+ *         gated trend point, which was the shape before Q49 widened it. The
+ *         phase's own migration had started emitting `n`, so the assertion went
+ *         red with `expected +0 to be undefined`.
+ *
+ *         Updating it to `toBe(0)` is one line, is green immediately, and cites
+ *         the decision that justifies it. It would also have shipped two
+ *         application defects: the emitted count was `count(distinct r.id)` over
+ *         responses JOINED TO ANSWERS on scale questions — so a round four
+ *         people answered reported 0 when those four skipped the scale — and
+ *         the decision's user-visible half, the panel rendering the count, did
+ *         not exist at all. Every layer was individually green: `tsc` was clean
+ *         because nothing read the new field, and the visual gate passed
+ *         because it had only ever photographed the ungated form.
+ *
+ * THE RULE: when the fix is one line, the question is what the value MEANS, not
+ * whether the types agree. State the new value in words — "n is how many people
+ * took part in this round" — and then check that the code produces THAT. Here
+ * the sentence took four lines of CTE to falsify, and falsifying it is what
+ * found both defects. A stale-test fix that does not survive being stated in
+ * words is a defect being written down as an expectation.
+ *
+ * The corollary, for the phase that made the change: a contract has more readers
+ * than the one that went red. Q49 moved the payload; the TypeScript union, the
+ * component and two message strings all described the old one and none of them
+ * failed. GREP FOR THE FIELD YOU CHANGED, not for the test that told you.
+ *
+ */
+
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
 export const ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??

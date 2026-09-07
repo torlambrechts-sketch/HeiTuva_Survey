@@ -34,7 +34,8 @@
     "verify:visual": "tsx scripts/verify/visual.ts --local",
     "verify:responsive": "tsx scripts/verify/responsive.ts --local",
     "verify:splash": "tsx scripts/verify/splash.ts --local",
-    "verify:load": "tsx scripts/verify/load.ts --local"
+    "verify:load": "tsx scripts/verify/load.ts --local",
+    "census:write": "CENSUS_WRITE=1 vitest run"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.73.0",

@@ -10,7 +10,16 @@ HeiTuva is a Norwegian-market survey SaaS with a statutory-compliance wedge (Arb
 - Email: provider adapter in `lib/mail/` — Amazon SES eu-north-1 (see DECISIONS Q6)
 
 ## Design fidelity — pixel-perfect, non-negotiable
-- The design source of truth is `/design-reference/` (the Claude Design handoff bundle). Read `project/HeiTuva.dc.html` for any screen before building it. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
+- **Two handoff bundles, each governing a different question (DECISIONS Q18).**
+  `/design-reference-v1/` (second handoff) is the source of truth for every screen a
+  v1 phase touches — read `project/HeiTuva.dc.html` there before building it.
+  `/design-reference/` (first handoff) remains the reference for Phase 1–7 work **as
+  built**: a fidelity question about a screen no v1 phase has touched is answered
+  against the bundle it was built from, not against a later one that moved the frame
+  under it. Rendered baselines follow the same split — `artifacts/reference/` is the
+  first bundle, `artifacts/reference-v1/` the second; `npm run verify:reference`
+  renders both and overwrites neither. What changed between them, screen by screen:
+  `docs/v1/00-diff.md`. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
 - Theme tokens (Tailwind theme, CSS vars):
   `--bg #FCF6E9 · --sf #FFFDF6 · --sf2 rgba(25,21,16,.05) · --ink #191510 · --mut #5F5849 · --line #E8DFC9 · --ac #F5C64A · --acf #191510 · --ac2 #A8D5D2 · --ac3 #FBD5C4 · --sbg #FBEBBE · --sbg2 #F6EEDD`
   radius 16px · shadow `0 2px 10px rgba(25,21,16,.05)` · fonts: Playfair Display (display), DM Sans (body), Bricolage Grotesque (logo only) · base 14px · focus outline `3px solid #191510, offset 2px` · entry animation fade + 6px translateY, .25s ease
@@ -123,8 +132,45 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **55 of 71 surfaces
-actively checked** by 5a3, and **18 files / 392 tests** in the census manifest.
+phase, not built. Two numbers carry forward and may only move up: **56 of 74 surfaces
+actively checked** by 5a3, and **35 files / 577 tests** in the census manifest.
+Both were re-measured on a fresh `supabase db reset` at the start of V1-0
+(2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
+of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
+`dashboard_layouts` and `dashboard_presets` are two new RLS tables, the second
+allowlisted with its reason (a shipped registry carrying no org id, no survey id
+and no number). Every checked surface is protected AND guarded, none merely
+unproven. The census rose 392 → 395 with Q47's three tests,
+395 → 399 with Q36's four, 399 → 417 with the policy panel's
+ten warning tests, its five guard tests and «valgfritt» gaining a derived
+promise, and 417 → 421 with Q30's four. V1-2 took it 421 → 463: Q43's CSV
+serialiser (18), Q35's roles (12) and pack data (5), D94's round semantics (5)
+and the k=0 cell-shape invariant (3), then 464 → 475 in the acceptance pass
+with the CSV's no-address property (2) and the refusal-copy rule (9). V1-3 took
+it 475 → 498 with Q23's schedules RLS (6), Q20/Q22's recurrence (9) and the
+status sentence (8). V1-4 took it 498 → 544: Q51's layout constraints and Q25's
+RLS (22), the layout model (14), Q42's threshold sentence (5) and the panel
+vocabulary's three-way binding (5). V1-5 took it 544 → 553 with Q24/Q45's
+registry, the total-mapping assertion and the untouched category CHECK (9);
+5a3's denominator rose 73 → 74 with `use_cases`, allowlisted with its reason,
+so the checked number holds at 56. **V1-6 took the census 553 → 572** with Q49's
+count and its narrowing (4), Q50's clock (7), Q48(b)'s registry binding (5), the
+pack builder's two callers (2) and the fix pass's participation denominator (1);
+5a3 did not move at all, because `M:0053` replaces a function that already
+existed and `M:0051`'s two new ones live in the `app` schema. The close-out took
+it 572 → 577 with D102's five (`tests/unit/register-stats.test.ts`). 5a3 is unmoved by
+any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
+function, and a function in the `app` schema is enumerated by neither sweep, so
+neither is a catalogue surface — recorded limits of that gate, not gaps in it.
+
+**Run order changes what 5a3 can prove, not the number.** 55 of 71 either way. But
+the script only counts a surface as *proven* when there was a real row for the
+policy to refuse, so run it on a freshly reset database and six tables report
+PROTECTED BUT UNPROVEN — `demo_requests`, `duty_survey_links`, `logic_rules`,
+`report_exports`, `report_shares`, `template_pack_translations` are empty until
+something writes them. In `verify:all` the db suite runs first and populates them,
+and every surface reports `ok`. Six unproven tables after a bare reset are that
+ordering, not a regression.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.

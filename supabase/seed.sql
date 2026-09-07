@@ -17,7 +17,7 @@ insert into public.template_packs (org_id, key, category, legal_ref, title, audi
 (null,'likestilling-deltid','Lovpålagt','ARP — kartlegges annethvert år','Likestilling og ufrivillig deltid','Alle ansatte · annethvert år',
  '[{"text":"Jobber du heltid eller deltid?","type":"choice","options":["Heltid","Deltid — frivillig","Deltid — ønsker å jobbe mer"]},{"text":"Er du tilgjengelig for å jobbe mer enn du gjør i dag?","type":"yesno"},{"text":"Hva ville gjort det mulig for deg å jobbe mer?","type":"choice","multi":true,"options":["Annen arbeidstid","Tilrettelagte oppgaver","Barnehage/SFO","Tilrettelegging for helse","Ikke aktuelt"]},{"text":"Jeg har samme mulighet til utvikling og forfremmelse som andre","type":"likert"},{"text":"Jeg opplever at lønn settes rettferdig hos oss","type":"likert"},{"text":"Er det noe vi bør endre for å bli mer likestilte?","type":"text"}]',7),
 (null,'leverandor-apenhetsloven','Lovpålagt','Åpenhetsloven §§ 4–5 · frist 30. juni','Aktsomhetsvurdering leverandør','Leverandører og forretningspartnere',
- '[{"text":"Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?","type":"yesno"},{"text":"Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?","type":"yesno"},{"text":"Hvor mange ledd bakover i kjeden har dere oversikt over?","type":"choice","options":["Ingen","Ett ledd","To ledd","Tre eller flere"]},{"text":"Har dere avdekket brudd eller risiko siste 12 måneder?","type":"yesno"},{"text":"Har dere en varslingskanal som er åpen for arbeidere i kjeden?","type":"yesno"},{"text":"Beskriv tiltakene dere har iverksatt","type":"text"}]',8),
+ '[{"text":"Har virksomheten en policy for menneskerettigheter og anstendige arbeidsforhold?","type":"yesno","role":"policy","short":"Policy"},{"text":"Gjennomfører dere egne aktsomhetsvurderinger av deres leverandørkjede?","type":"yesno","role":"key","short":"Egen vurdering"},{"text":"Hvor mange ledd bakover i kjeden har dere oversikt over?","type":"choice","options":["Ingen","Ett ledd","To ledd","Tre eller flere"]},{"text":"Har dere avdekket brudd eller risiko siste 12 måneder?","type":"yesno","role":"brudd","short":"Brudd/risiko"},{"text":"Har dere en varslingskanal som er åpen for arbeidere i kjeden?","type":"yesno","role":"key","short":"Varslingskanal"},{"text":"Beskriv tiltakene dere har iverksatt","type":"text"}]',8),
 (null,'klima-miljo','Lovpålagt','Bærekraftsrapportering · ESG','Klima- og miljøkartlegging','Ansatte og leverandører',
  '[{"text":"Hvordan kommer du deg oftest på jobb?","type":"choice","options":["Til fots eller sykkel","Kollektivt","Elbil","Fossilbil","Hjemmekontor"]},{"text":"Hvor mange flyreiser i jobb hadde du siste år?","type":"choice","options":["Ingen","1–2","3–5","6 eller flere"]},{"text":"Vi har rutiner som gjør det enkelt å velge miljøvennlig","type":"likert"},{"text":"Hva hindrer deg i å ta det grønne valget på jobb?","type":"text"}]',9),
 (null,'nps-kunde','Kunder',null,'Hvor sannsynlig er det at du anbefaler oss?','Kunder · løpende',
@@ -35,7 +35,27 @@ insert into public.template_packs (org_id, key, category, legal_ref, title, audi
 (null,'sluttsamtale','Ansatte',null,'Sluttsamtale','Ansatte som slutter',
  '[{"text":"Hva var den viktigste grunnen til at du sluttet?","type":"choice","options":["Lønn og betingelser","Utviklingsmuligheter","Lederen min","Arbeidsmengde","Flyttet eller livssituasjon","Fikk et bedre tilbud"]},{"text":"Hvor lenge har du vurdert å slutte?","type":"choice","options":["Under en måned","1–3 måneder","6 måneder","Over et år"]},{"text":"Kunne vi gjort noe for å beholde deg?","type":"yesno"},{"text":"Jeg vil anbefale andre å søke jobb hos oss","type":"likert"},{"text":"Hva bør vi endre for de som blir igjen?","type":"text"}]',16),
 (null,'360-tilbakemelding','Ansatte',null,'360 tilbakemelding','Leder · kolleger og medarbeidere',
- '[{"text":"Din relasjon til personen","type":"choice","options":["Medarbeider","Kollega på samme nivå","Leder","Samarbeidspartner"]},{"text":"Vurder følgende utsagn om personen","type":"matrix","statements":["Er tydelig på hva som forventes","Gir tilbakemelding jeg kan bruke","Lytter før beslutninger tas","Følger opp det som avtales","Skaper trygghet i gruppen"]},{"text":"Hva bør personen fortsette med?","type":"text"},{"text":"Hva bør personen gjøre annerledes?","type":"text"}]',17);
+ '[{"text":"Din relasjon til personen","type":"choice","options":["Medarbeider","Kollega på samme nivå","Leder","Samarbeidspartner"]},{"text":"Vurder følgende utsagn om personen","type":"matrix","statements":["Er tydelig på hva som forventes","Gir tilbakemelding jeg kan bruke","Lytter før beslutninger tas","Følger opp det som avtales","Skaper trygghet i gruppen"]},{"text":"Hva bør personen fortsette med?","type":"text"},{"text":"Hva bør personen gjøre annerledes?","type":"text"}]',17),
+-- V1-5 / DECISIONS Q45 — the five new packs (NEW:2857-2881), questions verbatim.
+-- All 'Annet': the category CHECK is NOT widened to hold use-case names, so the
+-- customer-facing axis is `use_case` and this column stays the internal kind.
+(null,'servicedesk-sak','Annet',null,'Hvordan var hjelpen du fikk?','Ansatte etter lukket sak · løpende',
+ '[{"text":"Hvor fornøyd er du med hjelpen du fikk?","type":"smiley"},{"text":"Saken ble løst ved første kontakt","type":"likert"},{"text":"Hvor lang tid tok det før du fikk svar?","type":"choice","options":["Under en time","Samme dag","1–2 dager","Lenger"]},{"text":"Hva kunne gjort det enklere?","type":"text"}]',18),
+(null,'it-verktoy','Annet',null,'IT og verktøy — halvårlig','Alle ansatte · halvårlig',
+ '[{"text":"Verktøyene jeg bruker daglig fungerer som de skal","type":"likert"},{"text":"Hvilket verktøy skaper mest friksjon?","type":"choice","options":["E-post og kalender","Fagsystem","Videomøter","Fildeling","Mobil"]},{"text":"Jeg vet hvor jeg får hjelp når noe ikke virker","type":"likert"},{"text":"Hva bør IT prioritere neste halvår?","type":"text"}]',19),
+(null,'innbyggerundersokelse','Annet',null,'Innbyggerundersøkelse','Innbyggere · årlig',
+ '[{"text":"Hvor fornøyd er du med kommunens tjenester samlet sett?","type":"scale"},{"text":"Hvilke tjenester har du brukt siste år?","type":"choice","options":["Barnehage og skole","Helse og omsorg","Byggesak","Kultur og idrett","Renovasjon"],"multi":true},{"text":"Det er lett å finne fram til riktig kontor eller tjeneste","type":"likert"},{"text":"Hva bør kommunen gjøre bedre?","type":"text"}]',20),
+(null,'brukerundersokelse-tjeneste','Annet',null,'Brukerundersøkelse — tjeneste','Brukere av én tjeneste · etter møte',
+ '[{"text":"Hvor godt ble du møtt?","type":"smiley"},{"text":"Jeg forsto hva som skjer videre i saken min","type":"likert"},{"text":"Fikk du informasjonen på et språk du forstår?","type":"yesno"},{"text":"Hva ville gjort møtet bedre?","type":"text"}]',21),
+(null,'frivillige-arrangement','Annet',null,'Takk for innsatsen — hvordan var det?','Frivillige · etter arrangement',
+ '[{"text":"Hvor godt organisert opplevde du dagen?","type":"scale"},{"text":"Jeg visste hva jeg skulle gjøre","type":"likert"},{"text":"Vil du stille som frivillig igjen?","type":"yesno"},{"text":"Hva bør vi gjøre annerledes neste gang?","type":"text"}]',22);
+
+-- V1-5 / DECISIONS Q24: map every shipped pack to a use case. The SAME function
+-- migration 0049 defines and calls — migrations run before seeds, so the
+-- migration's own call finds an empty table on a fresh reset and this is what
+-- maps the rows above. One definition, two callers, idempotent by
+-- `use_case is null`.
+select app.map_pack_use_cases();
 
 -- Standard question bank ------------------------------------------------------
 insert into public.question_bank (org_id, text, type, category, config, sort_order) values
@@ -71,6 +91,12 @@ insert into public.duty_definitions (key, title, law, basis, default_interval_mo
  '[{"key":"k1","label":"Undersøkelse gjennomført"},{"key":"k2","label":"Varslingsrutine kjent"},{"key":"k3","label":"Funn håndtert"},{"key":"k4","label":"Ansvarlig oppnevnt"}]',
  '[{"key":"hr","label":"HR-ansvarlig","role":"Eier varslingsrutinen"}]');
 
+-- Q35 (2026-09-06): the Åpenhetsloven pack's questions above carry `role` and
+-- `short`. Migration 0040 sets the same values, and for the same reason the
+-- note below gives: it runs BEFORE this seed, so on a fresh reset its UPDATE
+-- hits zero rows and only serves a database whose packs predate it. The two
+-- must be edited together or a reset and an upgrade disagree.
+
 -- Q17 threshold policy on the statutory packs and duties (docs/Q17_terskel_forslag.md,
 -- the law-anchored table). This is DATA and belongs with the pack rows it governs.
 -- Migration 20260904000032 carries the SAME values, but it runs before this seed —
@@ -99,7 +125,20 @@ insert into public.quality_rules (key, lang, pattern, rule, message) values
 ('double_barreled','no','\m(og|eller)\M','{"kind":"regex_min_words","min_words":7}','Ser ut som to spørsmål i ett — del det opp'),
 ('leading_words','no',null,'{"kind":"leading_words","words":["fornøyd","enig i at","selvsagt","åpenbart","endelig","flott","utmerket","dårlige"]}','Ledende ordvalg — prøv en nøytral formulering'),
 ('too_long','no',null,'{"kind":"max_words","max":20}','Over 20 ord — kort det ned'),
-('negation','no','\m(ikke|aldri)\M','{"kind":"regex"}','Negasjon gjør spørsmålet vanskelig å svare på');
+('negation','no','\m(ikke|aldri)\M','{"kind":"regex"}','Negasjon gjør spørsmålet vanskelig å svare på'),
+-- The policy panel's pronoun rule (DECISIONS Q36's panel, v1 bundle :3529). It
+-- is a quality_rules row so that retuning the pronoun list, or adding the rule
+-- for another language, stays a row rather than a code change. `qualityFlags`
+-- skips kinds it does not know, so this never appears as a question-quality
+-- flag; only the policy panel reads it, and only in organisation mode.
+-- Its message carries one {question} placeholder — the single extension this
+-- table's convention needed, because this rule has to name what it is about.
+--
+-- Norwegian only, like the four rules above it: `quality_rules` has a `lang`
+-- column but its primary key is `key` alone, so the table cannot actually hold
+-- the same rule twice. Logged rather than migrated here — widening the key is a
+-- schema change and this is a panel.
+('policy_pronoun','no','\m(du|deg|din|ditt|dine|jeg|meg|min|mitt|mine)\M','{"kind":"policy_pronoun"}','«{question}» handler om enkeltpersoner, men svarene attribueres til virksomheten.');
 
 -- Benchmarks (static reference seed — DECISIONS Q8; replace with sourced values) --
 insert into public.benchmarks (industry, metric_key, value, source) values

@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { isFlagEnabled } from '@/lib/flags'
+import type { Cadence, CustomUnit } from '@/lib/send/registry'
+import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { SendScreen } from './SendScreen'
 
@@ -47,6 +49,35 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
       .maybeSingle(),
   ])
 
+  // The live series (Q22, Q23). Read through RLS as the viewer — since M:0044's
+  // predicate swap a leser reads it too, which is what puts the ↻ chip on their
+  // screen. `maybeSingle`: a survey has at most one schedule, and none until it
+  // has been sent with a cadence.
+  const { data: schedule } = await supabase
+    .from('schedules')
+    .select('cadence, runs_total, runs_done, paused_at, active, next_run_at, custom_every, custom_unit')
+    .eq('survey_id', id)
+    .maybeSingle()
+
+  // Q21 — the pack's cadence pre-fills the picker and explains itself. NOT a
+  // lock: `duty_definitions.default_interval_months` is a reporting interval,
+  // and turning it into a frozen control would be the product inventing a legal
+  // constraint the law does not impose.
+  const { data: duty } = survey.template_pack_key
+    ? await supabase
+        .from('duty_definitions')
+        .select('key, law, default_interval_months')
+        .eq('pack_key', survey.template_pack_key)
+        .maybeSingle()
+    : { data: null }
+
+  const inheritedCadence: Cadence | null =
+    duty?.default_interval_months === 12 ? 'annual'
+    : duty?.default_interval_months === 24 ? 'biennial'
+    : duty?.default_interval_months === 3 ? 'quarterly'
+    : duty?.default_interval_months === 1 ? 'monthly'
+    : null
+
   // Headcounts for the group cards. A separate grouped read rather than an
   // embed, because the count is of ACTIVE members and an embedded count cannot
   // carry that filter.
@@ -62,6 +93,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   // answers is locked by the guard. Either way the chips below are disabled
   // with the reason, instead of letting send_round fail on the trigger.
   const t = await getTranslations('send')
+  const tDuty = await getTranslations('duty')
   const attributed = survey.respondent_kind === 'organisation'
   const k = attributed ? 0 : Math.max(survey.k_threshold, 3)
   let lockedReason: string | null = null
@@ -94,6 +126,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         title={survey.title}
         audience={survey.audience_label}
         status={survey.status}
+        recurrence={await readScheduleChip(survey.id, survey.status)}
         current="send"
       />
       <SendScreen
@@ -103,6 +136,26 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         kThreshold={k}
         respondentKind={attributed ? 'organisation' : 'person'}
         lockedReason={lockedReason}
+        status={survey.status}
+        schedule={
+          schedule
+            ? {
+                cadence: schedule.cadence as Cadence,
+                runsTotal: schedule.runs_total,
+                runsDone: schedule.runs_done,
+                pausedAt: schedule.paused_at,
+                active: schedule.active,
+                nextRunAt: schedule.next_run_at,
+                customEvery: schedule.custom_every,
+                customUnit: schedule.custom_unit as CustomUnit | null,
+              }
+            : null
+        }
+        inheritedCadence={inheritedCadence}
+        // Q48(b): the statute reference from next-intl, keyed by the
+        // registry key — the column is still there and still canonical, but
+        // nothing reads it for display.
+        inheritedLegalRef={duty?.key ? tDuty(`law_${duty.key}` as never) : null}
         questionCount={questionCount ?? 0}
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}

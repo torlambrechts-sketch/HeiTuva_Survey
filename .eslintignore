@@ -1,4 +1,5 @@
 node_modules/
 .next/
 design-reference/
+design-reference-v1/
 next-env.d.ts

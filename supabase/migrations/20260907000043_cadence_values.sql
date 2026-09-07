@@ -1,0 +1,53 @@
+-- HeiTuva 0043 — Q20: `biennial` and `custom` join `app.cadence`.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- THIS MIGRATION EXISTS SEPARATELY ON PURPOSE. DO NOT MERGE IT INTO 0044.
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- `ALTER TYPE ... ADD VALUE` cannot be followed, in the SAME transaction, by
+-- anything that USES the value it just added, when the type EXISTED before that
+-- transaction. Measured here on PostgreSQL 17.6 rather than recalled:
+--
+--     begin;
+--     alter type public.scratch add value 'b';
+--     select 'b'::public.scratch;
+--     ERROR:  unsafe use of new value "b" of enum type scratch
+--     HINT:  New enum values must be committed before they can be used.
+--
+-- The exception, which is what makes this easy to disbelieve: a type CREATED in
+-- the same transaction has no such restriction, so the pattern works fine in a
+-- from-scratch script and fails only when altering a type that is already
+-- there. `app.cadence` has been there since M:0001:20.
+--
+-- The Supabase CLI runs each migration file in one transaction, so "add the
+-- values and use them" has to be two files: this one adds them, 0044 uses them
+-- (in `app.run_due_schedules`'s interval CASE and in the `custom_*` CHECKs).
+--
+-- The error reads like a typo in the CASE arm, several statements away from the
+-- ALTER TYPE that actually caused it, which is why this note is here rather
+-- than only in DECISIONS.md — whoever hits it will be reading this file.
+--
+-- Merging the two files, or moving 0044's contents up here "to keep the
+-- recurrence change together", reintroduces it on the next fresh
+-- `supabase db reset` and nowhere else: an already-migrated database has the
+-- labels and never runs this file again, so it fails only for the next person
+-- to set up from scratch, and only in CI.
+--
+-- WHY `biannual` STAYS. It has been in the enum since M:0001:20, means "twice a
+-- year", is not offered anywhere in the UI and is held by no row. A value
+-- cannot be removed from a Postgres enum without recreating the type and
+-- rewriting every column that uses it, which for a value nothing holds is a
+-- migration risk taken for tidiness. It stays, unused and undocumented in the
+-- product — Q20 says so explicitly so that its presence is not read later as a
+-- feature somebody forgot to build.
+--
+--   'annual'   — «Hvert år», the existing value. Not renamed.
+--   'biennial' — «Annethvert år». Likestillingsloven § 26's lønnskartlegging
+--                is a two-yearly duty (`duty_definitions`, `likestilling`,
+--                `default_interval_months = 24`), so this is the cadence a
+--                statutory pack pre-fills, not a hypothetical.
+--   'custom'   — «Egendefinert»: every N days/weeks/months, on a weekday, at
+--                `send_at_local`. The three settings are columns added in 0044.
+
+alter type app.cadence add value if not exists 'biennial';
+alter type app.cadence add value if not exists 'custom';

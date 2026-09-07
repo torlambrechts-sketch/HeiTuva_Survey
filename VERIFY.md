@@ -11,9 +11,21 @@ The protocol's premise: **an unverified claim is a hallucination in waiting.** C
 ```
 Build the verification harness. This is infrastructure I will reuse every phase.
 
-1. Playwright: install with `npx playwright install --with-deps chromium`.
+1. Playwright: install with `npx playwright install --with-deps chromium webkit`.
    Create playwright.config.ts with two projects: "desktop" (1440x900, deviceScaleFactor 2)
    and "mobile" (390x844, iPhone 13 profile).
+   The mobile project is WebKit, so a container with only Chromium runs the desktop
+   half and reports the mobile half as an install error — which is not the same as
+   a pass, and is easy to skim past in a long log.
+
+   The local Supabase stack must include mailpit and storage-api. CI excludes both
+   (`ci.yml`: `supabase start -x …,mailpit`) and runs neither browser gate, so the
+   mail and archive halves of `verify:send` and `verify:export` exist ONLY here:
+   without those two services the invitation worker cannot deliver and the export
+   cannot be archived, and both report as check failures rather than as an absent
+   dependency. Start with
+   `supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor`
+   (mailpit on 54324/54325, storage behind Kong on 54321).
 
 2. scripts/verify/capture.ts — starts the dev server if not running, logs in as a
    seeded user, navigates to each route in the manifest AT THE VIEWPORTS THAT ROUTE IS
@@ -44,11 +56,17 @@ Build the verification harness. This is infrastructure I will reuse every phase.
    Any harness fix that widens coverage requires RE-RUNNING earlier completed phases:
    a gate that could not see a defect never proved its absence.
 
-3. scripts/verify/reference.ts — opens the design file
-   /design-reference/heituva-survey-app-design/project/HeiTuva.dc.html in Playwright,
-   drives its internal state to each screen (the prototype is a single page with JS
-   state; set state via page.evaluate rather than guessing click paths), and captures
-   artifacts/reference/<screen>.png at 1440 wide. Run once; commit the reference PNGs.
+3. scripts/verify/reference.ts — opens the design files in Playwright, drives their
+   internal state to each screen (the prototype is a single page with JS state; set
+   state via page.evaluate rather than guessing click paths), and captures each screen
+   at 1440 wide. Run once per bundle update; commit the reference PNGs.
+   Since DECISIONS Q18 it renders BOTH handoffs and overwrites neither:
+   /design-reference/…/HeiTuva.dc.html      -> artifacts/reference/<screen>.png
+     the first handoff, the baseline Phases 1–7 were built against.
+   /design-reference-v1/…/HeiTuva.dc.html   -> artifacts/reference-v1/<screen>.png
+     the second handoff, the target for every screen a v1 phase touches.
+   Gate 3a compares an untouched screen against the first set and a v1-phase screen
+   against the second; the run prints which set is which so nothing is inferred.
 
 4. tests/db/clients.ts — Supabase clients for each persona: anonClient (no session),
    adminClient, redaktorClient, leserClient (real logins as seeded users, NOT the
@@ -88,14 +106,21 @@ to prove your own implementation is wrong. Assume it is until evidence says othe
 
 === GATE 1 — SCOPE TRUTH ===
 Re-read CLAUDE.md and the phase scope in CLAUDE_CODE_PROMPTS.md. Re-read the relevant
-markup in /design-reference/heituva-survey-app-design/project/HeiTuva.dc.html.
+markup in the bundle that governs the screen (Q18): /design-reference-v1/… for
+anything a v1 phase touches, /design-reference/… for Phase 1–7 work as built.
 Produce a table: every screen, element, state, and behaviour the phase required |
 implemented? | file:line where it lives | verified in which gate.
 Explicitly list anything in the design you did NOT implement, and anything you built
 that the design does not contain (invented features are a defect, not a bonus).
 
 === GATE 2 — DATABASE: WRITE AND ATTACK ===
-Run against a fresh local database (`supabase db reset`) so results are reproducible.
+Run against a fresh local database so results are reproducible, and run the three
+steps in this order — `supabase db reset` && `npx tsx scripts/seed-i18n.ts --local`
+&& `npm run seed:demo`. This is what CI does (`ci.yml:51, 69`) and it is not
+optional: `ui_messages` is seeded from `/messages/*.json` by the i18n script, not
+by `supabase/seed.sql`, so a reset followed straight by `verify:all` fails
+`invariants.test.ts` on a shipped default that was never written. Not a new
+check — a setup order that was only written down in the workflow file.
 a) Round-trip: for every table this phase writes to, create a row through the actual
    application path (server action or RPC — not raw SQL), then read it back and show the
    row. Prove persistence, defaults, and constraints behave as designed.
@@ -184,12 +209,48 @@ Output in this exact structure, nothing else:
    Fixing defects does not close an unrun gate: if Gate 3a compared three screens of
    twenty, or 3c/3d/3f were not exercised, the verdict stays NOT READY until they are
    actually run. Defects and unrun gates are separate debts and both must clear.
+   **No phase closes while main's CI is red.** The Gate 6 report cites the run number
+   and its status as evidence, exactly like any other claim. A phase verified locally
+   against a pipeline that is not running has been verified once, not twice.
+
+   **RECORD EVERY CHAIN EXIT AND WHICH GATES IT NEVER REACHED.** `verify:all` stops at
+   the first failing gate, so a chain that exits early has not merely failed — it has left
+   the later gates UNRUN, and their silence is not a pass. V1-4's first chain exited at the
+   capture gate and never reached 3e; when 3e later reported 228 blockers, whether that
+   counted as the verification pass completing or as a forbidden third round turned on a
+   fact nobody had written down.
+
+   **The two-pass rule bounds FIX passes, not gate executions.** A gate that has never run
+   on this code has not had its pass. So the report states, as evidence rather than as
+   judgement: which gate the chain exited at, and which gates were therefore never
+   executed. One line, written when it happens, so the next reading is a fact.
 2. Evidence table: claim | gate | evidence (command output excerpt, file:line, or
    screenshot path).
 3. DEFECTS: numbered, each with severity (blocker/major/minor), location, and proposed fix.
 4. UNVERIFIED and BLOCKED items with reasons.
 5. DEVIATIONS from the design, each with a reason — append these to docs/DEVIATIONS.md.
-6. What I (the human) should look at personally, ranked — where your own judgement is
+6. DECISION CONFORMANCE. For every decision this phase implements, QUOTE THE CLAUSE and
+   cite where it is satisfied — file:line, migration, or test name. One row per clause,
+   not per decision: a decision with three requirements is three rows, and a clause with
+   no citation is the finding.
+
+   **Why this exists, added after V1-4.** A gate checks WHAT EXISTS. Nothing checks WHAT A
+   DECISION REQUIRED. Two confirmed decisions were built halfway in V1-4 and every gate
+   stayed green, because the missing halves were absences: Q26 said «the panel appears in
+   the picker as the bundle's own unavailable state… the bundle sanctions drawing its
+   absence, so this is not hiding a feature», and the picker offered nothing at all;
+   Q29 said keep the opener «beside "Frys som rapport"», and only the opener existed. Both
+   were found by reading DECISIONS.md against the code, which is not something a suite can
+   do — the clause is prose and the citation is judgement.
+
+   This is a REPORT SECTION, not machinery. It executes nothing and cannot fail; it makes
+   the omission visible to a reader at the moment the phase claims to be done. The
+   apparatus stays frozen.
+
+   Quote the clause verbatim rather than paraphrasing it. Both V1-4 misses survived a
+   paraphrase in my own head — «defer the stream panel» and «keep the opener» are both
+   true summaries of decisions I did not fully implement.
+7. What I (the human) should look at personally, ranked — where your own judgement is
    weakest.
 
 === GATE 7 — FIX ===
@@ -226,5 +287,17 @@ No fixes until I've seen the list.
 - **Mutation check** — the only way to know a test suite can fail. Green tests over broken code are worse than no tests, because they buy false confidence.
 - **Model-eye visual comparison, not just pixel-diff** — your implementation's DOM differs from the prototype's, so pixel-diff against the design is noise; pixel-diff belongs against its own previous screenshots for regression.
 - **"Where your judgement is weakest"** — invites the model to surface its own uncertainty rather than smoothing over it, which is where your review time is best spent.
+- **Why CI status is evidence, not machinery (recorded at V1-0, no new check)** — both CI jobs had been aborting before reaching anything since Phase 9: the invariant job died at a stale seed-count assertion and the static job at an out-of-sync lock file, so Phase 9's 313-test suite never ran in CI at all, and neither did tsc, eslint or the build. The census and 5a3 both worked — locally. Neither could see that CI was not executing them. That is the fourth instance in this project of a gate reporting green for something it structurally could not see (after `ui_messages`' too-wide predicate, the sweep that measured one state per route, and the two gates measuring history rather than the run). The answer is a rule that makes CI status part of the evidence, not another checker: a CI-watching gate would itself be a thing that can silently stop running.
+
+- **Why Gate 3a is read by eye and not by a diff (recorded at V1-1, no new check)** — the policy panel greyed its selected chips to `--sf2` while a save was in flight, which is the exact paint that means "locked": for the duration of every save the screen told the reader their survey had just been frozen. The state was correct, the assertion set was complete, and no test could have caught it — nothing was wrong except what the pixels said. That is the second time reading a capture found something the suite could not (after the Builder's 104px question field, which measured correctly and was unusable). Pixel-diff would not have helped either: it compares a screen with its own past, and both of these were wrong the first time they were drawn. "Correct state, misleading paint" is a class that only a person looking at the picture reaches, which is why 3a asks for judgement rather than a number.
+
+  **V1-3 added two more, both found the same way and neither reachable by any assertion.** (3) The Send screen's Pause/Stopp row was nested inside `cadence !== 'once'`, so it was hidden on exactly the surveys that had something to pause — a live weekly series whose picker happened to be sitting on «Én gang» showed no way to pause it. (4) That same picker opened on «Én gang» for a survey already running weekly, so a re-send that changed nothing else would have quietly converted it to a one-off. Every test passed on both: the schedule was correct in the database, the status sentence was correct in `lib/schedules/status.ts`, and its eight unit tests were green. What was wrong was which control the screen drew and what state it claimed — and a control that is ABSENT cannot be asserted about by a suite that does not know to look for it.
+
+  Four instances now, and the shape is stable enough to name: **the failures 3a catches are about what the screen SAYS, not about what the code computes.** A suite asserts over the things it renders; it is blind to a true thing rendered misleadingly (1, 2), to a true thing not rendered at all (3), and to a control that describes the wrong state confidently (4). Three of the four were in code whose tests were complete and passing when the capture was taken.
+
+  **V1-4 added the fifth, and it is the cleanest specimen of the class.** (5) The Dashboard's survey chips rendered TWICE — once inside the «Tilpass» card, where DECISIONS Q46 puts them, and once in the header row, which Q46 removes. Both locations were individually correct: the chips worked, toggled the selection and carried the right state in each place. Every test passed, and every test would still have passed with a third copy.
+
+  **Duplication is invisible to assertions that check PRESENCE rather than COUNT**, and almost every assertion a suite contains checks presence. `getByRole`, `toContain`, `toBeVisible`, a selector that takes the first match — all of them are satisfied by two. A test that would have caught it has to be written as "exactly one", which nobody writes without a reason, because the reason only exists after the second copy does. This is why 3a is read by eye rather than diffed: a person looking at the picture sees two rows of chips; no query asks how many rows of chips there should be.
+
 - **What Gate 5a3 does NOT prove (recorded after Phase 6, no new check)** — 5a3 proves a denial test *exists* for every surface, not that the test's scope is *right*. `ui_messages` was cross-tenant from Phase 1 to Phase 6 behind a green 5a3: its policy asked "is the caller an administrator of any org" and the tests asked the same question. A gate that enumerates surfaces cannot see that a predicate is too wide; only reading the policy against the table's ownership can. The apparatus stays frozen; this is its documented limit.
 

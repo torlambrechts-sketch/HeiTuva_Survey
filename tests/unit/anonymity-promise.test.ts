@@ -74,3 +74,32 @@ describe('(Q17 #6) the respondent promise is derived from the setting', () => {
     expect(word(10)).toBe('ti')
   })
 })
+
+describe('«valgfritt» — the respondent chooses, so the promise has to cover both halves', () => {
+  it('names the threshold, because an anonymous answer is still gated by it', async () => {
+    const { anonymityPromise } = await load()
+    // The old copy was a bare invitation to choose, which told the respondent
+    // nothing about what happens if they DO stay anonymous. The v1 bundle's
+    // own text carries the number (:2949, `choose:n =>`), and Q17 requires the
+    // promise to change with the threshold or it lies.
+    expect(
+      anonymityPromise({ anonymity: 'optional', kThreshold: 5, respondentKind: 'person' }),
+    ).toEqual({ key: 'promiseChoose', values: { kWord: 'fem' } })
+  })
+
+  it('carries the small-group caveat below five, exactly as the anonymous branch does', async () => {
+    const { anonymityPromise } = await load()
+    expect(
+      anonymityPromise({ anonymity: 'optional', kThreshold: 3, respondentKind: 'person' }),
+    ).toEqual({ key: 'promiseChooseLow', values: { kWord: 'tre' } })
+  })
+
+  it('is still overridden by an organisation respondent', async () => {
+    const { anonymityPromise } = await load()
+    // Attribution wins over every anonymity setting, «valgfritt» included —
+    // otherwise a supplier could be offered a choice the survey cannot honour.
+    expect(
+      anonymityPromise({ anonymity: 'optional', kThreshold: 5, respondentKind: 'organisation' }),
+    ).toEqual({ key: 'promiseOrganisation' })
+  })
+})

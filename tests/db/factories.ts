@@ -112,6 +112,12 @@ export async function createSurvey(
   questions: QuestionSpec[],
   opts: {
     anonymity?: 'anonymous' | 'named' | 'optional'
+    /**
+     * Who answers. `organisation` is the attributed path (Q17 §5): no
+     * threshold, `anonymity` forced to `named` by the CHECK in M:0034:38, and
+     * `attributed_results` is the only way to read it.
+     */
+    respondentKind?: 'person' | 'organisation'
     status?: 'utkast' | 'aktiv' | 'lukket'
     /** The design's meta line starts with who the survey is for. */
     audience?: string
@@ -140,7 +146,12 @@ export async function createSurvey(
       title,
       audience_label: opts.audience ?? null,
       langs: opts.langs ?? ['no'],
-      anonymity: opts.anonymity ?? 'anonymous',
+      respondent_kind: opts.respondentKind ?? 'person',
+      // An organisation survey is named whatever the caller passed: the CHECK
+      // refuses anything else, so a fixture that forgot would fail at insert
+      // with a constraint name rather than the reason.
+      anonymity:
+        opts.respondentKind === 'organisation' ? 'named' : (opts.anonymity ?? 'anonymous'),
       status: opts.status ?? 'aktiv',
       template_pack_key: opts.templatePackKey ?? null,
     })
@@ -148,7 +159,7 @@ export async function createSurvey(
     .single()
   if (error) throw new Error(`createSurvey(${title}): ${error.message}`)
 
-  const created: { id: string; type: string; text: string }[] = []
+  const created: { id: string; type: string; text: string; config: Record<string, unknown> }[] = []
   for (const [i, q] of questions.entries()) {
     const { data, error: qErr } = await svc
       .from('survey_questions')
@@ -159,10 +170,15 @@ export async function createSurvey(
         text: q.text,
         config: (q.config ?? {}) as never,
       })
-      .select('id, type, text')
+      // `config` too, because the real send path snapshots it
+      // (`app.send_round`, M:0027:124) and Q35's roles live in it. A fixture
+      // whose snapshot dropped config produced an attributed register with no
+      // columns while the pack designated four — a difference between the
+      // harness and production, which is the one thing a fixture must not have.
+      .select('id, type, text, config')
       .single()
     if (qErr) throw new Error(`addQuestion(${q.text}): ${qErr.message}`)
-    created.push(data)
+    created.push(data as { id: string; type: string; text: string; config: Record<string, unknown> })
   }
 
   return { ...survey, questions: created }
@@ -171,7 +187,7 @@ export async function createSurvey(
 /** A round plus `invitations` unused tokens. Raw tokens are returned so tests
  *  can submit; only their hashes reach the database. */
 export async function createRound(
-  survey: { id: string; questions: { id: string; type: string; text: string }[] },
+  survey: { id: string; questions: { id: string; type: string; text: string; config?: unknown }[] },
   invitations: number,
   opts: { groupId?: string | null; roundNo?: number; svc?: Client } = {},
 ) {
@@ -223,6 +239,45 @@ export async function inviteTo(
     if (error) throw new Error(`createInvitation(${i}): ${error.message}`)
   }
   return tokens
+}
+
+/**
+ * Invitations that carry a NAME — the supplier register an organisation survey
+ * is read through.
+ *
+ * `inviteTo` above makes anonymous-path invitations: an address nobody reads
+ * and no name, because a person survey's results never show either. An
+ * organisation survey is the opposite case — `app.attributed_rows` selects
+ * `i.name` and renders it as the row heading (M:0034:134), so an invitation
+ * without one produces a table of blank rows that still looks like it worked.
+ *
+ * Returned paired with the raw token so a caller can submit "as" a named
+ * supplier and know which row the answer must land on.
+ */
+export async function inviteOrganisations(
+  roundId: string,
+  names: string[],
+  opts: { groupId?: string | null; svc?: Client } = {},
+) {
+  const svc = opts.svc ?? serviceClient()
+  const invited: { name: string; email: string; token: string }[] = []
+
+  for (const name of names) {
+    const raw = randomUUID()
+    const email = `kontakt@${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.test`
+    const { error } = await svc.from('survey_invitations').insert({
+      round_id: roundId,
+      name,
+      email,
+      token_hash: hashToken(raw),
+      group_id: opts.groupId ?? null,
+      channel: 'email',
+    })
+    if (error) throw new Error(`inviteOrganisations(${name}): ${error.message}`)
+    invited.push({ name, email, token: raw })
+  }
+
+  return invited
 }
 
 /**

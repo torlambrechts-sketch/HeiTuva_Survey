@@ -54,14 +54,31 @@ jobs:
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -c "
             do \$\$
-            declare packs int; duties int; bank int; sections int;
+            declare packs int; duties int; bank int; sections int; presets int; panels int; uses int; unmapped int;
             begin
               select count(*) into packs    from public.template_packs;
               select count(*) into duties   from public.duty_definitions;
               select count(*) into bank     from public.question_bank;
               select count(*) into sections from public.report_section_types;
-              if packs <> 17 or duties <> 4 or bank <> 12 or sections <> 11 then
-                raise exception 'seed drift: packs=% duties=% bank=% sections=%', packs, duties, bank, sections;
+              select count(*) into presets  from public.dashboard_presets;
+              -- V1-4: `sections` rose 11 -> 12 when `duties` joined the
+              -- registry as a dashboard-only row, and `panels` is the
+              -- dashboard subset that a layout may name (DECISIONS Q51). The
+              -- second number is the one that matters: it is the vocabulary,
+              -- and it must NOT include `stream` while Q26 stands.
+              select count(*) into panels   from public.report_section_types where on_dashboard;
+              -- V1-5: five new packs (DECISIONS Q45), 17 -> 22. `uses` is the
+              -- use-case registry and `unmapped` is the one that matters: a
+              -- shipped pack with no use case draws a library card with no
+              -- eyebrow, and the mapping runs in a function both the migration
+              -- and the seed call.
+              select count(*) into uses     from public.use_cases;
+              select count(*) into unmapped from public.template_packs
+               where org_id is null and use_case is null;
+              if packs <> 22 or duties <> 4 or bank <> 12 or sections <> 12
+                 or presets <> 6 or panels <> 6 or uses <> 6 or unmapped <> 0 then
+                raise exception 'seed drift: packs=% duties=% bank=% sections=% presets=% panels=% uses=% unmapped=%',
+                  packs, duties, bank, sections, presets, panels, uses, unmapped;
               end if;
             end \$\$;"
 

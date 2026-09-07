@@ -83,29 +83,40 @@ export function responsePct(responses: number, target: number | null): number {
 }
 
 /**
- * The wizard's purpose list. The design offers six of the standard packs
- * rather than all seventeen (HeiTuva.dc.html:3504) — a first survey needs a
- * short, opinionated menu, not the whole Bibliotek.
+ * RETIRED by DECISIONS Q44 (V1-5). The wizard offered six hand-picked pack
+ * keys; it now offers the first six packs of the USE CASE chosen in step 0
+ * (NEW:4195-4197), read from `use_cases` and `template_packs` in
+ * `undersokelser/ny/page.tsx`.
  *
- * Keys, so the list survives a pack being retitled. A key missing from
- * `template_packs` is simply not offered.
+ * The list is gone rather than kept unused, because the failure it had is the
+ * one this project keeps removing: a hand-maintained menu beside a table that
+ * grows. Five packs were added in the same phase that retired it, and none of
+ * them could have appeared in the wizard.
  */
-export const WIZARD_PACK_KEYS = [
-  'ukentlig-puls',
-  'psykososial-kartlegging',
-  'csat',
-  'oppstartssjekk',
-  'likestilling-deltid',
-  'nps-kunde',
-] as const
 
-/** The three cadences the wizard offers (HeiTuva.dc.html:3531). */
-export const WIZARD_CADENCES = ['once', 'weekly', 'monthly'] as const
+/**
+ * The cadences the wizard offers — six in the v1 bundle (NEW:4220), three in
+ * the first one (OLD:3531).
+ *
+ * A SUBSET of `lib/send/registry.ts`'s eight, and deliberately: the wizard is
+ * the four-step path for someone who has not thought about frequency yet, so it
+ * offers the common ones and «Tilpasset» for everything else. `biweekly` and
+ * `biennial` are reachable on the Send screen, which is where a customer who
+ * knows they want «annethvert år» is. The bundle's own list is what decides
+ * which six; this is not a judgement call re-made here.
+ *
+ * `annual` where the bundle says `yearly` — the schema's value, the bundle's
+ * label (DECISIONS Q20).
+ */
+export const WIZARD_CADENCES = ['once', 'weekly', 'monthly', 'quarterly', 'annual', 'custom'] as const
 export type WizardCadence = (typeof WIZARD_CADENCES)[number]
 export const CADENCE_KEY: Record<WizardCadence, { chip: string; sentence: string }> = {
   once: { chip: 'cadenceOnce', sentence: 'cadenceOnceLower' },
   weekly: { chip: 'cadenceWeekly', sentence: 'cadenceWeeklyLower' },
   monthly: { chip: 'cadenceMonthly', sentence: 'cadenceMonthlyLower' },
+  quarterly: { chip: 'cadenceQuarterly', sentence: 'cadenceQuarterlyLower' },
+  annual: { chip: 'cadenceAnnual', sentence: 'cadenceAnnualLower' },
+  custom: { chip: 'cadenceCustom', sentence: 'cadenceCustomLower' },
 }
 
 /** The wizard's four steps, in order (HeiTuva.dc.html:3494). */
