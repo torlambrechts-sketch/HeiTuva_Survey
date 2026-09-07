@@ -215,6 +215,8 @@ recorded limit of the gate, not a gap to close).
 
 ### V1-2 outcome (2026-09-06)
 
+Full Gate 6 report: **`docs/v1/reports/V1-2.md`**.
+
 Built as planned, plus one thing the plan could not have known: the demo
 organisation had never held a survey at **k = 0**, and putting a screen in front
 of one found a crash in four SECURITY DEFINER functions.
