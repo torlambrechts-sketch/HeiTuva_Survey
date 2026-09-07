@@ -1,5 +1,25 @@
 # Status — what remains across the whole specification
 
+> **THIS FILE IS DERIVED, NOT A SOURCE. Read it to find where to look; verify against the
+> source before you act on it.**
+>
+> The sources are **`DECISIONS.md`** (what was decided) and **the code, the migrations and
+> the tests** (what exists). This file is a summary of both, written by hand, at a moment.
+> **Summaries age and nobody re-measures them** — that is precisely their purpose, to save
+> the reader from re-measuring, which is also why a stale row here is invisible for longer
+> than a stale row anywhere else.
+>
+> It has happened, and the row is still below, struck: **Q31** was listed as PARTIAL after it
+> had landed whole in `8b4efab`. The row survived **six** later edits to this file, was read
+> as outstanding in the v2 planning round, and became decision **Q54** — a decision to fix
+> something already fixed. It cost one decision rather than a phase only because V2-0's
+> Gate 1 reads the code instead of this file.
+>
+> So: a claim here that some work is outstanding is a **pointer to check**, never a finding.
+> Confirm it in the source, and if the source disagrees, the source wins and the row gets
+> struck **with its evidence** rather than deleted — so the next reader can see that a status
+> row outlived its subject.
+
 **Written at V1-4's close, 2026-09-07; updated at V1-6's close and again at the
 bundle's close, the same day.** The one-page summary of the whole bundle is
 `docs/v1/06-closeout.md`; this file stays the detailed picture.

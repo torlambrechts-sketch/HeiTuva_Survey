@@ -52,6 +52,26 @@ Two consequences, both cheap:
   (`--bundle=v1`, `--bundle=legacy`, `--all`), because a baseline re-rendered under a newer
   Chromium silently stops being the thing its phases were judged against. What changed
   between bundles, screen by screen: `docs/v1/00-diff.md` and `docs/v2/00-diff.md`. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
+- **ADDING A BUNDLE — the checklist, because two of these were missed in one phase.** A
+  handoff is not installed until every one of these is done. The failure they prevent is the
+  same each time: a baseline that renders, is reported captured, and is structurally invisible
+  afterwards.
+  1. `scripts/verify/reference.ts` — a `BUNDLES` entry, and screens the earlier bundles lack
+     declared `only: ['<key>']` so they are skipped rather than captured from the wrong page.
+  2. `.gitignore` — an `!artifacts/reference-<key>/` allowlist line. **`artifacts/*` is
+     ignored**, so without it the set renders and is committed nowhere.
+  3. `.eslintignore` — a `design-reference-<key>/` line, or eslint lints the bundle's own
+     `support.js` and reports errors in code nobody wrote.
+  4. `CLAUDE.md` and `VERIFY.md` — the third path, and which surface it governs.
+  5. `docs/v2/00-diff.md § 0.3` — the per-surface governance row.
+  6. **Commit the rendered directory**, and check it landed: `git status artifacts/`.
+  A baseline reported but never committed is the shape this project has hit six times —
+  green for something that structurally could not be seen: `ui_messages` cross-tenant behind
+  a green 5a3; V1-6's screen whose visual gate had only ever photographed the old state;
+  D102's pre-`M:0040` survey and V1-6's gated multi-round trend, both invisible because the
+  seed reaches only states the current code creates; prod nineteen migrations behind while
+  every gate stayed green; and `overview_activity` hand-applied, which would have failed
+  Gate 1's lint (D104).
 - Theme tokens (Tailwind theme, CSS vars):
   `--bg #FCF6E9 · --sf #FFFDF6 · --sf2 rgba(25,21,16,.05) · --ink #191510 · --mut #5F5849 · --line #E8DFC9 · --ac #F5C64A · --acf #191510 · --ac2 #A8D5D2 · --ac3 #FBD5C4 · --sbg #FBEBBE · --sbg2 #F6EEDD`
   radius 16px · shadow `0 2px 10px rgba(25,21,16,.05)` · fonts: Playfair Display (display), DM Sans (body), Bricolage Grotesque (logo only) · base 14px · focus outline `3px solid #191510, offset 2px` · entry animation fade + 6px translateY, .25s ease

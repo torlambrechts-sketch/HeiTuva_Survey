@@ -90,6 +90,22 @@ Two clarifications, both forced by the evidence rather than chosen:
    were read as a touch, v2 would govern everything after V2-0 and Q52 would have decided
    nothing.
 
+### What the table governs, and what it does not
+
+**The table assigns VISUAL governance — what a surface should look like. It does not govern
+copy.** A decision in `DECISIONS.md` outranks any bundle's wording, and changing words on a
+surface another bundle governs is permitted where a decision requires it, touching no layout.
+
+**Precedent: Q55**, applied in V2-0. `personvern` and `databehandleravtale` are
+original-governed, and Q55 rewrote the threshold sentence on both — including the DPA's
+technical-measures clause — without touching either page's layout. CLAUDE.md already draws
+this line one level up ("this file wins on security, the bundle wins on visuals"); the table
+inherits it rather than narrowing it.
+
+Written down because the alternative is that the next phase re-derives it, and it could
+just as easily re-derive it the other way — leaving a decision unapplied because a bundle
+"governs" the screen it lands on.
+
 ### The table
 
 Provenance derived from `git diff --name-only cd74022..3b7cef5 -- 'app/**'` (the v1 round)

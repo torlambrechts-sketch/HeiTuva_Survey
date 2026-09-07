@@ -54,6 +54,10 @@ type Bundle = {
   out: string
 }
 
+/** Adding one here is step 1 of 6 — the rest of the checklist is in CLAUDE.md
+ *  under "ADDING A BUNDLE". `.gitignore` is the one that bites: `artifacts/*`
+ *  is ignored, so a new set renders, reports captured, and is committed
+ *  nowhere. */
 const BUNDLES: Bundle[] = [
   {
     key: 'legacy',
