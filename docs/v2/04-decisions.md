@@ -47,7 +47,23 @@ early** even though its phase is sixth: Q72 shapes V2-4's copy, V2-5 entirely, a
 
 ---
 
-## Batch A — before V2-0
+## Batch A — **CONFIRMED (Tor), 2026-09-07 — PROMOTED to `DECISIONS.md` Q52–Q56**
+
+All five are confirmed and now live in the register, which is the authority on how firmly
+each is held. The text below is the draft they were confirmed from, kept for the argument,
+not for the status — the same convention `docs/v1/04-decisions.md` adopted after V1-4's
+provenance fix. **If this file and `DECISIONS.md` disagree, `DECISIONS.md` wins.**
+
+Outcomes, one line each:
+- **Q52 — extend to three bundles.** The per-surface table is written once, in
+  `00-diff.md § 0.3`. Accepted cost: V2-0's re-render turns every Gate 3a diff red in one commit.
+- **Q53 — a check, not a rebuild.** D90 is not reopened.
+- **Q54 — fix in V2-0**, the v1 chrome verbatim including the accessible name.
+- **Q55 — rewrite**, with the DPA clause corrected but held behind `legal.draftNotice` until
+  a lawyer has read it; `docs/LEGAL_DRAFTS.md` now names it as where the review starts.
+- **Q56 — strike the links.** The page is not built and the link is not redirected.
+
+### The drafts, as confirmed from
 
 **Q52 ●** — *Does Q18's rule extend to a third bundle?*
 

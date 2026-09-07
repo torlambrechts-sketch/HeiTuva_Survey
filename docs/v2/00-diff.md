@@ -64,6 +64,76 @@ strikes the links.
 
 ---
 
+## 0.3 Which bundle governs which surface — **Q52, CONFIRMED (Tor): extend to three**
+
+Q18's rule extends. `design-reference-v2/` governs every screen a **v2 phase touches**;
+`design-reference-v1/` keeps the screens v1 phases built and v2 does not touch;
+`design-reference/` keeps Phase 1–7 work as built. `verify:reference` gains a third render
+directory, `artifacts/reference-v2/`, and overwrites neither of the others.
+
+**Written once, here, so no phase rediscovers it.**
+
+### The rule that makes the table decidable
+
+Two clarifications, both forced by the evidence rather than chosen:
+
+1. **Governance is per SURFACE, not per file.** The v1 round touched
+   `app/(app)/profil/page.tsx` and `app/(app)/administrasjon/layout.tsx` — but the profil
+   change is one line removing `max-width:[900px]` (V1-0's wide toggle) and the admin change
+   is two lines in the tab rail. Neither redrew a screen body. **The shell is governed by the
+   bundle that last drew the shell; a screen body is governed by the bundle it was built
+   from.** Reading it per file would hand v1 every screen in the app on the strength of a
+   frame change, which is the opposite of what Q18 protects.
+2. **A property check does not move governance; building to a new drawing does.** V2-0's
+   hardening pass (Q53 — check, not rebuild) touches controls on every screen. That is a
+   check that a property holds, not adoption of a new drawing, so it moves nothing. If it
+   were read as a touch, v2 would govern everything after V2-0 and Q52 would have decided
+   nothing.
+
+### The table
+
+Provenance derived from `git diff --name-only cd74022..3b7cef5 -- 'app/**'` (the v1 round)
+and the phase table in `docs/v1/06-closeout.md § 1`.
+
+| Surface | Built from | Governs today | Moves to v2 in |
+|---|---|---|---|
+| **App shell** — header, nav, Innsikt rail, wide toggle | **v1** (V1-0) | v1 | **V2-0** — fifth nav item, avatar-only user button |
+| `oversikt` | **v1** (V1-1, Q37 compliance card) | v1 | — |
+| `undersokelser` (list) | original *(v1 frame only)* | **original** | — |
+| `undersokelser-ny` (wizard) | **v1** (V1-5, use-case rail in step 0) | v1 | — |
+| `bygg` — Builder + policy panel | **v1** (V1-1, Q17 §1/§2) | v1 | **V2-3** — the audience breach warning |
+| `send` | **v1** (V1-3, recurrence controls) | v1 | **V2-3** — import consolidation, audience picker |
+| `resultater` | **v1** (V1-2 attributed, V1-6 rounds) | v1 | — |
+| `resultater/csv` | **v1** (V1-2, Q43) | v1 | — |
+| `dashboard` + «Tilpass» | **v1** (V1-4) | v1 | — |
+| `rapporter`, `rapport-editor` | **v1** (V1-0 rail, V1-2 Q30) | v1 | — |
+| `bibliotek` | **v1** (V1-5) | v1 | — |
+| `profil` (the member's own) | original *(v1 frame only — one line)* | **original** | — |
+| `admin-firma`, `admin-grupper`, `admin-valg`, `admin-sprak` | original *(v1 touched `layout.tsx` only)* | **original** | — |
+| `admin-brukere` | original | **original** | **V2-2** — member statuses |
+| `admin-personvern` | original | **original** | **V2-1** — Q38's threshold picker |
+| `respondent` (`/s/[token]`) | original body; **v1** for the language chips (Q31) and peer results (Q47) | mixed, as listed | **V2-10** — quiz tiles |
+| `r/[token]` (shared report) | original | **original** | — |
+| `logg-inn`, `kom-i-gang` | original | **original** | — |
+| `splash` | original *(v1 byte-identical, 696 lines both)* | **original** | **V2-8** |
+| `personvern`, `databehandleravtale` (marketing) | original | **original** | copy only in V2-0 (Q55); layout unmoved |
+| **Oppgaver** | — | — | **v2 from birth** (V2-4) |
+| **Målgrupper**, **Profil og avsender**, **Integrasjoner** | — | — | **v2 from birth** (V2-3, V2-1, V2-11) |
+| **Help centre** | — | — | **v2 from birth** (V2-6) |
+| **Bruksområder** | — | — | **v2 from birth** (V2-8) |
+| **Live**, **Quiz** | — | — | **v2 from birth** (V2-9, V2-10) |
+
+**Rows marked "—" in the last column are answered against the bundle in "Governs today" for
+the life of this plan.** A later phase that adopts a v2 drawing for one of them moves it, and
+moving it is an edit to this table — not a judgement made inside the phase.
+
+**The accepted cost, recorded so it is not mistaken for a regression.** V2-0 re-renders and
+**every current Gate 3a diff goes red in one commit**. That is the correct behaviour of a
+gate whose baselines have moved, it is one scheduled commit, and it is the price of the rule
+rather than a defect in it.
+
+---
+
 ## A. BUNDLE DIFF — the three legs
 
 ### A.0 Counts, measured

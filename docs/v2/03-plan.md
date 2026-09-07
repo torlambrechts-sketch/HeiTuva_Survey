@@ -89,13 +89,13 @@ renders inside that frame.
 
 | Surface | Class | Work |
 |---|---|---|
-| Q18 extended to three bundles | — | **Q52 first.** Then `scripts/verify/reference.ts`, CLAUDE.md and VERIFY.md carry the third path; a third render directory if Q52 lands that way |
+| Q18 extended to three bundles | — | **Q52 CONFIRMED: extend.** `scripts/verify/reference.ts`, CLAUDE.md and VERIFY.md carry the third path; `artifacts/reference-v2/` is added and neither existing directory is overwritten. The per-surface answer is **already written**, once, in `00-diff.md § 0.3` — this phase reads that table, it does not re-derive it |
 | Reference re-render | — | One scheduled commit. It turns every existing Gate 3a diff red at once, which is correct |
 | Oppgaver as a fifth nav item | PARTIAL (B.1 built as four) | `components/AppHeader.tsx:27-30`, `AppNav.tsx`'s pathname→key map, `MobileNav.tsx`. The item renders **inert until V2-4** — no dead route |
 | Header avatar-only + role line | PARTIAL (B.29) | V2:195, V2:199–200 |
-| `box-sizing` / `max-width:100%` hardening | PARTIAL (B.27) | 42 controls. A **check**: where `docs/RESPONSIVE.md` already holds, record it and change nothing. D90's deliberate 20px gutter is not reopened |
-| Q31's carried chip chrome | PARTIAL | `docs/v1/05-status.md § 2` — the count rule is built (`app/s/[token]/page.tsx:49-62`); the chrome is not, and **the missing `title`/`aria-label` is the part that matters**: a two-letter code with no accessible name. No deviation logged. **Q54** |
-| Bundle copy re-asserting a categorical "fem" | — | Already settled for the app (D87). **The splash and legal keys are Q55** |
+| `box-sizing` / `max-width:100%` hardening | PARTIAL (B.27) | **Q53 CONFIRMED: a check, not a rebuild.** 42 controls. **The mechanism is not the point, the property is** — where `docs/RESPONSIVE.md`'s patterns already hold it, record that and change nothing; adopt the bundle's pair only where they do not. **D90 is not reopened.** And per `00-diff.md § 0.3`, this check **moves no screen's governing bundle** |
+| Q31's carried chip chrome | PARTIAL | **Q54 CONFIRMED: fix here.** Adopt the v1 bundle's chrome verbatim — 11px/700, `padding:6px 8px`, 2px gap, `--sf` active — and `title` + `aria-label` carrying the language name (`design-reference-v1/…:2320-2322`). The missing accessible name is the part that matters. Count rule already built (`app/s/[token]/page.tsx:49-62`) |
+| The categorical-"fem" copy | — | **Q55 CONFIRMED: rewrite.** Person surveys «aldri under virksomhetens terskel, som aldri er lavere enn tre»; **a separate clause** for organisation respondents — attributed, no threshold at all. Corrected **here**: the splash (`messages/no.json:1369`, `:1344`), the pricing fine print (`:1455`), and `legal.privacy3P` (`:1553`). **`legal.dpa4P` (`:1573`) is corrected in the same commit but does NOT go live** — `legal.draftNotice` stays up and only the lawyer's sign-off commit empties it. It is a contract, not copy. `docs/LEGAL_DRAFTS.md` names it as where the review starts |
 
 **Schema:** none. **Negative tests:** none — no new surface.
 
@@ -108,7 +108,9 @@ renders inside that frame.
 | Every existing screen | Its existing pattern, re-checked. Charts follow the **amended** Q40 rule (44px per interactive mark; the 200px floor is gone) |
 
 **Definition of done**
-- Reference renders regenerated for whichever bundles Q52 names, committed in their own commit.
+- Reference renders regenerated for all three bundles (Q52), committed in their own commit.
+  **Every current Gate 3a diff goes red in that commit** — the accepted, recorded cost of the
+  rule, not a regression.
 - Gate 3a run across all **159** capture states; every diff resolved or logged with a reason.
 - No horizontal scroll at 390px on any route (RESPONSIVE.md global rule 1 — blocker).
 - Census **577 / 35** unchanged; 5a3 **56 of 74** unchanged. A fidelity phase that moves
@@ -454,12 +456,18 @@ validation and returns without inserting.
 
 ## V2-8 — Bruksområder, and the splash fidelity pass
 
-**Blocked on Q56** (the missing fourth page).
+**No longer blocked. Q56 CONFIRMED: strike the links.** Tor is requesting the export
+separately; V2-8 proceeds without it.
 
 **Scope.** The Bruksområder page (NOT BUILT, B.24) — nine survey types, `UC` :184,
 `ORDER` :290, all nine already seeded as packs. The splash's growth 696 → 1051 (PARTIAL,
 B.26), whose two new states (`r.isLegal` V2:217, `r.hasPage` V2:226) drive links at
-`HeiTuva Splash.dc.html:1027` and `:1029` **to the page that does not exist**.
+`HeiTuva Splash.dc.html:1027` and `:1029` **to the page that does not exist**. Per Q56 the
+ranked list ships **without the details link** — `r.hasPage` is never true, so the `sc-if`
+never renders — and the deviation is logged. **The page is not built and the link is not
+redirected to Bruksområder**: both invent content for a page nobody drew, and a redirect is
+worse than a gap because it silently answers a link with something else. Q26's stream panel
+is the precedent — the absence is left visible.
 
 **Schema:** none. **Negative tests:** none new; re-run the public-surface denials
 (`request_demo`, the anon paths) unchanged.
@@ -469,8 +477,9 @@ B.26), whose two new states (`r.isLegal` V2:217, `r.hasPage` V2:226) drive links
 
 **Definition of done**
 - No link on any public page points at a page that does not exist.
-- No public page claims a capability the product does not have (D73), which includes the
-  categorical-five copy if **Q55** lands as a rewrite.
+- No public page claims a capability the product does not have (D73). The categorical-five
+  copy was already corrected in V2-0 (Q55); this phase must not reinstate it from the v2
+  splash, which still draws `n ≥ 5` at `HeiTuva Splash.dc.html:375`.
 - Census and 5a3 unchanged.
 
 ---
