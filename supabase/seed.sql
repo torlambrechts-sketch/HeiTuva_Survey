@@ -35,7 +35,27 @@ insert into public.template_packs (org_id, key, category, legal_ref, title, audi
 (null,'sluttsamtale','Ansatte',null,'Sluttsamtale','Ansatte som slutter',
  '[{"text":"Hva var den viktigste grunnen til at du sluttet?","type":"choice","options":["Lønn og betingelser","Utviklingsmuligheter","Lederen min","Arbeidsmengde","Flyttet eller livssituasjon","Fikk et bedre tilbud"]},{"text":"Hvor lenge har du vurdert å slutte?","type":"choice","options":["Under en måned","1–3 måneder","6 måneder","Over et år"]},{"text":"Kunne vi gjort noe for å beholde deg?","type":"yesno"},{"text":"Jeg vil anbefale andre å søke jobb hos oss","type":"likert"},{"text":"Hva bør vi endre for de som blir igjen?","type":"text"}]',16),
 (null,'360-tilbakemelding','Ansatte',null,'360 tilbakemelding','Leder · kolleger og medarbeidere',
- '[{"text":"Din relasjon til personen","type":"choice","options":["Medarbeider","Kollega på samme nivå","Leder","Samarbeidspartner"]},{"text":"Vurder følgende utsagn om personen","type":"matrix","statements":["Er tydelig på hva som forventes","Gir tilbakemelding jeg kan bruke","Lytter før beslutninger tas","Følger opp det som avtales","Skaper trygghet i gruppen"]},{"text":"Hva bør personen fortsette med?","type":"text"},{"text":"Hva bør personen gjøre annerledes?","type":"text"}]',17);
+ '[{"text":"Din relasjon til personen","type":"choice","options":["Medarbeider","Kollega på samme nivå","Leder","Samarbeidspartner"]},{"text":"Vurder følgende utsagn om personen","type":"matrix","statements":["Er tydelig på hva som forventes","Gir tilbakemelding jeg kan bruke","Lytter før beslutninger tas","Følger opp det som avtales","Skaper trygghet i gruppen"]},{"text":"Hva bør personen fortsette med?","type":"text"},{"text":"Hva bør personen gjøre annerledes?","type":"text"}]',17),
+-- V1-5 / DECISIONS Q45 — the five new packs (NEW:2857-2881), questions verbatim.
+-- All 'Annet': the category CHECK is NOT widened to hold use-case names, so the
+-- customer-facing axis is `use_case` and this column stays the internal kind.
+(null,'servicedesk-sak','Annet',null,'Hvordan var hjelpen du fikk?','Ansatte etter lukket sak · løpende',
+ '[{"text":"Hvor fornøyd er du med hjelpen du fikk?","type":"smiley"},{"text":"Saken ble løst ved første kontakt","type":"likert"},{"text":"Hvor lang tid tok det før du fikk svar?","type":"choice","options":["Under en time","Samme dag","1–2 dager","Lenger"]},{"text":"Hva kunne gjort det enklere?","type":"text"}]',18),
+(null,'it-verktoy','Annet',null,'IT og verktøy — halvårlig','Alle ansatte · halvårlig',
+ '[{"text":"Verktøyene jeg bruker daglig fungerer som de skal","type":"likert"},{"text":"Hvilket verktøy skaper mest friksjon?","type":"choice","options":["E-post og kalender","Fagsystem","Videomøter","Fildeling","Mobil"]},{"text":"Jeg vet hvor jeg får hjelp når noe ikke virker","type":"likert"},{"text":"Hva bør IT prioritere neste halvår?","type":"text"}]',19),
+(null,'innbyggerundersokelse','Annet',null,'Innbyggerundersøkelse','Innbyggere · årlig',
+ '[{"text":"Hvor fornøyd er du med kommunens tjenester samlet sett?","type":"scale"},{"text":"Hvilke tjenester har du brukt siste år?","type":"choice","options":["Barnehage og skole","Helse og omsorg","Byggesak","Kultur og idrett","Renovasjon"],"multi":true},{"text":"Det er lett å finne fram til riktig kontor eller tjeneste","type":"likert"},{"text":"Hva bør kommunen gjøre bedre?","type":"text"}]',20),
+(null,'brukerundersokelse-tjeneste','Annet',null,'Brukerundersøkelse — tjeneste','Brukere av én tjeneste · etter møte',
+ '[{"text":"Hvor godt ble du møtt?","type":"smiley"},{"text":"Jeg forsto hva som skjer videre i saken min","type":"likert"},{"text":"Fikk du informasjonen på et språk du forstår?","type":"yesno"},{"text":"Hva ville gjort møtet bedre?","type":"text"}]',21),
+(null,'frivillige-arrangement','Annet',null,'Takk for innsatsen — hvordan var det?','Frivillige · etter arrangement',
+ '[{"text":"Hvor godt organisert opplevde du dagen?","type":"scale"},{"text":"Jeg visste hva jeg skulle gjøre","type":"likert"},{"text":"Vil du stille som frivillig igjen?","type":"yesno"},{"text":"Hva bør vi gjøre annerledes neste gang?","type":"text"}]',22);
+
+-- V1-5 / DECISIONS Q24: map every shipped pack to a use case. The SAME function
+-- migration 0049 defines and calls — migrations run before seeds, so the
+-- migration's own call finds an empty table on a fresh reset and this is what
+-- maps the rows above. One definition, two callers, idempotent by
+-- `use_case is null`.
+select app.map_pack_use_cases();
 
 -- Standard question bank ------------------------------------------------------
 insert into public.question_bank (org_id, text, type, category, config, sort_order) values

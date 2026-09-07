@@ -132,8 +132,8 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **56 of 73 surfaces
-actively checked** by 5a3, and **31 files / 544 tests** in the census manifest.
+phase, not built. Two numbers carry forward and may only move up: **56 of 74 surfaces
+actively checked** by 5a3, and **32 files / 553 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
@@ -150,7 +150,10 @@ with the CSV's no-address property (2) and the refusal-copy rule (9). V1-3 took
 it 475 → 498 with Q23's schedules RLS (6), Q20/Q22's recurrence (9) and the
 status sentence (8). V1-4 took it 498 → 544: Q51's layout constraints and Q25's
 RLS (22), the layout model (14), Q42's threshold sentence (5) and the panel
-vocabulary's three-way binding (5). 5a3 is unmoved by any of them: a CHECK constraint is
+vocabulary's three-way binding (5). V1-5 took it 544 → 553 with Q24/Q45's
+registry, the total-mapping assertion and the untouched category CHECK (9);
+5a3's denominator rose 73 → 74 with `use_cases`, allowlisted with its reason,
+so the checked number holds at 56. 5a3 is unmoved by any of them: a CHECK constraint is
 neither an RLS table nor a SECURITY DEFINER function, so it is not a catalogue
 surface — a recorded limit of that gate, not a gap in it.
 

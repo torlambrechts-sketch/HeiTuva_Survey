@@ -1989,6 +1989,7 @@ export type Database = {
           questions: Json
           sort_order: number
           title: string
+          use_case: string | null
         }
         Insert: {
           audience?: string | null
@@ -2004,6 +2005,7 @@ export type Database = {
           questions: Json
           sort_order?: number
           title: string
+          use_case?: string | null
         }
         Update: {
           audience?: string | null
@@ -2019,6 +2021,7 @@ export type Database = {
           questions?: Json
           sort_order?: number
           title?: string
+          use_case?: string | null
         }
         Relationships: [
           {
@@ -2034,6 +2037,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_packs_use_case_fkey"
+            columns: ["use_case"]
+            isOneToOne: false
+            referencedRelation: "use_cases"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -2102,6 +2112,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      use_cases: {
+        Row: {
+          description: string
+          key: string
+          label: string
+          preset_key: string | null
+          short: string
+          sort_order: number
+          tint: string | null
+        }
+        Insert: {
+          description: string
+          key: string
+          label: string
+          preset_key?: string | null
+          short: string
+          sort_order?: number
+          tint?: string | null
+        }
+        Update: {
+          description?: string
+          key?: string
+          label?: string
+          preset_key?: string | null
+          short?: string
+          sort_order?: number
+          tint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "use_cases_preset_key_fkey"
+            columns: ["preset_key"]
+            isOneToOne: false
+            referencedRelation: "dashboard_presets"
+            referencedColumns: ["key"]
           },
         ]
       }
