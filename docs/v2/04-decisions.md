@@ -164,6 +164,14 @@ bundle" and one has arrived. But `orgThresholdNote` V2:5591 asserts *"Den som la
 undersøkelse kan heve terskelen, men ikke senke den under virksomhetens minimum"*, which is
 stricter than `privacy.redaktor_may_lower` (`M:0034`) — a flag that exists so an organisation
 **can** permit lowering, read by the guard, with no writer since D87.
+**Verified against source during V2-0, not read off a status file:**
+`organizations.default_k_threshold` exists with its 3–10 CHECK (`M:0034:15`, `:19-20`) and is
+already **displayed** — `PrivacyPanel.tsx:64` interpolates it into `pMinResponsesDesc` — but
+has **no writer**: no action takes an int for it, and `setPrivacy` is boolean-only and
+Zod-allowlisted (`administrasjon/actions.ts:92-97`). `privacy.redaktor_may_lower` is read by
+the guard (`M:0034:108`) and tested (`attributed-results.test.ts:267-288`), has no writer, is
+**not in `PrivacyKey`'s allowlist**, and is drawn nowhere in v2.
+
 **Proposed:** build the picker as drawn; **keep the column and do not build the switch**; and
 parameterise the note on the flag rather than asserting the flag is always false. Removing a
 working consumer to match a bundle that forgot it is what **Q29** refused, in words Tor kept

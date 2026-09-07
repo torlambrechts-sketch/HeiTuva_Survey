@@ -189,12 +189,91 @@ merging would bury them inside a screen build.
 
 ---
 
+## Batch B — sent 2026-09-07 · **OPEN**
+
+Three decisions, all on the security core. V2-1's batch, sent after V2-0 closed.
+
+**Every premise below was verified against source during V2-0's Gate 1**, not read off a
+status document. That is Q54's lesson applied: Q54 was confirmed to fix something already
+fixed, because `docs/v1/05-status.md` said it was outstanding and nobody re-measured. Two of
+the three drafts changed on verification.
+
+### Q57 ● — Q38's picker is drawn; the `redaktor_may_lower` switch is not
+
+v2 draws the Personvern threshold controls that Q38 parked waiting for a bundle: chips
+`[3,5,8,10]` (V2:5583) and `[5,8,10,12]` (V2:5587), note V2:5591, markup V2:2737–2747.
+Neither exists in v1.
+
+**What is already built, measured:** `organizations.default_k_threshold` exists with its
+3–10 CHECK (`M:0034:15`, `:19-20`) and is **displayed today** — `PrivacyPanel.tsx:64`
+interpolates it into `pMinResponsesDesc`. It has **no writer**: no action takes an int for it,
+and `setPrivacy` is boolean-only and Zod-allowlisted (`administrasjon/actions.ts:92-97`).
+`privacy.redaktor_may_lower` is read by the guard (`M:0034:108`) and tested
+(`attributed-results.test.ts:267-288`), has no writer, is **not in `PrivacyKey`'s allowlist**,
+and is drawn nowhere in v2.
+
+**So the shape is: the number is shown but not settable, and the flag is enforced but not
+settable.** V2-1 makes the first settable.
+
+**The conflict** is that `orgThresholdNote` (V2:5591) asserts *"Den som lager en undersøkelse
+kan heve terskelen, men ikke senke den under virksomhetens minimum"* — stricter than
+`redaktor_may_lower`, a flag that exists so an organisation **can** permit lowering.
+
+**Proposed:** build the picker as drawn; **keep the column and do not build the switch**;
+parameterise the note on the flag rather than asserting the flag is always false; and **log
+the divergence** — the flag is the truth, the note is copy. **Q29 applies verbatim**: do not
+remove a working consumer to match a bundle that forgot it.
+
+*Confirm: as proposed / drop `redaktor_may_lower` to match the copy / build the switch from
+the brief's prose.*
+
+### Q58 ● — a per-topic automatic threshold of 8
+
+V2:5591: *"Kartlegging av trakassering, varsling og helse settes **automatisk** til 8."*
+Q17 defines a default, a floor and a lock — no topic rule. It **strengthens** the guarantee,
+so "the file wins on security" does not settle it.
+
+**Verified, and stronger than the draft claimed:** `app.apply_pack_policy` (`M:0032`)
+**already reads `k_threshold` from the pack's policy jsonb** —
+`new.k_threshold := coalesce((v_policy->>'k_threshold')::int, new.k_threshold)`. The pack
+route therefore needs **no DDL and no code change at all**. The mechanism is built and wired;
+the decision is only *which packs carry which number*.
+
+**Proposed:** adopt it **as a pack property** — sensitive statutory packs carry 8 in their
+seeded policy. It cannot be got wrong by classifying a topic at runtime, which is **Q35's
+precedent exactly**: the bundle classified questions by regex and the answer was "data on the
+pack. Never a regex on question text." A topic string parsed to pick a threshold is the same
+mistake in the same place.
+
+*Confirm: pack property / a second org-level default as drawn / reject.*
+
+### Q59 ● — verneombud: a fourth role, or a duty capacity?
+
+v2 says "**Fire roller** styrer hva folk ser" (V2:4279) and gives verneombud its own role
+(V2:4283, V2:5100, V2:5131). **The v1 bundle says nothing of the kind**, and **v2 contradicts
+itself**: its own Brukere screen lists three (V2:2279). The product has three —
+`app.member_role` is exactly `('administrator','redaktor','leser')` (`M:0001:7`).
+
+A verneombud does have a distinct statutory position (aml. § 6-2, and the medvirkning a
+psykososial report must document), so the design is not wrong about the world — it is
+inconsistent with the product's role model.
+
+**Proposed:** **a duty capacity, not a role.** `duty_signers`
+(`20260904000004_duty_signing.sql`) already records who signs; a verneombud is a `leser` who
+signs statutory duties. Correct the help copy to match V2:2279. One copy change, already
+built, and it keeps the role model — a surface 5a3 enumerates against — at three.
+
+**What the alternative costs, so the choice is between consequences:** a fourth enum value
+touches every RLS policy and every `app.has_role` call, and 5a3 re-enumerates all 74 surfaces
+against it. That is a security-kernel change to express something `duty_signers` already
+expresses.
+
+*Confirm: duty capacity / a real fourth role in `app.member_role` / copy only.*
+
+---
+
 ## Batches not yet sent
 
-**Batch B is queued behind V2-0's close** (Tor, 2026-09-07) — it is V2-1's batch, and V2-0
-must land first.
-
-`docs/v2/04-decisions.md` holds the drafts. In plan order: **B** (V2-1, Q57–Q59),
-**C** (V2-2, Q60–Q61), **D** (V2-3, Q62–Q67), **E** (V2-4, Q68–Q71), **G** (V2-6, Q74–Q75),
+`docs/v2/04-decisions.md` holds the drafts. In plan order: **C** (V2-2, Q60–Q61), **D** (V2-3, Q62–Q67), **E** (V2-4, Q68–Q71), **G** (V2-6, Q74–Q75),
 **H** (V2-7, Q76), **I** (V2-8, Q77), **J** (V2-9, Q78–Q82), **K** (V2-10, Q83–Q85),
 **L** (V2-11, Q86–Q89).
