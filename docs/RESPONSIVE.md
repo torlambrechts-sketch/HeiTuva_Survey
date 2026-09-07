@@ -71,6 +71,12 @@ keeps its position in reading order and its width collapses.
 - The threshold line stays **directly under the survey chips it describes**. It is the
   sentence saying which gate the panels on screen were drawn under (Q42), and separating
   it from the selection it belongs to would make it read as a property of the page.
+- **A panel card's control row uses `.touch-cluster`.** Five controls at 30px
+  with 44px hit areas need 14px between painted edges (7px overflow each side);
+  the design draws 6px, which is right above `md` where there is no overlay and
+  wrong below it. One shared utility, not a per-instance gap — Gate 3e reported
+  228 blockers from this single cause, which is what global rule 2 means by
+  "a finding count in the hundreds is one systemic fix".
 - No panel, preset or filter is removed on any viewport. The card is the only way to reach
   the filters after Q46 moved them out of the header, so hiding any part of it would hide
   a feature, which the global rules forbid.

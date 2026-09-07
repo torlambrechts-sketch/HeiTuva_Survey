@@ -447,7 +447,7 @@ export async function DashboardScreen({
       <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
         {panels.map((entry) => {
           const controls = (
-            <span className="flex flex-wrap items-center justify-end gap-[6px]">
+            <span className="touch-cluster flex flex-wrap items-center justify-end gap-[6px]">
               <PanelControls
                 panelKey={entry.key}
                 panels={panels}

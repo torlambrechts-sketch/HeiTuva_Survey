@@ -52,7 +52,7 @@ export function PanelControls({
     'touch-44 flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full border border-line bg-transparent text-mut disabled:opacity-40'
 
   return (
-    <span className="flex flex-wrap items-center justify-end gap-[6px]">
+    <span className="touch-cluster flex flex-wrap items-center justify-end gap-[6px]">
       <button
         type="button"
         aria-label={labels.up}

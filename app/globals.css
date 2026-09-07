@@ -118,6 +118,28 @@
     transform: translate(-50%, -50%);
   }
 
+  /* A ROW OF SMALL CONTROLS, spaced so their 44px areas do not collide.
+     RESPONSIVE.md global rule 2: "Where two controls sit close enough that
+     their 44px regions would collide, increase the SPACING between them at
+     mobile — spacing is layout and may change; the control is a token and may
+     not." And: "Implement once as a shared utility, not per instance. A
+     finding count in the hundreds is one systemic fix, not hundreds of edits."
+
+     The arithmetic, so the number is not a guess. A 30px painted control with
+     a 44px hit area overflows (44 - 30) / 2 = 7px on each side, so two
+     adjacent ones need at least 14px between their painted edges. The design
+     draws 6px (NEW:1089), which is why they overlapped by 8px² at 390px — and
+     why the same 6px is correct above md, where the pointer is a mouse and the
+     44px overlay does not exist at all.
+
+     Found by Gate 3e reporting 228 blockers across every dashboard panel, all
+     one cause. The phase plan had predicted it in as many words ("the
+     five-control cluster measured for overlaps") and the build did not
+     measure it. */
+  .touch-cluster {
+    gap: 14px !important;
+  }
+
   /* Native <select> and <input> are replaced elements — ::after does not render
      on them, so the overlay above is not available. Instead the border box is
      grown with a transparent border while `background-clip: padding-box` keeps
