@@ -266,9 +266,16 @@ export const ROUTES: RouteSpec[] = [
         // the first click. V1-6's visual gate had exactly this hole.
         name: 'accent-picked',
         setup: async (page) => {
-          const swatch = page.getByRole('button', { name: /^(Salvie|Sage)$/ })
-          const already = (await swatch.getAttribute('aria-pressed')) === 'true'
-          await page.getByRole('button', { name: already ? /^(Fersken|Peach)$/ : /^(Salvie|Sage)$/ }).click()
+          // NOT an exact-name match. A swatch button's accessible name is the
+          // whole of its three spans — «✓ Salvie Kontrast 11,3:1» — so
+          // /^Salvie$/ matches nothing and the responsive gate reported it as
+          // UNMEASURED rather than as a miss. That distinction is the harness
+          // doing its job: a state it cannot reach is a blocker, not a pass.
+          const salvie = page.getByRole('button', { name: /Salvie|Sage/ })
+          const already = (await salvie.getAttribute('aria-pressed')) === 'true'
+          await page
+            .getByRole('button', { name: already ? /Fersken|Peach/ : /Salvie|Sage/ })
+            .click()
           await page.waitForTimeout(1200)
         },
       },
@@ -355,8 +362,33 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        /*
+          V2-2 — THE KEY IS NOW PINNED, AND IT HAD TO BE.
+
+          This setup used to edit "the first translation form on the page",
+          whichever key that happened to be, and it PERSISTS an organisation
+          override on that key. V2-2 added 27 `admin.*` messages, the first form
+          became `admin.accentFersken`, and the fourth accent swatch rendered as
+          «Vår egen formulering» in every subsequent capture — including the one
+          this phase added, whose setup then could not find a button called
+          «Fersken» and timed out.
+
+          Standing question 4: what does this leave behind? An override on a key
+          nobody chose. It was harmless only for as long as the key it landed on
+          happened to be inert, which is not a property anybody was maintaining.
+
+          `nav.insight` is the pinned key deliberately: `verify:roundtrip`
+          already overrides and then REMOVES exactly this row, so the two
+          harnesses agree about which string is the demo override rather than
+          racing over whichever one sorts first.
+        */
         name: 'egen-tekst',
         setup: async (page) => {
+          await page.goto(
+            new URL('/administrasjon/sprak?ns=nav&q=insight', page.url()).toString(),
+            { waitUntil: 'domcontentloaded' },
+          )
+          await page.waitForLoadState('load')
           const first = page.locator('form').filter({ has: page.locator('textarea') }).first()
           await first.locator('textarea').fill('Vår egen formulering')
           await first.getByRole('button', { name: 'Lagre' }).click()
