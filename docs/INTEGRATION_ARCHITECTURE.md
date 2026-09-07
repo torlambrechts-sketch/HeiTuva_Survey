@@ -64,9 +64,30 @@ Three verified facts that only matter together:
    `app/(auth)/kom-i-gang/actions.ts:45` calls `createAdminClient()` to create an
    organisation, and `app/(app)/administrasjon/actions.ts:390` calls
    `createAdminClient().auth.admin.inviteUserByEmail`. Both are server actions on
-   the request path. Either the key is on Vercel and the doc is wrong, or those
-   two flows are broken in production. **This must be established before
-   anything is designed on top of it**, and it is G0's first task.
+   the request path, and `createAdminClient()` throws outright when the key is
+   absent.
+
+   **Evidence from production, 2026-09-07.** `heituva-prod` holds one
+   organisation ("HeiTuva AS", created 2026-09-03 11:42:57Z), one active
+   administrator whose `org_members` row carries the *same* creation timestamp
+   to the microsecond, and one `auth.users` row with provider `email` created
+   2.7 hours earlier — which is exactly the shape `/kom-i-gang` produces, and
+   `/kom-i-gang` cannot produce anything at all without the service key. The
+   account also holds four surveys and no groups, rounds, responses, duties or
+   reports, so it is a real if lightly-used signup rather than seed data
+   (`scripts/seed-demo.ts` would have left a populated org).
+
+   **So the key is available to the app runtime, with one caveat that only
+   Vercel can close:** this proves the *code path* ran, not that it ran on the
+   deployed Vercel app rather than a local dev server pointed at production. The
+   remaining question is a `vercel env ls` away and needs the CLI or the
+   dashboard — the Vercel MCP connector's tool surface is projects, deployments
+   and deployment events, with no environment-variable tools, so it cannot
+   answer it.
+
+   **Either way the design consequence is unchanged, and is the point:** the
+   only assumption that survives is that the app *can* read anything the service
+   role can read. `docs/OPERATIONS.md:53` must be corrected to say so.
 
 So: if integration secrets are stored the obvious way, **a bug in any server
 action becomes a cross-tenant credential disclosure**, and the only thing
@@ -115,9 +136,22 @@ earlier. **G0 and G1 can start today.**
 Fixing what is already wrong, before anything is built on top of it. Every item
 has value with or without integrations.
 
-1. **Establish the service-key reality** (§1, fact 3) and correct
-   `docs/OPERATIONS.md:53` to say what is actually true. If the key is on Vercel,
-   that is a finding to record, not a line to quietly edit.
+1. **Establish the service-key reality** (§1, fact 3). The database side is
+   now evidence rather than conjecture; what remains is one `vercel env ls`
+   against the production project. Then correct `docs/OPERATIONS.md:53` — this
+   is a finding to record, not a line to quietly edit, because the sentence has
+   been load-bearing for the threat model since Phase 7.
+
+   While confirming this, two related facts were read off the production
+   advisors and are worth writing into the same commit rather than
+   rediscovering: `auth_leaked_password_protection` is **off**, which is
+   consistent with `docs/OPERATIONS.md:11` ("the pre-launch gate — what the
+   operator does") still being open and with DECISIONS Q14 deferring it, not a
+   regression; and `audit_events` on production is **empty**, so the audit path
+   G3 extends has never actually run against a real deployment. `lib/auth/audit.ts`
+   swallows its own errors into `console.error` by design, so an empty trail and
+   a broken trail look identical. G3 should add the assertion that closes that
+   gap.
 2. **Resurrect `FLAGGED_CHANNELS`.** `lib/send/registry.ts:19` has **zero
    references repo-wide**; `SendScreen.tsx:200` hard-codes
    `c !== 'sms' || smsEnabled` instead, with further hard-coded channel branches
@@ -441,6 +475,8 @@ wasted, and the provider work cannot start without it.**
 | Q18-b | Whether a bespoke Postgres role and its JWT are acceptable operationally | Tor | G2 |
 | Q18-c | What `organizations.privacy.eu_only` means — a control that refuses third-country providers, or a switch that comes out | Tor | G5 |
 | Q18-d | Whether the service key is on Vercel today, and whether it should be | operator + Tor | G0 |
+| Q18-e | Whether an empty production `audit_events` means "nothing auditable happened" or "the trail is failing silently" | G3, from evidence | G3 |
 
-Q18-d is a question of fact, and G0's first task is to answer it. The other
+Q18-d is a question of fact and is now most of the way answered (§1, fact 3);
+what is left needs Vercel, not judgement. Q18-e is the same shape. The other
 three are judgements, and G1 exists to put evidence under them.
