@@ -348,6 +348,32 @@ async function main() {
         /små grupper/i.test(atThree),
         atThree.split('\n').find((l) => /gjenkjennelig/i.test(l))?.slice(0, 70) ?? '',
       )
+
+      /*
+        DECISIONS Q91 — k=2 IS ITS OWN TIER, CHECKED IN THE BROWSER BECAUSE THAT
+        IS WHERE IT WENT WRONG.
+
+        "The promise is derived, so it follows automatically" was true and
+        insufficient. Before the third tier existed, k=2 fell into
+        `promiseAnonymousLow` and this very banner read «I små grupper kan svar
+        likevel være gjenkjennelige» — a caveat about RECOGNISABILITY at a
+        threshold where the other respondent can DERIVE the answer by
+        subtraction. The function was working correctly; the boundary was in the
+        wrong place. So the assertion here is two-sided: the arithmetic must be
+        said, and the softer caveat must be ABSENT — a one-sided check would
+        have passed on the old copy the moment the new sentence was appended.
+      */
+      const atTwo = await bannerForThreshold(2)
+      check(
+        'k=2 states the arithmetic — the other respondent can work it out',
+        /regne seg fram/i.test(atTwo),
+        atTwo.split('\n').find((l) => /regne seg fram/i.test(l))?.slice(0, 90) ?? '',
+      )
+      check(
+        'k=2 does NOT carry the softer «gjenkjennelig» caveat',
+        !/gjenkjennelig/i.test(atTwo),
+        atTwo.split('\n').find((l) => /gjenkjennelig/i.test(l))?.slice(0, 70) ?? '(absent)',
+      )
     }
 
     // --- the token is single-use for an invited respondent -----------------

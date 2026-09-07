@@ -193,6 +193,13 @@ verification** is manual/DNS-record display only — no provider API).
 
 ## V2-2 — Suppression and member state
 
+> **WHAT ACTUALLY SHIPPED AS V2-2 (2026-09-07), recorded here so the plan does not
+> misdescribe the repository.** Tor folded «Profil og avsender»'s unblocked half into this
+> phase (V2-1's §4 recommendation), and three threshold decisions — **Q58, Q90, Q91** —
+> arrived mid-phase and were taken here. **Suppression and member state, the scope below,
+> were NOT delivered and are the next thing**; the six negative tests still stand as written.
+> See `docs/v2/reports/V2-2.md § 5`.
+
 Small, legally required (GDPR art. 21), overdue.
 
 **Scope**

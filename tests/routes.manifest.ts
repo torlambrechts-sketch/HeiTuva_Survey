@@ -252,6 +252,29 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-2 — «Profil og avsender», the two cards it builds (V2:2313-2347).
+    route: '/administrasjon/profil',
+    label: 'admin-profil',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        // The accent chosen. Captured as its own state because the SELECTED
+        // swatch is the only thing that changes — an --ink border and a ✓ — and
+        // a default-only capture photographs the state nobody is ever in after
+        // the first click. V1-6's visual gate had exactly this hole.
+        name: 'accent-picked',
+        setup: async (page) => {
+          const swatch = page.getByRole('button', { name: /^(Salvie|Sage)$/ })
+          const already = (await swatch.getAttribute('aria-pressed')) === 'true'
+          await page.getByRole('button', { name: already ? /^(Fersken|Peach)$/ : /^(Salvie|Sage)$/ }).click()
+          await page.waitForTimeout(1200)
+        },
+      },
+    ],
+  },
+  {
     route: '/administrasjon/brukere',
     label: 'admin-brukere',
     as: 'administrator',

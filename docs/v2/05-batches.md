@@ -324,6 +324,29 @@ thought through in the bundle. Help copy corrected to match V2:2279 and logged.
 
 ---
 
+## Not a batch — the three threshold decisions, taken in conversation during V2-2
+
+**These did not come from `04-decisions.md` and were not sent as a batch.** They arose while
+V2-2 was executing Q58's return, and each one is recorded here so the shape is visible: a
+decision reached in conversation is invisible until it is a register line, and this phase is
+where that stopped being an abstraction (see `DECISIONS.md`'s header, third instance).
+
+| # | What Tor decided | What it came out of |
+|---|---|---|
+| **Q58** | ONE pack key, `trakassering-ytringsklima`, seeded 8/anonymous/person/locked; `apply_pack_policy` takes `greatest(pack, org)` | The return in Batch B. Tor: the anonymity lock is «the RIGHT outcome, not a cost» |
+| **Q90** | `organizations.default_k_threshold` is a **floor**, waived by `redaktor_may_lower` | D105's second clause: I asserted an absence, was told not to ship copy asserting an absence I could not demonstrate, enumerated it — and the enumeration showed the flag had no referent |
+| **Q91** | The floor moves **3 → 2**, superseding Q17's floor, with prescribed copy | Tor, mid-phase, after Q90 |
+
+**Q91's copy was prescribed rather than left to a writer, and the reason is in the decision:**
+«Med terskel 2 kan den som svarer regne seg fram til hva den andre svarte» — **not** «kan være
+gjenkjennelig». At 2 the property is arithmetic, not recognisability, and the softer word is
+the failure Q17 calls «den eneste virkelige feilen i hele denne endringen».
+
+**All three are in `DECISIONS.md`.** Q17 keeps its text and gains a pointer forward; Q36, Q55
+and Q57 gain dated pointers where Q90 or Q91 moved the ground under them.
+
+---
+
 ## Batches not yet sent
 
 `docs/v2/04-decisions.md` holds the drafts. In plan order: **C** (V2-2, Q60–Q61), **D** (V2-3, Q62–Q67), **E** (V2-4, Q68–Q71), **G** (V2-6, Q74–Q75),
