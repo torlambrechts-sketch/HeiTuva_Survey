@@ -37,7 +37,9 @@ figures are **targets the phase must produce**, not measurements.
   without Tor's go-ahead. No earlier phase may depend on anything it would deliver.
 - **No v2 phase lifts `feature_flags.event_stream_panel`.** Q26 defers it, V1-7 was
   descheduled because the panel is R4's second half, and a third bundle drawing the same
-  panel changes neither (02-conflicts §A9).
+  panel changes neither (02-conflicts §A9). **Any phase that appears to need it is depending
+  on the deferred integrations phase, which is forbidden** — that is the test, and it is
+  cheaper than re-arguing Q26: the dependency is the finding, not the panel.
 
 ---
 
@@ -235,7 +237,7 @@ this.
 | Per-round freeze | NOT BUILT | V2:5033 — "312 treff · frosset for Ukespuls 36" |
 | Audience audit log | NOT BUILT | `auditRows` V2:5031–5036 |
 | Import relocation (**Q62**) | PARTIAL (B.28) | Send keeps the one-off list V2:3020 + "Lagre som målgruppe" V2:3037; sync stubs move here V2:3040, still behind `feature_flags`, still "kommer" |
-| `hasThresholdWarn` | NOT BUILT (B.25) | V2:4988 — **a fourth caller of `lib/questions/policy-warnings.ts`, not a fourth copy**, taking k from `app.k_for` |
+| `hasThresholdWarn` | NOT BUILT (B.25) | V2:4988 — **a fourth caller of `lib/questions/policy-warnings.ts`, not a fourth copy**, taking k from `app.k_for`. See the note below |
 | Populasjoner | NOT BUILT (B.15) | **Not in this phase.** The section renders the design's unavailable state — never a fabricated count (CLAUDE.md) |
 
 **Schema first.** `groups` gains `kind ('gruppe'|'segment')`, `source`, `synced_at`, and for
@@ -262,6 +264,19 @@ field set, never free text evaluated in SQL (**Q65**). A
 property, not the ones you picked. `policyWarnings` will then have four callers, and the
 test must bind all four — the pattern `tests/unit/dashboard-panels.test.ts` established for
 the panel vocabulary.
+
+**Recorded because the pattern is now being caught earlier, which is the point.**
+`hasThresholdWarn` is the **fifth** instance of one-function-many-callers in this project and
+**the first caught before the second copy existed**. The previous four were removed after the
+fact — V1-3's interval CASE, V1-4's panel vocabulary, V1-5's use-case mapping, V1-6's
+pack-question builder, all named in `lib/questions/pack.ts` — and
+`docs/v1/06-closeout.md § 1` calls the shape "the defect shape of this codebase". Here the
+copy is still hypothetical: the bundle draws `g.count > 0 && g.count < 5` inline (V2:4988),
+and the phase's job is to route it to the existing function instead of transcribing it.
+**And the answer to the v2 instruction's question: `audGroups` is not the data source D94 was
+waiting for.** D94 closed in V1-2 (`M:0039`); `surveys.target` has had a writer since, and
+`policyWarnings` already has three callers. v2's warning is a different comparison — per
+audience group, at pick time — so it is new work for an existing function, not a new rule.
 
 **UI**
 

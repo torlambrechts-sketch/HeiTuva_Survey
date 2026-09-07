@@ -49,17 +49,59 @@ early** even though its phase is sixth: Q72 shapes V2-4's copy, V2-5 entirely, a
 
 ## Batch A — before V2-0
 
-**Q52 ●** — *Does Q18 extend to a third bundle?* Q18 confirmed two bundles, each governing a
-different question, and `verify:reference` renders both into `artifacts/reference/` and
-`artifacts/reference-v1/` overwriting neither. v2 is a third handoff and Q18's sentence does
-not extend itself.
-**Proposed:** extend the rule as written — `design-reference-v2/` governs every screen a v2
-phase touches; v1 keeps the screens v1 phases touched and v2 does not; the original keeps
-Phase 1–7's untouched screens; a third render directory. This is what Q18's own reasoning
-gives, and it is the reading that keeps "a fidelity question about an untouched screen is
-answered against the bundle it was built from" true.
-*Confirm: extend to three (recommended) / v2 supersedes v1 wholesale / v2 governs only the
-new screens.*
+**Q52 ●** — *Does Q18's rule extend to a third bundle?*
+
+**This is a rule about how the project reads its own history, not a preference, so the
+reasoning is set out rather than a recommendation offered.**
+
+**What Q18 actually decided.** Not "use the newest bundle". Q18 decided that **two bundles
+stay, and each governs a different question**: `design-reference-v1/` is the target for every
+screen a v1 phase touches, and `design-reference/` remains the reference for Phase 1–7 work
+**as built** — "so a fidelity question about an untouched screen is answered against the
+bundle it was built from, not against a later one that moved the frame under it." The
+mechanism follows: `scripts/verify/reference.ts:21` carries both paths, `verify:reference`
+renders into `artifacts/reference/` and `artifacts/reference-v1/` and **overwrites neither**,
+and `design-reference-v1/README.md` says which document governs where the two diverge.
+
+**What that rule is for.** A bundle is not a specification of the product; it is a
+specification of the product *at a moment*. When a later handoff redraws a screen nobody has
+touched, the screen has not become wrong — the frame moved under it. Judging it against the
+new bundle would manufacture a defect out of a change of mind, and the repository would
+accumulate "fidelity findings" that are really just history. Q18's answer is that fidelity is
+**a question with a date on it**.
+
+**Why a third bundle is the case Q18 was written for, not an exception to it.** v2 is the
+first handoff that moves the frame under screens signed off against a *previous* handoff
+rather than against the original — the hardening pass over 42 controls, the header losing its
+visible name, and a fifth nav item. If v2 simply superseded v1, every screen V1-0 … V1-5
+built would become answerable against a bundle it was not built from, which is the exact
+outcome Q18 exists to prevent. The rule was written for two bundles because there were two;
+its reason does not stop at two.
+
+**What extending it costs, stated plainly.** A third render directory
+(`artifacts/reference-v2/`) and a third path in `reference.ts`, CLAUDE.md and VERIFY.md; a
+per-screen answer to "which bundle governs this?" that has to be *written down* rather than
+inferred; and a re-render that turns every current Gate 3a diff red in one commit. The
+alternative — v2 supersedes v1 wholesale — costs nothing today and discards the reason Q18
+was confirmed. The third option, v2 governing only the screens it introduces, is tidier still
+and leaves the hardening pass with no bundle authorising it, which would make it an invented
+change under CLAUDE.md's do-not-invent rule.
+
+**What follows mechanically from each answer**, so the choice is between consequences rather
+than adjectives:
+
+| | Extend to three | v2 supersedes v1 | v2 governs new screens only |
+|---|---|---|---|
+| Screens V1-0…V1-5 built | judged against v1, except where a v2 phase touches them | judged against v2 — new findings on signed-off work | judged against v1 |
+| The 42-control hardening pass | authorised, on the screens a v2 phase touches | authorised everywhere | **unauthorised** — no bundle covers it |
+| Renders | three directories | one, and the v1 renders become history | two |
+| «which bundle governs this screen» | written per screen | needs no answer | written per screen |
+| Q18's stated reason | preserved | discarded | preserved |
+
+*Confirm: extend the rule to three bundles / v2 supersedes v1 wholesale / v2 governs only the
+screens it introduces.*
+
+**Blocks:** V2-0, and every fidelity question in every phase after it.
 
 **Q53** — *How the v2 hardening pass reconciles with `docs/RESPONSIVE.md`.* v2 adds
 `box-sizing:border-box;max-width:100%` to 42 controls (00-diff §A.6). The app solved the same
@@ -110,6 +152,11 @@ stricter than `privacy.redaktor_may_lower` (`M:0034`) — a flag that exists so 
 parameterise the note on the flag rather than asserting the flag is always false. Removing a
 working consumer to match a bundle that forgot it is what **Q29** refused, in words Tor kept
 because the reasoning generalises.
+**And log the divergence**, because it is a bundle-versus-schema disagreement rather than a
+style choice: `docs/DEVIATIONS.md` records that V2:5591 asserts a rule stricter than
+`M:0034` holds, that **the flag is the truth and the note is copy**, and that the note is
+therefore rendered from the flag. Without the entry the next reader meets a screen whose
+sentence and whose database disagree, with nothing saying which was decided.
 *Confirm: as proposed (recommended) / drop `redaktor_may_lower` to match the copy / build the
 switch from the brief's prose.*
 
@@ -303,9 +350,12 @@ about a static check and the design honours it. It does not cover the room: in a
 the audience watches `liveStage.counter` (V2:6177) go 4 → 5 and the bars appear (V2:1863).
 **Q28 licenses the number** — counts of people stay visible — but its four enumerated homes
 are asynchronous private reads by an authenticated member. The live counter renders the same
-number continuously to a **co-located audience**, and what leaks is the *increment correlated
-with a room*, not the count. Q28 was confirmed before any projected surface existed. This is
-an extension, not a violation, and must be put that way.
+number continuously to a **co-located audience**. What may be new is therefore **not the
+number but the increment**, observed in real time by a room that already knows who is
+present: **a correlation channel, not an aggregation** — which is a different kind of thing
+from anything Q28 ruled on, and Q28 was confirmed before any projected surface existed.
+**Q28 holds; a count of people is participation.** This is an extension of it, not a
+violation, and phrased as a violation it gets refused and the real question is lost.
 **Proposed:** default the counter **off** below the threshold and refuse the reveal until
 n ≥ k (`counter` V2:6138 and `manualReveal` V2:6139 both default on, so this is a default
 change plus a guard). State in the phase report that this is a mitigation, not a proof.
@@ -424,10 +474,23 @@ Q72, Q86, Q87, Q88 and the expansion catalogue are settled.
 - **Q17 stands over the bundle's copy and logic.** The app's own copy was rewritten in D87;
   the three v2 logic sites hard-coding 5 (V2:4988, V2:5048, V2:5052) take `app.k_for`
   (02-conflicts §A4). Only the splash/legal keys remain open, as **Q55**.
-- **`hasThresholdWarn` is a fourth CALLER, not a fourth copy.** D94 closed in V1-2 (`M:0039`);
-  `lib/questions/policy-warnings.ts` already has three callers. "One rule written in two
-  places" is the defect signature `docs/v1/06-closeout.md § 1` names, removed four times in
-  the v1 bundle.
+- **`hasThresholdWarn` is a fourth CALLER of `lib/questions/policy-warnings.ts`, not a fourth
+  copy — and it is the FIFTH instance of one-function-many-callers in this project, the first
+  caught BEFORE the copy existed.** The previous four were removed after the fact: V1-3's
+  interval CASE, V1-4's panel vocabulary, V1-5's use-case mapping, and V1-6's pack-question
+  builder (`lib/questions/pack.ts` names all four). `docs/v1/06-closeout.md § 1` calls it "the
+  defect shape of this codebase". That this one is visible while the second copy is still
+  hypothetical is the pattern's whole value, and it is worth making visible rather than
+  quietly doing the right thing: the rule is being caught earlier each time.
+  **And the answer to the question the v2 instruction asked: no — `audGroups` is NOT the data
+  source D94 was waiting for.** D94 **closed in V1-2** (`docs/DEVIATIONS.md:1783`, migration
+  `M:0039`): `surveys.target` gained a writer — a trigger on `survey_invitations` rather than
+  the Send action, because recipients reach a round by several paths — and the count was
+  decided as the **latest round's**, proven both ways in `tests/db/policy-panel.test.ts`.
+  `policyWarnings` already has three callers (`Builder.tsx`, `PolicyPanel.tsx`,
+  `SendScreen.tsx:160`, the last feeding it `target: reach` from `:146`). v2's
+  `hasThresholdWarn` (V2:4988) is a *different* comparison — per audience group, at pick
+  time — so it is new work, but it is new work for an existing function.
 - **Q26 and the V1-7 descheduling stand.** No v2 phase lifts
   `feature_flags.event_stream_panel` (`M:0047:72`); the panel is R4's second half and Q41
   travels with it.

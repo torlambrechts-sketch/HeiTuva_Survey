@@ -2,6 +2,33 @@
 
 HeiTuva is a Norwegian-market survey SaaS with a statutory-compliance wedge (Arbeidsmiljøloven § 4-3, Åpenhetsloven §§ 4–5, Likestillingsloven § 26/ARP, aml. kap. 2A). This file is the contract for every coding session. Read `DECISIONS.md` and `docs/HeiTuva_Implementation_Plan.md` before starting any phase.
 
+## Orient before you conclude — the first thing, every session
+
+**Establish WHERE YOU ARE before you conclude WHAT EXISTS.** Run `git fetch origin`,
+`git log --oneline origin/main -15` and `git merge-base origin/main HEAD` before reading the
+tree as evidence of anything. A clone can arrive without `main`, a branch can predate work
+that is committed, and a working tree is a *position*, not an inventory.
+
+The failure this prevents, because it has happened: a session found the design bundle at
+4097 lines where the instruction said 4901, and concluded that seven closed phases, five
+phase reports, thirty promoted decisions and sixteen deviations did not exist. All of it was on
+`main`, and the branch was a pure ancestor of it. The 4097 was the strongest available
+signal — and it was a fact about the reader's position, misread as a fact about the
+repository.
+
+That is the shape of nearly every finding this project has turned on: evidence that was
+present and misattributed. **An apply is not evidence, a comparison is** (V1-3, and the
+2026-09-07 prod sync where a truncated migration succeeded silently). The same sentence
+governs orientation: a tree you have not compared against its remote tells you nothing about
+what the project contains.
+
+Two consequences, both cheap:
+- **A repository that seems to be missing work triggers "verify where I am", never "conclude
+  what exists".** Absence is the single claim a working tree is least able to support.
+- **When a human corrects you about the state of the repository, verify it and say what you
+  find — including if they are wrong.** Withdraw on measurement, not on say-so. That is what
+  keeps a correction one turn instead of three phases.
+
 ## Stack (fixed — do not substitute)
 - Next.js (App Router) + TypeScript `strict` + Tailwind + shadcn/ui, deployed on Vercel
 - Supabase: Postgres + Auth + RLS + Storage + Edge Functions + pg_cron + pgmq — project region **eu-central-1**
