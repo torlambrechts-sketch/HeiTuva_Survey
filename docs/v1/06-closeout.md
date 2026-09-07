@@ -46,7 +46,7 @@ needed them.
 
 | | Value | Where |
 |---|---|---|
-| Migrations | **81** | `supabase/migrations/*.sql` |
+| Migrations | **81** (numbered series reaches 0053) — all applied on prod | `supabase/migrations/*.sql` |
 | Gate 5a3 | **56 of 74** surfaces actively checked (45 RLS tables + 29 SECURITY DEFINER functions, 18 allowlisted) | `verify:policy` |
 | Census manifest | **577 tests across 35 files** | `tests/expected-counts.json` |
 | Capture states | **159** · responsive combinations **160** | `verify:browser`, `verify:responsive` |
@@ -67,7 +67,8 @@ allowlisted) and the checked number never fell. The census rose 392 → 577.
 
 | # | Item | Why it is a decision |
 |---|---|---|
-| **1** | ~~Prod is nineteen migrations behind~~ — **DONE 2026-09-07.** All nineteen applied, ledger reconciled, schema now identical to local byte for byte. Two drifts found and repaired; seven invariants verified on prod; advisors clean. `docs/OPERATIONS.md` § "Prod sync" | **Two things came out of it and are still Tor's:** PITR is not enabled (a logical snapshot stood in, adequate only because prod holds zero responses), and the invariant suite was NOT run against prod because it writes fixtures — behaviour under real RLS remains unproven and wants a disposable database |
+| **1** | ~~Prod is nineteen migrations behind~~ — **DONE 2026-09-07.** All nineteen applied, ledger reconciled, schema now identical to local byte for byte. Two drifts found and repaired; seven invariants verified on prod; advisors clean. `docs/OPERATIONS.md` § "Prod sync" | **PITR** is not enabled — now the first item on the pre-launch gate, to be enabled before the first real send |
+| **1b** | **The disposable-remote run is BLOCKED on a plan change.** `create_branch` → `PaymentRequiredException: Branching is supported only on the Pro plan or above`. A free throwaway project ($0/month) would serve identically and was refused by the free tier's two-active-project limit, both slots held by `heituva-prod` and `gauge` | **Two ways to unblock, both Tor's:** upgrade the org to Pro, or pause `gauge` if idle. Pausing an unrelated project is not mine to do. What it would prove is narrower than it first appears — see § 5 |
 | **2** | **Launch readiness** — Turnstile, Entra, leaked-password protection, the remote load test | `docs/OPERATIONS.md:11-78` |
 | **3** | **Two deferred auth controls**, triggered by the first real organisation | D27; `docs/OPERATIONS.md:76-78` |
 | **4** | **Four unreviewed legal texts, DPIA not started** | `docs/LEGAL_DRAFTS.md` |
@@ -79,6 +80,14 @@ allowlisted) and the checked number never fell. The census rose 392 → 577.
 | Item | Shape |
 |---|---|
 | **The demo seed reaches only states the current code creates.** Twice in this bundle: D102's pre-`M:0040` organisation survey, and V1-6's multi-round survey below the threshold, which no fixture has | One seed row plus one `routes.manifest.ts` state. Belongs beside the remote load test, which needs non-happy-path fixtures anyway. Natural trigger: the first real organisation |
+
+### STANDING LIMITATIONS — no owner yet
+
+Not a gap in any gate. A gap between the gates and the thing they are about.
+
+| Limitation | Why it is here |
+|---|---|
+| **EVERY GATE READS LOCAL. NOTHING HAS EVER READ PROD.** `supabase db lint` lints the local database. The invariant suite queries the local database. Gate 5a3 enumerates the local catalogue. The census counts locally-collected tests. Six phases of green CI said nothing whatever about `heituva-prod`, and could not have | **This is the finding of the whole close-out pass, and it explains both prod defects found on 2026-09-07.** A hand-applied `overview_activity` that would have failed Gate 1's lint survived six phases (D104), and prod sat nineteen migrations behind while every gate stayed green — because the gates and prod are different databases and nothing compared them. The fingerprint procedure now in `docs/OPERATIONS.md` closes the *drift* half of this by hand, at apply time. It does not close the standing half: **between applies, nothing watches prod at all.** Whoever picks this up should decide whether that wants a scheduled comparison, a check in CI against a disposable remote, or a deliberate acceptance written down. **It is recorded here so the next person meets it as a known hole rather than discovering it the way I did** |
 
 ### Unowned by design
 
@@ -97,6 +106,11 @@ allowlisted) and the checked number never fell. The census rose 392 → 577.
 - **Standing question 5** written into `tests/db/clients.ts`.
 - **`design-reference-v1/README.md`** — the bundles' copies of governing documents are
   historical; `docs/` governs. One file diverges today and the README names it.
+- **The prod sync** — 0035–0053 applied, ledger reconciled, two drifts repaired
+  (`schedules.paused_at` lost in transit; `overview_activity` hand-applied, D104), seven
+  invariants verified on prod, advisors clean.
+- **"An apply is not evidence, a comparison is"** — the fingerprint procedure, with a
+  runnable query, at the head of the remote-apply section of `docs/OPERATIONS.md`.
 
 ---
 
@@ -114,3 +128,37 @@ surface and a count that reported 0 for four people.
 That is why standing question 5 exists, and why the Gate 6 decision-conformance section —
 quote the clause, cite the `file:line` that satisfies it — is worth its cost: it would have
 caught the same defect independently, by having nothing to cite.
+
+---
+
+## 5. What the disposable-remote run would and would not prove
+
+Recorded because the answer is narrower than the instruction assumed, and the narrowing is
+worth having before anyone pays for it.
+
+**It would NOT add JWT realism.** The premise that the suite's personas are weaker than
+real sessions does not hold: `tests/db/clients.ts:303` signs each persona in with
+`signInWithPassword` against a genuine GoTrue and returns a real access token — the file's
+own comment says *"a genuine JWT, so RLS and `auth.uid()` behave exactly as they do for a
+real user in the browser."* Cross-org isolation, leser refusals and token replay are
+already proven under real JWTs against real RLS, on every run, and they pass. A remote run
+would re-run those same assertions against the same schema.
+
+**It WOULD prove two things local genuinely cannot:**
+
+1. **That `supabase db push` applies the whole set to a FRESH REMOTE in one go.** Local
+   `db reset` proves the set is internally consistent; it says nothing about the transport.
+   The 2026-09-07 sync is the reason this matters: the schema arrived correct only after a
+   truncation was caught by comparison. (The repository holds **81** migration files; the
+   numbered series reaches 0053.)
+2. **That the schema behaves the same on Supabase's managed stack** — managed Postgres
+   17.6.1.166 against local's 17.6, managed GoTrue, the pooler, and platform extension
+   versions rather than the container's (`pg_cron 1.6.4`, `pgmq 1.5.1`, `supabase_vault
+   0.3.1`, `pgcrypto 1.3`).
+
+**A partial result already exists for (1), and it is not nothing.** Prod now carries all
+81 applied incrementally, and its fingerprint matches a freshly-reset local — where the
+same set was applied from scratch — byte for byte across columns, constraints, policies,
+RLS tables, normalised function bodies, grants and enums. **Two different application
+orders converge on an identical schema.** That is real evidence about the migration set;
+it is not evidence about `db push` against an empty remote, which is what remains open.
