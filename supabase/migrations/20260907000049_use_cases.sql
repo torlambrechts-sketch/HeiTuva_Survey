@@ -30,6 +30,7 @@ alter table public.use_cases enable row level security;
 -- both read it, and the splash may yet. The 5a3 allowlist carries the same
 -- reason, and `tests/db/use-cases.test.ts` checks the claim rather than
 -- trusting it — it asserts the table has no column matching org/survey/count.
+drop policy if exists use_cases_sel on public.use_cases;
 create policy use_cases_sel on public.use_cases for select using (true);
 
 grant select on public.use_cases to anon, authenticated;
@@ -152,5 +153,18 @@ language sql security definer set search_path = '' as $$
 $$;
 
 revoke all on function app.map_pack_use_cases() from public, anon;
+
+comment on function app.map_pack_use_cases() is
+  'ONE DEFINITION, TWO CALLERS: this migration and supabase/seed.sql. It has to '
+  'run twice in two different situations — on PROD the packs already exist so '
+  'the migration maps them; on a fresh reset the seed creates them AFTERWARDS '
+  '(migrations run before seeds) so the seed maps them. The first attempt ran '
+  'it only here and every shipped pack came back with a null use case. '
+  'DO NOT INLINE IT INTO EITHER CALLER: two copies of a rule that must agree is '
+  'the drift this project has now removed three times — V1-3''s interval CASE '
+  '(three copies, one disagreeing with the enum), V1-4''s panel labels '
+  '(registry and next-intl holding the same six strings by coincidence), and '
+  'this. Idempotent on `use_case is null`, so calling it twice is a no-op and '
+  'calling it after a new pack is added maps exactly that pack.';
 
 select app.map_pack_use_cases();

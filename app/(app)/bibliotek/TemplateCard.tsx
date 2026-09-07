@@ -5,6 +5,8 @@ export type TemplatePack = {
   id: string
   key: string
   category: string
+  /** Q24: the registry key this pack belongs to, or null for an org's own. */
+  useCase: string | null
   legalRef: string | null
   /** The statutory policy the pack brings with it (Q17); null for ordinary packs. */
   policy: { anonymity?: string; respondent_kind?: string; k_threshold?: number; locked?: boolean } | null

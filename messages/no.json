@@ -130,7 +130,8 @@
     "cadenceAnnual": "Hvert år",
     "cadenceAnnualLower": "hvert år",
     "cadenceCustom": "Tilpasset",
-    "cadenceCustomLower": "tilpasset"
+    "cadenceCustomLower": "tilpasset",
+    "useCase": "Hva slags område?"
   },
   "builder": {
     "title": "Tittel",
@@ -979,12 +980,9 @@
     "viewCards": "Kort",
     "viewList": "Liste",
     "catAll": "Alle",
-    "catAnsatte": "Ansatte",
     "catLovpalagt": "Lovpålagt",
-    "catKunder": "Kunder",
     "catAnnet": "Annet",
     "noteLovpalagt": "Malene dekker kartleggingsplikter i arbeidsmiljøloven § 4-3, aktivitets- og redegjørelsesplikten i likestillingsloven, åpenhetsloven og bærekraftsrapportering. De er et utgangspunkt — dere må selv vurdere hva som er relevant for virksomheten.",
-    "noteKunder": "Kundemaler bruker NPS, CSAT og rangering. Husk å slå på «Tilby oppfølging» i byggeren når kunden skal kunne be om svar.",
     "usePack": "Bruk mal",
     "questionCount": "{count, plural, one {# spørsmål} other {# spørsmål}}",
     "minutes": "~{mins} min",
@@ -1015,7 +1013,15 @@
     "failed": "Noe gikk galt. Prøv igjen.",
     "readOnlyNote": "Lesere kan bla i biblioteket, men ikke opprette undersøkelser eller endre maler.",
     "policyPerson": "Anonym · terskel {k} · låst",
-    "policyOrganisation": "Navngitt · organisasjon · attribuert"
+    "policyOrganisation": "Navngitt · organisasjon · attribuert",
+    "tabUseCases": "Bruksområder",
+    "useCasesNote": "Seks områder HeiTuva brukes til. Hvert område har egne maler, et dashboard-oppsett og — der loven krever det — de lovpålagte kartleggingene.",
+    "useCaseCount": "{count} maler",
+    "useCaseCountLegal": "{count} maler · {legal} lovpålagt",
+    "useCaseLive": "{count, plural, one {# undersøkelse} other {# undersøkelser}} hos dere",
+    "useCaseNone": "Ingen undersøkelser ennå",
+    "useCaseTemplates": "Se maler",
+    "useCaseDashboard": "Dashboard"
   },
   "auth": {
     "signInTitle": "Logg inn",

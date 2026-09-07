@@ -21,8 +21,12 @@ export type WizardPack = {
   id: string
   title: string
   tag: string
+  /** Q44: which use case this pack belongs to, so step 0's chips can filter. */
+  useCase: string | null
   questions: { text: string; typeLabel: string }[]
 }
+
+export type WizardUseCase = { key: string; label: string; short: string; description: string }
 
 export type WizardGroup = { id: string; name: string; memberCount: number }
 
@@ -40,13 +44,33 @@ export type WizardGroup = { id: string; name: string; memberCount: number }
  * that exist only in this component's state, so formatting them on the server
  * would mean sending the state up just to get the sentence back.
  */
-export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardGroup[] }) {
+export function Wizard({
+  packs,
+  groups,
+  useCases,
+}: {
+  packs: WizardPack[]
+  groups: WizardGroup[]
+  useCases: WizardUseCase[]
+}) {
   const t = useTranslations('wizard')
   const tSurveys = useTranslations('surveys')
 
 
   const [step, setStep] = useState(0)
-  const [packId, setPackId] = useState(packs[0]?.id ?? '')
+  /**
+   * Q44: step 0 picks a USE CASE first, and the purposes are that use case's
+   * packs. The old fixed list of six keys (`WIZARD_PACK_KEYS`) is retired — it
+   * was a hand-picked menu that could not follow a pack being added.
+   *
+   * Six is still the number shown, but it is now "the first six of this use
+   * case" (NEW:4197) rather than six chosen once and frozen. A use case with
+   * fewer shows fewer; one with more shows its first six by `sort_order`,
+   * which is the bundle's own editorial sequence.
+   */
+  const [useCase, setUseCase] = useState(useCases[0]?.key ?? '')
+  const offered = packs.filter((p) => p.useCase === useCase).slice(0, 6)
+  const [packId, setPackId] = useState(offered[0]?.id ?? '')
   const [count, setCount] = useState(4)
   const [chosen, setChosen] = useState<Record<string, boolean>>({})
   const [cadence, setCadence] = useState<WizardCadence>('weekly')
@@ -157,12 +181,44 @@ export function Wizard({ packs, groups }: { packs: WizardPack[]; groups: WizardG
                 {t('startBlank')}
               </button>
             </div>
-            <h2 className="text-[15px] font-semibold">{t('purpose')}</h2>
+            {/* Q44's chip rail (NEW:4195). RESPONSIVE.md § Tab rails: it wraps,
+                chips keep their size, nothing is hidden. */}
+            <h2 className="text-[15px] font-semibold">{t('useCase')}</h2>
+            <div className="touch-cluster mt-[10px] flex flex-wrap gap-2">
+              {useCases.map((u) => {
+                const on = u.key === useCase
+                return (
+                  <button
+                    key={u.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      setUseCase(u.key)
+                      // The selected purpose belongs to the OLD use case, so it
+                      // is re-pointed at the new one's first pack rather than
+                      // left dangling — a chip change that silently kept an
+                      // invisible selection is the shape 3a keeps catching.
+                      const first = packs.find((p) => p.useCase === u.key)
+                      setPackId(first?.id ?? '')
+                    }}
+                    className="touch-44 cursor-pointer rounded-full border px-[13px] py-2 text-[12.5px] font-semibold text-ink"
+                    style={{
+                      borderColor: on ? 'var(--ink)' : 'var(--line)',
+                      background: on ? 'var(--ac)' : 'transparent',
+                    }}
+                  >
+                    {u.short}
+                  </button>
+                )
+              })}
+            </div>
+
+            <h2 className="mt-[18px] text-[15px] font-semibold">{t('purpose')}</h2>
             <div className="mt-[14px] flex flex-col gap-[9px]">
-              {packs.length === 0 ? (
+              {offered.length === 0 ? (
                 <p className="text-[13px] text-mut">{t('noPacks')}</p>
               ) : (
-                packs.map((p) => {
+                offered.map((p) => {
                   const on = p.id === packId
                   return (
                     <button

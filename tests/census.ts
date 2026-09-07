@@ -15,6 +15,22 @@ import type { File, Reporter } from 'vitest'
  *
  * A committed count makes that impossible to miss and costs one number per file.
  *
+ * IT HAS NOW PAID FOR ITSELF TWICE, both times on the SKIPPED path, which is
+ * the one it exists for — a skipped test is green to vitest and absent to the
+ * surface it was meant to cover:
+ *
+ *   Phase 7  `report-rls` collected 27 as SKIPPED on a UNIQUE collision, and
+ *            `policy-coverage` collected 46 as zero when a helper read the
+ *            fixture before `beforeAll` built it.
+ *   V1-5     `use-cases.test.ts` came back 9 SKIPPED after a `supabase db
+ *            reset` wiped the demo personas, so `personaClient` threw in
+ *            `beforeAll`. Every other file passed; the run would have read as
+ *            success with an entire decision unverified.
+ *
+ * Which is why `countTests` counts skipped tests as EXISTING. Counting them as
+ * absent would hide precisely the failure this reporter is for, and both
+ * occasions above would have been silent.
+ *
  * Growth is fine and needs no ceremony — adding tests must never fail a run.
  * A DROP fails, and so does a file that has vanished from the run entirely,
  * because "the file stopped existing" and "the file stopped collecting" look

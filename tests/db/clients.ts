@@ -13,8 +13,10 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  *
  *   1. What ELSE could refuse this before the check I am testing gets a chance?
  *   2. What could have MOVED the state my selector assumes?
+ *   2b. Which ROWS can my roles reach — not just which roles read?
  *   3. Am I asserting over the SET — of values, AND of the sites that can
  *      violate the property — or over the ones I happened to pick?
+ *   4. What does my test LEAVE BEHIND when it fails to fail?
  *
  * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
  *
@@ -188,6 +190,41 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * focus assertion four steps away; `verify:roundtrip` now deletes the group it
  * creates, because one accumulated per run in the DEMO organisation and turned
  * up in a V1-2 capture as a team row nobody had made.
+ * ── 4. WHAT DOES MY TEST LEAVE BEHIND WHEN IT FAILS TO FAIL? ────────────────
+ *
+ * A denial test creates something it expects to be REFUSED. Cleanup written
+ * after the assertion runs only on the path where the refusal happened — which
+ * is the path where there is nothing to clean. On the path that matters, the
+ * one where the control is missing, the insert SUCCEEDS and the row stays.
+ *
+ * THE SYMPTOM IS WHAT MAKES THIS FINDABLE, because the failure never looks like
+ * itself:
+ *
+ *   A MUTATION ROUND LEAVES LITTER THAT READS AS A REAL FAILURE IN THE RESTORED
+ *   SUITE, AND YOU DIAGNOSE A PHANTOM BEFORE FINDING YOUR OWN.
+ *
+ *   V1-5  `use-cases.test.ts` inserts a pack with an unknown `use_case` and
+ *         expects the foreign key to refuse it. Under the mutation that DROPS
+ *         the key — the mutation the test exists to catch — the insert
+ *         succeeded and left the row. Four `probe-` rows survived the round.
+ *         The restored suite then failed "the mapping is TOTAL over every
+ *         shipped pack", which is true and alarming and had nothing to do with
+ *         the code: the unmapped packs were mine. I re-added the constraint,
+ *         watched it fail again (the leftover rows violated it), and only then
+ *         looked at what was in the table.
+ *
+ * THE RULE: a test must clean up after the outcome it is trying to PREVENT, not
+ * only the one it expects. Choose the identifier BEFORE the insert and register
+ * it for teardown immediately, so a row that should not exist is removed
+ * whether or not it does. Gate 5a2's "do not become what else exists", one step
+ * earlier than usual — the row you must not leave behind is the one you hoped
+ * would never be created.
+ *
+ * This is also why teardown keys on something the test CHOSE rather than on
+ * something the database returned: a row that was refused has no id to
+ * remember, and an id-based cleanup silently skips exactly the rows that need
+ * it.
+ *
  */
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'

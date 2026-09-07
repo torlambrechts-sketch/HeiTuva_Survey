@@ -83,21 +83,16 @@ export function responsePct(responses: number, target: number | null): number {
 }
 
 /**
- * The wizard's purpose list. The design offers six of the standard packs
- * rather than all seventeen (HeiTuva.dc.html:3504) — a first survey needs a
- * short, opinionated menu, not the whole Bibliotek.
+ * RETIRED by DECISIONS Q44 (V1-5). The wizard offered six hand-picked pack
+ * keys; it now offers the first six packs of the USE CASE chosen in step 0
+ * (NEW:4195-4197), read from `use_cases` and `template_packs` in
+ * `undersokelser/ny/page.tsx`.
  *
- * Keys, so the list survives a pack being retitled. A key missing from
- * `template_packs` is simply not offered.
+ * The list is gone rather than kept unused, because the failure it had is the
+ * one this project keeps removing: a hand-maintained menu beside a table that
+ * grows. Five packs were added in the same phase that retired it, and none of
+ * them could have appeared in the wizard.
  */
-export const WIZARD_PACK_KEYS = [
-  'ukentlig-puls',
-  'psykososial-kartlegging',
-  'csat',
-  'oppstartssjekk',
-  'likestilling-deltid',
-  'nps-kunde',
-] as const
 
 /**
  * The cadences the wizard offers — six in the v1 bundle (NEW:4220), three in

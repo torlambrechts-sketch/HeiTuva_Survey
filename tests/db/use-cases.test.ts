@@ -75,9 +75,19 @@ describe('(Q24) the use-case registry', () => {
   it('carries no organisation, survey or number — the allowlist claim, checked', async () => {
     // Named exactly, not matched loosely. The first version was
     // /org|survey|count|n$|threshold/i and it flagged `description`, because
-    // that word ends in "n" — a check whose failure teaches nothing about the
-    // property it is for. The claim is about IDENTIFIERS and NUMBERS, so the
-    // test names them.
+    // that word ends in "n".
+    //
+    // THE SAME LESSON AS V1-3'S `prosrc` SWEEP, and the two are one incident in
+    // two places: there, a catalogue query matching on function bodies flagged
+    // `send_round` for the COMMENT explaining what it had stopped doing, until
+    // comments were stripped before matching. Here, a column sweep flagged a
+    // prose column for its last letter.
+    //
+    // A CHECK WHOSE FAILURE TEACHES NOTHING GETS SWITCHED OFF. That is the cost
+    // being avoided — not the false positive itself, but the day someone
+    // deletes the check because it cried wolf. So: name the identifiers, and
+    // pair the exclusion with a positive control on the exact column set, so
+    // the check still fails when something real changes.
     const FORBIDDEN = ['org_id', 'organization_id', 'survey_id', 'user_id', 'k', 'n']
     const { data } = await svc.from('use_cases').select('*').limit(1)
     const cols = Object.keys(data![0]!)

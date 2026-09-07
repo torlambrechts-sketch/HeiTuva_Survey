@@ -130,7 +130,8 @@
     "cadenceAnnual": "Every year",
     "cadenceAnnualLower": "every year",
     "cadenceCustom": "Custom",
-    "cadenceCustomLower": "custom"
+    "cadenceCustomLower": "custom",
+    "useCase": "Which area?"
   },
   "builder": {
     "title": "Title",
@@ -979,12 +980,9 @@
     "viewCards": "Cards",
     "viewList": "List",
     "catAll": "All",
-    "catAnsatte": "Employees",
     "catLovpalagt": "Statutory",
-    "catKunder": "Customers",
     "catAnnet": "Other",
     "noteLovpalagt": "These templates cover the survey duties in the Working Environment Act § 4-3, the activity and reporting duty in the Equality Act, the Transparency Act and sustainability reporting. They are a starting point — you must assess what is relevant for your organisation.",
-    "noteKunder": "Customer templates use NPS, CSAT and ranking. Remember to enable \"Offer follow-up\" in the builder if customers should be able to ask for a reply.",
     "usePack": "Use template",
     "questionCount": "{count, plural, one {# question} other {# questions}}",
     "minutes": "~{mins} min",
@@ -1015,7 +1013,15 @@
     "failed": "Something went wrong. Try again.",
     "readOnlyNote": "Readers can browse the library but cannot create surveys or change templates.",
     "policyPerson": "Anonymous · threshold {k} · locked",
-    "policyOrganisation": "Named · organisation · attributed"
+    "policyOrganisation": "Named · organisation · attributed",
+    "tabUseCases": "Use cases",
+    "useCasesNote": "Six areas HeiTuva is used for. Each has its own templates, a dashboard setup and — where the law requires it — the statutory surveys.",
+    "useCaseCount": "{count} templates",
+    "useCaseCountLegal": "{count} templates · {legal} statutory",
+    "useCaseLive": "{count, plural, one {# survey} other {# surveys}} at your organisation",
+    "useCaseNone": "No surveys yet",
+    "useCaseTemplates": "See templates",
+    "useCaseDashboard": "Dashboard"
   },
   "auth": {
     "signInTitle": "Sign in",

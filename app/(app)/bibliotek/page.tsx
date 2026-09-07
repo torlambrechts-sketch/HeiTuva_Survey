@@ -2,10 +2,9 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import {
-  CATEGORY_KEY,
   CATEGORY_NOTE_KEY,
+  FIXED_PACK_CHIPS,
   LIBRARY_TABS,
-  PACK_CATEGORIES,
   PACK_VIEWS,
   estimateMinutes,
   ownTint,
@@ -19,6 +18,7 @@ import { TemplateCard, type TemplatePack } from './TemplateCard'
 import { UsePackButton } from './UsePackButton'
 import { BankRow } from './BankRow'
 import { BankSearch } from './BankSearch'
+import { UseCaseCard } from './UseCaseCard'
 
 type Search = { fane?: string; visning?: string; kategori?: string; sok?: string }
 
@@ -48,13 +48,36 @@ export default async function LibraryPage({
   const view: PackView = PACK_VIEWS.includes(sp.visning as PackView)
     ? (sp.visning as PackView)
     : 'kort'
-  const category: PackCategory = PACK_CATEGORIES.includes(sp.kategori as PackCategory)
-    ? (sp.kategori as PackCategory)
-    : 'Alle'
   const query = (sp.sok ?? '').trim()
 
   const canEdit = viewer.role !== 'leser'
   const supabase = await createClient()
+
+  // Q24: the six use cases are a REGISTRY, read at request time. The chip rail,
+  // the tab's cards and the pack eyebrows all read this one list, so adding a
+  // use case is a row and nothing here changes.
+  const { data: useCases } = await supabase
+    .from('use_cases')
+    .select('key, label, short, description, tint, preset_key')
+    .order('sort_order')
+  const uses = useCases ?? []
+  const useLabel = new Map(uses.map((u) => [u.key, u.label]))
+
+  // The admissible chips are the three fixed ones plus the registry's keys.
+  // Validated rather than trusted: an unknown `?kategori=` would otherwise
+  // filter every pack out and draw an empty grid that looks like a bug in the
+  // library rather than a bad link.
+  const admissible = new Set<string>([...FIXED_PACK_CHIPS, ...uses.map((u) => u.key)])
+  const category: PackCategory = admissible.has(sp.kategori ?? '') ? sp.kategori! : 'Alle'
+
+  // Chips: «Alle», the six, «Lovpålagt», «Annet» (NEW:4469). Order matters —
+  // the fixed three bracket the registry rather than being mixed into it.
+  const chips: { key: string; label: string }[] = [
+    { key: 'Alle', label: t('catAll') },
+    ...uses.map((u) => ({ key: u.key, label: u.label })),
+    { key: 'Lovpålagt', label: t('catLovpalagt') },
+    { key: 'annet', label: t('catAnnet') },
+  ]
 
   const href = (next: Partial<Search>) => {
     const params = new URLSearchParams()
@@ -74,6 +97,13 @@ export default async function LibraryPage({
         {/* Chip rail — RESPONSIVE.md § Tab rails: wraps below md, chips keep
             their design size, 8px row gap so 44px hit areas stay apart. */}
         <div className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
+          <ChipLink
+            href={href({ fane: 'bruksomrader' })}
+            active={tab === 'bruksomrader'}
+            variant="segment"
+          >
+            {t('tabUseCases')}
+          </ChipLink>
           <ChipLink href={href({ fane: 'maler' })} active={tab === 'maler'} variant="segment">
             {t('tabTemplates')}
           </ChipLink>
@@ -83,9 +113,20 @@ export default async function LibraryPage({
         </div>
       </div>
 
-      {tab === 'maler' ? (
+      {tab === 'bruksomrader' ? (
+        <UseCasesTab
+          uses={uses}
+          orgId={viewer.orgId}
+          href={href}
+          t={t}
+          supabase={supabase}
+        />
+      ) : tab === 'maler' ? (
         <TemplatesTab
           orgId={viewer.orgId}
+          useLabel={useLabel}
+          chips={chips}
+          useNote={uses.find((u) => u.key === category)?.description}
           category={category}
           view={view}
           href={href}
@@ -117,6 +158,9 @@ type TQ = Awaited<ReturnType<typeof getTranslations<'qtype'>>>
 
 async function TemplatesTab({
   orgId,
+  useLabel,
+  chips,
+  useNote,
   category,
   view,
   href,
@@ -127,6 +171,11 @@ async function TemplatesTab({
   supabase,
 }: {
   orgId: string
+  /** Registry key → label, for the card eyebrow (NEW:4484). */
+  useLabel: Map<string, string>
+  chips: { key: string; label: string }[]
+  /** Q24: a use-case chip's note IS its registry description (NEW:4479). */
+  useNote: string | undefined
   category: PackCategory
   view: PackView
   href: (next: Partial<Search>) => string
@@ -139,7 +188,7 @@ async function TemplatesTab({
   const { data, error } = await supabase
     .from('template_packs')
     .select(
-      'id, key, org_id, category, legal_ref, title, audience, questions, private, created_at, sort_order, policy, org_members(name)',
+      'id, key, org_id, category, use_case, legal_ref, title, audience, questions, private, created_at, sort_order, policy, org_members(name)',
     )
     // The grid tints by POSITION, so the order decides which cards are
     // coloured. `sort_order` carries the design bundle's own editorial
@@ -156,6 +205,7 @@ async function TemplatesTab({
       id: p.id,
       key: p.key,
       category: p.category,
+      useCase: p.use_case,
       legalRef: p.legal_ref,
       policy: (p.policy as TemplatePack['policy']) ?? null,
       title: p.title,
@@ -169,9 +219,22 @@ async function TemplatesTab({
   })
 
   const mine = all.filter((p) => p.isOwn)
+  // Q45: the chip means one of three things, and the filter says which.
+  // «Lovpålagt» is the only CATEGORY chip left, because a statutory pack is a
+  // kind that cuts across all six use cases; «annet» is `use_case is null`,
+  // which after the total-mapping assertion holds only an organisation's own
+  // untagged templates.
   const standard = all
     .filter((p) => !p.isOwn)
-    .filter((p) => category === 'Alle' || p.category === category)
+    .filter((p) =>
+      category === 'Alle'
+        ? true
+        : category === 'Lovpålagt'
+          ? p.category === 'Lovpålagt'
+          : category === 'annet'
+            ? !p.useCase
+            : p.useCase === category,
+    )
 
   const noteKey = CATEGORY_NOTE_KEY[category]
   const meta = (p: (typeof all)[number]) =>
@@ -197,7 +260,12 @@ async function TemplatesTab({
       ? p.isPrivate
         ? t('privateTemplate')
         : t('companyTemplate', { owner: p.ownerName ?? '' })
-      : p.category,
+      : // Q24 (NEW:4484): a standard pack's eyebrow is its USE-CASE label, not
+        // its category. The category is internal after Q45 and the customer
+        // never sees it; falling back to it here would put the internal axis on
+        // screen for exactly the packs the mapping missed — which the totality
+        // assertion says is none, so the fallback is unreachable and honest.
+        (useLabel.get(p.useCase ?? '') ?? p.category),
     meta: meta(p),
     use: t('usePack'),
     privateLabel: t('privateLabel'),
@@ -245,16 +313,19 @@ async function TemplatesTab({
             {t('viewList')}
           </ChipLink>
         </span>
-        {PACK_CATEGORIES.map((c) => (
-          <ChipLink key={c} href={href({ kategori: c })} active={category === c}>
-            {t(CATEGORY_KEY[c] as 'catAll')}
+        {chips.map((c) => (
+          <ChipLink key={c.key} href={href({ kategori: c.key })} active={category === c.key}>
+            {c.label}
           </ChipLink>
         ))}
       </div>
 
-      {noteKey ? (
+      {/* Q24: a use-case chip's note is its registry DESCRIPTION — data, not
+          copy. «Lovpålagt» keeps its hand-written one, because a statutory
+          warning is not a description of a use case. */}
+      {useNote ?? (noteKey ? t(noteKey as 'noteLovpalagt') : null) ? (
         <p className="mt-3 max-w-[820px] rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
-          {t(noteKey as 'noteLovpalagt')}
+          {useNote ?? t(noteKey as 'noteLovpalagt')}
         </p>
       ) : null}
 
@@ -324,6 +395,93 @@ async function TemplatesTab({
           ))}
         </div>
       )}
+    </>
+  )
+}
+
+/**
+ * «Bruksområder» — HeiTuva.dc.html:1873-1893. DECISIONS Q24.
+ *
+ * Six cards from the registry. Everything a card SAYS about the customer is
+ * counted here rather than stored: how many templates the use case has, how
+ * many are statutory, and how many surveys this organisation is running under
+ * it. A count that lived in the registry would be wrong the moment a pack was
+ * added.
+ */
+async function UseCasesTab({
+  uses,
+  orgId,
+  href,
+  t,
+  supabase,
+}: {
+  uses: {
+    key: string
+    label: string
+    short: string
+    description: string
+    tint: string | null
+    preset_key: string | null
+  }[]
+  orgId: string
+  href: (next: Partial<Search>) => string
+  t: T
+  supabase: Supa
+}) {
+  const [{ data: packs }, { data: surveys }] = await Promise.all([
+    supabase
+      .from('template_packs')
+      .select('key, title, category, use_case, org_id')
+      .order('sort_order'),
+    // «N undersøkelser hos dere» — the organisation's own, joined back to a use
+    // case through the pack it was created from. RLS scopes it already; the
+    // filter is what makes the query use the org index.
+    supabase
+      .from('surveys')
+      .select('id, template_pack_key')
+      .eq('org_id', orgId)
+      .is('deleted_at', null),
+  ])
+
+  const shipped = (packs ?? []).filter((p) => p.org_id === null)
+  const useOfPack = new Map(shipped.map((p) => [p.key, p.use_case]))
+
+  return (
+    <>
+      <p className="mt-[18px] max-w-[680px] text-[13.5px] leading-[1.6] text-mut">
+        {t('useCasesNote')}
+      </p>
+      <div className="mt-[18px] grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+        {uses.map((u) => {
+          const mine = shipped.filter((p) => p.use_case === u.key)
+          const legal = mine.filter((p) => p.category === 'Lovpålagt').length
+          const live = (surveys ?? []).filter(
+            (sv) => sv.template_pack_key && useOfPack.get(sv.template_pack_key) === u.key,
+          ).length
+
+          return (
+            <UseCaseCard
+              key={u.key}
+              label={u.label}
+              description={u.description}
+              tint={u.tint}
+              examples={mine.slice(0, 3).map((p) => p.title)}
+              countLine={
+                legal
+                  ? t('useCaseCountLegal', { count: mine.length, legal })
+                  : t('useCaseCount', { count: mine.length })
+              }
+              liveLine={live ? t('useCaseLive', { count: live }) : t('useCaseNone')}
+              templatesHref={href({ fane: 'maler', kategori: u.key })}
+              // The registry row's preset, loaded on the Dashboard. Null when
+              // the row points at none — the button is then not drawn at all,
+              // rather than drawn and inert.
+              dashboardHref={u.preset_key ? `/dashboard?oppsett=${u.preset_key}` : null}
+              labels={{ templates: t('useCaseTemplates'), dashboard: t('useCaseDashboard') }}
+            />
+          )
+        })}
+      </div>
     </>
   )
 }
