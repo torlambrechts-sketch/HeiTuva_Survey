@@ -78,7 +78,7 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           initials={initialsOf(viewer.displayName)}
           role={viewer.role}
           labels={{
-            menu: t('userMenu'),
+            menu: t('userMenu', { name: viewer.displayName }),
             profile: t('myProfile'),
             administration: t('administration'),
             privacy: t('privacyGdpr'),

@@ -48,18 +48,27 @@ export function UserMenu({
 
   return (
     <div ref={wrap}>
+      {/* v2 (HeiTuva.dc.html:195): the button loses its visible name and
+          becomes a 38px avatar. The name does not disappear — it moves into
+          `aria-label` AND `title`, and the dropdown below already carries it
+          with the role line under it (:199-200).
+
+          THE ACCESSIBLE NAME IS THE POINT, and it is the same lesson Q31's
+          language chips carry: a control whose visible label is two initials
+          needs its real name in an attribute, or it announces as "T B". So
+          `userMenu` is parameterised on the name rather than left as a bare
+          "Brukermeny" — the bundle writes «Brukermeny for {{ userName }}» and
+          that is what a screen reader should hear. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={labels.menu}
+        title={name}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="touch-44 flex cursor-pointer items-center gap-[9px] rounded-full border border-line bg-transparent py-1.5 pl-1.5 pr-3 text-[12.5px] font-semibold text-ink"
+        className="touch-44 inline-flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border border-line bg-ac3 p-0 text-[12.5px] font-bold text-ink"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ac3 text-[11.5px] font-bold">
-          {initials}
-        </span>
-        {name}
+        {initials}
       </button>
 
       {open ? (

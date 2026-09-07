@@ -91,7 +91,7 @@ renders inside that frame.
 |---|---|---|
 | Q18 extended to three bundles | — | **Q52 CONFIRMED: extend.** `scripts/verify/reference.ts`, CLAUDE.md and VERIFY.md carry the third path; `artifacts/reference-v2/` is added and neither existing directory is overwritten. The per-surface answer is **already written**, once, in `00-diff.md § 0.3` — this phase reads that table, it does not re-derive it |
 | Reference re-render | — | One scheduled commit. It turns every existing Gate 3a diff red at once, which is correct |
-| Oppgaver as a fifth nav item | PARTIAL (B.1 built as four) | `components/AppHeader.tsx:27-30`, `AppNav.tsx`'s pathname→key map, `MobileNav.tsx`. The item renders **inert until V2-4** — no dead route |
+| Oppgaver as a fifth nav item | PARTIAL (B.1 built as four) | **MOVED TO V2-4 during the V2-0 pass — see the note below.** `components/AppHeader.tsx:27-30`, `AppNav.tsx`'s pathname→key map, `MobileNav.tsx` |
 | Header avatar-only + role line | PARTIAL (B.29) | V2:195, V2:199–200 |
 | `box-sizing` / `max-width:100%` hardening | PARTIAL (B.27) | **Q53 CONFIRMED: a check, not a rebuild.** 42 controls. **The mechanism is not the point, the property is** — where `docs/RESPONSIVE.md`'s patterns already hold it, record that and change nothing; adopt the bundle's pair only where they do not. **D90 is not reopened.** And per `00-diff.md § 0.3`, this check **moves no screen's governing bundle** |
 | Q31's carried chip chrome | PARTIAL | **Q54 CONFIRMED: fix here.** Adopt the v1 bundle's chrome verbatim — 11px/700, `padding:6px 8px`, 2px gap, `--sf` active — and `title` + `aria-label` carrying the language name (`design-reference-v1/…:2320-2322`). The missing accessible name is the part that matters. Count rule already built (`app/s/[token]/page.tsx:49-62`) |
@@ -106,6 +106,19 @@ renders inside that frame.
 | App shell / header, all routes | § App shell / header — slide-over below `md`. The fifth item is one more row |
 | Header user button (38×38, V2:195) | Global rule 2 — ≥44px hit area via transparent padding; painted size unchanged |
 | Every existing screen | Its existing pattern, re-checked. Charts follow the **amended** Q40 rule (44px per interactive mark; the 200px floor is gone) |
+
+**One scope change made during the pass, and why.** The plan had the fifth nav item
+rendering **inert** in V2-0, with the screen following in V2-4. I moved the whole item to
+V2-4 instead.
+
+Q26 is the precedent that looks like it authorises the inert version — the stream panel is
+drawn as unavailable rather than hidden, "so its absence is drawn rather than hidden". But
+Q26's panel appears in a **picker**, where an unavailable entry states **its precondition**
+(«krever løpende måling, f.eks. CSAT etter sak») and that is information a person choosing
+panels can use. A top-level nav item is not a chooser; it is a promise of a destination, and
+Oppgaver has no honest precondition to state — only "kommer", which is a roadmap claim, not a
+condition. D73's rule is the governing one: a surface must not claim a capability the product
+does not have. The plan's own wording («disabled/absent») already allowed this reading.
 
 **Definition of done**
 - Reference renders regenerated for all three bundles (Q52), committed in their own commit.
@@ -350,7 +363,7 @@ reach, not just which roles read? V1-2 hit that twice.
 | Filter pills | § Tab rails — wrap; row gap ≥ the design step so 44px areas do not overlap |
 | Stat tiles | The bundle's `auto-fit,minmax(180px,1fr)` (V2:2166) |
 | Task cards | Already cards. `stepChips` (six, V2:2197) wrap below `md` |
-| Nav | The fifth item becomes live (V2-0 left it inert) |
+| Nav | The fifth item is ADDED here, with the screen it points to (moved from V2-0) |
 
 **Definition of done**
 - Eight negative tests pass; 1 and 3 are blockers.
