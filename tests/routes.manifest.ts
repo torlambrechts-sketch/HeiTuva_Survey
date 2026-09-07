@@ -728,6 +728,18 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        // V1-6: below the threshold WITH a history. 'for-fa-svar' above has one
+        // round, so it can only ever show "nobody has answered yet". This
+        // survey has two closed rounds and four answers in total, which is the
+        // different screen: a round picker whose every round refuses, and a
+        // trend panel with points it cannot draw. A small team sees this one,
+        // not the empty one.
+        name: 'for-fa-svar-flere-runder',
+        setup: async (page) => {
+          await pickSurvey(page, 'Vernerunde — verksted')
+        },
+      },
+      {
         name: 'ikke-sendt',
         setup: async (page) => {
           await pickSurvey(page, 'Utkast uten svar')

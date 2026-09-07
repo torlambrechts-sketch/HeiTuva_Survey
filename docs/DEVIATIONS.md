@@ -1681,3 +1681,53 @@ visible, not hidden, as the brief asks. The refusal itself is the RPC's: a
 report row that names the section over person sources composes it as
 `unavailable` with no rows, and the test proves no organisation name leaks
 through the refused section.
+
+### D89 — the named demo seed: three writes the real producers cannot make
+`scripts/seed-heituva-demo.ts` builds "HeiTuva AS (DEMO)" through the product's
+own paths — `send_round` for rounds, invitations and schedules,
+`submit_response` for every one of its 183 responses, `close_round` for the
+snapshots, `sign_duty` + `publish_duty` for the archive version — and does the
+rest as a signed-in administrator so RLS is what admits each row. Three writes
+cannot be made that way and are logged here rather than dressed up:
+
+1. **The organisation and its first member** use the service role, because
+   `organizations` has no INSERT policy and `org_members` needs an administrator
+   to exist before one can be added. A real organisation is born at signup; a
+   seed has no signup to run.
+2. **The administrator's dashboard pins.** `dashboard_pins_ins` is
+   `user_id = auth.uid()`, and the seed does not hold a real person's session.
+   The operator's own pins go through the operator's session; the human's are
+   written with the service role, and only when their auth user already exists.
+   The alternative was a saved layout that exists for a synthetic account and
+   not for the person the demo is for.
+3. **Schedule bookkeeping.** `send_round` creates the schedule with
+   `runs_done = 1`; four rounds have since been sent, and `app.run_due_schedules`
+   is what would have written that down as cron opened each one. The seed sets
+   the same two columns that function sets (`runs_done`, `next_run_at`) and
+   `active = false` for the paused series, because that function is in the `app`
+   schema and PostgREST cannot reach it.
+
+Two further notes. The seed reads its invitation tokens back off `mail_outbox`
+through `mail_outbox_read`/`mail_outbox_delete` — it is the mail worker with
+the send removed — and deletes every message it caused, so no demo mail can be
+posted even by someone who later runs the worker; `sent_at` is left NULL, which
+is the condition `app.enqueue_reminders` keys off, so the hourly reminder job
+never sees these invitations either. And the four-person "Ledergruppen" answers
+only the most recent round: the k gate counts responses, not people, so four
+people answering four rounds is sixteen rows and an unfiltered heatmap adds
+them up and shows a number. A demo whose small team answers every round
+photographs the gate not firing.
+
+### D90 — V1-6: a below-threshold survey that has a history
+The fixture seed's below-threshold survey ("Psykososial kartlegging") has one
+round, so the harness could only ever capture "nobody has answered yet" — never
+the different screen a small team actually sees, where the survey HAS a history
+and still cannot be read: a round picker whose every round refuses, a trend
+panel with points it cannot draw. `scripts/seed-demo.ts` now also builds
+"Vernerunde — verksted": two closed rounds, two answers each, four in total, so
+it is gated whether a screen reads one round or all of them. It is a separate
+survey rather than a second round on the existing one on purpose —
+`aggregate_results` with no round filter sums every round, so three more answers
+there would have pushed the existing fixture over the threshold and turned the
+assertion that it reports `insufficient_data` into an assertion about nothing.
+`tests/routes.manifest.ts` gains the matching state (`for-fa-svar-flere-runder`).

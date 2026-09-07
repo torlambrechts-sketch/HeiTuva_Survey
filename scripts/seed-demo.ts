@@ -241,6 +241,43 @@ async function main() {
   if (published?.error) throw new Error(`seed publish_duty: ${published.error}`)
 
   // ---------------------------------------------------------------------
+  // V1-6: a below-threshold survey with MORE THAN ONE ROUND
+  // ---------------------------------------------------------------------
+  // `below` above is under k=5, but it has a single round, so no capture ever
+  // shows the case where a survey has a HISTORY and still cannot be read: a
+  // trend whose every point is gated, a round picker offering rounds that all
+  // refuse. That is a different screen from "nobody has answered yet", and it
+  // is the one a small team actually sees.
+  //
+  // Its own survey rather than a second round on `below`: aggregate_results
+  // with no round filter sums every round, so three more answers there would
+  // put the existing fixture over the threshold and turn the assertion that it
+  // reports insufficient_data into an assertion about nothing.
+  //
+  // Two closed rounds, two answers each — four in total, under the threshold
+  // whether a screen reads one round or all of them. Closed through the RPC, so
+  // each round also freezes the snapshot a real closed round would have.
+  const belowSeries = await createSurvey(org.id, 'Vernerunde — verksted', [
+    { type: 'scale', text: 'Er verneutstyret på plass der du jobber?' },
+    { type: 'text', text: 'Hva mangler på din arbeidsplass?' },
+  ], { audience: 'Verkstedet · halvårlig' })
+
+  for (const roundNo of [1, 2]) {
+    const round = await createRound(belowSeries, 4, { groupId: secondGroup?.id ?? null, roundNo })
+    await submitResponses(
+      round.tokens,
+      (i) => ({
+        [belowSeries.questions[0]!.id]: { value: 3 + (i % 2) },
+        [belowSeries.questions[1]!.id]: { value: 'Vernerunden bør tas oftere' },
+      }),
+      2, // < k = 5, and still < k when both rounds are read together
+    )
+    const { data: closed } = await asAdmin.rpc('close_round', { p_round: round.id })
+    const closeResult = closed as { ok?: boolean; error?: string }
+    if (closeResult?.error) throw new Error(`seed close_round(vernerunde ${roundNo}): ${closeResult.error}`)
+  }
+
+  // ---------------------------------------------------------------------
   // Surfaces Gate 5a3 could not prove
   // ---------------------------------------------------------------------
   // policy-coverage.ts measures protection by attempting a cross-org read. An
@@ -364,6 +401,7 @@ async function main() {
   ${ORG_OTHER} (${other.id}) — cross-org isolation fixture
   "${above.title}" 6 responses (above k=5)
   "${below.title}" 3 responses (below k=5)
+  "${belowSeries.title}" 2 closed rounds, 2 responses each (below k=5 in every reading)
   "${draft.title}" draft, no round\n  share link /s/${DEMO_SHARE_TOKEN}`)
 }
 
