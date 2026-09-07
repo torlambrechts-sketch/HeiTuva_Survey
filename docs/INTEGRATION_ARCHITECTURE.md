@@ -103,10 +103,28 @@ Three custody options, with a recommendation.
 | **B. Vault + a bespoke Postgres role** (recommended) | Secret in Vault; the reading RPC is granted to a `heituva_integrations` role and **revoked from `service_role`**; the worker authenticates as that role with its own JWT, held only by the worker deployment | A request-path bug, a leaked Vercel env, an over-broad server action | One role, one JWT, one deployment variable |
 | **C. B + envelope encryption** | As B, and the stored value is additionally encrypted with a data key held only in the integration runtime's env | A full database compromise, and Supabase itself | A key to rotate, and a recovery story if it is lost |
 
-**Recommendation: B, designed so that C is a later addition and not a rewrite** —
-the secret accessor is one function, so wrapping it in envelope decryption is a
-change in one place. B is the point at which "the app cannot read integration
-secrets" stops being a convention and becomes a grant.
+~~**Recommendation: B**~~ — **superseded by the G1 spike, which chose C and
+dropped Vault.** The reasoning above holds; two facts it did not have do not.
+
+`service_role` can both **read** `vault.decrypted_secrets` and **execute**
+`vault.create_secret`, so Vault stops nothing the app can already do — its
+protection boundary on Supabase is everything below `supabase_admin`, and the
+service key sits inside it. And B's two ways of reaching a bespoke role are
+both shaky right now: a custom-role JWT rests on the legacy JWT secret, which
+Supabase marks "no longer recommended" and is migrating projects off, while a
+direct Postgres connection rests on a deploy target that does not exist —
+`scripts/mail-worker.ts` has no host at all (§G1, and Q19).
+
+C is indifferent to all of it: ciphertext under a key the database has never
+held is useless to whoever reads the row, wherever the runtime runs, under
+whichever JWT system Supabase settles on. It also covers the database-dump case
+Vault was for. Layering both would add a second key-management surface for
+protection already held — defence in depth wants layers that fail
+independently, and Vault and the service key fail to the same key.
+
+Full evidence, including what was proven against the live catalog and what is
+inferred rather than executed: **`docs/G1_CUSTODY_SPIKE.md`**. The decision is
+DECISIONS **Q18**; the hosting question it surfaced is **Q19**.
 
 Three rules that hold under any option:
 
@@ -242,26 +260,34 @@ Three things surfaced that are real and are not G0's:
   is not G0's to change. Worth pinning the npm version in CI before it bites
   someone mid-phase.
 
-### G1 — The custody decision · 2–3 days · gates G2
+### G1 — The custody decision · **DONE 2026-09-07** · gates G2
 
-A spike and a decision, not a build. Deliverables:
+A spike and a decision, not a build. **Report: `docs/G1_CUSTODY_SPIKE.md`.**
 
-- A written answer to §1's question, as DECISIONS **Q18**, with the option
-  chosen and the ones refused.
-- Proof that a bespoke Postgres role can (a) execute a SECURITY DEFINER function
-  that reads `vault.decrypted_secrets`, (b) be reached by the worker via a JWT
-  signed with the project's JWT secret, and (c) have `service_role` revoked from
-  that function without breaking PostgREST. Verified against a Supabase branch,
-  not asserted.
-- Proof that `supabase_vault` is present in the **local** stack that CI starts
-  (`.github/workflows/ci.yml:47` runs `supabase start -x …`) and survives
-  `supabase db reset`. Prod having Vault is not the same as CI having it, and
-  the invariant suite runs against local.
-- A recovery story: what an operator does when a customer's integration is
-  wedged, without reading the secret.
+It answered the question by making two of the three proofs unnecessary rather
+than by producing them, which is a legitimate outcome for a spike and is worth
+being explicit about:
 
-**Done when:** Q18 is written and the three proofs are command output in the
-phase report.
+- **DECISIONS Q18 is written** — option C, envelope encryption, Vault dropped —
+  with the evidence table and the two refused options.
+- **The bespoke-role proofs were not run, and are no longer wanted.** They
+  needed DDL, and a spike does not get to leave objects on production; the only
+  clean venue was a Supabase branch, which costs money nobody authorised. They
+  became moot when `service_role`'s Vault grants (read *and* write) showed that
+  the layer they were protecting adds nothing. What replaced them is catalog
+  evidence: E2, E3 and E4 in the report, read rather than asserted, plus three
+  claims explicitly marked inferred.
+- **The local-Vault proof was not run and is moot for the same reason.** This
+  container has neither the Supabase CLI nor a running Docker daemon, so no
+  local stack could be started. It returns only if Tor overrules Q18.
+- **The recovery story is in Q18**, and is deliberately blunt: a lost data key
+  means every connected customer reconnects through OAuth. Visible, recoverable,
+  and cheaper than the failure option A accepts.
+
+**Also found, not looked for:** production enqueues into `mail_outbox` on two
+hourly cron jobs and **nothing drains the queue** — the worker is an npm script
+with no host. Latent today (nothing has been sent), silent when it bites.
+Recorded as **Q19** and as a launch blocker beside the four in Q5 and Q14.
 
 ### G2 — Secret custody · 4–6 days · needs G1
 
@@ -273,8 +299,9 @@ org_integrations
   provider          text not null          -- FK to the registry (G5)
   external_id       text                   -- the provider's tenant id
   external_name     text                   -- shown in the UI; untrusted input
-  secret_ref        uuid                   -- vault.secrets id
-  refresh_ref       uuid
+  secret_ct         bytea                  -- AES-256-GCM ciphertext (Q18)
+  refresh_ct        bytea
+  key_version       int                    -- which data key encrypted these
   expires_at        timestamptz
   scopes            text[]
   status            text                   -- 'active' | 'revoked' | 'expired' | 'error'
@@ -287,10 +314,18 @@ org_integrations
 - **RLS on, no select policy for clients.** The UI reads
   `public.integration_status(p_org uuid)` — a SECURITY DEFINER RPC returning
   provider, workspace name, status and `installed_at`, and nothing else.
-- **`app.integration_secret(p_org uuid, p_provider text)`** is the only reader.
-  SECURITY DEFINER, `set search_path = ''`, granted to the G1 role only, revoked
-  from `public`, `anon`, `authenticated` **and `service_role`**. It writes an
-  audit row on every call.
+- **The ciphertext never leaves the database as plaintext, because it never
+  enters as plaintext.** Under Q18 the encryption happens in the integration
+  runtime (`node:crypto`, AES-256-GCM, key from the environment), so Postgres
+  holds bytes it cannot interpret and there is no secret-reading function to
+  guard. `org_integrations` is read by the runtime like any other table; what
+  makes it safe is that reading it is useless.
+- **`key_version` is there from the first row, not added later.** Rotating a
+  data key means re-encrypting every row, and a schema that cannot say which key
+  a row used cannot roll forward without downtime.
+- **The audit row is written on use, not on read.** With no privileged accessor
+  to hook, the honest event is "the runtime used org X's credential against
+  provider Y", written by the runtime through `app.record_system_event` (G3).
 - **Rotation is serialised.** A provider with rotating single-use refresh tokens
   will be locked out by two concurrent refreshers. The refresh path takes a
   `pg_advisory_xact_lock` keyed on the integration id and writes the new refresh
@@ -299,14 +334,20 @@ org_integrations
   being rediscovered four times (D50, D51, D57, duty-archive): write the rule as
   *"nobody may change this content"*, comparing the columns that carry meaning,
   so `on delete set null` on `installed_by` still works.
-- **Deleting the org destroys the secret.** `on delete cascade` removes the row;
-  a trigger must also remove the Vault entry, or every deleted customer leaves a
-  live credential behind.
+- **Deleting the org destroys the credential.** `on delete cascade` removes the
+  row, and under Q18 that is the whole of it — there is no second store to
+  forget about, which was one of Vault's quieter costs.
+- **Revoking at the provider is still required.** Deleting our ciphertext makes
+  the credential unusable *by us*; the grant at the provider survives until it
+  is revoked there. That call belongs in G7's revoke path, and cascade delete
+  must not be the only thing that fires.
 
-**Done when:** a secret round-trips through Vault; no persona — `anon`,
-`leser`, `redaktor`, `administrator` — can select `org_integrations`; a
-service-role client is **refused** by `app.integration_secret`; a concurrent
-refresh is provably blocked; deleting an organisation leaves no Vault row.
+**Done when:** a credential round-trips through encrypt/decrypt with a key held
+only in the environment; a row read directly with the service key yields
+ciphertext and nothing usable; no persona — `anon`, `leser`, `redaktor`,
+`administrator` — can select `org_integrations`; a wrong or absent key fails
+closed rather than returning garbage; a concurrent refresh is provably blocked;
+deleting an organisation leaves nothing behind.
 
 ### G3 — The inbound edge · 4–5 days · needs G2
 
@@ -496,7 +537,7 @@ and this plan does not propose to unfreeze it. What it does add:
 
 ```
 G0 truth-up & hygiene ......... DONE    ── shipped 2026-09-07
-G1 custody decision (spike) ... 2–3 d   ── start now, gates G2
+G1 custody decision (spike) ... DONE    ── shipped 2026-09-07 (Q18, Q19)
 G2 secret custody ............. 4–6 d   ── gates G3, G4, G7
 G3 inbound edge ............... 4–5 d
 G4 outbound edge .............. 3–4 d   ── can run beside G3
@@ -530,8 +571,9 @@ wasted, and the provider work cannot start without it.**
 
 | # | Decision | Owner | Blocks |
 |---|---|---|---|
-| Q18-a | The custody model — A, B or C from §1 | Tor, on G1's evidence | G2 |
-| Q18-b | Whether a bespoke Postgres role and its JWT are acceptable operationally | Tor | G2 |
+| Q18-a | The custody model — A, B or C from §1 | **answered by G1: C.** Tor may overrule in one line | G2 |
+| Q18-b | ~~Whether a bespoke Postgres role and its JWT are acceptable operationally~~ | **withdrawn** — C uses neither | — |
+| Q19 | Where the mail worker and the integration runtime run | Tor + operator | G2's accessor is written against it; a launch blocker on its own |
 | Q18-c | What `organizations.privacy.eu_only` means — a control that refuses third-country providers, or a switch that comes out | Tor | G5 |
 | Q18-d | Whether the service key is on Vercel today, and whether it should be | operator + Tor | **open** — needs `vercel env ls`; G0 established the app *can* read it and corrected OPERATIONS.md |
 | Q18-e | Whether an empty production `audit_events` means "nothing auditable happened" or "the trail is failing silently" | G3, from evidence | G3 |
