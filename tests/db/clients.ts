@@ -3,14 +3,16 @@ import type { Database } from '@/types/database'
 import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
 
 /**
- * ── THE TWO STANDING QUESTIONS ──────────────────────────────────────────────
+ * ── THE STANDING QUESTIONS ──────────────────────────────────────────────────
  *
- * Before writing a check, ask both. They are halves of one thing — a check
- * that reaches the wrong control, and a check that reaches the wrong row —
- * and V1-2 hit each of them twice.
+ * Before writing a check, ask all three. The first two are halves of one thing
+ * — a check that reaches the wrong control, and a check that reaches the wrong
+ * row — and V1-2 hit each of them twice. The third is about a check that
+ * reaches the right thing and only looks at part of it; V1-3 found it.
  *
  *   1. What ELSE could refuse this before the check I am testing gets a chance?
  *   2. What could have MOVED the state my selector assumes?
+ *   3. Am I asserting over the SET, or over the members I happened to pick?
  *
  * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
  *
@@ -78,6 +80,27 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * open round, say all four — and fail loudly when nothing matches, rather than
  * silently testing something else. If the check needs a queue drained, drain
  * until it reports empty rather than assuming one pass is enough.
+ *
+ * ── 3. ASSERT THE RELATION OVER THE SET, NOT THE MEMBERS ────────────────────
+ *
+ * Where a set of values must each satisfy the same relation, write the
+ * assertion over the SET. Sampling two of them tests two of them.
+ *
+ *   V1-3  `app.run_due_schedules` computed the next run from a CASE with four
+ *         arms and `else interval '7 days'`, so `annual` — in the enum since
+ *         M:0001:20 — re-sent every seven days. Q20 was adding two cadences,
+ *         and a test of the two NEW values would have passed: they were about
+ *         to be given correct arms. The assertion that caught it was the
+ *         relation — "a cadence whose next run is sooner than its own name is
+ *         wrong" — evaluated over every value in the vocabulary, including the
+ *         four that had been wrong for months and were in nobody's sample.
+ *
+ * This is the enumeration-versus-sampling rule arriving in test design rather
+ * than in coverage, and it is the same rule Gate 5a3 applies to the catalogue
+ * and Q28 applies to its exemption list: enumerate the set from its source,
+ * assert the property over all of it, and let a new member fail until someone
+ * adds it deliberately. A list of examples grows only when someone remembers
+ * to grow it, which is exactly when it stops covering the case that matters.
  *
  * ── AND THE CONVERSE, WHICH IS THE SAME RULE FROM THE OTHER SIDE ────────────
  *
