@@ -189,7 +189,7 @@ merging would bury them inside a screen build.
 
 ---
 
-## Batch B — sent 2026-09-07 · **OPEN**
+## Batch B — sent 2026-09-07 · **Q57 and Q59 CONFIRMED and promoted; Q58 RETURNED with a correction**
 
 Three decisions, all on the security core. V2-1's batch, sent after V2-0 closed.
 
@@ -227,6 +227,13 @@ remove a working consumer to match a bundle that forgot it.
 *Confirm: as proposed / drop `redaktor_may_lower` to match the copy / build the switch from
 the brief's prose.*
 
+#### OUTCOME — as proposed, promoted to `DECISIONS.md` Q57, with two additions
+
+`default_k_threshold` gets its **first writer**, so the 3–10 CHECK is exercised from the
+application side for the first time — negative tests in **Q36's shape: 11 refused, 10
+accepted, 2 refused**. And the writer is **`administrator`, not `redaktør`**: a privacy
+setting sits with the role that already owns the Personvern tab.
+
 ### Q58 ● — a per-topic automatic threshold of 8
 
 V2:5591: *"Kartlegging av trakassering, varsling og helse settes **automatisk** til 8."*
@@ -246,6 +253,43 @@ pack. Never a regex on question text." A topic string parsed to pick a threshold
 mistake in the same place.
 
 *Confirm: pack property / a second org-level default as drawn / reject.*
+
+#### OUTCOME — **RETURNED. Confirmed as a pack property, but three facts make the confirmed
+form unbuildable as written, and they were found by checking the seed rather than the plan.**
+
+Tor confirmed "pack property", plus two requirements: list the packs **by key, not by topic**
+("listing by topic moves the regex into a spreadsheet"), and **8 is a floor the pack carries,
+not a ceiling** — an organisation whose default is 10 must not be lowered to 8 by choosing one
+of these packs.
+
+Measured against the seeded rows, `select key, policy from template_packs where org_id is null`:
+
+1. **Only TWO packs carry a locked policy at all** — `psykososial-kartlegging`
+   (`k_threshold: 5`) and `leverandor-apenhetsloven` (`k_threshold: 0`, organisation). Every
+   other pack's `policy` is null.
+2. **`trakassering-ytringsklima` carries NO policy**, so `apply_pack_policy` never fires for
+   it. Giving it 8 is not a threshold bump: it means adding `locked: true`,
+   `anonymity: anonymous` and `respondent_kind: person` — **bringing the pack under Q17's lock
+   for the first time**, which is a larger change than the decision describes.
+3. **"varsling" and "helse" have no pack.** Of v2's three named sensitive topics, only
+   trakassering maps to one. Whether `psykososial-kartlegging` is v2's "helse" is a judgement
+   about the world, not about the code — and listing by key is exactly what forces it to be
+   asked rather than resolved by a regex in a spreadsheet.
+
+**And the floor requirement needs a code change after all.** `app.apply_pack_policy`
+(`M:0034`) **assigns** rather than takes a maximum —
+`new.k_threshold := coalesce((v_policy->>'k_threshold')::int, new.k_threshold)` — and
+**returns early**, so the organisation default is never consulted for a locked pack. Under
+that code a pack carrying 8 would lower an org whose default is 10 to 8, which is the outcome
+Tor's requirement forbids. My Batch B statement that this needs "no code change at all" was
+right that the mechanism exists and **wrong that it implements the semantics** — the second
+time verification has moved this decision.
+
+The fix is `greatest(pack_k, org_default)`. Note it changes behaviour for the **existing**
+locked packs too, not only new ones: today `psykososial-kartlegging` pins a survey at 5 even
+in an organisation whose default is 10. Under `greatest` it would be 10. That is a
+strengthening in every case — the survey is never gated less than the organisation chose —
+but it is a change to the security kernel and belongs to Tor, not to a build.
 
 ### Q59 ● — verneombud: a fourth role, or a duty capacity?
 
@@ -269,6 +313,14 @@ against it. That is a security-kernel change to express something `duty_signers`
 expresses.
 
 *Confirm: duty capacity / a real fourth role in `app.member_role` / copy only.*
+
+#### OUTCOME — duty capacity, promoted to `DECISIONS.md` Q59
+
+The deciding reason is duplication rather than cost: **`duty_signers` already expresses
+exactly this, and a fourth enum value would express it a second time, in the one place in the
+schema where a mistake is most expensive.** That v2 contradicts itself internally — four roles
+in the help copy (V2:4279), three on Brukere (V2:2279) — is itself a sign the role is not
+thought through in the bundle. Help copy corrected to match V2:2279 and logged.
 
 ---
 
