@@ -2178,3 +2178,69 @@ inside a plausible one.
 
 **Repaired** by re-applying the committed definition verbatim, including its `revoke`,
 `grant` and `comment`. Every fingerprint category now matches local byte for byte.
+
+### D105 — the Personvern threshold note says three things the system does not do
+v2 draws the organisation's default-threshold picker (HeiTuva.dc.html:2737-2747,
+values at :5583) and, under it, this note at :5591:
+
+> «Standard for nye undersøkelser er 5 svar. Kartlegging av trakassering,
+> varsling og helse settes automatisk til 8. Den som lager en undersøkelse kan
+> heve terskelen, men ikke senke den under virksomhetens minimum.»
+
+The picker is built as drawn — its values agree with the schema, 3 being Q17's
+floor for natural persons and 10 Q36's ceiling, both CHECKed on the column
+(`M:0034:19-20`). **The note is not.** Measured against the code rather than
+against the brief, three of its clauses are false:
+
+1. **«settes automatisk til 8» — no such rule exists**, and Q58, which would
+   create it, was RETURNED rather than confirmed: only two packs carry a locked
+   policy at all, `trakassering-ytringsklima` carries none, and «varsling» and
+   «helse» have no pack to attach a number to. Shipping the sentence would
+   promise a behaviour nothing implements.
+2. **«ikke senke den under virksomhetens minimum» — there is no such floor.**
+   `organizations.default_k_threshold` SEEDS a new person survey in
+   `app.apply_pack_policy` (`M:0034:66-68`) and constrains nothing afterwards.
+   A survey's own floor is the CHECK at 3, not the organisation's number. This
+   is the clause most likely to be believed, because it reads as a guarantee.
+3. **«Den som lager en undersøkelse kan heve terskelen» — by default they
+   cannot.** `app.guard_survey_policy` (`M:0034`) refuses any threshold change
+   by a non-administrator unless `privacy.redaktor_may_lower` is true.
+
+So the note states what is true and is **parameterised on the flag**:
+«Nye undersøkelser for personer starter på {k} svar. Terskelen kan aldri settes
+under tre.» plus, on `redaktor_may_lower`, either «Bare en administrator kan
+endre terskelen på en undersøkelse.» or «Redaktører kan også endre terskelen på
+en enkelt undersøkelse, fordi det er slått på for virksomheten.» — and a third
+sentence the bundle omits entirely, that organisation surveys have no threshold
+at all, which is `app.k_for` returning 0 by design.
+
+**`privacy.redaktor_may_lower` is KEPT and no switch is built for it** (Q57).
+v2 draws no control for the flag, and Q29's rule applies verbatim: do not remove
+a working consumer to match a bundle that forgot it. The flag is read by the
+guard and tested (`tests/invariants/attributed-results.test.ts:267-288`); what
+changes is that the copy above it now tells the truth about which state it is in.
+
+### D106 — the help copy says four roles; v2's own Brukere screen says three
+`HeiTuva.dc.html:4279` opens the «Roller og tilgang» article with «Fire roller
+styrer hva folk ser», and `:4283` gives verneombud its own role, repeated at
+`:5100` and `:5131`. **The same bundle contradicts itself at `:2279`**, where the
+Brukere screen's own sentence is «Administrator styrer innstillinger og
+personvern. Redaktør lager og sender undersøkelser. Leser ser bare summerte
+resultater» — three. The v1 bundle says nothing of the kind.
+
+DECISIONS **Q59**: verneombud is a **duty capacity, not a role**. `duty_signers`
+(`20260904000004_duty_signing.sql`) already records who signs a statutory duty,
+so a verneombud is a `leser` who signs. `app.member_role` stays exactly
+`('administrator','redaktor','leser')` (`M:0001:7`).
+
+The deciding reason is duplication rather than cost: a fourth enum value would
+express a second time what `duty_signers` already expresses, in the one place in
+the schema where a mistake is most expensive — every RLS policy and every
+`app.has_role` call reads that enum, and Gate 5a3 re-enumerates all 74 surfaces
+against it.
+
+**Consequence for V2-6**, which builds the help centre: the article is
+transcribed with **three** roles, matching `:2279` and the schema, and the
+verneombud sentence describes signing rather than a role. Recorded here so the
+copy is not transcribed verbatim from `:4279` by someone reading only the
+article.

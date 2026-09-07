@@ -154,6 +154,60 @@ export async function setRetention(months: number): Promise<AdminResult> {
   return { ok: true }
 }
 
+/**
+ * DECISIONS Q57 — the organisation's default display threshold gets its first
+ * writer. The column has existed since M:0034 and been shown on this tab since
+ * Phase 9; D87 recorded that the action was left unwritten on purpose, because
+ * an action with no caller is a lie in the codebase. v2 draws the picker
+ * (HeiTuva.dc.html:2737-2747), so there is a caller now.
+ *
+ * ADMINISTRATOR, NOT REDAKTØR (Tor, with the Q57 confirmation): this is a
+ * privacy setting and sits with the role that already owns this tab. That is
+ * `requireAdmin` here AND `org_upd` in the database (M:0008:8), so removing the
+ * check here does not open it — which is what tests/db/org-threshold.test.ts
+ * proves by asserting the VALUE did not move rather than that an error came
+ * back, since RLS filters an UPDATE instead of erroring.
+ *
+ * THE RANGE IS NOT THIS FUNCTION'S TO DECIDE. 3-10 is Q36's CHECK on the column
+ * (M:0034:19-20) and Q17's floor for natural persons; the Zod bound mirrors it
+ * so the form can say something useful, and the database refuses independently.
+ * Both sides are tested from both ends: 11 refused, 10 accepted, 3 accepted,
+ * 2 refused.
+ */
+const DefaultKInput = z.coerce.number().int().min(3).max(10)
+
+export async function setDefaultThreshold(k: number): Promise<AdminResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+
+  const parsed = DefaultKInput.safeParse(k)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('default_k_threshold')
+    .eq('id', admin.orgId)
+    .single()
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ default_k_threshold: parsed.data })
+    .eq('id', admin.orgId)
+  if (error) {
+    console.error(`setDefaultThreshold failed: ${error.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  // Q17: changing the threshold is an administrator action, audited.
+  await audit(admin.orgId, 'threshold.default_change', String(parsed.data), {
+    from: org?.default_k_threshold,
+    to: parsed.data,
+  })
+  revalidatePath('/administrasjon')
+  return { ok: true }
+}
+
 const OptionKey = z.enum(['reminders', 'weekly_digest', 'allow_self_serve', 'brand_mail', 'sso'])
 
 export async function setOption(key: string, value: boolean): Promise<AdminResult> {

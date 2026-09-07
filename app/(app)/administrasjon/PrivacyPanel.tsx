@@ -2,7 +2,7 @@
 
 import { useOptimistic, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { setPrivacy, setRetention } from './actions'
+import { setDefaultThreshold, setPrivacy, setRetention } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
 import { PRIVACY_KEYS, type PrivacyKey } from './keys'
 
@@ -15,6 +15,11 @@ const LABEL: Record<PrivacyKey, [string, string]> = {
 
 const RETENTIONS = [6, 12, 24, 0] as const
 
+/** DECISIONS Q57 / Q38 — the picker v2 draws (HeiTuva.dc.html:2737-2747). The
+ *  values are the bundle's and they agree with the schema: 3 is Q17's floor for
+ *  natural persons, 10 is Q36's ceiling, both CHECKed on the column. */
+const THRESHOLDS = [3, 5, 8, 10] as const
+
 /** Personvern card — HeiTuva.dc.html:1477-1502.
  *
  *  The design lists five toggles; the first, "Skjul resultater under 5 svar",
@@ -25,16 +30,23 @@ export function PrivacyPanel({
   privacy,
   retention,
   defaultK,
+  redaktorMayLower,
 }: {
   privacy: Record<PrivacyKey, boolean>
   retention: number
   /** organizations.default_k_threshold — what a NEW person survey starts at (Q17). */
   defaultK: number
+  /** organizations.privacy.redaktor_may_lower. Read only: v2 draws no switch
+   *  for it, and Q57 keeps the column rather than deleting a working consumer
+   *  to match a bundle that forgot it (Q29). The note below is PARAMETERISED on
+   *  it instead of asserting it is always false. */
+  redaktorMayLower: boolean
 }) {
   const t = useTranslations('admin')
   const [saved, setSaved] = useState(privacy)
   const [optimistic, setOptimistic] = useOptimistic(saved)
   const [months, setMonths] = useState(retention)
+  const [k, setK] = useState(defaultK)
   const [error, setError] = useState<AdminResult | null>(null)
   const [, startTransition] = useTransition()
 
@@ -136,6 +148,64 @@ export function PrivacyPanel({
 
       <p className="mt-2.5 text-[13px] text-mut">
         {months === 0 ? t('retentionNoteNever') : t('retentionNoteMonths', { months })}
+      </p>
+
+      <div className="my-[18px] h-px bg-line" />
+
+      {/* DECISIONS Q38 / Q57 — the organisation's default threshold. The column
+          has been SHOWN on this tab since Phase 9 and had no writer; v2 draws
+          the picker, so it has one now. Administrator only, in this component,
+          in the action, and in `org_upd` (M:0008:8).
+
+          THE NOTE IS NOT THE BUNDLE'S. V2:5591 says «Den som lager en
+          undersøkelse kan heve terskelen, men ikke senke den under
+          virksomhetens minimum», and THREE parts of that are not what this
+          system does: nothing ties a survey's threshold to the organisation's
+          default (the default SEEDS a new survey in `app.apply_pack_policy`
+          and constrains nothing afterwards); by default only an administrator
+          may change a survey's threshold at all; and whether a redaktør may is
+          `privacy.redaktor_may_lower`, which the bundle draws no switch for.
+          So the note states what is true and is parameterised on the flag.
+          Logged in docs/DEVIATIONS.md. */}
+      <div className="flex flex-wrap items-center gap-3.5">
+        <span className="text-[14px] font-semibold">{t('orgThreshold')}</span>
+        <div className="flex flex-wrap gap-2">
+          {THRESHOLDS.map((value) => {
+            const on = k === value
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  const previous = k
+                  setK(value)
+                  startTransition(async () => {
+                    const res = await setDefaultThreshold(value)
+                    if (res.ok) setError(null)
+                    else {
+                      setK(previous)
+                      setError(res)
+                    }
+                  })
+                }}
+                className="touch-44 cursor-pointer rounded-full px-[15px] py-[9px] text-[12.5px] font-semibold text-ink"
+                style={{
+                  background: on ? 'var(--ac)' : 'transparent',
+                  border: `1px solid ${on ? 'var(--ink)' : 'var(--line)'}`,
+                }}
+              >
+                {t('orgThresholdChip', { k: value })}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <p className="mt-2.5 text-[13px] leading-[1.6] text-mut">
+        {t('orgThresholdNote', { k })}{' '}
+        {redaktorMayLower ? t('orgThresholdRedaktorMayLower') : t('orgThresholdAdminOnly')}{' '}
+        {t('orgThresholdOrgSurveys')}
       </p>
 
       {error && !error.ok ? (

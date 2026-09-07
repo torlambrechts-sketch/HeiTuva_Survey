@@ -44,7 +44,14 @@ export default async function PrivacyTab() {
   return (
     <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.1fr_.9fr]">
       <div className="flex flex-col gap-[18px]">
-        <PrivacyPanel privacy={privacy} retention={org?.retention_months ?? 12} defaultK={org?.default_k_threshold ?? 5} />
+        <PrivacyPanel
+          privacy={privacy}
+          retention={org?.retention_months ?? 12}
+          defaultK={org?.default_k_threshold ?? 5}
+          redaktorMayLower={
+            (org?.privacy as Record<string, boolean> | null)?.redaktor_may_lower === true
+          }
+        />
         <DsrPanel requests={(dsr ?? []) as DsrRequest[]} />
       </div>
 
@@ -69,7 +76,12 @@ export default async function PrivacyTab() {
 
         <section className="rounded-[18px] border border-line bg-sf p-6">
           <h2 className="text-[16px] font-semibold">{t('anonExplainerTitle')}</h2>
-          <p className="mt-2.5 text-[13.5px] leading-[1.7] text-mut">{t('anonExplainer')}</p>
+          {/* Parameterised on the organisation's own default, because V2-1 made that
+              default settable — a fixed «fem som standard» here would be false the
+              moment an administrator uses the picker on the left. */}
+          <p className="mt-2.5 text-[13.5px] leading-[1.7] text-mut">
+            {t('anonExplainer', { k: org?.default_k_threshold ?? 5 })}
+          </p>
         </section>
       </div>
     </div>
