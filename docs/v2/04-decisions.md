@@ -184,15 +184,59 @@ sentence and whose database disagree, with nothing saying which was decided.
 *Confirm: as proposed (recommended) / drop `redaktor_may_lower` to match the copy / build the
 switch from the brief's prose.*
 
-**Q58 ●** — *A per-topic automatic threshold of 8.* V2:5591 — "Kartlegging av trakassering,
-varsling og helse settes **automatisk** til 8", with chips `[5,8,10,12]` default 8 (V2:5587).
-Q17 defines a default, a floor and a lock, not a topic rule.
-**Proposed:** adopt it **as a pack property** — sensitive statutory packs carry 8 in their
-seeded `policy`, applied by the existing `app.apply_pack_policy`. A seed change, no DDL, and
-it cannot be got wrong by classifying a topic at runtime. **This is Q35's precedent exactly**:
-the bundle classified by regex and the answer was "data on the pack. Never a regex on question
-text."
-*Confirm: pack property (recommended) / a second org-level default as drawn / reject.*
+**Q58 ●** — *A per-topic automatic threshold of 8.* **RETURNED once and re-drafted here with
+everything the first draft got wrong.** V2:5591: «Kartlegging av trakassering, varsling og
+helse settes **automatisk** til 8.» Q17 defines a default, a floor and a lock — no topic rule.
+
+Confirmed as a **pack property** with two requirements: list the packs **by key, not by
+topic**, and **8 is a floor the pack carries, not a ceiling**. Both requirements broke the
+draft, and here is the whole of it:
+
+**(a) Which packs, by key.** `select key, policy from template_packs where org_id is null`
+returns **two** packs with a policy at all:
+
+| key | policy today |
+|---|---|
+| `psykososial-kartlegging` | `{locked, anonymous, person, k_threshold: 5}` |
+| `leverandor-apenhetsloven` | `{locked, named, organisation, k_threshold: 0}` |
+
+Every other pack's `policy` is **null**, including `trakassering-ytringsklima`.
+
+**(b) `trakassering-ytringsklima` would come under Q17's lock for the first time, and that
+is not a threshold bump.** With a null policy, `app.apply_pack_policy` never fires for it: the
+function's `where` clause requires `policy->>'locked'`. Giving it 8 means giving it
+`locked: true`, `anonymity`, and `respondent_kind` as well — after which its threshold and
+anonymity **freeze**, `guard_survey_policy` refuses every later change with `policy_locked`,
+and no customer can adjust either. That is a larger change than the sentence describes and it
+is irreversible for surveys created from it.
+
+**(c) «varsling» and «helse» have no pack at all.** Of v2's three named topics only
+*trakassering* maps to one. Whether `psykososial-kartlegging` is the «helse» case is a
+judgement about the world, not the code. **Listing by key is what forced this to be asked
+rather than resolved by a regex in a spreadsheet** — which is exactly what Tor said listing by
+topic would do.
+
+**(d) The floor requirement needs a code change.** `app.apply_pack_policy` (`M:0034`)
+**assigns** and returns early —
+`new.k_threshold := coalesce((v_policy->>'k_threshold')::int, new.k_threshold); … return new;`
+— so a locked pack never consults the organisation default. A pack carrying 8 would set a
+survey to 8 in an organisation whose default is 10: the outcome the requirement forbids. The
+fix is `greatest(pack_k, org_default)`, and **it changes behaviour for the existing locked
+packs too**: today `psykososial-kartlegging` pins a survey at 5 even where the organisation
+chose 10; under `greatest` it would be 10. That is a strengthening in every case — a survey is
+never gated below what the organisation chose — but it is a security-kernel change.
+
+**(e) And this may not be Q58's question at all.** D105's enumeration establishes that
+`default_k_threshold` **seeds and does not bound** (0 surfaces constrain against it), and that
+this matches Q17 as committed. If Tor's «organisasjonen kan heve, aldri senke» is adopted as a
+decision, the org default becomes a floor — and then a pack floor is **the same mechanism at a
+different level**, and both should be built by one change (`greatest` over pack, org and the
+CHECK) rather than two.
+
+*Confirm, in this order: (1) is the organisation default a FLOOR (D105) — because Q58's shape
+depends on it; (2) which pack keys carry 8, given that trakassering has no policy today and
+varsling and helse have no pack; (3) `greatest` in `apply_pack_policy`, accepting that it
+raises existing statutory surveys in organisations whose default exceeds the pack's.*
 
 **Q59 ●** — *Verneombud: a fourth role, or a duty capacity?* v2 says "Fire roller" (V2:4279)
 and gives verneombud its own role (V2:4283, V2:5100, V2:5131) — while its own Brukere screen

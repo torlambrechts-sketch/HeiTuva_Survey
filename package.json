@@ -27,12 +27,14 @@
     "verify:browser": "tsx scripts/verify/capture.ts --local",
     "verify:reference": "tsx scripts/verify/reference.ts",
     "verify:quality": "tsc --noEmit && eslint . && supabase db lint --level warning",
-    "verify:all": "npm run verify:quality && npm run verify:db && npm run verify:policy && npm run verify:attack && npm run verify:roundtrip && npm run verify:hermetic && npm run verify:interaction && npm run verify:i18n && npm run verify:respondent && npm run verify:send && npm run verify:export && npm run verify:splash && npm run verify:load && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
+    "verify:all": "npm run verify:quality && npm run verify:copy && npm run verify:db && npm run verify:policy && npm run verify:attack && npm run verify:roundtrip && npm run verify:hermetic && npm run verify:interaction && npm run verify:i18n && npm run verify:respondent && npm run verify:send && npm run verify:export && npm run verify:splash && npm run verify:load && npm run verify:browser && npm run verify:responsive && npm run verify:visual",
     "verify:visual": "tsx scripts/verify/visual.ts --local",
     "verify:responsive": "tsx scripts/verify/responsive.ts --local",
     "verify:splash": "tsx scripts/verify/splash.ts --local",
     "verify:load": "tsx scripts/verify/load.ts --local",
-    "census:write": "CENSUS_WRITE=1 vitest run"
+    "census:write": "CENSUS_WRITE=1 vitest run",
+    "verify:copy": "tsx scripts/verify/threshold-copy.ts",
+    "verify:thresholds": "tsx scripts/verify/threshold-readers.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.73.0",

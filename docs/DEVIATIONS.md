@@ -2197,11 +2197,34 @@ against the brief, three of its clauses are false:
    policy at all, `trakassering-ytringsklima` carries none, and «varsling» and
    «helse» have no pack to attach a number to. Shipping the sentence would
    promise a behaviour nothing implements.
-2. **«ikke senke den under virksomhetens minimum» — there is no such floor.**
-   `organizations.default_k_threshold` SEEDS a new person survey in
-   `app.apply_pack_policy` (`M:0034:66-68`) and constrains nothing afterwards.
-   A survey's own floor is the CHECK at 3, not the organisation's number. This
-   is the clause most likely to be believed, because it reads as a guarantee.
+2. **«ikke senke den under virksomhetens minimum» — there is no such floor, and
+   this is now ENUMERATED rather than asserted.** `scripts/verify/threshold-readers.ts`
+   derives the complete set of readers and writers of both threshold columns
+   from `pg_proc`, `pg_constraint` and `pg_trigger`, and classifies each:
+
+   | | |
+   |---|---|
+   | `app.apply_pack_policy` | **SEEDS** — the only function that reads `organizations.default_k_threshold`, and it writes `new.k_threshold` at insert |
+   | `app.guard_survey_policy` | **BOUNDS** — on the LOCK and the ROLE, and it never reads the org default |
+   | `app.k_for`, `public.get_survey_for_token` | READ |
+   | `organizations_default_k_threshold_range` | `CHECK (default_k_threshold BETWEEN 3 AND 10)` |
+   | `surveys_k_threshold_ceiling` | `CHECK (k_threshold <= 10)` |
+   | `surveys_k_threshold_floor` | `CHECK (k_threshold >= 3 OR respondent_kind = 'organisation')` |
+
+   **Verdict: 0 surfaces constrain a survey's threshold against the organisation
+   default.** No CHECK references it; the one function that reads it seeds and
+   returns. A survey's floor is 3, not the organisation's number.
+
+   **And that matches Q17 as committed.** `docs/Q17_terskel_forslag.md:9-14`
+   tabulates «Gulv 3 · Standard 5 · Kan endres av Administrator» for both
+   natural-person rows, and the design brief §8 says «Enkeltundersøkelser kan
+   settes høyere, aldri under **3**». So the implementation is not a gap against
+   Q17 — it is Q17. A stricter rule making the organisation's default a FLOOR
+   for its own surveys is a **decision nobody has taken in this repository**:
+   `git grep` finds no «aldri senke», no «sette gulv», no «25 ansatte». If it
+   was decided in conversation it is the third thing in this project to be
+   decided and never committed, after Q17 itself and the expansion catalogue,
+   and it needs a decision line and a migration rather than a sentence in a note.
 3. **«Den som lager en undersøkelse kan heve terskelen» — by default they
    cannot.** `app.guard_survey_policy` (`M:0034`) refuses any threshold change
    by a non-administrator unless `privacy.redaktor_may_lower` is true.
