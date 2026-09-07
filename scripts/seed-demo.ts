@@ -427,9 +427,8 @@ async function main() {
         user_id: null,
         title: 'Arbeidsmiljø',
         panels: [
-          { key: 'trend', wide: false },
-          { key: 'heatmap', wide: true },
           { key: 'drivers', wide: false },
+          { key: 'themes', wide: false },
         ],
         // No group_id: an organisation preset may not carry one (Q51) — the
         // seed obeys the constraint rather than working around it.
@@ -439,7 +438,13 @@ async function main() {
         org_id: org.id,
         user_id: adminUser.userId,
         title: 'Mitt oppsett',
+        // The member's WORKING layout, so this is what the demo dashboard
+        // draws: the four panels the bundle's default board has
+        // (`dashLayout` = ["trend","heatmap","drivers","themes"], NEW:3045),
+        // with the heatmap full width as `wideDefault` gives it.
         panels: [
+          { key: 'trend', wide: false },
+          { key: 'heatmap', wide: true },
           { key: 'drivers', wide: false },
           { key: 'themes', wide: false },
         ],

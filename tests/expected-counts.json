@@ -27,5 +27,7 @@
   "tests/db/schedules-rls.test.ts": 6,
   "tests/unit/schedule-status.test.ts": 8,
   "tests/db/dashboard-layouts.test.ts": 20,
-  "tests/unit/threshold-line.test.ts": 5
+  "tests/unit/threshold-line.test.ts": 5,
+  "tests/unit/dashboard-layout.test.ts": 14,
+  "tests/unit/dashboard-panels.test.ts": 4
 }

@@ -1948,3 +1948,55 @@ Nothing to do until a customer asks. Recorded so that the next person to meet
 this reads a decision with a stated boundary rather than a screen half that
 looks accidentally missing.
 
+
+### D100 — Two shipped presets lose the panel they were drawn to lead with
+
+`DASH_PRESETS` gives «Kundeopplevelse» `["stream","themes","drivers"]` and
+«Intern tjenestekvalitet» `["stream","drivers","themes"]` (NEW:2976–2978). Both
+lead with the event-stream panel, which Q26 defers behind
+`feature_flags.event_stream_panel`. They are seeded without it.
+
+The descriptions changed too, and that is the part worth stating. The bundle
+writes «Løpende tilfredshet etter sak, med volum per dag og temaer i
+kommentarene» and «Servicedesk og støttefunksjoner: løpende strøm, høyest og
+lavest, frisvar». A description promising «løpende» beside a preset that cannot
+show it is the fabricated-data rule one level up: it is copy asserting a
+capability the product does not have. So the two read «Tilfredshet over tid, hva
+som trekker opp og ned, og temaer i kommentarene» and «Servicedesk og
+støttefunksjoner: utvikling, høyest og lavest, frisvar» — the same three panels
+they now contain, named.
+
+«Medlem og frivillig» also carried `stream` as its third panel and now carries
+`heatmap`; its description never mentioned the stream, so it is unchanged.
+
+**Not remembered, enforced.** A preset naming a panel the dashboard does not
+offer is refused by the same trigger that guards a member's own layout
+(`app.preset_keys_registered`, M:0047). A shipped default that cannot be applied
+is worse than a missing one, so the constraint applies to the seed as well as to
+the user.
+
+**Reverting is a seed change, not a code change.** When Q26 lifts, `stream`
+gains a `report_section_types` row with `on_dashboard`, and the three presets
+get their drawn panels and descriptions back in the same migration.
+
+### D101 — The first-run preset cards carry no illustration
+
+The bundle draws seven inline SVG illustrations for the «Velg et oppsett å
+starte fra» cards, selected by index (`p.il0`–`p.il6`, NEW:1047–1053): an
+ellipse ground shadow and a scene above it, one per preset.
+
+They are omitted. Recreating a rendering is what CLAUDE.md asks for; copying the
+prototype's internal structure is what it forbids, and these are seven distinct
+drawings keyed to six presets by position — so the seventh is a fallback for a
+preset that does not exist, and a member's OWN saved preset would land on
+whichever illustration its index happened to select. An illustration chosen by
+array position is decoration that claims to be about the thing it sits on.
+
+The cards keep everything that carries meaning: the tint (which is the bundle's
+own per-preset colour), the title, the description, the panel chips and the
+button. What is missing is ornament, and it is missing deliberately rather than
+forgotten.
+
+If the illustrations matter, the honest form is one per preset KEY rather than
+per index — an asset the seed names, like a template pack's icon — which is a
+data change and belongs with whoever decides the six presets are final.

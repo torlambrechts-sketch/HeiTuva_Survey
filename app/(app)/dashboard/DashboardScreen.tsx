@@ -1,12 +1,16 @@
-import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
 import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/results/types'
 import { InsightTabs } from '@/components/InsightTabs'
-import { DashboardFilters } from './DashboardFilters'
 import { PinButton } from './PinButton'
 import { OpenPinnedButton } from './OpenPinnedButton'
+import { CustomizeCard, type PickerItem, type PresetChip } from './CustomizeCard'
+import { PanelControls } from './PanelControls'
+import { PresetChooser } from './PresetChooser'
+import { CustomizeToggle } from './CustomizeToggle'
+import { thresholdLine as thresholdLineOf } from '@/lib/dashboard/threshold-line'
+import type { LayoutFilters, PanelEntry } from '@/lib/dashboard/layout'
 
 const CARD = 'rounded-2xl border border-line bg-sf p-[22px]'
 
@@ -14,20 +18,25 @@ export async function DashboardScreen({
   surveys,
   selected,
   groups,
-  group,
-  period,
   summary,
   heatmap,
   trendBars,
   themes,
   filterLine,
   pinned,
+  panels,
+  needsSetup,
+  pinnable,
+  picker,
+  presetChips,
+  chooserPresets,
+  customizeOpen,
+  canEdit,
+  layoutFilters,
 }: {
   surveys: { id: string; title: string; status: string }[]
   selected: string[]
   groups: { id: string; name: string }[]
-  group: string | null
-  period: 'q' | 'h' | 'y'
   summary: DashboardSummary | null
   heatmap: Heatmap | null
   trendBars: { key: string; label: string; avg: number | null }[]
@@ -35,6 +44,29 @@ export async function DashboardScreen({
   filterLine: string
   /** The member's own pins, from `dashboard_pins`. */
   pinned: string[]
+  /** The member's working layout (Q25) — ordered keys with widths. */
+  panels: PanelEntry[]
+  /** No working row yet: the first-run preset chooser, not an empty board. */
+  needsSetup: boolean
+  /** Panels that may become a report section — the bundle's `arche === 'agg'`
+   *  intersected with the registry's `in_report` (see page.tsx). */
+  pinnable: Set<string>
+  picker: PickerItem[]
+  presetChips: PresetChip[]
+  chooserPresets: {
+    id: string
+    title: string
+    description: string
+    panels: string[]
+    tint: string | null
+    panelLabels: string[]
+  }[]
+  customizeOpen: boolean
+  canEdit: boolean
+  /** The period, group and selection in one value — the same shape a stored
+   *  layout holds. They used to arrive as separate props too; passing the same
+   *  fact twice is the drift shape this phase kept meeting, so there is one. */
+  layoutFilters: LayoutFilters
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
@@ -96,18 +128,113 @@ export async function DashboardScreen({
     },
   ]
 
-  const href = (patch: Record<string, string | string[] | undefined>) => {
-    const params = new URLSearchParams()
-    const next = { periode: period, gruppe: group ?? undefined, u: selected, ...patch }
-    if (next.periode && next.periode !== 'y') params.set('periode', String(next.periode))
-    if (next.gruppe) params.set('gruppe', String(next.gruppe))
-    const chosen = Array.isArray(next.u) ? next.u : next.u ? [String(next.u)] : []
-    if (chosen.length && chosen.length !== surveys.length) {
-      for (const id of chosen) params.append('u', id)
+  // Q42: the threshold sentence, from the one definition that also decides
+  // what to say when there is none. `k = 0` is an ORGANISATION-only selection
+  // and gets its own sentence rather than the numeral, because «… terskel …: 0»
+  // is true and reads as broken.
+  const line = thresholdLineOf(trendK)
+  const thresholdText = t(line.key, line.values as never)
+
+  /**
+   * One arm per key the registry offers on the dashboard. Exhaustive by
+   * construction: a layout may only hold a registry key, and a key with no arm
+   * returns null rather than an empty card.
+   *
+   * Every body below is the one the fixed grid had, moved unchanged — the
+   * panels themselves are not what this phase alters. What changed is that
+   * their ORDER, WIDTH and PRESENCE come from the layout instead of from this
+   * file, and their header action is the move/width/remove control set with
+   * the pin beside it where a panel may become a report section.
+   */
+  const renderPanel = (key: string, controls: React.ReactNode): React.ReactNode => {
+    switch (key) {
+      case 'trend':
+        return (
+<Panel title={t('panel_trend')} note={t('note_trend')} action={controls}>
+        {trendBars.length ? (
+          <div className="mt-[14px] flex flex-col gap-[9px]">
+            {trendBars.map((b) => (
+              <BarRow
+                key={b.key}
+                label={b.label}
+                value={b.avg === null ? tr('gatedCell', { k: trendK ?? 0 }) : no(b.avg)}
+                pct={b.avg === null ? 0 : pctOf5(b.avg)}
+                color={b.avg === null ? 'var(--sf2)' : 'var(--ac)'}
+              />
+            ))}
+          </div>
+        ) : (
+          <Empty text={t('noData')} />
+        )}
+      </Panel>
+        )
+      case 'heatmap':
+        return (
+<Panel
+          title={t('panel_heatmap')}
+          note={heatK === null ? t('heatNoteGeneric') : t('heatNote', { k: heatK, kWord: numberWord(heatK, locale) })}
+          action={controls}
+        >
+          <HeatGrid heatmap={heatmap} gated={tr('gatedCell', { k: heatK ?? 0 })} gatedTitle={tr('gatedTitle', { k: heatK ?? 0 })} empty={t('noData')} />
+        </Panel>
+        )
+      case 'drivers':
+        return (
+<Panel title={t('panel_drivers')} note={t('note_drivers')} action={controls}>
+        {highest.length || lowest.length ? (
+          <div className="mt-[14px] flex flex-col gap-[9px]">
+            {highest.map((d) => (
+              <BarRow key={`h-${d.question_id}`} label={d.text} value={no(d.avg)} pct={pctOf5(d.avg)} color="var(--ac2)" />
+            ))}
+            {lowest.map((d) => (
+              <BarRow key={`l-${d.question_id}`} label={d.text} value={no(d.avg)} pct={pctOf5(d.avg)} color="var(--ac3)" />
+            ))}
+          </div>
+        ) : (
+          <Empty text={t('noData')} />
+        )}
+      </Panel>
+        )
+      case 'themes':
+        return (
+<Panel title={t('panel_themes')} note={t('note_themes')} action={controls}>
+        {themes.length ? (
+          <div className="mt-[14px] flex flex-wrap gap-2">
+            {themes.map((theme) => (
+              <span key={theme.key} className="rounded-full bg-sbg px-[14px] py-2 text-[13px]">
+                {/* The dashboard's own wording, not Resultater's: the
+                    design writes "tid · nevnt 19 ganger" on both screens
+                    (HeiTuva.dc.html:1466), and the short form here read as a
+                    count of something unnamed. */}
+                {t('themeMentions', { label: theme.label, count: theme.mentions })}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <Empty text={tr('themesEmpty')} />
+        )}
+      </Panel>
+        )
+      case 'per_virksomhet':
+        return (
+          <Panel title={t('panel_per_virksomhet')} note={t('note_per_virksomhet')} action={controls}>
+            {/* D88: the register table itself is composed and exported but not
+                yet drawn. The panel states that rather than rendering an empty
+                grid that looks like "no suppliers have answered". */}
+            <Empty text={t('registerPending')} />
+          </Panel>
+        )
+      case 'duties':
+        return (
+          <Panel title={t('panel_duties')} note={t('note_duties')} action={controls}>
+            <Empty text={t('dutiesPending')} />
+          </Panel>
+        )
+      default:
+        return null
     }
-    const q = params.toString()
-    return q ? `/dashboard?${q}` : '/dashboard'
   }
+
 
   return (
     <div className="animate-enter pt-[34px]">
@@ -133,28 +260,19 @@ export async function DashboardScreen({
           <p className="mt-[6px] text-[13px] text-mut">
             {unavailable
               ? t('unavailable')
-              : [t('liveNumbers'), filterLine, trendK === null ? null : t('thresholdLine', { k: trendK })]
+              : [t('liveNumbers'), filterLine, trendK === null ? null : thresholdText]
                   .filter(Boolean)
                   .join(' · ')}
           </p>
         </div>
-        <DashboardFilters
-          period={period}
-          group={group}
-          groups={groups}
-          selected={selected}
-          allCount={surveys.length}
-          labels={{
-            period: t('periodFilter'),
-            group: t('groupFilter'),
-            allGroups: t('allGroups'),
-            q: t('periodLast'),
-            h: t('periodTwo'),
-            y: t('periodAll'),
-          }}
-        />
-        {/* The design puts "Åpne rapport" at the end of the filter row
-            (HeiTuva.dc.html:831), after the period and group selects. */}
+        {/* Q46: the period and group selects have LEFT the header — they are
+            the first tab of the «Tilpass» card now (NEW:948-996). What stays
+            beside the heading is the card's own toggle and, per Q29, the
+            opener the new bundle dropped from its markup while keeping the
+            pins that feed it. Removing a working consumer to match a bundle
+            that forgot it would leave pins storing a fact nobody can use. */}
+        <div className="flex flex-wrap items-center gap-[10px]">
+        <CustomizeToggle label={t('customize')} open={customizeOpen} />
         <OpenPinnedButton
           count={pinned.length}
           label={t('openPinned')}
@@ -162,39 +280,57 @@ export async function DashboardScreen({
             date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
           })}
         />
+        </div>
       </div>
 
-      {/* RESPONSIVE.md § Tab rails and chip groups: the chips wrap, keep their
-          design size, and nothing is hidden or moved behind a select. */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {surveys.map((s) => {
-          const on = selected.includes(s.id)
-          const next = on
-            ? selected.filter((id) => id !== s.id)
-            : [...selected, s.id]
-          return (
-            <Link
-              key={s.id}
-              href={href({ u: next.length ? next : surveys.map((x) => x.id) })}
-              scroll={false}
-              aria-pressed={on}
-              className="touch-44 flex cursor-pointer items-center gap-2 rounded-full border px-[13px] py-2 text-[12.5px] font-semibold text-ink no-underline"
-              style={{
-                borderColor: on ? 'var(--ink)' : 'var(--line)',
-                background: on ? 'var(--sbg)' : 'var(--bg)',
-              }}
-            >
-              <span
-                className="flex h-4 w-4 flex-none items-center justify-center rounded-[5px] text-[10px] font-bold"
-                style={{ border: `1.5px solid ${on ? 'var(--ink)' : 'var(--line)'}` }}
-              >
-                {on ? '✓' : ''}
-              </span>
-              {s.title}
-            </Link>
-          )
-        })}
-      </div>
+      <CustomizeCard
+        open={customizeOpen}
+        panels={panels}
+        filters={layoutFilters}
+        surveys={surveys}
+        groups={groups}
+        picker={picker}
+        presets={presetChips}
+        canEdit={canEdit}
+        thresholdLine={thresholdText}
+        labels={{
+          title: t('customizeTitle'),
+          tabData: t('tabData'),
+          tabPanels: t('tabPanels'),
+          tabLayout: t('tabLayout'),
+          surveysLegend: t('surveysLegend'),
+          thresholdScope: t('thresholdScope'),
+          period: t('periodFilter'),
+          group: t('groupFilter'),
+          allGroups: t('allGroupsOption'),
+          periodLast: t('periodLast'),
+          periodTwo: t('periodTwo'),
+          periodAll: t('periodAll'),
+          pickerNote: t('pickerNote'),
+          arche_agg: t('archeAgg'),
+          archeQ_agg: t('archeAggQ'),
+          arche_reg: t('archeReg'),
+          archeQ_reg: t('archeRegQ'),
+          arche_duty: t('archeDuty'),
+          archeQ_duty: t('archeDutyQ'),
+          add: t('panelAdd'),
+          added: t('panelAdded'),
+          unavailable: t('panelUnavailable'),
+          saveLegend: t('saveLegend'),
+          namePlaceholder: t('namePlaceholder'),
+          save: t('savePreset'),
+          saveNote: t('saveNote'),
+          saveLeser: t('saveLeser'),
+          saved: t('presetSaved'),
+          duplicate: t('presetDuplicate'),
+          saveFailed: t('presetFailed'),
+          groupDropped: t('presetSavedGroupDropped'),
+          groupWillNotTravel: t('groupWillNotTravel'),
+          switchLegend: t('switchLegend'),
+          deletePreset: t('deletePreset'),
+          startOver: t('startOver'),
+        }}
+      />
 
       <div className="mt-5 grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
@@ -206,74 +342,54 @@ export async function DashboardScreen({
         ))}
       </div>
 
+      {needsSetup ? (
+        /* Q25: the one place the ORGANISATION is put in front of the member —
+           "the organisation appears only in the first-run offer of presets".
+           A member with no saved layout gets the shipped six, not an empty
+           board (NEW:1042-1072). */
+        <PresetChooser
+          presets={chooserPresets}
+          filters={layoutFilters}
+          labels={{
+            title: t('chooseSetup'),
+            note: t('chooseSetupNote'),
+            use: t('useSetup'),
+          }}
+        />
+      ) : null}
+
+      {/* Q51/Q25: the panels on screen are the member's LAYOUT, rendered in
+          its order with its widths — not a fixed sequence. Each key is a
+          registry row (M:0047), so `renderPanel` is exhaustive over what a
+          layout can contain: the database refuses any other key on write, and
+          `readPanels` drops one the registry has since retired. */}
       <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
-        {/* Panel order is the bundle's own: `dashPanels` is
-            ["trend","heatmap","drivers","themes"] and the heatmap spans
-            `1 / -1` (HeiTuva.dc.html:3045-3047). Grid auto-placement therefore
-            puts trend alone on row one, the heatmap across row two, and drivers
-            beside themes on row three — including the empty cell next to trend.
-            Reordering to fill that cell reads as an improvement and is exactly
-            what CLAUDE.md rules out. */}
-        <Panel title={t('panelTrend')} note={t('trendNote')} action={pin('trend')}>
-          {trendBars.length ? (
-            <div className="mt-[14px] flex flex-col gap-[9px]">
-              {trendBars.map((b) => (
-                <BarRow
-                  key={b.key}
-                  label={b.label}
-                  value={b.avg === null ? tr('gatedCell', { k: trendK ?? 0 }) : no(b.avg)}
-                  pct={b.avg === null ? 0 : pctOf5(b.avg)}
-                  color={b.avg === null ? 'var(--sf2)' : 'var(--ac)'}
-                />
-              ))}
+        {panels.map((entry) => {
+          const controls = (
+            <span className="flex flex-wrap items-center justify-end gap-[6px]">
+              <PanelControls
+                panelKey={entry.key}
+                panels={panels}
+                filters={layoutFilters}
+                labels={{
+                  up: t('moveUp'),
+                  down: t('moveDown'),
+                  wide: t('makeWide'),
+                  narrow: t('makeNarrow'),
+                  remove: t('removePanel'),
+                }}
+              />
+              {pinnable.has(entry.key) ? pin(entry.key) : null}
+            </span>
+          )
+          const inner = renderPanel(entry.key, controls)
+          if (!inner) return null
+          return (
+            <div key={entry.key} className={entry.wide ? 'xl:col-span-2' : undefined}>
+              {inner}
             </div>
-          ) : (
-            <Empty text={t('noData')} />
-          )}
-        </Panel>
-
-        <div className="xl:col-span-2">
-          <Panel
-            title={t('panelHeatmap')}
-            note={heatK === null ? t('heatNoteGeneric') : t('heatNote', { k: heatK, kWord: numberWord(heatK, locale) })}
-            action={pin('heatmap')}
-          >
-            <HeatGrid heatmap={heatmap} gated={tr('gatedCell', { k: heatK ?? 0 })} gatedTitle={tr('gatedTitle', { k: heatK ?? 0 })} empty={t('noData')} />
-          </Panel>
-        </div>
-
-        <Panel title={t('panelDrivers')} note={t('driversNote')} action={pin('drivers')}>
-          {highest.length || lowest.length ? (
-            <div className="mt-[14px] flex flex-col gap-[9px]">
-              {highest.map((d) => (
-                <BarRow key={`h-${d.question_id}`} label={d.text} value={no(d.avg)} pct={pctOf5(d.avg)} color="var(--ac2)" />
-              ))}
-              {lowest.map((d) => (
-                <BarRow key={`l-${d.question_id}`} label={d.text} value={no(d.avg)} pct={pctOf5(d.avg)} color="var(--ac3)" />
-              ))}
-            </div>
-          ) : (
-            <Empty text={t('noData')} />
-          )}
-        </Panel>
-
-        <Panel title={t('panelThemes')} note={t('themesNote')} action={pin('themes')}>
-          {themes.length ? (
-            <div className="mt-[14px] flex flex-wrap gap-2">
-              {themes.map((theme) => (
-                <span key={theme.key} className="rounded-full bg-sbg px-[14px] py-2 text-[13px]">
-                  {/* The dashboard's own wording, not Resultater's: the
-                      design writes "tid · nevnt 19 ganger" on both screens
-                      (HeiTuva.dc.html:1466), and the short form here read as a
-                      count of something unnamed. */}
-                  {t('themeMentions', { label: theme.label, count: theme.mentions })}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <Empty text={tr('themesEmpty')} />
-          )}
-        </Panel>
+          )
+        })}
       </div>
 
       {surveys.length === 0 ? (

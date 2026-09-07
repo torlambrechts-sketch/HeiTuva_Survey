@@ -5,6 +5,12 @@ import { readDashboard, readHeatmap, readThemes, readTrends } from '@/lib/result
 import type { Theme, TrendPoint } from '@/lib/results/types'
 import { isGated } from '@/lib/results/types'
 import { DashboardScreen } from './DashboardScreen'
+import {
+  WORKING_TITLE,
+  archetypeOf,
+  readPanels,
+  type PanelEntry,
+} from '@/lib/dashboard/layout'
 
 /**
  * Dashboard — HeiTuva.dc.html:808-901.
@@ -29,19 +35,31 @@ const isPeriod = (v: string | undefined): v is Period => !!v && PERIODS.includes
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ periode?: string; gruppe?: string; u?: string | string[] }>
+  searchParams: Promise<{
+    periode?: string
+    gruppe?: string
+    u?: string | string[]
+    tilpass?: string
+  }>
 }) {
-  const { periode, gruppe, u } = await searchParams
+  const { periode, gruppe, u, tilpass } = await searchParams
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('dashboard')
 
   const period: Period = isPeriod(periode) ? periode : 'y'
 
-  const [{ data: allSurveys }, { data: groups }, { data: pins }] = await Promise.all([
+  const [
+    { data: allSurveys },
+    { data: groups },
+    { data: pins },
+    { data: panelTypes },
+    { data: shipped },
+    { data: savedLayouts },
+  ] = await Promise.all([
     supabase
       .from('surveys')
-      .select('id, title, status')
+      .select('id, title, status, respondent_kind')
       .eq('org_id', viewer.orgId)
       .is('deleted_at', null)
       .neq('status', 'utkast')
@@ -54,6 +72,28 @@ export default async function DashboardPage({
       .select('panel_key')
       .eq('org_id', viewer.orgId)
       .eq('user_id', viewer.userId),
+    // Q51: the vocabulary a layout may name. The DASHBOARD subset of the
+    // registry — read once here and threaded through, so the picker, the
+    // renderer and `readPanels` all work from the same list rather than three
+    // hard-coded ones.
+    supabase
+      .from('report_section_types')
+      .select('key, label, description, in_report')
+      .eq('on_dashboard', true)
+      .order('sort_order'),
+    supabase
+      .from('dashboard_presets')
+      .select('key, title, description, panels, tint')
+      .order('sort_order'),
+    // RLS returns exactly two kinds of row: this member's own, and the
+    // organisation's presets (`user_id null`). Nobody else's personal layout
+    // is readable, which is what `dashboard_layouts_sel`'s second clause is
+    // for and what `tests/db/dashboard-layouts.test.ts` proves.
+    supabase
+      .from('dashboard_layouts')
+      .select('id, user_id, title, panels, filters')
+      .eq('org_id', viewer.orgId)
+      .order('title'),
   ])
 
   const available = allSurveys ?? []
@@ -62,6 +102,101 @@ export default async function DashboardPage({
   const selected = requested.length ? requested : available.map((s) => s.id)
 
   const group = gruppe && (groups ?? []).some((g) => g.id === gruppe) ? gruppe : null
+
+  // ── The layout (Q25/Q51) ──────────────────────────────────────────────────
+  const offered = (panelTypes ?? []).map((t) => t.key)
+  const working = (savedLayouts ?? []).find(
+    (l) => l.user_id === viewer.userId && l.title === WORKING_TITLE,
+  )
+  // A member with no working row has not chosen yet: the design answers that
+  // with the shipped presets, not an empty board (NEW:1042).
+  const panels: PanelEntry[] = working ? readPanels(working.panels, offered) : []
+  const needsSetup = !working
+
+  // An organisation survey has no threshold (`app.k_for` returns 0), so the
+  // register panel is only meaningful when the selection contains one. The
+  // bundle states that as a `req` chip rather than hiding the panel
+  // (NEW:3534), which is the same "draw the absence" treatment Q26 uses.
+  const hasOrgSurvey = available.some(
+    (s) => selected.includes(s.id) && s.respondent_kind === 'organisation',
+  )
+
+  // The `req` chip is a PRECONDITION stated in the picker, not an error: the
+  // bundle prints it whether or not the condition is met (NEW:3668), so a
+  // reader learns what a panel needs before they wonder why it is empty.
+  // Availability is the separate question of whether it is met right now.
+  const REQ: Record<string, string> = {
+    per_virksomhet: t('reqOrgRespondents'),
+    trend: t('reqRounds'),
+  }
+
+  // WHY THE LABEL IS NOT THE REGISTRY'S. `report_section_types.label` is
+  // Norwegian-only — it has no `lang` column and nothing translates it, which
+  // is exactly what Q48(b) is for and has not landed. Reading it here would
+  // make every panel title Norwegian in English, a regression. So the registry
+  // stays the VOCABULARY (which keys may be composed) and next-intl stays the
+  // NAME, keyed by the registry key so the two cannot be renamed apart.
+  //
+  // Today the two sets of strings are identical, which is the drift risk
+  // rather than the reassurance: two sources agreeing by coincidence is how
+  // one of them gets translated and the other does not.
+  // `tests/unit/dashboard-panels.test.ts` asserts a name exists for every
+  // offered key, in both languages.
+  //
+  // And a dashboard panel is not data-only in any case: it needs a
+  // `renderPanel` arm to draw anything. The registry constrains what may be
+  // NAMED; drawing one is still code.
+  const picker = (panelTypes ?? []).map((pt) => ({
+    key: pt.key,
+    label: t(`panel_${pt.key}` as never),
+    desc: t(`desc_${pt.key}` as never),
+    req: REQ[pt.key] ?? '',
+    // Only the register panel has a condition the data can fail. The others
+    // render their own empty state, which is a truer answer than removing them
+    // from the picker.
+    available: pt.key === 'per_virksomhet' ? hasOrgSurvey : true,
+  }))
+
+  const labelOf = new Map(picker.map((i) => [i.key, i.label]))
+  const presetChips = [
+    ...(shipped ?? []).map((p) => ({
+      id: `shipped:${p.key}`,
+      title: p.title,
+      panels: (p.panels as string[]).filter((k) => offered.includes(k)),
+      own: false,
+    })),
+    ...(savedLayouts ?? [])
+      .filter((l) => l.user_id === null)
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        panels: readPanels(l.panels, offered).map((e) => e.key),
+        own: true,
+      })),
+  ]
+
+  const chooserPresets = (shipped ?? []).map((p) => ({
+    id: p.key,
+    title: p.title,
+    description: p.description,
+    panels: (p.panels as string[]).filter((k) => offered.includes(k)),
+    tint: p.tint,
+    panelLabels: (p.panels as string[])
+      .filter((k) => offered.includes(k))
+      .map((k) => labelOf.get(k) ?? k),
+  }))
+
+  // Which panels may be pinned into a report. The bundle's rule is
+  // `arche === "agg"` (NEW:3681); `in_report` is the schema's. Both are
+  // required and they are not the same set: `per_virksomhet` IS a report
+  // section but the bundle does not offer it as a pin, and `duties` is neither.
+  // Intersecting them keeps the drawing and keeps the button's count equal to
+  // the sections the report will actually contain.
+  const pinnable = new Set(
+    (panelTypes ?? [])
+      .filter((t) => t.in_report && archetypeOf(t.key) === 'agg')
+      .map((t) => t.key),
+  )
 
   // The period is a set of rounds: the most recent one per survey, the most
   // recent two, or all of them.
@@ -139,8 +274,6 @@ export default async function DashboardPage({
       surveys={available}
       selected={selected}
       groups={groups ?? []}
-      group={group}
-      period={period}
       summary={summary}
       heatmap={heatmap}
       trendBars={trendBars}
@@ -151,6 +284,15 @@ export default async function DashboardPage({
         group: group ? ((groups ?? []).find((g) => g.id === group)?.name ?? '') : t('allGroups'),
       })}
       pinned={(pins ?? []).map((p) => p.panel_key)}
+      panels={panels}
+      needsSetup={needsSetup}
+      pinnable={pinnable}
+      picker={picker}
+      presetChips={presetChips}
+      chooserPresets={chooserPresets}
+      customizeOpen={tilpass !== undefined}
+      canEdit={viewer.role === 'administrator' || viewer.role === 'redaktor'}
+      layoutFilters={{ period, group_id: group, survey_ids: selected }}
     />
   )
 }
