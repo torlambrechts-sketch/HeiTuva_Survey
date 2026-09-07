@@ -1,6 +1,6 @@
 # Status — what remains across the whole specification
 
-**Written at V1-4's close, 2026-09-07.** Head `0276fd0` plus the V1-4 fix pass.
+**Written at V1-4's close, 2026-09-07; updated at V1-6's close, the same day.**
 Not a phase report: this is the whole picture, so that the next decision is taken
 against the remaining work rather than against the next phase.
 
@@ -71,12 +71,26 @@ returned `CHAIN_EXIT=0` in one pass. What the phase carried, for the record:
 The CI seed assertion moves with it: `.github/workflows/ci.yml:63` currently
 asserts `packs = 17`.
 
-### V1-6 — Carried findings
+### V1-6 — CLOSED 2026-09-07. **The v1 bundle is finished.**
 
-`docs/v1/03-plan.md:432-462`. **No decision batch and no design work** — Q37's two
-Oversikt surfaces were its only drawn scope and moved to V1-1. Its content is §3
-of this file plus whatever V1-5's fix pass adds. Its size is not knowable now,
-which is why it keeps a phase rather than being folded into V1-5.
+`docs/v1/reports/V1-6.md`. The carried-findings pass: seven items, no fresh
+decision batch, `verify:all` returned `CHAIN_EXIT=0` on the third run (the first
+was the verification pass and found the phase's real defect; the second was
+stopped by a harness staleness guard).
+
+| Item | Reference |
+|---|---|
+| Q49 — a round's count survives its own threshold | `M:0050`, corrected by `M:0053`; `RoundsPanel.tsx:91` |
+| Q50 — the organisation's clock, computed `at time zone` | `M:0051`, `M:0052` |
+| Q48(b) — next-intl for the duty and section registries | `tests/unit/registry-strings.test.ts` |
+| Census manifest generation (`CENSUS_WRITE=1`) | `tests/census.ts`, `package.json` |
+| `bibliotek/actions.ts`'s config path — the FOURTH one-function-two-callers | `lib/questions/pack.ts` |
+| `verify:roundtrip` cleans up after itself | `scripts/verify/roundtrip.ts` |
+| D102's four repair options | `docs/DEVIATIONS.md` — **open, Tor's choice** |
+
+**Two application defects were found by the verification pass** — Q49's
+user-visible half never built, and the count on a gated point being the wrong
+count — and both came out of one failing assertion. `V1-6.md` § 5.
 
 ### V1-7 — DESCHEDULED 2026-09-07. **The v1 bundle finishes at V1-6.**
 
@@ -181,7 +195,8 @@ with work still attached:
 
 | Item | State | Reference |
 |---|---|---|
-| **The census manifest is hand-maintained** — it flags a file that SHRINKS, so an entry drifting upward is invisible. V1-3 found two stale by two. The fix is to GENERATE it (a `--write` mode, never on an ordinary run), applied **the next time the file is touched** rather than as an errand | instruction written into the file itself | `tests/census.ts:27-52` |
+| **The census manifest is hand-maintained** — it flags a file that SHRINKS, so an entry drifting upward is invisible. V1-3 found two stale by two | **DONE in V1-6.** `CENSUS_WRITE=1` regenerates it, refuses a partial run, and never writes on an ordinary one | `tests/census.ts:55-143`, `package.json` (`census:write`) |
+| **A screenshot gate cannot see a surface that was never built.** V1-6's largest defect passed Gate 3a and its visual diff, because the screen rendered exactly as its baseline did — the baseline was taken before the decision that required the change | recorded, no action; the decision-conformance section in Gate 6 is the mechanism that covers it | `docs/v1/reports/V1-6.md` § 5 |
 | Gate 3a's evidence now carries **five** instances of "the suite cannot see this" — the newest being that duplication is invisible to assertions checking presence rather than count | recorded, no action | `VERIFY.md:259-265` |
 
 ---
@@ -256,13 +271,13 @@ depends on a document not in this repository. See § 1.
 
 | | |
 |---|---|
-| Migrations | 79 (`supabase/migrations/*.sql`) |
-| Deviations logged | 104 (`docs/DEVIATIONS.md`) |
-| Decisions in the register | 46, of which 32 are CONFIRMED (Tor) (`DECISIONS.md:5`) |
-| Decisions Q18-Q51 audited | 26 in the register + 8 staged only |
-| UI messages per language | 1532 (`messages/no.json`, `messages/en.json`) |
+| Migrations | 81 (`supabase/migrations/*.sql`) |
+| Deviations logged | 106 (`docs/DEVIATIONS.md`) |
+| Decisions in the register | 48, of which 33 are CONFIRMED (Tor) (`DECISIONS.md:38`) |
+| Decisions Q18-Q51 audited | 30 in the register + 4 staged only (Q38, Q39, Q40, Q41 — all V1-7's, descheduled with it) |
+| UI messages per language | 1558 (`messages/no.json`, `messages/en.json`) |
 | Gate 5a3 | 56 of 74 surfaces actively checked (45 RLS tables + 29 SECURITY DEFINER functions, 18 allowlisted) |
-| Census manifest | 553 tests across 32 files (`tests/expected-counts.json`) |
-| Capture states | 159 |
-| v1 phases closed | **6 of 7** (V1-0 … V1-5) — V1-7 descheduled, so only V1-6 remains |
-| Phase reports on disk | 4 of 6 closed phases (V1-0 and V1-1 were chat-only) |
+| Census manifest | 572 tests across 34 files (`tests/expected-counts.json`) |
+| Capture states | 159 · responsive combinations 160 |
+| v1 phases closed | **7 of 7** (V1-0 … V1-6) — V1-7 descheduled. **The bundle is finished.** |
+| Phase reports on disk | 5 of 7 closed phases (V1-0 and V1-1 were chat-only) |

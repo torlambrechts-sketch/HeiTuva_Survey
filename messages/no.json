@@ -592,8 +592,8 @@
     "roundsStatus": "{count} runder",
     "roundsLabel": "Runde {n}",
     "roundsAnswers": "{count} svar",
-    "roundsBelow": "under terskel",
-    "roundsNote": "Hver runde er sitt eget datasett. Runder under terskelen vises som — uten antall.",
+    "roundsBelow": "{count} svar · under terskel",
+    "roundsNote": "Hver runde er sitt eget datasett. Runder under terskelen viser antall svar, men ikke snittet.",
     "attribDeniedTitle": "Navngitte svar vises ikke for din rolle",
     "attribDeniedBody": "Denne undersøkelsen har virksomheter som respondenter, og hvert svar står med navn. Leser-rollen ser bare aggregerte tall. Be en administrator eller redaktør om å dele det du trenger."
   },

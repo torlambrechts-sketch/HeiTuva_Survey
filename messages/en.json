@@ -592,8 +592,8 @@
     "roundsStatus": "{count} rounds",
     "roundsLabel": "Round {n}",
     "roundsAnswers": "{count} answers",
-    "roundsBelow": "below threshold",
-    "roundsNote": "Each round is its own dataset. Rounds below the threshold show as — with no count.",
+    "roundsBelow": "{count} answers · below threshold",
+    "roundsNote": "Each round is its own dataset. Rounds below the threshold show the response count, but not the average.",
     "attribDeniedTitle": "Named answers are not shown for your role",
     "attribDeniedBody": "This survey has organisations as respondents, and every answer carries a name. The reader role sees aggregate figures only. Ask an administrator or an editor to share what you need."
   },

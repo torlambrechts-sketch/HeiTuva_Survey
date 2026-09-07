@@ -565,8 +565,16 @@ describe('an aggregate cell is a number or a refusal, never a null wearing a num
     const point = payload.points.find((p) => p.round_id === empty.id)
     expect(point, 'the empty round must appear').toBeDefined()
     expect(point!.insufficient_data).toBe(true)
-    expect(point!.n).toBeUndefined()
-    expect(point!.avg).toBeUndefined()
+    // CHANGED BY DECISIONS Q49 (V1-6), and the change is the point of the line.
+    // This assertion was written under D94, when a gated point carried neither
+    // `n` nor `avg` and the union was {n, avg} | Gated. Q49 widened the gated
+    // arm to carry the COUNT, so `n` is now present and the honest value for a
+    // round nobody answered is 0 — zero PEOPLE took part, which is a true
+    // statement about participation and not a number about anything anyone
+    // said. D94's property is untouched and is asserted below: a cell that
+    // claims a DERIVED number must have one.
+    expect(point!.n, 'Q49: zero people is a count, not an absence').toBe(0)
+    expect(point!.avg, 'and nothing derived, which is D94 unchanged').toBeUndefined()
 
     for (const p of payload.points) {
       if (p.insufficient_data === true) continue
@@ -574,6 +582,50 @@ describe('an aggregate cell is a number or a refusal, never a null wearing a num
       expect(typeof p.avg, `avg on round ${p.round_no}`).toBe('number')
     }
   })
+  it('get_trends: the gated count counts RESPONDENTS, not scale-answerers', async () => {
+    // Q49 puts `n` on a gated point ALONE, with no `avg` beside it to say what
+    // it is the denominator of. «under terskel · 4 svar» is read by everyone as
+    // "four people answered this round", so that is what the number must be.
+    //
+    // `get_trends`' stats CTE counts responses joined to answers on SCALE-type
+    // questions with a numeric value. That is the correct denominator for an
+    // average and the wrong one for participation, and the two coincide in
+    // every fixture where each respondent answers every question — which is
+    // why this needed an arrangement of its own rather than being caught by
+    // the tests already here. Four people who answered the yes/no question and
+    // skipped the scale produce NO stats row at all, and the count that
+    // reaches the panel was `coalesce(st.n, 0)` = 0.
+    //
+    // Zero is the worst possible wrong answer here: it is indistinguishable
+    // from "nobody took part", which is the other thing this function says
+    // with the same number. CLAUDE.md's rule about never rendering a value
+    // derived from an unknown denominator is exactly this case.
+    const survey = await surveyWith('Svarte men ikke skala', 4, 0, {}, { groupId: ctx.group.id })
+
+    for (const inv of survey.invitations) {
+      const { data, error } = await ctx.an.rpc('submit_response', {
+        p_token: inv.raw, p_lang: 'no',
+        p_answers: { [survey.qYes.id]: { value: true } },
+      })
+      if (error) throw new Error(`submit_response: ${error.message}`)
+      const failed = (data as { error?: string })?.error
+      if (failed) throw new Error(`submit_response: ${failed}`)
+    }
+
+    const { data } = await ctx.adminU.client.rpc('get_trends', {
+      p_survey: survey.survey.id,
+      p_group: null,
+    })
+    const payload = data as { k: number; points: Record<string, unknown>[] }
+    expect(payload.k, 'a person survey carries a real threshold').toBeGreaterThan(0)
+
+    const point = payload.points.find((p) => p.round_id === survey.round.id)
+    expect(point, 'the round must appear on the axis').toBeDefined()
+    expect(point!.insufficient_data, 'no scale answers, so nothing derived may show').toBe(true)
+    expect(point!.avg, 'and none does').toBeUndefined()
+    expect(point!.n, 'four people took part and the panel must say four').toBe(4)
+  })
+
   it('get_heatmap and get_benchmarks too — the sweep, not just the crash site', async () => {
     // 0041 fixed the two functions the crash came through. This asserts the two
     // its catalogue sweep found (migration 0042): fixing a defect without

@@ -35,7 +35,20 @@ export type TrendPoint = {
   opens_at: string | null
   closes_at: string | null
   status: string
-} & ({ n: number; avg: number } | Gated)
+  /**
+   * DECISIONS Q49 (V1-6). `n` sits OUTSIDE the union, which is what makes a
+   * trend point different from every other cell in this file: how many people
+   * took part is participation, and participation survives the threshold
+   * (Q28 — the line is the subject of the number, not its size). `avg` is
+   * derived from what those people said, so `avg` is what the union gates.
+   *
+   * It is the count of RESPONSES to the round, not of people who answered a
+   * scale question — one meaning of `n` across `results_summary`,
+   * `overview_activity` and here (M:0053). The gate still reads the other
+   * count, which is emitted nowhere.
+   */
+  n: number
+} & ({ avg: number } | Gated)
 export type Trends = { k: number; survey_id: string; points: TrendPoint[] }
 
 // --- get_themes --------------------------------------------------------------

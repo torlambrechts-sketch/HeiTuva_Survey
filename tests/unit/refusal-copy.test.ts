@@ -61,4 +61,32 @@ describe('a refusal reads the same whatever the data is', () => {
     expect(no.results.insufficient).toMatch(/\{[^}]+\}/)
     expect(en.results.insufficient).toMatch(/\{[^}]+\}/)
   })
+
+  it('DECISIONS Q49: a gated ROUND carries its count, so its label must vary', () => {
+    // The third string in this product that varies with data on purpose, and
+    // the reason it is asserted HERE rather than beside the panel: this file is
+    // where the next person asks why one threshold message carries a number
+    // when the rule above says they must not. The answer is Q28's line —
+    // a count of PEOPLE is participation, not a svarutledet number — extended
+    // from the survey to the round by Q49.
+    //
+    // It is also the check that would have caught this phase's largest defect.
+    // Migration 0050 shipped `n` on a gated point and no surface rendered it:
+    // the union in lib/results/types.ts still said the gated arm had no count,
+    // and `roundsBelow` was the fixed string «under terskel». A decision that
+    // says "the panel renders the count" is checkable at the string level,
+    // because a message with no placeholder cannot render one in any language.
+    expect(no.results.roundsBelow).toMatch(/\{count\}/)
+    expect(en.results.roundsBelow).toMatch(/\{count\}/)
+  })
+
+  it('DECISIONS Q49: and the note under the panel no longer says the opposite', () => {
+    // The bundle's own sentence (HeiTuva.dc.html:2608) said rounds below the
+    // threshold are shown «— uten antall». Q49 makes that false on its own
+    // screen, so it was amended (D103). Asserted as the absence of the claim
+    // rather than as the new wording, so a later rewrite of the sentence does
+    // not have to come back here — only a re-introduction of the promise does.
+    expect(no.results.roundsNote).not.toMatch(/uten antall/)
+    expect(en.results.roundsNote).not.toMatch(/no count/)
+  })
 })

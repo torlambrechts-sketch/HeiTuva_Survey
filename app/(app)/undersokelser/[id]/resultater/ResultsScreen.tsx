@@ -383,7 +383,7 @@ export async function ResultsScreen({
             status: recurrence || t('roundsStatus', { count: trends.points.length }),
             round: (n) => t('roundsLabel', { n }),
             answers: (n) => t('roundsAnswers', { count: n }),
-            belowThreshold: t('roundsBelow'),
+            belowThreshold: (n) => t('roundsBelow', { count: n }),
             note: t('roundsNote'),
           }}
         />

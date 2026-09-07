@@ -11,17 +11,24 @@ import { isGated, type Trends } from '@/lib/results/types'
  * already say.
  *
  * Every round is gated on its own. That is not a rendering choice — `get_trends`
- * returns `{insufficient_data}` for a point below the survey's threshold and
- * carries no `n` and no `avg` with it, so a gated round has no number to draw
- * even if one wanted to. The bundle's own treatment is the same: a short grey
- * stub, an em dash where the average would be, and «under terskel» underneath.
+ * withholds the AVERAGE for a point below the survey's threshold, so a gated
+ * round has no derived number to draw even if one wanted to. The bundle's
+ * treatment of the bar is unchanged: a short grey stub and an em dash where the
+ * average would be.
  *
- * NOTE for the next phase's list, not acted on here: Q28 permits a count of
- * PEOPLE below the threshold — how many took part is not a svarutledet number —
- * but `get_trends` does not return `n` for a gated point, so this panel shows
- * less than Q28 allows. Widening it means a third entry in Q28's enumerated
- * exemption list, which is a deliberate act with its own test, not something to
- * slip into a UI phase.
+ * WHAT CHANGED, and why the bundle does not show it: DECISIONS Q49 (V1-6) puts
+ * the participation COUNT on a gated point, so the sub-label reads «3 svar ·
+ * under terskel» rather than «under terskel» alone. Q28 settled that a count of
+ * PEOPLE is not a svarutledet number and amended the threshold brief to say so
+ * (docs/Designbrief_terskel_Q17.md:132); Q49 extended it from the survey to the
+ * round. The bundle predates both — its own note under this panel said rounds
+ * below the threshold show «— uten antall», and that sentence is amended here
+ * because leaving it would have the screen contradict itself (D103).
+ *
+ * The earlier note in this file said widening it needed a third entry in Q28's
+ * enumerated exemption list. That was wrong and Q49 corrected it before the
+ * migration was written: that list names functions which never call
+ * `app.k_for`, and `get_trends` calls it.
  */
 export function RoundsPanel({
   trends,
@@ -33,7 +40,7 @@ export function RoundsPanel({
     status: string
     round: (n: number) => string
     answers: (n: number) => string
-    belowThreshold: string
+    belowThreshold: (n: number) => string
     note: string
   }
 }) {
@@ -81,7 +88,7 @@ export function RoundsPanel({
                 </span>
                 <span className="mt-[7px] flex-none text-xs">{labels.round(p.round_no)}</span>
                 <span className="flex-none text-[11.5px] text-mut">
-                  {gated ? labels.belowThreshold : labels.answers(p.n)}
+                  {gated ? labels.belowThreshold(p.n) : labels.answers(p.n)}
                 </span>
               </div>
             )

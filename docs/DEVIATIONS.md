@@ -2068,3 +2068,41 @@ is not wasted, because the copy fix is B's empty state too.
 **I have not run the scope query**, because reading prod's survey inventory is not
 something to do without saying so first. It is one statement and the whole trade turns on
 it.
+
+---
+
+### D103 — the note under «Runde for runde» no longer promises what the panel does
+
+**Bundle:** `HeiTuva.dc.html:2608` sets the sentence under the rounds panel:
+«Hver runde er sitt eget datasett. **Runder under terskelen vises som — uten
+antall.**» It was implemented verbatim as `results.roundsNote`.
+
+**Deviation:** the second clause is replaced. `no`: «Runder under terskelen viser
+antall svar, men ikke snittet.» `en`: "Rounds below the threshold show the
+response count, but not the average."
+
+**Why:** DECISIONS Q49 (V1-6, confirmed by Tor) puts the participation count on a
+gated round, so the panel now renders «3 svar · under terskel» where it used to
+render «under terskel» alone. The bundle's sentence promises the opposite, on the
+same screen, eight pixels below the thing it describes. Leaving it was not an
+option: a screen that contradicts itself is a defect whichever half is right.
+
+**Why this is not restyling.** The bundle predates the decision that governs it.
+Q28 amended the threshold brief's absolute prohibition — «Ingen visning av
+faktisk antall svar under terskelen» became «Ingen visning av et **svarutledet
+tall** under terskelen» (`docs/Designbrief_terskel_Q17.md:132`) — because a count
+of people is participation and not a number about what anyone said. Q49 extended
+that from the survey to the round. The bundle's copy was written against the
+un-amended brief; the copy inside `design-reference-v1/` still carries the old
+line, and it is a handoff artifact and stays untouched.
+
+**Scope:** two strings, both languages. The panel's structure, the em dash on the
+bar, the grey stub and every token are unchanged. The count is appended to the
+sub-label the bundle already had, so the ungated and gated sub-labels keep the
+same shape — «{count} svar» and «{count} svar · under terskel».
+
+**Guard:** `tests/unit/refusal-copy.test.ts` asserts that `roundsBelow` carries a
+`{count}` placeholder (a fixed string cannot render a count in any language) and
+that `roundsNote` no longer carries the withdrawn promise. The second is asserted
+as the ABSENCE of the old claim rather than as the new wording, so rewording the
+sentence later does not have to come back through this file.

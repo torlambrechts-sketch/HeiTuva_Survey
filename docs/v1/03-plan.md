@@ -429,7 +429,15 @@ own commit (C18). Census ≥ +7, +1 file (≥ 442 / 23). 5a3: +1 registry (`--`)
 
 ---
 
-## V1-6 — Carried findings
+## V1-6 — Carried findings. **CLOSED 2026-09-07 — `docs/v1/reports/V1-6.md`.**
+
+Seven items, `CHAIN_EXIT=0` on the third run. Its actual scope, which this section
+correctly could not predict: Q49, Q50, Q48(b), census generation, the `bibliotek`
+config path, the roundtrip harness's own cleanup, and D102's options written out for
+Tor — the last still open. **The census DID move** (553 → 572) and **5a3 did not**,
+against the guesses below.
+
+**With this the v1 bundle is finished.** V1-7 is descheduled; nothing follows in this plan.
 
 **Scope**
 
@@ -458,6 +466,9 @@ unless a carried finding needs a test. 5a3 unchanged.
 
 **Not in this phase.** Anything new. A finding that arrives during V1-6 goes to
 V1-7 or to the post-v1 list — the two-pass rule does not restart here.
+**As built:** the verification pass found two application defects inside Q49's own
+scope, so both were fixed rather than carried; nothing new was started. D102 is the
+one item handed back, and it was handed back as options rather than as a finding.
 
 ---
 

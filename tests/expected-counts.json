@@ -7,7 +7,7 @@
   "tests/db/recurrence.test.ts": 13,
   "tests/db/schedules-rls.test.ts": 6,
   "tests/db/use-cases.test.ts": 9,
-  "tests/invariants/attributed-results.test.ts": 22,
+  "tests/invariants/attributed-results.test.ts": 23,
   "tests/invariants/duty-signing.test.ts": 21,
   "tests/invariants/invariants.test.ts": 54,
   "tests/invariants/k-surface.test.ts": 37,
@@ -28,9 +28,9 @@
   "tests/unit/policy-warnings.test.ts": 10,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/question-roles.test.ts": 12,
-  "tests/unit/refusal-copy.test.ts": 9,
+  "tests/unit/refusal-copy.test.ts": 11,
+  "tests/unit/registry-strings.test.ts": 5,
   "tests/unit/results-present.test.ts": 17,
   "tests/unit/schedule-status.test.ts": 8,
-  "tests/unit/threshold-line.test.ts": 5,
-  "tests/unit/registry-strings.test.ts": 5
+  "tests/unit/threshold-line.test.ts": 5
 }
