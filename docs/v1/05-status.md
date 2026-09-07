@@ -28,7 +28,8 @@ Source: `docs/v1/03-plan.md`. Decision batches: `docs/v1/04-decisions.md:10-21`.
 | V1-1 | Policy panel (Q17 §1/§2), Oversikt compliance card (Q37) | chat only |
 | V1-2 | Attributed results, organisation results, rounds | `docs/v1/reports/V1-2.md` |
 | V1-3 | Recurrence — cadence vocabulary, pause/stop, schedules read | `docs/v1/reports/V1-3.md` |
-| V1-4 | Dashboard customisation | this session's report |
+| V1-4 | Dashboard customisation | `docs/v1/reports/V1-4.md` |
+| V1-5 | Use-case library and the five packs | `docs/v1/reports/V1-5.md` |
 
 **Two phases have no report on disk.** V1-0 and V1-1 were reported in chat before
 the file convention existed (`docs/v1/reports/V1-2.md:10-11` records the offer to
@@ -54,10 +55,10 @@ gate:
 
 Nothing else from V1-4's plan is outstanding.
 
-### V1-5 — Use-case library and five packs
+### V1-5 — CLOSED 2026-09-07
 
-`docs/v1/03-plan.md:389-430`. Decision batch **Q24, Q44, Q45** (`04-decisions.md:31, 51, 52`)
-— all three are DEFAULT and none has been confirmed.
+`docs/v1/reports/V1-5.md`. Q24, Q44 and Q45 confirmed and built; `verify:all`
+returned `CHAIN_EXIT=0` in one pass. What the phase carried, for the record:
 
 | Item | Reference |
 |---|---|
@@ -255,13 +256,13 @@ depends on a document not in this repository. See § 1.
 
 | | |
 |---|---|
-| Migrations | 76 (`supabase/migrations/*.sql`) |
+| Migrations | 79 (`supabase/migrations/*.sql`) |
 | Deviations logged | 104 (`docs/DEVIATIONS.md`) |
-| Decisions in the register | 43, of which 29 are CONFIRMED (Tor) (`DECISIONS.md:5`) |
+| Decisions in the register | 46, of which 32 are CONFIRMED (Tor) (`DECISIONS.md:5`) |
 | Decisions Q18-Q51 audited | 26 in the register + 8 staged only |
 | UI messages per language | 1532 (`messages/no.json`, `messages/en.json`) |
-| Gate 5a3 | 56 of 73 surfaces actively checked (44 RLS tables + 29 SECURITY DEFINER functions, 17 allowlisted) |
-| Census manifest | 544 tests across 31 files (`tests/expected-counts.json`) |
-| Capture states | 153 before V1-4; V1-4 adds three |
-| v1 phases closed | 5 of **7** (V1-0 … V1-4) — V1-7 descheduled, so the bundle finishes at V1-6 |
-| Phase reports on disk | 3 of 5 closed phases |
+| Gate 5a3 | 56 of 74 surfaces actively checked (45 RLS tables + 29 SECURITY DEFINER functions, 18 allowlisted) |
+| Census manifest | 553 tests across 32 files (`tests/expected-counts.json`) |
+| Capture states | 159 |
+| v1 phases closed | **6 of 7** (V1-0 … V1-5) — V1-7 descheduled, so only V1-6 remains |
+| Phase reports on disk | 4 of 6 closed phases (V1-0 and V1-1 were chat-only) |
