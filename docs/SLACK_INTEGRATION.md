@@ -1,7 +1,10 @@
 # Slack-integrasjon — investigation, verification and plan
 
 Status: **PROPOSAL — not built, not decided.** Nothing in this document has been
-implemented. It exists so the decision can be made on evidence rather than on a
+implemented. Its internal half — everything HeiTuva must change in itself, with
+no provider named — has been split out into
+**`docs/INTEGRATION_ARCHITECTURE.md`**, which is not blocked on any of the gates
+below and is where work should start. It exists so the decision can be made on evidence rather than on a
 demo. Written against the repository at commit `cd74022` (Phase 9 closed).
 
 Three passes, in the order they were run: what the codebase actually gives us
@@ -228,13 +231,15 @@ Four rules, each borrowed from one the product already enforces:
    *workspace name and connection state* through a SECURITY DEFINER RPC that
    never returns a secret reference. Same posture as `responses`/`answers`, for
    the same reason: the safest read policy is the one that does not exist.
-2. **The token is never a plaintext column.** The intended mechanism is Supabase
-   Vault — but **Vault is not in use anywhere in this project today**, so its
-   availability on `eu-central-1`, its behaviour under `supabase db reset` in CI,
-   and its interaction with the invariant suite are all **unverified and must be
-   spiked before M1 is estimated firmly.** If Vault does not hold up, the
-   fallback is envelope encryption with a key from `process.env`, which is a
-   worse answer and needs its own decision rather than a quiet substitution.
+2. **The token is never a plaintext column.** Since this document was written,
+   the spike has partly resolved: **`supabase_vault` 0.3.1 is already installed
+   on `heituva-prod`** (schema `vault`, `eu-central-1`), so the secret store
+   exists and needs no new extension. What remains unverified is its presence in
+   the local stack CI starts and its behaviour under `supabase db reset`. The
+   harder question turned out not to be *where* the secret lives but *who may
+   read it* — `vault.decrypted_secrets` is granted to `service_role`, which the
+   app itself holds. See `docs/INTEGRATION_ARCHITECTURE.md` §1, which is where
+   that decision now lives.
 3. **Refresh is serialised.** One producer refreshes under an advisory lock and
    writes the new refresh token before using the new access token. Slack's
    refresh tokens are single-use; two concurrent refreshers lock the customer out
@@ -628,7 +633,8 @@ go/no-go on Vault at the end of them.
 | Risk | Likelihood | Impact | Response |
 |---|---|---|---|
 | Legal gate refuses personal data leaving the EEA | Medium | Kills S1/S3; S2 survives with a narrower text | Run G0-1/G0-2 first; S2's data footprint is defensible standalone |
-| Supabase Vault does not hold up in CI or on the project | Medium | M1 needs a different secret story mid-phase | Spike it in the first 3 days, with a written answer before anything is built on it |
+| The app can read every tenant's secrets | High if unaddressed | A request-path bug becomes cross-tenant credential disclosure | `INTEGRATION_ARCHITECTURE.md` §1: grant the secret accessor to a bespoke role and revoke `service_role` |
+| Supabase Vault absent from the local CI stack | Low | Invariant suite cannot cover the secret path | Prod has it (verified); confirm local in G1 |
 | Artboards do not arrive | Medium | Kernels ship, screens do not — a D87 repeat | Commission W1 at Gate 0; sequence kernels first so the wait is not idle |
 | Token rotation lockout in production | Medium | Customer's integration dies opaquely | Serialise refresh under a lock; alert on `invalid_grant`; make reconnect one click |
 | A webhook endpoint without the primitives to defend it | Medium | First externally-callable surface, built with no `timingSafeEqual`, an in-memory rate limiter and a fail-open Turnstile | Treat signature verification + replay window as a named deliverable of M1, not a detail |
