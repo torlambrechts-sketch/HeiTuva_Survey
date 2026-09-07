@@ -8,7 +8,8 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * Before writing a check, ask all three. The first two are halves of one thing
  * — a check that reaches the wrong control, and a check that reaches the wrong
  * row — and V1-2 hit each of them twice. The third is about a check that
- * reaches the right thing and only looks at part of it; V1-3 found it.
+ * reaches the right thing and only looks at part of it; V1-3 found it, and
+ * V1-4 found it again rotated onto a new axis (see 2b).
  *
  *   1. What ELSE could refuse this before the check I am testing gets a chance?
  *   2. What could have MOVED the state my selector assumes?
@@ -32,7 +33,24 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  *         `{error:forbidden}` and the assertion ran against a document with no
  *         sections at all.
  *
- * Two of two says the answer is rarely nothing. The layers in this schema
+ *   V1-4  A Q25 test asserted that a member cannot write a colleague's layout,
+ *         using `insert(...).select('id')` and an error assertion. It passed
+ *         with `dashboard_layouts_ins` widened to `is_org_member` alone,
+ *         because PostgreSQL applies the SELECT policy to an INSERT's
+ *         RETURNING — the refusal came from `_sel` wearing a write test's
+ *         name. A BARE insert is accepted under the widened policy, measured
+ *         rather than reasoned about. Mutation caught it; reading it did not.
+ *
+ * THREE VARIANTS OF ONE ROOT CAUSE, AND THE GENERAL FORM IS THE USEFUL PART:
+ * THE THING THAT REFUSED IS NOT THE THING UNDER TEST. It was refused by an
+ * EARLIER check (V1-1's guard, behind RLS), by an OUTER control (V1-2's
+ * group-less share, refused before the payload existed), and by a CO-LOCATED
+ * policy (V1-4's SELECT policy, invoked by the RETURNING of an INSERT). The
+ * third is the one reading cannot find: nothing in the statement mentions the
+ * read policy. Only removing the control you believe is acting, and watching
+ * the test go red, tells you which one was.
+ *
+ * Three of three says the answer is rarely nothing. The layers in this schema
  * stack: auth → RLS → a guard trigger → a CHECK → the function's own rule, and
  * a fixture that trips an early one never reaches the late one. So arrange the
  * fixture so ONLY the rule under test can produce the result, and where both
@@ -81,6 +99,32 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * open round, say all four — and fail loudly when nothing matches, rather than
  * silently testing something else. If the check needs a queue drained, drain
  * until it reports empty rather than assuming one pass is enough.
+ *
+ * ── 2b. THE SAME QUESTION ROTATED: THE ROWS, NOT THE ROLES ──────────────────
+ *
+ * Question 2 asks what could have MOVED the row my check reads. This is its
+ * other axis, and V1-4 walked into it: I asserted over the ROLES THAT READ and
+ * not over the ROWS THEY MAY REACH.
+ *
+ *   V1-4  `dashboard_layouts_sel` is `is_org_member AND (user_id is null OR
+ *         user_id = auth.uid())` — two clauses, because a member sees the
+ *         organisation's shared presets AND their own layouts, and nobody
+ *         else's. Every read assertion covered a role: an outsider sees
+ *         nothing, a redaktør reads a preset, a leser reads a preset. Widening
+ *         the policy to `is_org_member` alone failed NO test, because no
+ *         assertion had ever tried to read a COLLEAGUE'S PERSONAL row — the
+ *         only row the second clause exists to hide.
+ *
+ * THE RULE: WHEN A POLICY PROTECTS A ROW RATHER THAN A TABLE, ENUMERATING THE
+ * ROLES IS NOT ENUMERATING THE CASES. A predicate with a disjunction has one
+ * case per branch and one for the rows no branch admits, and it is that last
+ * one the policy is usually for. Read the predicate, list the row shapes it
+ * distinguishes, and write an assertion per shape — the same discipline
+ * question 3 applies to values, applied to rows.
+ *
+ * This will recur wherever a table holds rows of more than one ownership. It
+ * already applies to `dashboard_pins`, and it will apply to anything that
+ * mixes shared and personal rows in one table.
  *
  * ── 3. ASSERT THE RELATION OVER THE SET, NOT THE MEMBERS ────────────────────
  *

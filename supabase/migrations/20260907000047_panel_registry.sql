@@ -29,6 +29,19 @@ comment on column public.report_section_types.on_dashboard is
 comment on column public.report_section_types.in_report is
   'The report-editor subset. False for a panel that has no prose form.';
 
+-- THE FOUR COMBINATIONS, AND THE ONE THAT WANTS WATCHING.
+--   t/t  both surfaces render it   — trend, heatmap, drivers, themes, per_virksomhet
+--   t/f  a panel with no prose form — duties
+--   f/t  prose with no panel        — summary, method, participation, quotes, actions, teams
+--   f/f  NOTHING CAN RENDER IT
+-- Measured at V1-4: no row is f/f. It is not a CHECK, because "an entry
+-- awaiting its consumer" is a legitimate state a constraint would forbid — and
+-- it is not left unwatched either, because the danger is that someone later
+-- "fixes" an orphan by flipping a flag, putting a key on a surface with no
+-- renderer for it. `tests/db/dashboard-layouts.test.ts` fails on an f/f row
+-- that is not listed with a stated reason: the same rule 5a3 and the census
+-- apply, where a new one arrives failing until someone says what it is worth.
+
 -- The five report sections that are also dashboard panels, by the bundle's own
 -- PANEL_LIB (NEW:2955-2963). `register` there is this registry's
 -- `per_virksomhet` — the registry key wins, because it is what a layout stores.

@@ -26,6 +26,6 @@
   "tests/db/recurrence.test.ts": 9,
   "tests/db/schedules-rls.test.ts": 6,
   "tests/unit/schedule-status.test.ts": 8,
-  "tests/db/dashboard-layouts.test.ts": 19,
+  "tests/db/dashboard-layouts.test.ts": 20,
   "tests/unit/threshold-line.test.ts": 5
 }

@@ -211,6 +211,32 @@ describe('(Q51) a layout stores identifiers, never values', () => {
     expect(error, 'so a layout naming it is refused by the database').not.toBeNull()
   })
 
+  it('no registry key is off BOTH surfaces without a stated reason', async () => {
+    // A row with on_dashboard = false and in_report = false is a row nothing
+    // can render: either a mistake, or an entry waiting for a consumer that
+    // does not exist yet. Both want a comment, and the danger is the same
+    // either way — someone later "fixes" the orphan by flipping a flag,
+    // putting a key on a surface that has no renderer for it.
+    //
+    // Not a CHECK constraint, because "awaiting a consumer" is a legitimate
+    // state and a constraint would forbid it. The same rule 5a3 and the census
+    // apply instead: a new one arrives FAILING until someone states what it is
+    // worth, here by adding it below with its reason.
+    const AWAITING_A_CONSUMER: Record<string, string> = {
+      // key: 'why it renders nowhere yet, and what would consume it'
+    }
+
+    const { data: rows } = await svc
+      .from('report_section_types')
+      .select('key, on_dashboard, in_report')
+    const orphans = rows!
+      .filter((r) => !r.on_dashboard && !r.in_report)
+      .map((r) => r.key)
+      .filter((k) => !(k in AWAITING_A_CONSUMER))
+
+    expect(orphans, 'a registry row nothing can render needs a stated reason').toEqual([])
+  })
+
   it('(Q27) every shipped preset names only panels the dashboard offers', async () => {
     // Q27 enforced rather than remembered. A seeded default that cannot be
     // applied is worse than a missing one, and the two presets the bundle
@@ -416,7 +442,7 @@ describe('(Q25) per member, presets per organisation', () => {
     expect(landed, "no row claiming someone else's user_id reached the table").toEqual([])
   })
 
-  it("a colleague cannot clear someone's saved setup", async () => {
+  it("a colleague cannot clear someone's saved setup — enforced by _sel, not _del (whose user check is DEFENCE IN DEPTH and unobservable through PostgREST)", async () => {
     // This asserts the BEHAVIOUR, and the comment says which policy delivers
     // it, because mutation showed they are not the same thing.
     //
