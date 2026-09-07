@@ -507,6 +507,44 @@ describe('(Q25) per member, presets per organisation', () => {
     expect(theirs, 'but another organisation does not').toEqual([])
   })
 
+  it('an organisation preset may not take a SHIPPED preset name (M:0048)', async () => {
+    // Found by looking at the «Bytt oppsett» row, not by a test: it draws the
+    // shipped presets and the organisation's own side by side, and the demo
+    // seed had named one «Arbeidsmiljø» — which is also shipped. Two identical
+    // chips, one deletable and one not.
+    //
+    // `dashboard_layouts`' unique index is (org_id, user_id, title) and cannot
+    // see `dashboard_presets`, so this is the collision it structurally cannot
+    // catch. Asserted over the SET of shipped titles rather than the one that
+    // happened to clash.
+    const { data: shipped } = await svc.from('dashboard_presets').select('title')
+    expect(shipped!.length, 'or this loop asserts nothing').toBeGreaterThan(0)
+
+    for (const { title } of shipped!) {
+      const { error } = await insert(admin, good({ user_id: null, title }))
+      expect(error, `"${title}" is a shipped preset name`).not.toBeNull()
+      expect(error!.code, 'reported as a duplicate, so the action says so').toBe('23505')
+    }
+
+    // Case and surrounding space do not make it a different name to a reader.
+    const one = shipped![0]!.title
+    const { error: cased } = await insert(
+      admin,
+      good({ user_id: null, title: `  ${one.toUpperCase()}  ` }),
+    )
+    expect(cased, 'case and padding are not a new name').not.toBeNull()
+  })
+
+  it("a MEMBER'S OWN layout may still be titled anything — the rule is scoped", async () => {
+    // The switch list only shows organisation presets, so a personal row that
+    // shares a shipped name is invisible and forbidding it would be a rule
+    // with no reader. Stated as a test so the scope is deliberate rather than
+    // an oversight someone later "tightens".
+    const { data: shipped } = await svc.from('dashboard_presets').select('title').limit(1)
+    const { error } = await insert(admin, good({ title: shipped![0]!.title }))
+    expect(error, 'a personal row is not in the switch list').toBeNull()
+  })
+
   it('a leser cannot save an organisation preset', async () => {
     const { error } = await insert(leser, good({ user_id: null, title: 'Leser-oppsett' }))
     expect(error, 'writing a shared preset is an editor act').not.toBeNull()

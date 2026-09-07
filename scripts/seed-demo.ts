@@ -425,7 +425,10 @@ async function main() {
       {
         org_id: org.id,
         user_id: null,
-        title: 'Arbeidsmiljø',
+        // NOT «Arbeidsmiljø»: that is a SHIPPED preset's name, and migration
+        // 0048 refuses an organisation preset that takes one — the collision
+        // this fixture originally created is what found the defect.
+        title: 'Ledergruppa',
         panels: [
           { key: 'drivers', wide: false },
           { key: 'themes', wide: false },
