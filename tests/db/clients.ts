@@ -12,7 +12,8 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  *
  *   1. What ELSE could refuse this before the check I am testing gets a chance?
  *   2. What could have MOVED the state my selector assumes?
- *   3. Am I asserting over the SET, or over the members I happened to pick?
+ *   3. Am I asserting over the SET — of values, AND of the sites that can
+ *      violate the property — or over the ones I happened to pick?
  *
  * ── 1. WHAT ELSE COULD REFUSE THIS ──────────────────────────────────────────
  *
@@ -101,6 +102,38 @@ import { DEMO_PASSWORD, PERSONAS, type PersonaName } from './personas'
  * assert the property over all of it, and let a new member fail until someone
  * adds it deliberately. A list of examples grows only when someone remembers
  * to grow it, which is exactly when it stops covering the case that matters.
+ *
+ * ── 3b. THERE ARE TWO SETS, AND THE SECOND ONE IS THE SITES ─────────────────
+ *
+ * The same phase then made the same mistake one level up, which is why this
+ * half is written out separately.
+ *
+ *   V1-3  The cadence test enumerated the VALUES correctly — every cadence, the
+ *         relation asserted over all of them — and drove ONE of the two places
+ *         that compute a next run. `send_round` held a second copy of the CASE
+ *         with the same `else interval '7 days'`, so after the fix the sweep
+ *         advanced an annual survey by a year while its FIRST next run was
+ *         still a week out. Enumerating the values while sampling the call
+ *         sites is the same error in a different dimension.
+ *
+ * So, the general form:
+ *
+ *   A property that must hold EVERYWHERE must be asserted at every site that
+ *   can violate it, and THE SET OF SITES IS DERIVED, NOT REMEMBERED.
+ *
+ * Derived means a query against the catalogue, not a list in a test file and
+ * not a note in a comment. `tests/invariants/threshold-policy.test.ts` has two
+ * of these now — nothing may still call `app.k_threshold()`, and nothing but
+ * `app.cadence_interval` may do interval arithmetic on a cadence — and both are
+ * `select … from pg_proc`, so a function added next month is in the set without
+ * anyone adding it.
+ *
+ * Worth knowing why that matters more than it sounds: migration 0044's comment
+ * PREDICTED the second copy, in as many words, and the second copy survived it
+ * anyway. A comment warning about a class of bug does not go looking for other
+ * instances of the class. Only a query does. If you find yourself writing "and
+ * make sure nobody does this elsewhere" in a comment, that sentence is the
+ * specification for a sweep, not a substitute for one.
  *
  * ── AND THE CONVERSE, WHICH IS THE SAME RULE FROM THE OTHER SIDE ────────────
  *

@@ -287,6 +287,43 @@ describe('(Q17 #8) every aggregate path routes through app.k_for — none kept t
       `these functions still call app.k_threshold(): ${callsOldConstant.join(', ') || '(none)'}`,
     ).toEqual([])
 
+    // (a2) The SAME SHAPE, for a different constant — DECISIONS Q20, added in
+    //      V1-3 because the pattern earned a second instance.
+    //
+    //      How long a cadence step is has exactly one definition,
+    //      `app.cadence_interval` (M:0044). It got that definition after a CASE
+    //      with four arms and `else interval '7 days'` was found making an
+    //      ANNUAL survey re-send weekly — and then a SECOND copy of the same
+    //      CASE was found in `send_round` (M:0045), because 0044 fixed the site
+    //      that had the symptom rather than the set of sites that could have it.
+    //
+    //      0044's comment predicted the second copy in as many words and the
+    //      second copy still survived it. A comment warning about a class of
+    //      bug does not go looking for other instances; only a query does. So
+    //      this is the query: any function that does interval arithmetic on a
+    //      cadence, other than the one definition, fails on the PR that adds it.
+    //      COMMENTS ARE STRIPPED FIRST, and that is not a detail: `prosrc` is
+    //      the whole body, so the first version of this query flagged
+    //      `send_round` for the comment explaining what it had stopped doing —
+    //      a function quoting `else interval '7 days'` to say why it no longer
+    //      does that. A sweep that reads prose as code produces exactly the
+    //      false positive that gets a check switched off.
+    const doesOwnIntervalMath = psql(
+      `select n.nspname || '.' || p.proname
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('public','app')
+          and p.proname <> 'cadence_interval'
+          and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') ~ 'cadence'
+          and regexp_replace(p.prosrc, '--[^\\n]*', '', 'g') ~ 'interval\\s'
+        order by 1`,
+    ).map((r) => r[0])
+    expect(
+      doesOwnIntervalMath,
+      `these compute a cadence interval themselves instead of calling app.cadence_interval(): ${
+        doesOwnIntervalMath.join(', ') || '(none)'
+      }`,
+    ).toEqual([])
+
     // (b) The other side, derived from the catalogue too: every SECURITY
     //     DEFINER function a caller can reach that READS the vault must consult
     //     app.k_for. This catches the likelier mistake in a phase that adds
