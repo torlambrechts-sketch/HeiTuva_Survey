@@ -87,6 +87,40 @@ async function main() {
     },
   ])
 
+  // V2-3b — the Reservasjonsliste and the member-status vocabulary need states
+  // to be IN. Q61 derives all four statuses from data that already exists, so
+  // the seed's job is to make each one reachable:
+  //
+  //   Aktiv     the three personas, already seeded
+  //   Ny        `status = 'invited'` — a member who has not signed in
+  //   Reservert a row in `suppressions` for that member's address
+  //   Bounce    `bounced_at` on that member's latest invitation
+  //
+  // Without them the Medlemmer card photographs one status four times, which is
+  // the fixture gap CLAUDE.md names six times over — the seed reaching only the
+  // states the current code happens to create.
+  await svc
+    .from('org_members')
+    .insert([
+      { org_id: org.id, email: 'nora@nordiskstudio.test', name: 'Nora Lie',
+        role: 'leser', group_id: secondGroup!.id, status: 'active' },
+      { org_id: org.id, email: 'petter@nordiskstudio.test', name: 'Petter Holm',
+        role: 'leser', group_id: secondGroup!.id, status: 'invited' },
+      // Active AND unsuppressed, so the group send below has somebody to reach.
+      // Without a third member it invited nobody — Nora is on the list and
+      // Petter is `invited`, which the group loop filters out — and a send that
+      // reaches nobody is indistinguishable from suppression working.
+      { org_id: org.id, email: 'sofie@nordiskstudio.test', name: 'Sofie Dahl',
+        role: 'leser', group_id: secondGroup!.id, status: 'active' },
+    ])
+
+  await svc.from('suppressions').insert({
+    org_id: org.id,
+    email: 'nora@nordiskstudio.test',
+    reason: 'har sagt nei til undersøkelser',
+    source: 'manuell',
+  })
+
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
@@ -383,6 +417,42 @@ async function main() {
   })
   const scheduled = schedResult as { error?: string }
   if (scheduled?.error) throw new Error(`seed send_round(schedule): ${scheduled.error}`)
+
+  // V2-3b — a REAL group-targeted send, because three things are otherwise
+  // invisible to every gate:
+  //
+  //   `survey_invitations.member_id` (Q64 gap 1) is written only by the group
+  //   loop, and the seed's other 32 invitations are inserted directly, so the
+  //   column would be 0-of-32 and no capture would ever show it working.
+  //
+  //   The suppression skip has nothing to skip. `verify:policy` reports
+  //   `suppressions` PROTECTED BUT UNPROVEN on a bare reset for the same
+  //   reason: an empty table is never asked to refuse anything.
+  //
+  //   `bounced_at` needs an invitation to sit on, and Bounce is one of Q61's
+  //   four statuses.
+  const bounceSurvey = await createSurvey(org.id, 'Pulssjekk utvikling', [
+    { type: 'scale', text: 'Hvordan er arbeidsmengden?' },
+  ], { audience: GROUP_SECONDARY })
+
+  const { data: groupSend } = await asAdmin.rpc('send_round', {
+    p_survey: bounceSurvey.id,
+    p_channels: ['email'],
+    p_group_ids: [secondGroup!.id],
+  })
+  const sent = groupSend as { error?: string; invited?: number }
+  if (sent?.error) throw new Error(`seed send_round(group): ${sent.error}`)
+  // Nora is in this group and on the Reservasjonsliste, so the send reaches
+  // Sofie and not her. Asserted rather than assumed: a seed that quietly sent
+  // to both would leave every suppression capture photographing nothing.
+  if (sent?.invited !== 1) {
+    throw new Error(`seed: expected 1 invited (Nora is suppressed), got ${sent?.invited}`)
+  }
+
+  await svc
+    .from('survey_invitations')
+    .update({ bounced_at: new Date(Date.now() - 2 * 864e5).toISOString() })
+    .eq('email', 'sofie@nordiskstudio.test')
 
   // survey_editors — produced by sharing a survey with a colleague. Written
   // through a member client so `editors_cud` is what admits it, not the service

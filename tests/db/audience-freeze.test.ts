@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { adminClient, serviceClient, type Client } from './clients'
+import { adminClient, anonClient, serviceClient, type Client } from './clients'
 import { ORG_PRIMARY } from './personas'
 
 /**
@@ -36,6 +36,7 @@ function psql(query: string): string[][] {
 
 let svc: Client
 let admin: Client
+let anon: Client
 let orgId: string
 let surveyId = ''
 let groupA = ''
@@ -46,6 +47,7 @@ const stamp = `${process.pid}`
 beforeAll(async () => {
   svc = serviceClient()
   admin = await adminClient()
+  anon = anonClient()
   const { data: orgs } = await svc.from('organizations').select('id, name')
   orgId = orgs!.find((o) => o.name === ORG_PRIMARY)!.id
 
@@ -194,5 +196,149 @@ describe('(Q64) BLOCKER — a membership change after send moves no denominator'
       .eq('round_id', rounds![0]!.id)
       .eq('group_id', groupA)
     expect(count, 'all six were sent as group A, and still are').toBe(6)
+  })
+
+  it('and it carries WHO — Q64 gap 1, which was open until V2-3b', async () => {
+    // `member_id` (`M:0059`) is written by the group loop, the only one that
+    // knows the member: named recipients and imports address people who may not
+    // be members at all. Without it the snapshot holds an address and no person,
+    // so «who was invited to round 3» stops being answerable the moment an
+    // address changes.
+    //
+    // A column nothing writes is D110's instance 2 — a feature flag with no call
+    // site is a comment in a table — so this asserts the WRITE, not the column.
+    const { data: rounds } = await svc
+      .from('survey_rounds')
+      .select('id')
+      .eq('survey_id', surveyId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const { data: rows } = await svc
+      .from('survey_invitations')
+      .select('email, member_id')
+      .eq('round_id', rounds![0]!.id)
+    expect(rows?.length, 'six recipients').toBe(6)
+    expect(
+      rows!.filter((r) => r.member_id !== null).length,
+      'every one of them is linked to the member it was sent to',
+    ).toBe(6)
+    expect(new Set(rows!.map((r) => r.member_id)).size, 'six DIFFERENT people').toBe(6)
+  })
+})
+
+/**
+ * Q64 gap 2 — the `ON DELETE` behaviour of the four columns referencing
+ * `groups`, which existed as `set null` and had never been CHOSEN.
+ *
+ * Measuring it found a live privacy defect that predates this phase, and these
+ * are its regression tests. The reasoning is in `M:0059`'s header; the short
+ * version is that `compose_report` gates a share link with
+ *
+ *     if v_rep.filters->>'group' is not null and v_share.group_id is not null
+ *        and v_share.group_id <> (v_rep.filters->>'group')::uuid then forbidden
+ *
+ * — so nulling `report_shares.group_id` DISABLES the check that was refusing a
+ * mismatched link, and `v_group` then falls back to the report's own filter.
+ * Deleting a group, on an unrelated screen, widened a share link's access.
+ */
+describe('(Q64 gap 2) deleting a group cannot rewrite the record or widen a link', () => {
+  it('the four FKs carry the behaviour that was DECIDED, not the one inherited', () => {
+    // Asserted from the catalogue rather than described, because the whole
+    // finding was that nobody had ever looked at these four values.
+    const rows = psql(
+      `select c.conrelid::regclass::text||'.'||a.attname, c.confdeltype
+         from pg_constraint c join unnest(c.conkey) k on true
+         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+        where c.contype = 'f' and c.confrelid = 'public.groups'::regclass
+        order by 1`,
+    )
+    const by = Object.fromEntries(rows.map((r) => [r[0]!, r[1]!]))
+    expect(by, 'all four are accounted for').toEqual({
+      // A person outlives a group; that is what a group is.
+      'org_members.group_id': 'n',
+      // A share scoped to a group that is gone has no meaning. It must not come
+      // to mean something else.
+      'report_shares.group_id': 'c',
+      // These two ARE the record: a sent round and an answer already given.
+      // 'a' = NO ACTION, and the constraints are DEFERRABLE INITIALLY DEFERRED
+      // — asserted separately below, because 'a' alone would also describe the
+      // undeferred form, which cannot express what this rule means.
+      'responses.respondent_group_id': 'a',
+      'survey_invitations.group_id': 'a',
+    })
+  })
+
+  it('and DEFERRED, which is the half RESTRICT could not express', () => {
+    // CLAUDE.md's referential-maintenance rule, fifth instance. RESTRICT is
+    // checked immediately and made the ORGANISATION undeletable — a broken
+    // erasure path wearing a freeze's clothes. Deferring the check to commit
+    // refuses the group delete and allows the org cascade. Both halves are
+    // asserted: the flags below and `dropOrg` in every seed run.
+    const rows = psql(
+      `select c.conrelid::regclass::text||'.'||a.attname, c.condeferrable, c.condeferred
+         from pg_constraint c join unnest(c.conkey) k on true
+         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+        where c.contype = 'f' and c.confrelid = 'public.groups'::regclass
+          and c.conrelid::regclass::text in ('responses','survey_invitations')
+        order by 1`,
+    )
+    expect(rows.map((r) => [r[0], r[1], r[2]])).toEqual([
+      ['responses.respondent_group_id', 't', 't'],
+      ['survey_invitations.group_id', 't', 't'],
+    ])
+  })
+
+  it('a group a round was sent to CANNOT be deleted, and the refusal is the FK', async () => {
+    // Before this, the delete succeeded and nulled the column, which is the
+    // freeze holding only until somebody tidies up.
+    const { error } = await svc.from('groups').delete().eq('id', groupA)
+    expect(error?.code, 'foreign_key_violation').toBe('23503')
+
+    const { count } = await svc
+      .from('groups')
+      .select('id', { count: 'exact', head: true })
+      .eq('id', groupA)
+    expect(count, 'POSITIVE CONTROL: the group is still there').toBe(1)
+  })
+
+  it('a share link scoped to a deleted group GOES, rather than coming to mean another group', async () => {
+    // The regression test for the widening. A link scoped to group B on a
+    // report filtered elsewhere used to survive B's deletion with its scope
+    // check switched off; now the link is deleted with the group it was for.
+    const { data: report } = await svc
+      .from('reports')
+      .insert({ org_id: orgId, title: `Frys-rapport ${stamp}`, filters: {} })
+      .select('id')
+      .single()
+    const { data: share } = await svc
+      .from('report_shares')
+      .insert({
+        report_id: report!.id,
+        group_id: groupB,
+        scope: 'ledere_eget_team',
+        token_hash: `frys${stamp}`.padEnd(64, '0'),
+      })
+      .select('id')
+      .single()
+
+    const { error } = await svc.from('groups').delete().eq('id', groupB)
+    expect(error, 'group B has no round and no answer, so it may go').toBeNull()
+
+    const { data: after } = await svc.from('report_shares').select('id').eq('id', share!.id)
+    expect(after ?? [], 'the link went with it').toEqual([])
+
+    // And the property, not just the row: the token no longer opens anything.
+    // Asserted through the RPC because the claim is about ACCESS, and a deleted
+    // row is only evidence of access if something reads it.
+    const { data: composed } = await anon.rpc('compose_report', {
+      p_report: report!.id,
+      p_token: `frys${stamp}`,
+    })
+    expect(
+      (composed as { error?: string } | null)?.error,
+      'the link is refused rather than re-scoped',
+    ).toBe('forbidden')
+
+    await svc.from('reports').delete().eq('id', report!.id)
   })
 })

@@ -475,8 +475,30 @@ status column**, because a second column carrying a derived fact disagrees with 
 first time one of them is written alone.
 
 **THE STRUCTURAL CONSTRAINT, carried from V2-3's withdrawn coupling argument.**
-`send_round` has **two** insertion points into `survey_invitations` today (`M:0052:107` and
-`:140`) and will have three once segments land. **Every new recipient source is a place the
+~~`send_round` has **two** insertion points into `survey_invitations` today (`M:0052:107` and
+`:140`) and will have three once segments land.~~
+
+> **CORRECTED BY MEASUREMENT AT V2-3b's OPENING, 2026-09-08 — D110's shape again, and the
+> struck text stays.** There are **three** live insertion points, in **two** functions, and the
+> plan counted only the ones inside `send_round`:
+>
+> ```
+> select n.nspname||'.'||p.proname from pg_proc p
+>   join pg_namespace n on n.oid = p.pronamespace
+>  where n.nspname in ('public','app')
+>    and p.prosrc ~* 'insert\s+into\s+(public\.)?survey_invitations';
+> -->  app.run_due_schedules
+>      public.send_round
+> ```
+>
+> `send_round` at `M:0052:107` (named recipients) and `:140` (whole groups), **and
+> `app.run_due_schedules` at `M:0052:276`**, which builds round N+1 by copying round N's
+> invitation rows verbatim — `select distinct on (coalesce(email, phone)) … from
+> public.survey_invitations where round_id = v_prev`, with no membership check, no status
+> filter and nothing else. **It is the most dangerous of the three for this phase**: a person
+> who objects after round 1 is re-invited by cron, from a path no screen leads to. The
+> constraint below is unchanged and now has a third caller to cover; the number that was wrong
+> was typed, not measured. **Every new recipient source is a place the
 suppression guard can be forgotten**, which is this project's named failure shape. So
 suppression is enforced where a new source **cannot bypass it** — a trigger on
 `survey_invitations`, or a single `app.resolve_recipients` both loops must go through — and
