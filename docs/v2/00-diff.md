@@ -128,6 +128,12 @@ copy for the behaviour before drafting the question, not only its markup for the
 like any other; `DECISIONS.md` still outranks it, exactly as it outranks the bundle's wording.
 What changes is that the bundle must be *read* in that mode rather than only looked at.
 
+**Recorded in `docs/DEVIATIONS.md` D110 as instance 5, because it is a FOURTH way a cited
+claim fails**, beside the three that entry already names. V2:5033 is real, is about the freeze,
+and is the wrong source — an echo rather than a statement. It passes every test a reviewer
+applies to a citation, which is why the rule above is «grep the copy for the behaviour», not
+«check that the citation resolves».
+
 Written down because the alternative is that the next phase re-derives it, and it could
 just as easily re-derive it the other way — leaving a decision unapplied because a bundle
 "governs" the screen it lands on.

@@ -1,5 +1,13 @@
 # 03 — The plan (Round 3)
 
+> **EDITING THIS FILE PROGRAMMATICALLY: anchor on a line range, never on `.index()` of a
+> section heading.** Every phase here repeats `**Scope**`, `**Schema first.**`,
+> `**Negative tests…**` and `**Definition of done**`, so a `.index()` intended for one phase
+> silently matches an earlier one — on 2026-09-08 that put a rewritten V2-3 section at line 1
+> of the document. **It was caught by checking the heading order, not by the diffstat, which
+> read a plausible `87 insertions, 24 deletions`.** A diffstat that looks reasonable is not
+> evidence the content landed in the right place.
+
 Phases in dependency order, with 01-briefs §7's scope split applied. This document plans;
 it starts nothing.
 
@@ -249,7 +257,7 @@ this.
 
 ---
 
-## V2-3 — Målgrupper: groups and segments
+## V2-3a — Målgrupper: groups and segments
 
 **SPLIT (Tor, 2026-09-08).** Målgrupper here; **suppression and member state are V2-3b**,
 immediately after this phase and ahead of V2-4. Thirteen negative tests plus schema plus UI

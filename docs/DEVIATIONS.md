@@ -2429,6 +2429,20 @@ neither. Tor named it, 2026-09-08.
 | 2 | «They are flagged off (`entra_sync`, `google_sync`, `hr_sync`)» | The three flags are seeded `false` and **read by nothing**. The actual gate is `IMPLEMENTED_SOURCES`, a hard-coded client constant — not org-scoped, not a row | **D44**; `lib/send/registry.ts:125`, `SendScreen.tsx:364` |
 | 3 | «Census target ≥630 / 38» | Already satisfied before the phase opened — the manifest read **636 / 38**. And «5a3 ≥61 of 74» carried a denominator that had moved to **75** | `03-plan.md`, V2-3's definition of done |
 | 4 | «`app.k_for` (…floor **2** for natural persons since **Q91**)» | The function returned `greatest(s.k_threshold, 3)`. The sentence was written when the CHECK moved and the function did not | `CLAUDE.md` standing invariant 1; see **D109** |
+| 5 | Q64 «the freeze surface is **V2:5033**» — in three documents | **V2:5033 is real, is about the freeze, and is the wrong source.** It is a string inside `auditRows` — the changelog's *echo*. The card that STATES the rule is `freezeNote` at **V2:5030**: «Medlemskapet fryses når undersøkelsen sendes.» The answer to the open question was sitting in the artefact, in its own words | `03-plan.md`, `01-briefs.md`, `04-decisions.md`; bundle V2:5024–5036 |
+
+**INSTANCE 5 IS A FOURTH FAILURE MODE, and it is the one a citation rule is worst at
+catching** (Tor, 2026-09-08). The first four instances fail because the claim went stale, was
+never built, was already satisfied, or moved underneath. This one fails while being **real,
+on-topic, and checkable**: someone opened V2:5033, found text about the freeze, and cited it.
+Every test a reviewer would apply passes. **A citation can point at a genuine mention of the
+right subject and still be the wrong source** — an echo of the rule rather than its statement
+— and the cost here was that a question was drafted as OPEN while its answer sat six lines
+above the line being cited.
+
+The practical form, recorded in `docs/v2/00-diff.md § 0.3`: when a decision is about behaviour
+on a screen the bundle draws, **grep the bundle's COPY for the behaviour**, not only its markup
+for the control — and prefer the surface that states a rule over any surface that mentions it.
 
 **THE SHAPE.** Every one of these is a **document asserting a fact about the
 system**. None was careless, and none was wrong when written — (1) and (3) were
