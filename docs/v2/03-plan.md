@@ -284,6 +284,13 @@ vocabulary are now decisions this phase needs.
 | Import relocation (**Q62**) | PARTIAL (B.28) | Send keeps the one-off list V2:3020 + "Lagre som målgruppe" V2:3037; sync stubs move here V2:3040, still behind `feature_flags`, still "kommer" |
 | `hasThresholdWarn` | NOT BUILT (B.25) | V2:4988 — **a fourth caller of `lib/questions/policy-warnings.ts`, not a fourth copy**, taking k from `app.k_for`. See the note below |
 | Populasjoner | NOT BUILT (B.15) | **Not in this phase.** The section renders the design's unavailable state — never a fabricated count (CLAUDE.md) |
+| Medlemmer | NOT BUILT ▲ | V2:2570–2608. A per-member list with a search box and «Synkroniser nå». **Unlisted until 2026-09-08** |
+| Reservasjonsliste | NOT BUILT ▲ | The suppression card, V2:2641–2657 — the surface the carried V2-2 scope builds |
+| Behandlingsgrunnlag | NOT BUILT ▲ | V2:2610–2621, data :5016–5021. **Lawful basis per population, with a count of people.** Population-scoped, so it follows Q63 and renders the unavailable treatment |
+
+**The section draws NINE cards; this table had seven rows.** Two rows (Import relocation,
+`hasThresholdWarn`) sit inside one card, so seven rows never covered nine cards even before
+the three additions above.
 
 **Schema first.** `suppressions(org_id, email, reason, source, created_by, created_at)`,
 unique on `(org_id, lower(email))`, RLS and policies in the same migration. Status mapping per
@@ -347,11 +354,23 @@ audience group, at pick time — so it is new work for an existing function, not
 | Grupper | The bundle's `auto-fill,minmax(280px,1fr)` (V2:2432) |
 | Segmenter | § Data tables → wide rows become cards; the monospace rule wraps, never truncated |
 | Populasjoner | The design's unavailable/empty treatment |
-| Builder breach warning (V2:2561) | § Three-pane Builder — it sits in the right pane, which becomes a sheet below `xl`. **A warning behind a closed sheet is not a warning**; surface it on the base layer at mobile, as `SendScreen` already does for the same rule |
+| ~~Builder breach warning (V2:2561)~~ **Målgrupper import warning (V2:2561)** | **CORRECTED 2026-09-08 — V2:2561 IS NOT IN THE BUILDER.** Its `sc-if` chain is `isAdmin` (2214–2821) → `adminMalgrupper` (2405–2658) → `mgImportOpen` (2510–2567); the Builder's `isBuild` block spans 382–941 and closes 1620 lines earlier. So the prescribed three-pane/sheet treatment solved a problem this screen does not have: Målgrupper is a single-column admin surface with no right pane and no `xl` sheet. The warning sits inside the import panel, on the base layer already, and needs no responsive treatment beyond § Cards |
+| Send audience picker warning (V2:3072–3074) | **The fourth rendered site of the same rule**, missed by `00-diff.md § B.27` and `02-conflicts.md § A4`, both of which say «three». Data at V2:6543–6544 (`warn`, `hasWarn`). It is a chip inside an existing picker row — § Data tables, narrow rows keep the row |
 
 **Definition of done**
 - Thirteen negative tests pass; tests 3 and 9 are blockers.
-- Census target **≥630 / 38**. 5a3 **≥61 of 74**.
+- Census target **≥660 / 40**. 5a3 **≥60 of 77**.
+  **RESTATED 2026-09-08, because the committed numbers gated nothing.** «≥630 / 38» was
+  already satisfied before the phase opened — the manifest reads **636 / 38** — and «≥61 of
+  74» carried a denominator that moved to **75** in V2-2 and reads **56 of 75** today. A
+  target the tree already passes is not a target. The new numbers assume the thirteen negative
+  tests plus the suppression suite, and the 5a3 denominator assumes `suppressions` and one
+  audience table; **restate them again if Q92 lands on option (a)**, which adds no membership
+  table.
+  *The 5a3 ladder in the phases below still reads «of 74» and is stale by the same one. It is
+  left alone rather than swept: each phase restates its own target when it opens, and editing
+  eight future numbers on one measurement is how a plan starts describing a repository nobody
+  has looked at.*
 - Demo seed gains four groups, four segments, **one segment whose membership changes after a
   send**, one group below k, one suppressed address, one bounced member, and — carried from
   V2-2 — **one SENT survey at `k_threshold` 2**, so Q91's «two» tier is photographed on the

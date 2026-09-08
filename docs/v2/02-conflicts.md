@@ -85,10 +85,18 @@ security" does not settle it. Three readings:
 
 Recommend (1).
 
-### A4. Three v2 surfaces hard-code 5 in logic — **Q17**
+### A4. ~~Three~~ **FOUR** v2 surfaces hard-code 5 in logic — **Q17**
 
 `hasThresholdWarn` **V2:4988** (`g.count > 0 && g.count < 5`), `mgGroups.small` **V2:5048**,
 `mgSegments.small` **V2:5052**; the warning's group list V2:4986 uses the same constant.
+
+**CORRECTED 2026-09-08 — a fourth rendered surface was missed, and it is on a screen that
+already ships.** The Send audience picker carries `warn: g.count < 5` and `hasWarn: g.count <
+5` (**V2:6543–6544**), rendered as a chip at **V2:3072–3074**. `00-diff.md § B.27` says
+«three» from the same enumeration. Six logic lines across four rendered surfaces, not four
+lines across three — and the missed one is the only one attached to a screen a user reaches
+today, so a phase that fixed «the three» would have left the live one behind. Found by a
+`grep -n "count < 5"` over the whole bundle rather than by re-reading the list.
 
 **RESOLVED — the file wins.** `app.k_for` (`M:0032:69`) returns **0** for organisation
 surveys and `greatest(k_threshold, 3)` otherwise, so `count < 5` is wrong in both

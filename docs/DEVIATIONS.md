@@ -890,6 +890,32 @@ integrations with their own OAuth flows and admin consent: Entra ID, Google
 Workspace and HR systems. They are flagged off (`entra_sync`, `google_sync`,
 `hr_sync`) and land in Phase 6 alongside Entra SSO.
 
+**CORRECTED 2026-09-08. Two claims above are wrong, in different ways, and V2-3
+carries the correction rather than relocating the entry.**
+
+**(a) NEVER TRUE — «they are flagged off».** The three flags are seeded `false`
+(`supabase/seed.sql:162-163`) and **read by nothing**: a whole-repo grep returns
+nine lines, none a call site. What actually gates the three sources is
+`IMPLEMENTED_SOURCES` (`lib/send/registry.ts:125`), a hard-coded client constant
+branched on at `SendScreen.tsx:364` — not org-scoped, not a row, not switchable
+per tenant. **The mechanism this deviation names has never existed**, and Q9's
+own clause «sync sources gated by `feature_flags`» inherits the same error. That
+makes it a data-not-code violation sitting inside the block V2-3 rewrites.
+
+**(b) WENT STALE — «eleven unit tests».** `tests/unit/import.test.ts` has **15**
+(`tests/expected-counts.json`). True when written, and the kind of number a
+deviation should not carry: the census manifest already holds it, and a count
+duplicated into prose is a count that drifts.
+
+**(c) And a third claim, from the same family, found with them.** «Excel» is one
+of the three «built» parsers — but the file input accepts `.csv,.tsv,text/csv`
+(`SendScreen.tsx:376`), the handler is `file.text()` (`:380`), and no xlsx
+library is in `package.json`. A real `.xlsx` is read as text and silently
+produces garbage rather than refusing, under a label reading «Excel (.xlsx)» and
+help text promising «Vi leser første ark». **Q62 decides whether that is
+implemented or renamed**; recorded here because this entry is where a reader
+would look for it.
+
 Their cards still render, because the design draws six and hiding three would
 misrepresent what the product does. Selecting one shows the design's own
 explanation of what the sync does plus one line saying it is not available yet —
