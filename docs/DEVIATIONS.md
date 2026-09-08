@@ -2470,6 +2470,39 @@ the enumeration in § B.27 and § A4 by grep rather than by re-reading the list.
 The corrections themselves are in `docs/v2/03-plan.md`, `docs/v2/02-conflicts.md`
 and D44.
 
+**THIS ENTRY NEARLY CONTAINED ITS OWN FAILURE, AND THAT IS THE CLEAREST
+ILLUSTRATION OF WHY THE RULE IS WORTH HAVING.** Applying it to V2-3's restated
+targets meant writing two commands beside two numbers. I ran them. The first —
+`npm run verify:policy | grep -c '^  ok '` — returned **0**, not 56. The number
+was not wrong; **Docker had died in the container restart**, so the gate could
+not reach the stack at all. Had I written the numbers and the commands without
+running them, the entry demanding measured numbers would itself have shipped
+asserted ones, in the same commit that named the rule. The commands now return
+**56** and **38 / 636** against a restored stack.
+
+**THE CAVEAT THAT COMES WITH THE RULE, because the rule will spread.** A command
+beside a number is evidence **only if someone runs it**, and a command that fails
+for environment reasons looks exactly like a number that has changed. Nothing
+distinguishes them from the output. The gates have a dependency guard for this
+(`verify:visual` names the missing browser rather than emitting lookalike
+failures — VERIFY.md Gate 6); **nothing does, or should, guard a command embedded
+in a document.**
+
+So when a document and its command disagree, that means ONE OF THREE THINGS, and
+**only one of them is that the document is stale**:
+
+1. **The document is stale** — the number moved. Update the document.
+2. **The command cannot run** — dead stack, missing browser, no network. The
+   number may still be correct. Fix the environment and re-run before touching
+   the document. *This is the case that produced the 0 above.*
+3. **The command is wrong** — it never measured what the sentence claims, so
+   both have always disagreed and nobody looked. Fix the command first; the
+   number is unknown until it runs.
+
+**DO NOT BUILD ANYTHING FOR THIS.** A checker for embedded commands would be a
+new gate over prose, and the apparatus is what it is. Read the three cases, run
+the command, and decide which one you are in.
+
 **Related:** **D109** (the same failure, in copy rather than in a count: a
 warning that did not describe the system), and `DECISIONS.md`'s header rule that
 this narrows.
