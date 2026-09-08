@@ -138,6 +138,44 @@ Written down because the alternative is that the next phase re-derives it, and i
 just as easily re-derive it the other way — leaving a decision unapplied because a bundle
 "governs" the screen it lands on.
 
+### AWAITING A DRAWING — one control, and what the next bundle is compared against
+
+**Added 2026-09-08 (Tor), after V2-3b.** The table below assigns governance among three
+bundles. This row is the case none of them covers: **a control this project had to invent,
+because the duty it discharges exists whether or not anybody drew it.**
+
+| Surface | State | Governed by | Compare the next bundle against |
+|---|---|---|---|
+| **Reservasjonsliste — the add row and «Opphev»** (`MembersPanel.tsx`) | **PROVISIONAL, awaiting a drawing** | nothing — no bundle draws it | **a known-provisional shape, not a late arrival** |
+
+**Why it exists at all.** V2:2595–2608 draws the Reservasjonsliste as a **read-only list**.
+Objections were to arrive through `unsubNote`'s «avmeldingslenke» (V2:5022), which is not
+built and is not in any current phase. So the mechanism was complete — a table, policies, a
+guard on three insertion points, an audit trail — and **nothing could put a row in it**. A
+suppression list nobody can write to is not an incomplete feature; it is a screen stating a
+legal promise the product cannot keep.
+
+**This is the one surface in the v2 run where CLAUDE.md's do-not-invent rule had to yield,
+and the reason is worth stating in the words Tor used: the absence of a drawing does not
+remove the duty.** GDPR art. 21 is not conditional on the design bundle having a control for
+it. Everywhere else, an absent drawing means «render the design's empty treatment» (D111,
+D112a–b); here it would mean «offer no way to comply».
+
+**What follows for the next bundle, and it is the point of this row.** Claude Design is being
+asked for this control explicitly rather than left to produce it. So when a drawing arrives:
+
+- It is **compared against a shape that was always provisional**, not treated as arriving
+  late to correct something that had settled. The current control is an admission of
+  necessity, not a claim about how it should look.
+- The **behaviour** it must express is already decided and does not move with the drawing:
+  administrator-only, org-wide (Q60), a delete rather than an edit (there is no update
+  policy), and audited on lift (`app.audit_suppression_lift`).
+- The **scope sentences** on the card (added 2026-09-08, below) are a requirement of the
+  control rather than decoration. A control that discharges a duty must not make the operator
+  infer what it does. Whatever the drawing does with them, it must say them.
+
+Logged in `docs/DEVIATIONS.md` **D112(c)**.
+
 ### The table
 
 Provenance derived from `git diff --name-only cd74022..3b7cef5 -- 'app/**'` (the v1 round)

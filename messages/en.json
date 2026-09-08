@@ -1047,7 +1047,11 @@
     "mgSuppressDuplicate": "That address is already on the opt-out list.",
     "mgSuppressNeedEmail": "Enter an email address",
     "mgSuppressFailed": "Could not save. Try again.",
-    "mgSuppressedCount": "{count, plural, =0 {No opt-outs} one {# opt-out} other {# opt-outs}}"
+    "mgSuppressedCount": "{count, plural, =0 {No opt-outs} one {# opt-out} other {# opt-outs}}",
+    "mgSuppressScopeTitle": "What an opt-out does",
+    "mgSuppressScope1": "It applies to every future send from the organisation — including addresses that arrive in a synchronised group later.",
+    "mgSuppressScope2": "It does not delete answers already given. Deletion belongs under Privacy and GDPR.",
+    "mgSuppressScope3": "Only an administrator can lift it, and lifting it is logged."
   },
   "profile": {
     "aboutMe": "About me",

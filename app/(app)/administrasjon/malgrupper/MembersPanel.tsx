@@ -193,6 +193,18 @@ export function MembersPanel({
 
         {isAdministrator ? (
           <div className="mt-[18px] rounded-[14px] border border-dashed border-line bg-bg p-[18px]">
+            {/* THE SCOPE, IN PLAIN WORDS, ABOVE THE CONTROL RATHER THAN BELOW IT.
+                Added 2026-09-08 (Tor): «a control discharging a duty should not
+                require the operator to infer its scope». This one is invented
+                (D112c) and there is no drawing to lean on, so what it does has
+                to be said rather than shown — and said BEFORE the field, not as
+                a footnote after the button. */}
+            <div className="text-[12px] font-bold">{t('mgSuppressScopeTitle')}</div>
+            <ul className="mb-3.5 mt-1.5 flex list-disc flex-col gap-1 pl-[18px] text-[11.5px] leading-[1.5] text-mut">
+              <li>{t('mgSuppressScope1')}</li>
+              <li>{t('mgSuppressScope2')}</li>
+              <li>{t('mgSuppressScope3')}</li>
+            </ul>
             <div className="flex flex-wrap gap-[9px]">
               <input
                 type="email"

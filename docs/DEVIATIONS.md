@@ -2673,6 +2673,46 @@ The copy for `unsubNote` is replaced rather than kept (`mgSuppressHow`): the
 bundle's sentence describes the unsubscribe link as working today. Ours says
 where objections come from now, and that the link comes later.
 
+**AWAITING A DRAWING, AND LOGGED AS PROVISIONAL RATHER THAN AS SETTLED**
+(2026-09-08, Tor). This is the only surface in the v2 run where CLAUDE.md's
+do-not-invent rule had to yield, and the reason is the one worth carrying:
+**the absence of a drawing does not remove the duty.** Everywhere else an absent
+drawing means «render the design's empty treatment»; here it would mean «offer no
+way to comply with article 21». Claude Design is being asked for this control
+explicitly rather than left to produce it, so the eventual drawing is compared
+against **a shape that was always provisional** — not treated as arriving late to
+correct something that had settled. The governance row is in
+`docs/v2/00-diff.md § 0.3`, «AWAITING A DRAWING».
+
+The BEHAVIOUR does not move with the drawing: administrator-only, org-wide
+(Q60), a delete rather than an edit (there is no update policy), audited on lift.
+
+**THE SCOPE SENTENCES ARE A REQUIREMENT OF THE CONTROL, NOT DECORATION**
+(2026-09-08, Tor: «a control discharging a duty should not require the operator
+to infer its scope»). Three lines sit ABOVE the field, not below the button:
+
+1. it applies to every future send from the organisation, including addresses
+   that arrive in a synchronised group later;
+2. it does not delete answers already given — deletion is Personvern og GDPR;
+3. only an administrator can lift it, and lifting is logged.
+
+**The third line is NOT the sentence Tor asked for, and that is deliberate.** The
+instruction was that «one entered on someone's behalf cannot be undone by the
+person who entered it». **That is not true of what is built**: `suppressions_del`
+admits any administrator of the organisation, including the one who recorded the
+objection, so the operator can undo their own entry. Writing Tor's sentence would
+have put a false statement on the surface where a legal obligation is
+discharged — the never-fabricate rule at its sharpest — so the line says what the
+control actually does and the gap is raised rather than papered over.
+
+Making Tor's sentence true has one obvious shape and it does not survive contact
+with this product's size: a four-eyes rule (`created_by is distinct from
+auth.uid()` on the delete policy, using a column that already exists) means that
+in a **single-administrator organisation nobody could ever lift an objection** —
+and `heituva-prod` has one member today. A typo'd address would be permanent with
+no support path. So the choice is Tor's, not mine, and it is carried rather than
+guessed at.
+
 **Behandlingsgrunnlag moved cards, not screens.** D111(c) put it at the bottom of
 `AudiencePanel`; the bundle draws it in a two-column grid BESIDE the
 Reservasjonsliste (V2:2595–2621), which could not be built until that card
