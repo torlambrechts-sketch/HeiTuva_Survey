@@ -7,6 +7,7 @@ import type { Cadence, CustomUnit } from '@/lib/send/registry'
 import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { SendScreen } from './SendScreen'
+import { effectiveK } from '@/lib/questions/threshold-tier'
 
 /** Canonical UUID shape; anything else cannot name a survey. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -95,7 +96,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   const t = await getTranslations('send')
   const tDuty = await getTranslations('duty')
   const attributed = survey.respondent_kind === 'organisation'
-  const k = attributed ? 0 : Math.max(survey.k_threshold, 3)
+  const k = effectiveK(survey.k_threshold, attributed ? 'organisation' : 'person')
   let lockedReason: string | null = null
   if (survey.template_pack_key) {
     const { data: pack } = await supabase

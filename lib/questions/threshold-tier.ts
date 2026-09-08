@@ -38,6 +38,31 @@ export const THRESHOLD_FLOOR = 2
 /** Below this, an anonymous answer carries a caveat (Q17). */
 export const THRESHOLD_CAVEAT_BELOW = 5
 
+/**
+ * `app.k_for`, in TypeScript — the ONE place the application computes the gate.
+ *
+ * Four screens carried `Math.max(k_threshold, 3)` inline, and when Q91 moved
+ * the floor to 2 all four stayed at 3 along with the database function they
+ * mirrored. That is the fifth instance of one-function-many-callers in this
+ * project and the first on the security kernel; the previous four are named in
+ * `lib/questions/pack.ts`.
+ *
+ * NO FLOOR HERE EITHER, for the reason `M:0057` gives: the CHECK guarantees
+ * `k_threshold >= 2` for every person survey, so a clamp is a second copy of a
+ * bound the database already holds. The organisation branch returns 0 — the
+ * existence value meaning NO THRESHOLD APPLIES (Q17/Q47), not a low one.
+ *
+ * This mirrors the database rather than replacing it. Every RESULT still comes
+ * from a SECURITY DEFINER RPC that calls `app.k_for` itself; this is only for
+ * the screens that need to SAY the number.
+ */
+export function effectiveK(
+  kThreshold: number,
+  respondentKind: 'person' | 'organisation',
+): number {
+  return respondentKind === 'organisation' ? 0 : kThreshold
+}
+
 export type ThresholdTier = 'two' | 'low' | 'none'
 
 /**

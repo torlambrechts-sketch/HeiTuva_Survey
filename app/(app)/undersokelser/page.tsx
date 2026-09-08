@@ -18,6 +18,7 @@ import { hasScheduleStatus, scheduleStatus } from '@/lib/schedules/status'
 import { CADENCE_KEY } from '@/lib/send/registry'
 import { SharePanel, type ShareCandidate } from './SharePanel'
 import { BlankSurveyButton } from './BlankSurveyButton'
+import { effectiveK } from '@/lib/questions/threshold-tier'
 
 type Search = { filter?: string; sok?: string; sorter?: string; del?: string }
 
@@ -217,7 +218,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
                 desc:
                   shareFor.respondentKind === 'organisation'
                     ? t('scopeLeadDescAttributed')
-                    : t('scopeLeadDesc', { k: Math.max(shareFor.kThreshold, 3) }),
+                    : t('scopeLeadDesc', { k: effectiveK(shareFor.kThreshold, 'person') }),
               },
               alle_ansatte: { label: t('scopeAllLabel'), desc: t('scopeAllDesc') },
             },

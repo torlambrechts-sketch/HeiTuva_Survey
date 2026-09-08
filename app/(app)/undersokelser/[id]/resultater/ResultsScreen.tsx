@@ -27,7 +27,7 @@ import { AttributedTable } from './AttributedTable'
 import { RoundsPanel } from './RoundsPanel'
 import { SurveyPicker } from './SurveyPicker'
 import { ShareThemes } from './ShareThemes'
-import { thresholdTier } from '@/lib/questions/threshold-tier'
+import { effectiveK, thresholdTier } from '@/lib/questions/threshold-tier'
 
 type Question = { id: string; type: string; text: string; config: Record<string, unknown> }
 type QuoteSet = { n: number; theme: string | null; quotes: { text: string }[] }
@@ -99,7 +99,7 @@ export async function ResultsScreen({
   // applies in the database. Every "for få svar" line below says which number
   // that is; fixed copy would promise five on a survey gated at three.
   const attributed = respondentKind === 'organisation'
-  const k = attributed ? 0 : Math.max(kThreshold, 3)
+  const k = effectiveK(kThreshold, attributed ? 'organisation' : 'person')
   const kWord = numberWord(k, locale)
   const gatedText = t('insufficient', { kWord })
   const gatedTitle = t('insufficientTitle', { k })

@@ -188,6 +188,71 @@ describe('(Q17 #2, floor moved by Q91) the floor is 2 for natural persons', () =
   })
 })
 
+// 2b. DECISIONS Q91, THE HALF V2-2 DECIDED AND DID NOT IMPLEMENT.
+//
+// Q91 moved the floor 3 -> 2 in the CHECK and left `app.k_for` — the GATE every
+// aggregate path routes through — at `greatest(s.k_threshold, 3)`. So 2 was
+// writable, audited, and warned about in copy the decision prescribed word for
+// word, while the database withheld until 3.
+//
+// THE SUITE COULD NOT SEE IT because every k=2 assertion in the repository was
+// about the STORED COLUMN or about WHO MAY WRITE IT. Nothing asked what the gate
+// RETURNS. These do, and the last one asks it over the SET rather than over a
+// row somebody picked (standing question 3).
+describe('(Q91) the GATE honours the floor, not just the CHECK', () => {
+  it('returns the survey’s own threshold at 2 — not a floor of its own', async () => {
+    const s = await insert(ctx.a, 'surveys', {
+      org_id: ctx.org.id, title: uniq('Gate ved to'), respondent_kind: 'person', k_threshold: 2,
+    })
+    const [row] = psql(`select app.k_for('${s.id}'::uuid)::text`)
+    expect(row?.[0], 'app.k_for must return 2, not 3').toBe('2')
+  })
+
+  it('reveals a two-person cell and withholds a one-person cell', async () => {
+    // The end-to-end half. The assertion above proves the number; this proves
+    // the number is the one the RPC applies — the two are different claims, and
+    // V2-2 shipped a product where they disagreed.
+    type Agg = { questions?: { question_id: string; insufficient_data?: boolean }[] }
+    const cell = (d: Agg | null, q: string) => d?.questions?.find((c) => c.question_id === q)
+
+    const s = await personSurveyWithResponses('Gate to svar', 1)
+    await ctx.a.from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id)
+
+    const one = (await ctx.adminU.client.rpc('aggregate_results', { p_survey: s.survey.id })).data as Agg | null
+    expect(cell(one, s.q.id)?.insufficient_data, 'one answer stays gated at threshold 2').toBe(true)
+
+    const raw = uniq('second')
+    await insert(ctx.a, 'survey_invitations', {
+      round_id: s.round.id, email: `${raw}@example.test`,
+      token_hash: hashToken(raw), group_id: ctx.group.id, channel: 'email',
+    })
+    await ctx.an.rpc('submit_response', { p_token: raw, p_lang: 'no', p_answers: { [s.q.id]: { value: 4 } } })
+
+    const two = (await ctx.adminU.client.rpc('aggregate_results', { p_survey: s.survey.id })).data as Agg | null
+    expect(cell(two, s.q.id)?.insufficient_data, 'two answers must reveal the cell at threshold 2').toBeFalsy()
+  })
+
+  it('asserts over the SET: no person survey is gated above its own threshold', async () => {
+    // A floor reintroduced anywhere — in app.k_for, in a trigger, in a later
+    // migration — fails here without anyone remembering to look. A test on one
+    // survey at 2 would pass against `greatest(k, 2)`, which is the same defect
+    // with a fresher number.
+    const rows = psql(
+      `select count(*)::text from public.surveys s
+        where s.respondent_kind = 'person' and app.k_for(s.id) <> s.k_threshold`,
+    )
+    expect(rows[0]?.[0], 'every person survey must be gated at exactly its own k_threshold').toBe('0')
+  })
+
+  it('the organisation branch is untouched — 0 is an existence value, not a floor', () => {
+    const [row] = psql(
+      `select count(*)::text from public.surveys s
+        where s.respondent_kind = 'organisation' and app.k_for(s.id) <> 0`,
+    )
+    expect(row?.[0], 'an organisation survey has no threshold at all (Q17/Q47)').toBe('0')
+  })
+})
+
 // 3. Terskel og respondenttype kan ikke endres etter første respons — trigger avviser.
 describe('(Q17 #3) the policy locks when the survey has been sent', () => {
   it('is editable while a draft and frozen once policy_locked is set', async () => {

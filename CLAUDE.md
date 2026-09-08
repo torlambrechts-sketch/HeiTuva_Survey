@@ -185,7 +185,7 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
 phase, not built. Two numbers carry forward and may only move up: **56 of 75 surfaces
-actively checked** by 5a3, and **38 files / 631 tests** in the census manifest.
+actively checked** by 5a3, and **38 files / 636 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**

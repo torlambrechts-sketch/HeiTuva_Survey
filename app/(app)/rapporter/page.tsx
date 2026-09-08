@@ -7,6 +7,7 @@ import { ReportsScreen } from './ReportsScreen'
 import { ReportEditor } from './ReportEditor'
 import type { DutyCardData } from './types'
 import type { ComposedDocument, EditorReport, QuotePick } from './editor-types'
+import { effectiveK } from '@/lib/questions/threshold-tier'
 
 /**
  * Rapporter — HeiTuva.dc.html:911-1330.
@@ -153,7 +154,7 @@ export default async function ReportsPage({
             responses: countBySurvey.get(s.id) ?? 0,
             // The same reading app.k_for gives: organisation respondents carry
             // no threshold; persons never below the floor.
-            k: s.respondent_kind === 'organisation' ? 0 : Math.max(s.k_threshold, 3),
+            k: effectiveK(s.k_threshold, s.respondent_kind === 'organisation' ? 'organisation' : 'person'),
             respondentKind: s.respondent_kind,
           })),
           orgName: viewer.orgName,

@@ -174,6 +174,24 @@ const TIER_HOME = 'lib/questions/threshold-tier.ts'
 const TIER_LITERAL =
   /\b(k|kThreshold|k_threshold|defaultK|threshold|kFor|orgFloor)\s*(?:<=|>=|<|>|===|!==|==|!=)\s*([1-9][0-9]*)\b|\b([1-9][0-9]*)\s*(?:<=|>=|<|>|===|!==|==|!=)\s*(k|kThreshold|k_threshold|defaultK|threshold|kFor|orgFloor)\b/
 
+/**
+ * A FLOOR APPLIED WITHOUT A COMPARISON OPERATOR — `Math.max(k, 3)`, `greatest(k, 3)`.
+ *
+ * ADDED BECAUSE THE FIRST VERSION OF THIS SWEEP REPORTED CLEAN OVER FIVE LIVE
+ * SITES, INCLUDING THE ONE IT WAS WRITTEN TO POLICE. `TIER_LITERAL` requires a
+ * comparison operator; `Math.max(kThreshold, 3)` has none, so four TypeScript
+ * mirrors of the pre-Q91 floor and `app.k_for`'s own `greatest(s.k_threshold, 3)`
+ * all sat under a verdict reading «one boundary, asked by every surface, and it
+ * agrees with the database».
+ *
+ * That is this project's named failure exactly — THE THING THAT REPORTS GREEN IS
+ * NOT THE THING UNDER TEST — committed by the check built to prevent it, one day
+ * after it was built. A property expressed as one syntax is a syntax list, not a
+ * property: clamping and comparing are the same act written two ways.
+ */
+const FLOOR_MIRROR =
+  /(?:Math\.max|greatest)\s*\(\s*[^),]*\b(k|kThreshold|k_threshold|defaultK|threshold)\b[^),]*,\s*([1-9][0-9]*)\s*\)/i
+
 function sourceFiles(): string[] {
   const out: string[] = []
   const walk = (dir: string) => {
@@ -216,14 +234,16 @@ for (const file of sourceFiles()) {
   const code = stripComments(raw).split('\n')
   const shown = raw.split('\n')
   code.forEach((text, i) => {
-    if (TIER_LITERAL.test(text)) tierHits.push({ file, line: i + 1, text: shown[i]!.trim() })
+    if (TIER_LITERAL.test(text) || FLOOR_MIRROR.test(text))
+      tierHits.push({ file, line: i + 1, text: shown[i]!.trim() })
   })
 }
 
 console.log('\n== § 2  TIER DERIVATION — surfaces deciding a tier by literal\n')
 console.log(`  ${sourceFiles().length} source file(s) walked under app/, lib/, components/`)
 console.log(`  the boundary lives in ${TIER_HOME}; comparisons against 0 are existence`)
-console.log('  checks (app.k_for returns 0 for an organisation survey) and are not tiers.\n')
+console.log('  checks (app.k_for returns 0 for an organisation survey) and are not tiers.')
+console.log('  BOTH SHAPES are caught: a comparison (k < 5) and a clamp (Math.max(k, 3)).\n')
 if (tierHits.length === 0) {
   console.log('  CLEAN — every surface asks thresholdTier(); none carries its own boundary.')
 } else {
@@ -249,10 +269,34 @@ console.log(`  surveys_k_threshold_floor : >= ${Number.isFinite(dbFloor) ? dbFlo
 console.log(`  THRESHOLD_FLOOR           : ${Number.isFinite(tsFloor) ? tsFloor : '(not found)'}`)
 console.log(`  ${floorsAgree ? 'agree' : 'DISAGREE — the copy and the constraint promise different floors'}`)
 
-if (tierHits.length > 0 || !floorsAgree) {
+/* ── § 2c — THE GATE ITSELF ────────────────────────────────────────────────
+ *
+ * `app.k_for` is the function every aggregate path routes through, and it
+ * carried `greatest(s.k_threshold, 3)` — Q17's floor — for a full phase after
+ * Q91 moved that floor to 2. The CHECK said 2, the copy warned about 2, and the
+ * gate applied 3: a threshold a customer could set, that was audited and
+ * warned about, and that the database ignored.
+ *
+ * So the floor must not live in `app.k_for` AT ALL. The CHECK guarantees
+ * `k_threshold >= 2` for every person survey, which makes a clamp inside the
+ * gate a second copy of a bound that has now gone stale once. The organisation
+ * branch keeps its 0 — that is the existence value, not a floor.
+ */
+const kForBody = psql(
+  `select p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname = 'k_for'`,
+)[0]?.[0] ?? ''
+const gateClamps = FLOOR_MIRROR.test(kForBody)
+
+console.log('\n== § 2c  THE GATE CARRIES NO FLOOR OF ITS OWN\n')
+console.log(`  app.k_for ${gateClamps ? 'CLAMPS — it carries a floor the CHECK already guarantees' : 'reads the column; the CHECK is the only floor'}`)
+if (gateClamps) console.log(`      ${kForBody.replace(/\s+/g, ' ').trim().slice(0, 160)}`)
+
+if (tierHits.length > 0 || !floorsAgree || gateClamps) {
   console.log(
     `\nVERDICT: ${tierHits.length} surface(s) derive a tier by literal; the floor constant ` +
-      `${floorsAgree ? 'agrees with' : 'DISAGREES WITH'} the catalogue.\n` +
+      `${floorsAgree ? 'agrees with' : 'DISAGREES WITH'} the catalogue; the gate ` +
+      `${gateClamps ? 'CARRIES ITS OWN FLOOR' : 'carries no floor'}.\n` +
       '  A second copy of the boundary is the defect Q91 produced threshold-tier.ts to end.\n',
   )
   process.exit(1)
