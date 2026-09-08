@@ -55,6 +55,31 @@ THE LINE IT DOES IT ON.** Both instances were caught by someone going and readin
 the artefact; neither was caught by review.
 
 
+**WHEN BOTH OPTIONS IN A TWO-OPTION CHOICE PINCH, NAME THE SHARED ASSUMPTION
+BEFORE PICKING** (added 2026-09-08, Tor, after Q92's neighbour).
+
+The instance: the plan offered `hasThresholdWarn` as «a fourth CALLER of
+`policy-warnings.ts`, not a fourth COPY». Both were wrong. The first would have
+bent `policyWarnings` around a caller it was not built for — it takes a whole
+`PolicyState` plus questions, rules and a copy callback, which an audience badge
+cannot supply. The second is this project's named defect shape. **The unwritten
+assumption both shared was that the unit of reuse is the FUNCTION.** It is not;
+it is the PREDICATE. Naming that dissolved the choice — `belowThreshold()` moved
+out, and `policyWarnings` rule 1 became its first caller.
+
+**The general form, because a two-option question is how most of these arrive:**
+a choice where every option is uncomfortable is usually a choice built on a
+premise nobody stated. The move is not to pick the least bad one; it is to write
+down what both options assume and check whether that is true. Q92 is the same
+shape one level up — «membership or rule» shared the assumption that STORAGE
+FORM was what mattered, and the answer was that a person counting in more than
+one cell is.
+
+This applies to the questioner as much as the answerer. **A batch draft that
+offers two options should say what they have in common**, so the reader can
+reject the frame rather than only the options.
+
+
 **THIRD INSTANCE, 2026-09-07, and it is about the REGISTER rather than about
 citations — which is why it sits here and not in a phase report.** Asked to
 correct the DPA clause, I reported that Tor's Q55 replacement wording was «what

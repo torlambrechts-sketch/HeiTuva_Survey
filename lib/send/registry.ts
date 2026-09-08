@@ -159,6 +159,15 @@ export const SYNC_SOURCE_FLAGS = {
  * the name test and still is not text, and that is exactly the file a confused
  * user produces. Every OOXML file is a ZIP, so the first four bytes are the
  * honest question: `PK\x03\x04`.
+ *
+ * **DO NOT ALSO REJECT A UTF-8 BOM (`EF BB BF`), AND THE REASON IS THE WHOLE
+ * POINT OF THIS FUNCTION.** Hardening this looks like it should widen — a BOM
+ * is a binary-looking prefix on a file claiming to be text, and rejecting it is
+ * the obvious next step. **Excel writes that BOM when it saves a CSV.** So the
+ * widened check would refuse precisely the file the refusal message tells the
+ * user to produce, and the user would be told to do the thing they had just
+ * done. `tests/unit/import.test.ts` pins the BOM case for that reason; if it
+ * ever looks like an oversight, it is not.
  */
 export function looksLikeXlsx(head: Uint8Array): boolean {
   return head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04

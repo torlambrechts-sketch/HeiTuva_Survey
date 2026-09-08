@@ -20,6 +20,14 @@ disagree, `DECISIONS.md` wins.
 
 ---
 
+**WHEN A DRAFT OFFERS TWO OPTIONS, SAY WHAT THEY HAVE IN COMMON.** A choice
+where every option pinches is usually built on a premise nobody stated, and the
+reader can only reject a frame that is written down. Two instances in Batch C+D
+alone: `hasThresholdWarn` as «fourth caller or fourth copy» (both assumed the
+unit of reuse is the function; it is the predicate), and Q92 as «membership or
+rule» (both assumed storage form is what leaks; a person counting in more than
+one cell is). See `DECISIONS.md`'s header.
+
 ## The batch order
 
 One batch per phase, taken **before** the phase starts.
