@@ -29,6 +29,7 @@ One batch per phase, taken **before** the phase starts.
 | **A** | V2-0 | Q52●, Q53, Q54, Q55●, Q56 | 2 |
 | **B** | V2-1 | Q57●, Q58●, Q59● | 3 |
 | **C** | ~~V2-2~~ → **V2-3**, sent with D | Q60●, Q61 | 1 |
+| **C+D** | V2-3 | **sent 2026-09-08** — see `05-batches.md`. Q62–Q65 amended by the groundwork; **Q92–Q95 added** | 4 |
 | **D** | V2-3 | Q62, Q63●, Q64, Q65●, Q66●, Q67● | 4 |
 | **E** | V2-4 | Q68, Q69●, Q70, Q71 | 1 |
 | **F** | V2-5 | **Q72●●**, Q73● | 2 |
