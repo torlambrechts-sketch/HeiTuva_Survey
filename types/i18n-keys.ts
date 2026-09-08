@@ -1092,6 +1092,7 @@ export type MessageKey =
   | 'results.thresholdLine'
   | 'results.thresholdLineAttributed'
   | 'results.thresholdLineLow'
+  | 'results.thresholdLineTwo'
   | 'results.title'
   | 'results.trendDelta'
   | 'results.trendNone'

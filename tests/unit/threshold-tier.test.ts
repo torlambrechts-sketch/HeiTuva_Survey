@@ -103,6 +103,12 @@ describe('the «two» copy states the arithmetic, not recognisability', () => {
     (no as never as Record<string, Record<string, string>>).builder!.policyTwoText!,
     (no as never as Record<string, Record<string, string>>).respondent!.promiseAnonymousTwo!,
     (no as never as Record<string, Record<string, string>>).respondent!.promiseChooseTwo!,
+    // The fourth surface, added after the catalogue sweep found it. The Results
+    // screen carried its own `k < 5` and therefore had no «two» tier at all: at
+    // k=2 it rendered `thresholdLineLow`, «små grupper kan være
+    // gjenkjennelige». Same defect as the respondent promise, different screen,
+    // and it survived the phase that fixed the promise.
+    (no as never as Record<string, Record<string, string>>).results!.thresholdLineTwo!,
   ]
 
   it('every «two» string says the other respondent can WORK IT OUT', () => {
@@ -118,6 +124,13 @@ describe('the «two» copy states the arithmetic, not recognisability', () => {
       s.slice(0, 40),
       false,
     ])
+  })
+
+  it('every «two» string exists — a missing key would pass both checks above', () => {
+    // `undefined` matches neither regex, so a surface that never got its «two»
+    // copy would slip through the two assertions above in silence. That is how
+    // the Results line went unnoticed for a phase.
+    for (const s of strings) expect(typeof s).toBe('string')
   })
 
   it('the «low» tier still uses it, so the two tiers are actually different copy', () => {

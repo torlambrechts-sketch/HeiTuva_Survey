@@ -27,6 +27,7 @@ import { AttributedTable } from './AttributedTable'
 import { RoundsPanel } from './RoundsPanel'
 import { SurveyPicker } from './SurveyPicker'
 import { ShareThemes } from './ShareThemes'
+import { thresholdTier } from '@/lib/questions/threshold-tier'
 
 type Question = { id: string; type: string; text: string; config: Record<string, unknown> }
 type QuoteSet = { n: number; theme: string | null; quotes: { text: string }[] }
@@ -278,11 +279,20 @@ export async function ResultsScreen({
           <h1 className="font-display text-[26px] font-medium">{t('title')}</h1>
           <p className="mt-[3px] text-[12.5px] text-mut">{scopeLabel}</p>
           <p className="mt-[3px] text-[12.5px] text-mut">
+            {/* DECISIONS Q91 — the tier comes from `thresholdTier`, not from a
+                comparison here. This line carried its own `k < 5` until V2-2's
+                catalogue sweep derived the set of surfaces that decide a tier
+                and found it: at k=2 the screen said «små grupper kan være
+                gjenkjennelige», the softer wording Q91 rejected, for the same
+                reason the respondent promise did — a correct comparison in a
+                second copy of the boundary. */}
             {attributed
               ? t('thresholdLineAttributed')
-              : k < 5
-                ? t('thresholdLineLow', { k })
-                : t('thresholdLine', { k })}
+              : thresholdTier(k) === 'two'
+                ? t('thresholdLineTwo', { k })
+                : thresholdTier(k) === 'low'
+                  ? t('thresholdLineLow', { k })
+                  : t('thresholdLine', { k })}
           </p>
           {unavailable ? (
             <p role="alert" className="mt-[3px] text-[12.5px] text-mut">

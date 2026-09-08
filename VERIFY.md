@@ -234,6 +234,24 @@ Output in this exact structure, nothing else:
    on this code has not had its pass. So the report states, as evidence rather than as
    judgement: which gate the chain exited at, and which gates were therefore never
    executed. One line, written when it happens, so the next reading is a fact.
+
+   **EVERY GATE IS NAMED WITH ITS STATE: RAN GREEN, RAN RED, OR DID NOT RUN WITH THE
+   REASON. READY FOR REVIEW IS NOT AVAILABLE WHILE ANY GATE STANDS AS DID-NOT-RUN.**
+
+   Added after V2-2, from an instance where every part of the apparatus worked and the
+   report format had nowhere to put what it said. `verify:visual` refuses to start when a
+   browser is missing — deliberately, because a missing WebKit would otherwise produce a
+   dozen lookalike screenshot failures that read like visual regressions. It said so, once,
+   correctly. **V2-0 and V2-1 both reported READY FOR REVIEW anyway**, and the baseline
+   that gate would have caught had been stale since V1-5: V2-0 replaced the header's
+   avatar button and never regenerated `veiviser-formal`. What made it visible was
+   installing the browsers in V2-2, not reading either report.
+
+   A dependency guard that reports honestly and a report that has no field for its answer
+   produce a green phase over an unrun gate. So the field is mandatory: name all of them,
+   every time, including the ones that passed. **This is the same rule as «no phase closes
+   while main's CI is red», one layer in** — an unrun check and a red check are the same
+   debt, and only one of them announces itself.
 2. Evidence table: claim | gate | evidence (command output excerpt, file:line, or
    screenshot path).
 3. DEFECTS: numbered, each with severity (blocker/major/minor), location, and proposed fix.

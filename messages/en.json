@@ -565,6 +565,7 @@
     "insufficientTitle": "Shown from {k} answers. Now: fewer.",
     "thresholdLine": "Results from {k} answers or more",
     "thresholdLineLow": "Results from {k} answers or more — small groups may be identifiable.",
+    "thresholdLineTwo": "Results from {k} answers or more — at a threshold of {k}, whoever answers can work out what the other person answered.",
     "thresholdLineAttributed": "Attributed answers — one row per organisation, no threshold",
     "attribTitle": "Answers by organisation",
     "attribCount": "{answered} of {total} organisations have answered · {reminded} reminded",

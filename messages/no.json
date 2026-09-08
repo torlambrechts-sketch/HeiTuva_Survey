@@ -565,6 +565,7 @@
     "insufficientTitle": "Vises fra {k} svar. Nå: færre.",
     "thresholdLine": "Resultater fra {k} svar eller flere",
     "thresholdLineLow": "Resultater fra {k} svar eller flere — små grupper kan være gjenkjennelige.",
+    "thresholdLineTwo": "Resultater fra {k} svar eller flere — med terskel {k} kan den som svarer regne seg fram til hva den andre svarte.",
     "thresholdLineAttributed": "Attribuerte svar — én rad per virksomhet, ingen terskel",
     "attribTitle": "Svar per virksomhet",
     "attribCount": "{answered} av {total} virksomheter har svart · {reminded} påminnet",

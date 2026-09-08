@@ -12,6 +12,34 @@ import { DEMO_SHARE_TOKEN } from './db/personas'
  * `setup` runs after navigation and before the capture. Keep it to driving the
  * UI or seeding via the harness — never reach past the app to fake a state the
  * app cannot actually produce.
+ *
+ * ── BEFORE YOU EDIT A STATE THAT WRITES, READ THIS ──────────────────────────
+ *
+ * V2-2 fixed one leak here three times, and the first two fixes each MOVED it
+ * somewhere more visible instead of closing it:
+ *
+ *   1. `admin-sprak/egen-tekst` edited «the first translation form on the
+ *      page», whichever key that was, and PERSISTED an override on it. Adding
+ *      27 `admin.*` messages moved that first form onto `admin.accentFersken`,
+ *      and the fourth accent swatch on Profil read «Vår egen formulering».
+ *   2. Fix: pin the key. Pinned to `nav.insight` — a label in the header of
+ *      EVERY screen — so the override now corrupted every screenshot in the
+ *      suite, and `verify:visual` caught it as a diff in the new-survey wizard,
+ *      a page that state has nothing to do with.
+ *   3. Fix: `teardown`, below. The state undoes its own write.
+ *
+ * **A FIX THAT RELOCATES A LEAK INSTEAD OF CLOSING IT IS NOT A FIX**, and the
+ * tell is that each step was locally reasonable — pinning an arbitrary target
+ * IS better than leaving it arbitrary. What made it worse was that nothing in
+ * the fix addressed the actual property, which is that the state WROTE and
+ * nothing unwrote it. Blast radius grew from one inert key, to one product
+ * string, to every screenshot in the suite, while the root cause sat still.
+ *
+ * So the question to ask of any state you add or edit here is not «is this
+ * target safe» but «does this state write, and if so what undoes it». A
+ * teardown failure is a BLOCKER in both harnesses rather than a warning, for
+ * the same reason: a silently-skipped teardown is exactly the condition the
+ * teardown exists to prevent, and it would leave no trace at all.
  */
 export type RouteState = {
   name: string
