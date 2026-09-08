@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { policyWarnings, type PolicyState } from '../../lib/questions/policy-warnings'
+import { belowThreshold, policyWarnings, type PolicyState } from '../../lib/questions/policy-warnings'
 import type { QualityRule } from '../../lib/questions/quality'
 
 /**
@@ -111,5 +111,67 @@ describe('questions about a person on an organisation survey', () => {
         belowText,
       ),
     ).toHaveLength(0)
+  })
+})
+
+describe('(Q92/Q95) belowThreshold — one predicate, and every surface asks it', () => {
+  /**
+   * The v2 bundle writes `count < 5` inline on FOUR rendered surfaces:
+   * `hasThresholdWarn` (V2:4988), `mgGroups.small` (V2:5048), `mgSegments.small`
+   * (V2:5052) and the Send audience picker (V2:6543-6544 — the one
+   * `00-diff § B.27` and `02-conflicts § A4` both missed, and the only one on a
+   * screen a user reaches today).
+   *
+   * Every one of those is wrong twice: 5 has not been the threshold since Q17
+   * made it per-survey, and an organisation survey has no threshold at all.
+   * These assert the PREDICATE rather than any caller's output, because a test
+   * per caller passes while the callers disagree — which is exactly how the
+   * respondent promise reached k=2 with the wrong tier in V2-2.
+   */
+  const p = {
+    respondentKind: 'person' as const,
+    anonymity: 'anonymous' as const,
+  }
+
+  it('fires below the survey’s own k, not below 5', () => {
+    expect(belowThreshold({ count: 6, k: 8, ...p })).toBe(true)
+    expect(belowThreshold({ count: 6, k: 5, ...p })).toBe(false)
+  })
+
+  it('fires at k−1 and not at k — both sides of the boundary', () => {
+    expect(belowThreshold({ count: 2, k: 3, ...p })).toBe(true)
+    expect(belowThreshold({ count: 3, k: 3, ...p })).toBe(false)
+  })
+
+  it('is silent at Q91’s new floor when the audience meets it', () => {
+    expect(belowThreshold({ count: 2, k: 2, ...p })).toBe(false)
+    expect(belowThreshold({ count: 1, k: 2, ...p })).toBe(true)
+  })
+
+  it('NEVER fires for an organisation survey, whatever k says', () => {
+    // `app.k_for` returns 0 for an organisation (Q17/Q47), and the exemption is
+    // checked BEFORE the comparison — otherwise `count < 0` would read as
+    // "never below" by accident rather than by rule.
+    expect(belowThreshold({ count: 1, k: 0, respondentKind: 'organisation', anonymity: 'named' })).toBe(false)
+    expect(belowThreshold({ count: 1, k: 8, respondentKind: 'organisation', anonymity: 'anonymous' })).toBe(false)
+  })
+
+  it('never fires for a named survey — there is no threshold to clear', () => {
+    expect(belowThreshold({ count: 1, k: 8, respondentKind: 'person', anonymity: 'named' })).toBe(false)
+  })
+
+  it('is silent on an empty audience — an unfinished draft, not a contradiction', () => {
+    expect(belowThreshold({ count: 0, k: 5, ...p })).toBe(false)
+  })
+
+  it('BINDS THE EXISTING CALLER: policyWarnings rule 1 is this predicate', () => {
+    // The point of extracting it. If rule 1 ever grows its own comparison
+    // again, these two disagree and this fails — the fifth instance of
+    // one-function-many-callers caught before the copy exists rather than after.
+    for (const [target, k] of [[4, 5], [5, 5], [2, 3], [0, 5], [9, 10]] as const) {
+      const viaWarnings = run({ target, kThreshold: k }).some((w) => w.key === 'target_below_threshold')
+      const viaPredicate = belowThreshold({ count: target, k, ...p })
+      expect([target, k, viaWarnings]).toEqual([target, k, viaPredicate])
+    }
   })
 })

@@ -25,7 +25,7 @@
   "tests/unit/i18n-overlay.test.ts": 5,
   "tests/unit/import.test.ts": 20,
   "tests/unit/pack-questions.test.ts": 5,
-  "tests/unit/policy-warnings.test.ts": 10,
+  "tests/unit/policy-warnings.test.ts": 17,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/question-roles.test.ts": 12,
   "tests/unit/refusal-copy.test.ts": 11,

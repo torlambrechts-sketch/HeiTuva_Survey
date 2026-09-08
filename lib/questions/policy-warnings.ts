@@ -44,6 +44,49 @@ function toJsRegex(pattern: string): RegExp | null {
   }
 }
 
+/**
+ * **Is this audience too small to ever produce a result?**
+ *
+ * DECISIONS Q92/Q95, V2-3a. The v2 bundle writes this comparison inline on FOUR
+ * rendered surfaces — `hasThresholdWarn` (V2:4988), `mgGroups.small` (V2:5048),
+ * `mgSegments.small` (V2:5052) and the Send audience picker (V2:6543-6544, the
+ * one `00-diff § B.27` and `02-conflicts § A4` both missed) — each as
+ * `count < 5`. Every one of those is wrong twice over: 5 is not the threshold
+ * (Q17 made it per-survey), and an organisation survey has no threshold at all.
+ *
+ * **This is the predicate, extracted rather than reshaped.** `policyWarnings`
+ * below is rule 1's home and takes a whole `PolicyState` plus questions, rules
+ * and a copy callback — a signature an audience badge cannot satisfy. Forcing
+ * it to would bend the function around a caller it was not built for; copying
+ * the comparison would make it the fifth instance of this project's defect
+ * shape. So the BOUNDARY moves into one function and both ask it, exactly as
+ * `lib/questions/threshold-tier.ts` did for the tier.
+ *
+ * `k` is the caller's to supply and must come from `app.k_for` or, where there
+ * is no survey in scope, the organisation's default — and there the LABEL says
+ * which (Q95: a badge reporting a number nobody can derive is the D110 shape in
+ * a UI).
+ */
+export function belowThreshold(input: {
+  /** People in the audience — a count of PEOPLE, which Q28 expressly permits. */
+  count: number
+  /** From `app.k_for`, or the organisation default when no survey is in scope. */
+  k: number
+  respondentKind: 'person' | 'organisation'
+  anonymity: 'anonymous' | 'named' | 'optional'
+}): boolean {
+  // An organisation survey is attributed and has no threshold (Q17/Q47), and a
+  // named survey has no threshold to clear. Both exemptions are BEFORE the
+  // comparison, so k is never consulted for them — `app.k_for` returns 0 for an
+  // organisation, and `0 > count` would otherwise read as "never below".
+  if (input.respondentKind === 'organisation') return false
+  if (input.anonymity === 'named') return false
+  // 0 is an unfinished draft — nobody has chosen recipients yet — not a
+  // contradiction. Every survey passes through it.
+  if (input.count <= 0) return false
+  return input.count < input.k
+}
+
 export function policyWarnings(
   policy: PolicyState,
   questions: { id: string; text: string }[],
@@ -59,10 +102,12 @@ export function policyWarnings(
   //    to clear, and target 0 means nobody has chosen recipients yet — that is
   //    an unfinished draft, not a contradiction.
   if (
-    policy.respondentKind === 'person' &&
-    policy.anonymity !== 'named' &&
-    policy.target > 0 &&
-    policy.target < policy.kThreshold
+    belowThreshold({
+      count: policy.target,
+      k: policy.kThreshold,
+      respondentKind: policy.respondentKind,
+      anonymity: policy.anonymity,
+    })
   ) {
     out.push({
       key: 'target_below_threshold',
