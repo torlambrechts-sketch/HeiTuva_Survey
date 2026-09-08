@@ -107,7 +107,14 @@ export function MembersPanel({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('mgMembersSearch')}
             aria-label={t('mgMembersSearch')}
-            className="box-border w-[200px] max-w-full rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13px] text-ink outline-none"
+            /* `touch-44-FIELD`, not `touch-44`: `::after` does not render on a
+               replaced element, so the overlay utility is inert on an <input>
+               and this one measured 43-44px. The field variant grows the box
+               with a transparent border and paints through `background-clip`,
+               so the control keeps the bundle's `padding:11px 14px` (V2:2577)
+               at every width — RESPONSIVE.md rule 2's whole point: the hit area
+               is about thumbs, the painted size is a token. */
+            className="touch-44-field [--field-pad-y:11px] box-border w-[200px] max-w-full rounded-[10px] border border-line bg-bg px-3.5 py-[11px] text-[13px] text-ink outline-none"
           />
         </div>
 

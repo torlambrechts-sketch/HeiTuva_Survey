@@ -243,7 +243,13 @@ matching org/survey/count. **V2-3a took the census 636 → 668 across 40 files**
 five and the shared-predicate seven) and 5a3 **56 of 75 → 57 of 77**: `segments`
 is a new RLS table that is CHECKED, and `segment_fields` is allowlisted with
 `use_cases`' reason and checked the same way. **The checked number moved up for
-the first time since V1-4.**
+the first time since V1-4.** **V2-3b took it 57 of 77 → 58 of 78** — `suppressions`
+is a new RLS table and it is CHECKED, not allowlisted, so the checked number moved
+up a second phase running; it reports PROVEN even on a bare reset, because the
+demo seed carries an objection. The census rose 668 → 691 across 42 files:
+`tests/db/suppressions.test.ts` (11), Q64's gap tests in
+`tests/db/audience-freeze.test.ts` (5) and Q61's mapping in
+`tests/unit/member-status.test.ts` (7).
 5a3 is unmoved by
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so

@@ -419,8 +419,15 @@ export async function ResultsScreen({
           if (!result) return null
           return (
             <section key={q.id} className={CARD}>
-              <div className="flex items-baseline justify-between gap-[14px]">
-                <h2 className="text-[15.5px] font-semibold">{q.text}</h2>
+              {/* `flex-wrap` — RESPONSIVE.md rule 1 and the sentence in global
+                  rule 7: remove the width constraint and let flex-wrap do the
+                  work. `shrink-0` STAYS, and is why the wrap is needed: the
+                  meta must not be squeezed into three lines beside a long
+                  question at desktop, so below `md` it takes its own line
+                  instead. Found at 320px, where «Vises ved minst fem svar»
+                  (153px, unshrinkable) pushed the page to 350. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
+                <h2 className="min-w-0 text-[15.5px] font-semibold">{q.text}</h2>
                 <span className="shrink-0 text-[13px] text-mut" title={isGated(result) ? gatedTitle : undefined}>
                   {questionMeta(q, result, quotes[q.id] ?? null)}
                 </span>
