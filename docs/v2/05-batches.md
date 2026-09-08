@@ -324,7 +324,16 @@ thought through in the bundle. Help copy corrected to match V2:2279 and logged.
 
 ---
 
-## Batch C+D — sent 2026-09-08, before V2-3 · **Q60, Q61, Q62, Q63, Q64, Q65, Q66, Q67 + four new**
+## Batch C+D — sent 2026-09-08 · **ANSWERED IN FULL, all twelve promoted to `DECISIONS.md`**
+
+**Q60, Q61, Q62, Q63, Q64, Q65, Q66, Q67, Q92, Q93, Q94, Q95.** Q92 came back larger than the
+question asked: the recommendation was right about storage form and wrong about what matters.
+**Storage form is not what leaks — a person counting in more than one cell is.** So the
+decision is that segments are a FILTER, never a breakdown axis, because **k does not compose**.
+Tor also split V2-3 (see `03-plan.md`), and the coupling argument for merging suppression into
+it was written out at his instruction and **withdrawn**.
+
+### The drafts as sent
 
 Sent together because suppression moved into V2-3 (Tor, 2026-09-08). Every draft below was
 re-checked against the repository by a 62-agent groundwork pass before sending; **nineteen

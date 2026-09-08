@@ -198,12 +198,11 @@ verification** is manual/DNS-record display only — no provider API).
 > phase (V2-1's §4 recommendation), and three threshold decisions — **Q58, Q90, Q91** —
 > arrived mid-phase and were taken here.
 >
-> **THE SCOPE BELOW — SUPPRESSION AND MEMBER STATE — WAS NOT DELIVERED, AND IT MOVES INTO
-> V2-3 rather than drifting** (Tor, 2026-09-08: a GDPR art. 21 obligation belongs ahead of a
-> screen, not behind one). The six negative tests stand exactly as written; they run in V2-3
-> beside Målgrupper's seven, because both decide the same thing — which addresses
-> `send_round` may resolve into invitations. **Batch C (Q60, Q61) therefore goes with Batch D.**
-> See `docs/v2/reports/V2-2.md § 5`.
+> **THE SCOPE BELOW — SUPPRESSION AND MEMBER STATE — WAS NOT DELIVERED. It is now its own
+> phase, `## V2-3b`, immediately after Målgrupper and ahead of V2-4** (Tor, 2026-09-08). It
+> was briefly folded into V2-3 on a coupling argument; **that argument was written out in
+> full at Tor's instruction and did not survive** — see V2-3's section. Batch C (Q60, Q61)
+> was sent with Batch D and both are promoted. See `docs/v2/reports/V2-2.md § 5`.
 
 Small, legally required (GDPR art. 21), overdue.
 
@@ -250,28 +249,67 @@ this.
 
 ---
 
-## V2-3 — Målgrupper, and suppression
+## V2-3 — Målgrupper: groups and segments
 
-**Groups and segments, plus the suppression list moved down from V2-2** (Tor, 2026-09-08).
+**SPLIT (Tor, 2026-09-08).** Målgrupper here; **suppression and member state are V2-3b**,
+immediately after this phase and ahead of V2-4. Thirteen negative tests plus schema plus UI
+will not close in one verification pass and one fix pass, **and that constraint is what has
+kept phases converging** — it is the size limit, not the test count.
+
 Populations are catalogue-blocked and carry retention (02-conflicts §B8).
 
-**WHY THE TWO ARE ONE PHASE.** They are the same code path seen twice. A suppression is an
-address `send_round` must not resolve into an invitation; a segment is a rule that decides
-which addresses it resolves at all. Building them apart means writing and testing the
-recipient-resolution path twice, and the two hardest tests in each — the segment freeze
-(Q64) and the re-import case — both hang off exactly that path.
+---
 
-**This makes V2-3 the largest phase in the series: thirteen negative tests, not seven.**
+### THE COUPLING ARGUMENT, WRITTEN OUT — AND IT DOES NOT SURVIVE
 
-**IT IS NOT SPLIT, AND THE SIGNAL TO SPLIT IS NOT THE COUNT** (Tor, 2026-09-08): thirteen
-negative tests in a phase whose subject is an art. 21 obligation is proportionate, and a split
-would put the obligation behind a screen. **If the phase does not close in one verification
-pass and one fix pass, THAT is the signal** — the two-pass rule is the size limit, not the
-test count. Should it fire, the cut is Målgrupper then suppression, with suppression still
-ahead of V2-4.
+I argued for one phase on coupling: *a suppression is an address `send_round` must not resolve
+into an invitation, a segment is a rule deciding which addresses it resolves at all, so
+building them apart writes and tests the recipient-resolution path twice.* Tor asked for it
+written down rather than asserted. Written down, against the function itself, **it fails.**
 
-**Batch C (Q60, Q61) is sent with Batch D**, since suppression scope and the member-status
-vocabulary are now decisions this phase needs.
+**What `send_round` actually does** (`M:0052:92-150`, the live definition): there is no single
+recipient sink. There are **two independent loops**, each with its own
+`insert into public.survey_invitations`:
+
+| Loop | Source | Insert |
+|---|---|---|
+| Named recipients | `p_recipients` jsonb, lowercased at `:94` | `:107` |
+| Whole groups | `p_group_ids` → `org_members` where `status='active'` | `:140` |
+
+**Where each piece of work lands:**
+- **Suppression is a FILTER at the inserts** — one predicate against `suppressions`, applied
+  in both loops.
+- **A segment is a SOURCE upstream** — under **Q92** it is a rule evaluated to a member set,
+  structurally the same shape as the group loop at `:127-140`. It adds a *third* loop.
+
+**They are orthogonal, not coupled.** A source and a sink-filter compose without either
+knowing about the other: whichever lands first, the second inherits it. Nothing is written
+twice, and no test is written twice — the two hardest tests I cited as shared sit on different
+paths entirely. The freeze (**Q64**) is a property of `survey_invitations` as a snapshot and
+suppression never touches it; the re-import case is a property of the import parser plus the
+suppression check, and segments never touch it. Even test 12 — «a suppressed address that is
+also a group member is excluded» — spans suppression and **groups**, which exist today, so it
+needs no segment in order to be written.
+
+**WHAT THE ARGUMENT WAS GESTURING AT, WHICH IS REAL AND HAS A BETTER FIX.** Two insertion
+points today, three once segments land: **every new recipient source is a place the
+suppression guard can be forgotten.** That is this project's named failure shape — the same
+one `threshold-policy.test.ts`'s vault-reader assertion exists for, where a new function
+reading the vault fails the check until somebody adds it deliberately.
+
+**And the fix for that is structural, not scheduling.** One phase would only mean one person
+held both in mind on one afternoon. What holds is: suppression enforced where a new source
+**cannot bypass it** — a trigger on `survey_invitations`, or a single `app.resolve_recipients`
+the loops must go through — plus a **catalogue-derived test enumerating the insertion points**
+that fails when an unguarded one appears. That is a design constraint on V2-3b, recorded here,
+and worth more than the merge would have been.
+
+**So: split, and the coupling argument is withdrawn.** It was plausible and it was wrong, and
+it dissolved the moment it was written against `M:0052` instead of from memory.
+
+*Noted rather than re-litigated: suppression is now provably independent of Målgrupper, so it
+could equally run first. The order below is Tor's.*
+
 
 **Scope**
 
@@ -292,16 +330,35 @@ vocabulary are now decisions this phase needs.
 `hasThresholdWarn`) sit inside one card, so seven rows never covered nine cards even before
 the three additions above.
 
-**Schema first.** `suppressions(org_id, email, reason, source, created_by, created_at)`,
-unique on `(org_id, lower(email))`, RLS and policies in the same migration. Status mapping per
-**Q61** — derive rather than duplicate. Then `groups` gains `kind ('gruppe'|'segment')`,
-`source`, `synced_at`, and for segments a **structured predicate** — jsonb `{field, op, value}` clauses over an allowlisted
-field set, never free text evaluated in SQL (**Q65**). A
-`round_audience_members(round_id, member_id, frozen_at)` materialisation. An
-`audience_events` log.
+**Schema first.** `groups` gains `kind ('gruppe'|'segment')`, `source`, `synced_at`, and for
+segments a **structured predicate** — jsonb `{field, op, value}` clauses over an allowlisted
+field set, never free text evaluated in SQL (**Q65**), with the rendered rule **generated from
+the predicate** so it translates and cannot drift from what is stored.
 
-**Negative tests, proven failing before implementation.** Seven from Målgrupper, then six
-carried down from V2-2's suppression scope — thirteen, and the two blockers are #3 and #9.
+**RESHAPED BY Q92, AND TWO PROPOSALS ARE WITHDRAWN.**
+- **`round_audience_members` is NOT built.** The freeze already holds: `survey_invitations` is
+  a per-round snapshot, and moving members after a send moves no denominator (measured). The
+  two narrow gaps **Q64** names are a nullable **`member_id` on `survey_invitations`** and a
+  deliberate decision on the `ON DELETE SET NULL` behaviour of the four columns referencing
+  `groups` — CLAUDE.md's immutability rule, fifth instance.
+- **`audience_events` is NOT a new table** unless `audit_events` proves unable to carry it.
+  That table is already append-only, org-scoped and shaped `action`/`target`/`meta`; its two
+  obstacles are that reads require administrator and inserts require
+  `actor_user_id = auth.uid()`, so a system-actor row cannot be written through a user
+  session. Decide that before adding a table.
+- **`responses.respondent_group_id` is not touched at all** (**Q92**): it stays scalar and
+  frozen at submission, because it is the breakdown unit the gate counts over.
+
+**The constraint Q92 puts on every aggregate this phase might add:** a segment is a **FILTER,
+never a breakdown axis**. No segment becomes a row in a heatmap or a column in a report beside
+groups — **k does not compose**, and two segments of five with an intersection of two disclose
+the two by subtraction. Any segment-scoped aggregate is a new k-gated surface: `app.k_for`,
+per cell, catalogue-derived, negative tests at **n=1 and n=2** under Q91's floor. And a rule is
+**not reproducible over time** — the same report run in March and June differs with no answer
+having changed; frozen snapshots cover published reports, a live dashboard does not.
+
+**Negative tests, proven failing before implementation.** Seven; **#3 is the blocker.** The
+six suppression tests moved to **V2-3b** with the split.
 
 1. A segment rule naming a field outside the allowlist → refused at write time.
 2. A rule containing SQL → stored as data and never executed; assert no `execute` of user
@@ -315,19 +372,6 @@ carried down from V2-2's suppression scope — thirteen, and the two blockers ar
    k=8, and **does not fire at all** for an organisation survey (`k_for` = 0).
 7. The mixed-population send guard is **not** built here and nothing pretends it is: a group
    with a null population cannot satisfy it.
-
-**Carried from V2-2 (GDPR art. 21), same recipient-resolution path:**
-
-8. `send_round` addresses a suppressed email → **the invitation row is not created**, and the
-   refusal is the database's.
-9. **Re-importing the same CSV re-adds a suppressed address → refused. BLOCKER.** This is the
-   failure mode that makes suppression theatre.
-10. A `leser` writes `suppressions` → refused.
-11. Cross-org: org A suppresses into org B → refused.
-12. A suppressed address that is also a group member is excluded from a group-targeted send —
-    **and this is the test that only exists because the two halves are one phase**: it spans a
-    segment's membership and the suppression list at once.
-13. Removing a suppression is an audited administrator action (`audit_events`).
 
 **Standing question 3 applies to test 6**: assert over the SET of sites that can violate the
 property, not the ones you picked. `policyWarnings` will then have four callers, and the
@@ -358,7 +402,7 @@ audience group, at pick time — so it is new work for an existing function, not
 | Send audience picker warning (V2:3072–3074) | **The fourth rendered site of the same rule**, missed by `00-diff.md § B.27` and `02-conflicts.md § A4`, both of which say «three». Data at V2:6543–6544 (`warn`, `hasWarn`). It is a chip inside an existing picker row — § Data tables, narrow rows keep the row |
 
 **Definition of done**
-- Thirteen negative tests pass; tests 3 and 9 are blockers.
+- Seven negative tests pass; test 3 is the blocker.
 - Census target **≥660 / 40**. 5a3 **≥60 of 77**.
   **RESTATED 2026-09-08, because the committed numbers gated nothing.** «≥630 / 38» was
   already satisfied before the phase opened — the manifest reads **636 / 38** — and «≥61 of
@@ -384,6 +428,83 @@ audience group, at pick time — so it is new work for an existing function, not
 
 **Not in it:** populations, the mixed-population send guard (**Q67**, lands with populations),
 retention per population (**Q66**), any sync that actually syncs.
+
+---
+
+---
+
+## V2-3b — Suppression and member state
+
+**GDPR art. 21, split out of V2-3 (Tor, 2026-09-08) and ahead of V2-4.** Not deferred and not
+behind a screen: it is the phase immediately after Målgrupper, and it could equally have run
+first — the coupling argument that put the two together is withdrawn in V2-3's own section.
+
+**Scope**
+
+| Surface | Class | Work |
+|---|---|---|
+| Suppression list («Reservasjonsliste») | NOT BUILT (B.16) | `SUPPRESSED` V2:4325; card V2:2641–2657; blocks import V2:4971, badges preview V2:4982, filters recipients V2:4993; reasons V2:5014 |
+| Member statuses Aktiv/Bounce/Reservert/Ny | PARTIAL (B.17) | V2:4327–4335 vs `org_members.status` `check (… 'invited','active','inactive')` (**`M:0002:46`**, not `:43`) |
+| Medlemmer card | NOT BUILT | V2:2570–2608 — the per-member list the status vocabulary renders in |
+
+**Schema first.** `suppressions(org_id, email, reason, source, created_by, created_at)`,
+unique on `(org_id, lower(email))`, RLS + policies in the same migration. **Q60**: org-wide.
+**Q61**: statuses are DERIVED — `invited → Ny`, `active → Aktiv`, `inactive → (hidden)`,
+`Bounce` from the latest invitation's `bounced_at`, `Reservert` from `suppressions`. **No new
+status column**, because a second column carrying a derived fact disagrees with its source the
+first time one of them is written alone.
+
+**THE STRUCTURAL CONSTRAINT, carried from V2-3's withdrawn coupling argument.**
+`send_round` has **two** insertion points into `survey_invitations` today (`M:0052:107` and
+`:140`) and will have three once segments land. **Every new recipient source is a place the
+suppression guard can be forgotten**, which is this project's named failure shape. So
+suppression is enforced where a new source **cannot bypass it** — a trigger on
+`survey_invitations`, or a single `app.resolve_recipients` both loops must go through — and
+**not** as a predicate copied into each loop. Test 7 below is what makes that hold.
+
+**Negative tests, proven failing before implementation**
+1. `send_round` addresses a suppressed email → **the invitation row is not created**, and the
+   refusal is the database's.
+2. **Re-importing the same CSV re-adds a suppressed address → refused. BLOCKER.** This is the
+   failure mode that makes suppression theatre.
+3. A `leser` writes `suppressions` → refused.
+4. Cross-org: org A suppresses into org B → refused.
+5. A suppressed address that is also a group member is excluded from a group-targeted send.
+   *(Needs groups only — they exist today. It was never a reason to merge the phases.)*
+6. Removing a suppression is an audited administrator action (`audit_events`).
+7. **BLOCKER, and the one the structural constraint exists for:** a catalogue-derived test
+   enumerating every `insert into public.survey_invitations` in `pg_proc` and asserting each
+   is covered by the guard. **It must fail when a fourth insertion point is added without
+   one** — the shape `threshold-policy.test.ts`'s vault-reader assertion already uses.
+
+**Standing question 1 applies to tests 3 and 4** (`tests/db/clients.ts`): what ELSE could
+refuse this first? `suppressions` will be org-scoped by RLS, so a cross-org write is refused
+by the tenancy root before anything suppression-specific runs — arrange the fixture so only
+the rule under test can produce the result, and assert on the VALUE not moving rather than on
+an error where RLS filters.
+
+**Standing question 4** (`tests/db/clients.ts`): a suppression fixture that survives into the
+next test silently changes another phase's recipient counts. `verify:roundtrip` was fixed in
+V1-6 for exactly this.
+
+**UI**
+
+| Screen | Pattern |
+|---|---|
+| Brukere (statuses) | § Data tables → **narrow rows keep the row** — RESPONSIVE.md names Brukere explicitly. Status is consequential and stays visible |
+| Reservasjonsliste | § Data tables → wide rows become cards |
+| Send preview badges | § Send screen |
+
+**Definition of done**
+- Seven negative tests pass; tests 2 and 7 are blockers.
+- Targets restated by measurement when the phase opens, not inherited (**D110**):
+  `npm run verify:policy | grep -c '^  ok '` and
+  `python3 -c "import json;d=json.load(open('tests/expected-counts.json'));print(len(d),sum(d.values()))"`.
+  The `suppressions` table adds one 5a3 surface.
+- Demo seed carries one suppressed address and one bounced member.
+
+**Not in it:** populations, per-population suppression scope (**Q60** defers it until
+populations exist), and anything about segments.
 
 ---
 

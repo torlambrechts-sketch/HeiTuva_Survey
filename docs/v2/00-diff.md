@@ -102,6 +102,32 @@ technical-measures clause — without touching either page's layout. CLAUDE.md a
 this line one level up ("this file wins on security, the bundle wins on visuals"); the table
 inherits it rather than narrowing it.
 
+### A BUNDLE IS A SOURCE WHEN IT STATES A RULE, NOT ONLY WHEN IT DRAWS A CONTROL
+
+**Added 2026-09-08 (Tor), on Q64.** The table above governs what a surface should LOOK like,
+and everything written under it so far treats the bundle as a drawing. It is also, in places,
+a **statement of behaviour** — prose in a mock that says what the system does — and in that
+mode it is a source like any other artefact.
+
+**The instance.** Q64 asked how a segment's membership behaves when a round is sent. The
+bundle answers it outright, in its own copy: `freezeNote` at **V2:5030** — «Medlemskapet
+fryses når undersøkelsen sendes. Da kan to runder ha ulike medlemmer.» **No v2 document cited
+it.** Three separate documents — `03-plan.md`, `01-briefs.md` and the Q64 draft in
+`04-decisions.md` — cited **V2:5033** instead, which is a string inside `auditRows`: the
+changelog's *echo* of the freeze, not the card that states it. The rule was sitting in the
+artefact, in the answer's own words, while the question was being drafted as open.
+
+**So the citation rule from `DECISIONS.md`'s header — a clause asserting what an artefact
+does must carry the line it does it on — applies to the bundle in this mode too**, and it
+cuts both ways: a phase may not assert what the bundle draws without a line, and it may not
+treat a question as open without having read what the bundle SAYS about it. The practical
+form: when a decision is about behaviour on a screen the bundle draws, grep the bundle's
+copy for the behaviour before drafting the question, not only its markup for the control.
+
+**This does not move governance.** A rule the bundle states is evidence about intent, weighed
+like any other; `DECISIONS.md` still outranks it, exactly as it outranks the bundle's wording.
+What changes is that the bundle must be *read* in that mode rather than only looked at.
+
 Written down because the alternative is that the next phase re-derives it, and it could
 just as easily re-derive it the other way — leaving a decision unapplied because a bundle
 "governs" the screen it lands on.
