@@ -506,3 +506,81 @@ to local byte for byte, so a suite green on local is green on this schema; and t
 invariants above were checked on prod directly. What remains unproven on prod is
 BEHAVIOUR under real RLS with real JWTs — cross-org isolation, leser refusals, token
 replay. **The clean way to get that is a disposable database, not production.**
+
+---
+
+## 2026-09-08 — `M:0059` applied to prod out of order, and fingerprinted
+
+**One migration, applied ahead of its phase closing, on Tor's instruction.** The trade was
+the reasoning, not the severity: `report_shares.group_id ON DELETE SET NULL` widens a share
+link's access when a group is deleted (see `M:0059`'s header), and every day it stood was a
+day an administrator could trigger it by tidying up.
+
+**Prod's head before: `20260908063553` (`k_for_honours_q91` = `M:0057`).** `M:0058`
+(segments) is deliberately NOT applied — it belongs to V2-3a and had not been asked for.
+`M:0059` is standalone: it touches `report_shares`, `survey_invitations`, `responses` and
+`org_members`, none of which `M:0058` creates. It is also idempotent throughout —
+`drop constraint if exists` + `add`, `add column if not exists`, `create index if not
+exists` — so a later `db push` re-applying it by filename is safe.
+
+**Prod's scale, measured rather than assumed, because the trade rests on it:**
+
+```
+orgs 1 · members 1 · groups 0 · surveys 4 · rounds 2 · invitations 2
+responses 1 · reports 0 · report_shares 0
+```
+
+**Two corrections to the premise the apply was authorised on, neither of which changes the
+decision.** It was put as «zero rounds sent and no share links»: there are **2 rounds, 2
+invitations and 1 response**. There are indeed **0 report_shares and 0 groups** — which
+makes the trade better than stated, not worse: with no groups, the FK changes cannot block
+anything and the widening is currently unreachable. Recorded because a premise that is
+right by luck is not a premise anyone can reuse.
+
+### The comparison, which is the evidence — the apply is not
+
+A whole-catalogue fingerprint against a freshly reset local **could not simply be run**: the
+working local carries `M:0058` and `M:0060`, which prod does not. Comparing them would have
+produced differences that had to be *explained away* one by one, and explaining differences
+away is exactly the judgement this procedure exists to remove.
+
+So the local was reset to **prod's intended state instead** — `M:0058` and `M:0060` moved
+aside, `supabase db reset`, confirmed by `to_regclass`: no `segments`, no `suppressions`,
+`member_id` present. Then both sides ran the fingerprint query above.
+
+| | local mirror (0001–0057 + 0059) | heituva-prod |
+|---|---|---|
+| `n_columns` | **377** | **377** |
+| `columns` | `87e247298a31738957623bcf52200c36` | `87e247298a31738957623bcf52200c36` |
+| `constraints` | `8e28e5c47e10ab7f5d7f00012416fd4d` | `8e28e5c47e10ab7f5d7f00012416fd4d` |
+| `policies` | `7cb901e38a1323eddb8e119cce430eaf` | `7cb901e38a1323eddb8e119cce430eaf` |
+| `rls_tables` | `bfa0167f3e2e4d8cffb9e38237199ee6` | `bfa0167f3e2e4d8cffb9e38237199ee6` |
+| `functions` | `d2a01215aad5d525e98db6f867b63767` | `d2a01215aad5d525e98db6f867b63767` |
+| `grants` | `bc62f5373760c4061353280a314bf3f1` | `bc62f5373760c4061353280a314bf3f1` |
+| `enums` | `3daa7a71b419145535d7e7349d55b318` | `3daa7a71b419145535d7e7349d55b318` |
+
+**All eight match.** That is a stronger result than the apply's `{"success": true}`: it says
+prod's entire catalogue is identical to a clean build of the same migration set — which also
+re-confirms that the two prod-only repair migrations (`recurrence_paused_at_repair`,
+`overview_activity_repair_to_committed`) really did return prod to the committed state.
+
+The specific change, read back from prod's own catalogue:
+
+```
+org_members.group_id           n  (SET NULL, deliberately unchanged)
+report_shares.group_id         c  (CASCADE — the widening is closed)
+responses.respondent_group_id  a  deferrable, deferred
+survey_invitations.group_id    a  deferrable, deferred
+```
+
+**Advisors re-read after the apply: no new finding.** The three `rls_enabled_no_policy`
+entries are `answers`, `responses` and `demo_requests` — CLAUDE.md invariant 1 says clients
+never select from the first two and no select policy exists by design. The
+SECURITY DEFINER executables are the set `verify:policy` enumerates and allowlists.
+Leaked-password protection is still disabled and is still on the launch list.
+
+**Reversal, if it is ever wanted:** the three constraints go back with the same
+`drop constraint if exists` / `add constraint … on delete set null` shape. `member_id` would
+be dropped. Nothing in prod's data depends on either — 0 groups, and `member_id` is null on
+both existing invitations, since it is written only by `send_round`'s group loop, which
+`M:0060` introduces and prod does not have.

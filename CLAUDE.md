@@ -146,15 +146,30 @@ how to provide it — do not work around it by weakening a control.
 must click. Do not silently fall back to a manual instruction and carry on — an
 unapplied migration that everyone believes is applied is worse than a stopped session.
 
-## Immutability triggers must permit referential maintenance
+## Immutability rules must permit referential maintenance
 An append-only or freeze trigger written as "reject any UPDATE or DELETE" will collide
 with PostgreSQL's own FK maintenance — `ON DELETE SET NULL` and cascades are UPDATEs and
 DELETEs the database issues on your behalf — and the symptom is a parent row that cannot
 be deleted, discovered far from the trigger. Write the rule as *"nobody may change this
 content"*: compare the columns that carry meaning and reject only when they differ,
 allowing FK-driven nulling of reference columns through. Decide the cascade behaviour
-deliberately when the trigger is written, not when a delete fails. This has now been
-rediscovered four separate times (D50, D51, D57, and the duty-archive case).
+deliberately when the trigger is written, not when a delete fails.
+
+**THIS GOVERNS FOREIGN KEYS TOO, NOT ONLY TRIGGERS — same mechanism, different syntax.**
+`ON DELETE RESTRICT` is a freeze rule written as "reject any DELETE", and it collides the
+same way: it is checked IMMEDIATELY and cannot be deferred, so a cascade that would have
+removed the referencing rows anyway is refused mid-flight. In V2-3b, RESTRICT on
+`survey_invitations.group_id` made the whole ORGANISATION undeletable — a rule meant to
+protect a past round's record had broken the erasure path, and it surfaced as `dropOrg`
+failing in the demo seed, far from anything about freezing. `NO ACTION DEFERRABLE
+INITIALLY DEFERRED` says what was meant: deleting one group a round was sent to is still
+refused, at commit; deleting the organisation is allowed, because by commit time nothing
+points at the group. **The rule is never "this row is sacred"; it is "no record may be
+left pointing at something that stopped existing under it".**
+
+This has now been rediscovered five separate times (D50, D51, D57, the duty-archive case,
+and V2-3b's FK pair — which then bit a second time in the same migration, when an audit
+trigger on a lifted objection tried to write a row for an organisation already erased).
 
 ## Control substitution
 The design's control is authoritative. Substituting a different control for layout or

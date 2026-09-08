@@ -20,11 +20,13 @@
 --      pgmq.send('mail_outbox', …)`, and the two are independent. A trigger that
 --      returned NULL would drop the row and leave the message queued, and
 --      `scripts/mail-worker.ts` never reads `survey_invitations` before sending
---      — it sends first and then UPDATEs `sent_at`, an update that matches zero
---      rows and says nothing. **No invitation row and a delivered email is the
---      worst of the three outcomes, and it is the one a suppression test
---      checking `survey_invitations` would call a pass.** So the loop skips
---      before either happens, and the trigger raises rather than dropping.
+--      — **the worker sends BEFORE it touches `survey_invitations`**, then
+--      UPDATEs `sent_at`, an update that matches zero rows and says nothing.
+--      **So a dropped row would mean no invitation and a delivered email — the
+--      one outcome a suppression test checking that table would call a pass. A
+--      test that confirms the duty was met in exactly the case where it was
+--      broken.** So the loop skips before either happens, and the trigger raises
+--      rather than dropping.
 --
 -- Raising is safe precisely BECAUSE of the skip: in normal operation the
 -- trigger never fires. A test must therefore prove it would — `tests/db/

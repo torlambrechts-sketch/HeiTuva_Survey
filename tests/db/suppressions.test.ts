@@ -182,10 +182,11 @@ describe('(Q60) a suppressed address is not invited, by any path', () => {
     // deleted.
     //
     // It must RAISE, not drop. Each loop does `insert …; perform pgmq.send(…)`,
-    // and `scripts/mail-worker.ts` sends before it touches survey_invitations —
-    // so a silently dropped row would leave the mail queued and delivered, with
-    // no invitation to show for it. That outcome would pass any test that
-    // checks this table.
+    // and **the worker sends BEFORE it touches `survey_invitations`** — so a
+    // dropped row would mean NO INVITATION AND A DELIVERED EMAIL, which is the
+    // one outcome a suppression test checking this table would call a pass.
+    // **A test that confirms the duty was met in exactly the case where it was
+    // broken.** That is why the trigger raises, and why this test exists.
     const s = await makeSurvey(`Direkte ${stamp}`)
     const { data: round } = await svc
       .from('survey_rounds')
