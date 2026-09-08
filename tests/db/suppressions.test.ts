@@ -297,6 +297,52 @@ describe('who may record and lift an objection', () => {
     expect(data![0]!.target, 'and it names the address').toBe(mail)
   })
 
+  it('(Q96) THE SAME PERSON MAY DO BOTH, AND THE AUDIT ROW SHOWS THAT THEY DID', async () => {
+    // Q96 rejects separation of duties and keeps audit: four-eyes would leave a
+    // single-administrator organisation unable to lift anything, and prod has
+    // one member. So the product does not REFUSE the same person entering and
+    // lifting an objection — it makes it VISIBLE, and that is only true if the
+    // row carries both halves.
+    //
+    // Written through the persona client rather than the service role, because
+    // `created_by` defaults to `auth.uid()` and the service role has none: this
+    // is the path a real administrator takes.
+    const mail = `sammeperson-${stamp}@example.test`
+    const { error: insErr } = await admin
+      .from('suppressions')
+      .insert({ org_id: orgId, email: mail, reason: 'skrivefeil' })
+    expect(insErr).toBeNull()
+
+    const { data: row } = await svc
+      .from('suppressions')
+      .select('created_by')
+      .eq('org_id', orgId)
+      .eq('email', mail)
+      .single()
+    // The column had NO WRITER before `M:0061` — D110's instance 2 in the same
+    // phase that named it. Asserted here rather than assumed, because Q96's
+    // whole mechanism reads it.
+    expect(row!.created_by, 'the default recorded who entered it').not.toBeNull()
+
+    const since = new Date().toISOString()
+    await admin.from('suppressions').delete().eq('org_id', orgId).eq('email', mail)
+
+    const { data } = await svc
+      .from('audit_events')
+      .select('actor_user_id, meta')
+      .eq('org_id', orgId)
+      .eq('action', 'suppression.lift')
+      .gte('created_at', since)
+    expect(data ?? [], 'one row').toHaveLength(1)
+
+    const meta = data![0]!.meta as { entered_by: string | null; entered_at: string | null }
+    expect(meta.entered_by, 'the row names who ENTERED it').toBe(row!.created_by)
+    expect(meta.entered_at, 'and when').toBeTruthy()
+    // The point of the whole decision, asserted as an equality rather than
+    // described: a reviewer reading this row sees one person on both sides.
+    expect(data![0]!.actor_user_id, 'and the lifter is the same person').toBe(meta.entered_by)
+  })
+
   it('ERASING AN ORGANISATION IS NOT A LIFT — the audit trigger lets the cascade through', async () => {
     // CLAUDE.md's referential-maintenance rule, and this asserts the claim
     // `M:0060`'s trigger comment makes rather than leaving it as prose. Deleting

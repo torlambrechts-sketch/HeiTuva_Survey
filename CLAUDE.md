@@ -249,7 +249,8 @@ up a second phase running; it reports PROVEN even on a bare reset, because the
 demo seed carries an objection. The census rose 668 → 691 across 42 files:
 `tests/db/suppressions.test.ts` (11), Q64's gap tests in
 `tests/db/audience-freeze.test.ts` (5) and Q61's mapping in
-`tests/unit/member-status.test.ts` (7).
+`tests/unit/member-status.test.ts` (7). **Q96 took it 691 → 692** with the
+same-person lift audit, which also proved `created_by` had no writer at all.
 5a3 is unmoved by
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so

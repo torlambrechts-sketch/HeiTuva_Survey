@@ -2570,6 +2570,29 @@ new gate over prose, and nothing could check case 4 at all — the question «ca
 this artefact express this claim» is not mechanical. Read the four cases, run
 the command, open the picture, and decide which one you are in.
 
+**WHAT A RULE LIKE THIS CAN ACTUALLY ACHIEVE, which is less than it sounds and
+still worth having** (Tor, 2026-09-08, on V2-3b's third Docker death).
+
+The near-miss recorded above — `verify:policy | grep -c '^  ok '` returning **0**
+from a dead stack, inside the entry demanding measured numbers — happened
+**again**, in V2-3b, from the same command, for the same reason, while restating
+that phase's targets by measurement. The entry existed. It had been read. It was
+written by the person it happened to.
+
+> **Knowing the shape did not stop it happening again — it stopped it being
+> believed.**
+
+That is the honest account of what this entry buys, and it is a more precise one
+than «write the rule down». A documented failure mode does not stop the failure;
+environments still die mid-command and zeros still arrive looking like
+measurements. What it changes is the reading: the second time, the 0 was
+recognised as case 2 within one command rather than written into a document as
+case 1. **The rule's value is in the interval between seeing a number and
+believing it**, not in preventing the number.
+
+Recorded here because the same is true of most of this project's rules, and a
+reader who expects prevention will conclude they do not work.
+
 **Related:** **D109** (the same failure, in copy rather than in a count: a
 warning that did not describe the system), and `DECISIONS.md`'s header rule that
 this narrows.
@@ -2702,16 +2725,33 @@ person who entered it». **That is not true of what is built**: `suppressions_de
 admits any administrator of the organisation, including the one who recorded the
 objection, so the operator can undo their own entry. Writing Tor's sentence would
 have put a false statement on the surface where a legal obligation is
-discharged — the never-fabricate rule at its sharpest — so the line says what the
-control actually does and the gap is raised rather than papered over.
+discharged — the never-fabricate rule at its sharpest — **and it would have
+looked correct, because it had been asked for**. So the line says what the
+control actually does, and the gap was raised rather than papered over.
 
-Making Tor's sentence true has one obvious shape and it does not survive contact
-with this product's size: a four-eyes rule (`created_by is distinct from
-auth.uid()` on the delete policy, using a column that already exists) means that
-in a **single-administrator organisation nobody could ever lift an objection** —
-and `heituva-prod` has one member today. A typo'd address would be permanent with
-no support path. So the choice is Tor's, not mine, and it is carried rather than
-guessed at.
+**CLOSED, 2026-09-08, as DECISIONS Q96 — decided rather than carried.** Tor: «Do
+NOT build four-eyes… That is a trap, not a safeguard.» `created_by is distinct
+from auth.uid()` on the delete policy is one line and uses a column that already
+exists, and in a **single-administrator organisation nobody could ever lift
+anything**; `heituva-prod` has one member, so a mistyped address would be
+permanent with no support path.
+
+**The mechanism is AUDIT, not separation, which is the right shape at this
+product's size.** The same person may do both and the product does not refuse
+it — but the lift audit row now carries **who ENTERED the objection beside who
+lifted it** (`entered_by`, `entered_at`, `M:0061`), so a reviewer sees one person
+on both sides at a glance. `tests/db/suppressions.test.ts` asserts the equality
+rather than describing it.
+
+**And implementing it found that `created_by` had no writer at all** — `M:0060`
+added the column and nothing set it, which is D110's instance 2 inside the phase
+that named it. It is now a column DEFAULT rather than a line in the server
+action, for this phase's own reason one surface over: a predicate in the caller
+is a predicate the next caller forgets.
+
+The card's third line is unchanged and is now exactly right: **only an
+administrator can lift it, and lifting is logged.** That is the whole of the
+safeguard, stated.
 
 **Behandlingsgrunnlag moved cards, not screens.** D111(c) put it at the bottom of
 `AudiencePanel`; the bundle draws it in a two-column grid BESIDE the
