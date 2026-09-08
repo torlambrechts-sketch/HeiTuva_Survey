@@ -37,5 +37,6 @@
   "tests/db/org-threshold.test.ts": 18,
   "tests/unit/threshold-tier.test.ts": 13,
   "tests/db/branding.test.ts": 19,
-  "tests/db/segments.test.ts": 15
+  "tests/db/segments.test.ts": 15,
+  "tests/db/audience-freeze.test.ts": 5
 }
