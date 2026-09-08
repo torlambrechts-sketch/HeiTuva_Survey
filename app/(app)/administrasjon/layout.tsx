@@ -63,6 +63,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: '/administrasjon/profil', label: t('tabProfil') },
           { href: '/administrasjon/brukere', label: t('tabBrukere') },
           { href: '/administrasjon/grupper', label: t('tabGrupper') },
+          // V2-3a: v2's rail puts «Målgrupper» before «Grupper» (V2:4889). Both
+          // ship — the bundle keeps both tabs too — because they answer
+          // different questions: Grupper edits membership, Målgrupper composes
+          // audiences a survey is sent to.
+          { href: '/administrasjon/malgrupper', label: t('tabMalgrupper') },
           { href: '/administrasjon/personvern', label: t('tabPersonvern') },
           { href: '/administrasjon/valg', label: t('tabValg') },
           // A sixth tab the design does not draw (docs/DEVIATIONS.md D79):

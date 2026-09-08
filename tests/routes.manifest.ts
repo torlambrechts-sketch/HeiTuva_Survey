@@ -345,6 +345,28 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
+    // V2-3a — Målgrupper (V2:2405-2658), the cards this phase builds.
+    route: '/administrasjon/malgrupper',
+    label: 'admin-malgrupper',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [
+      { name: 'default' },
+      {
+        // The rule builder with a field chosen. Captured because the state that
+        // matters is the one where an UNAVAILABLE field is visible and
+        // disabled — Q65's «the editor must say so» is only true if somebody
+        // has looked at it.
+        name: 'regel-felt-valgt',
+        setup: async (page) => {
+          const select = page.locator('select').first()
+          await select.selectOption('role')
+          await page.waitForTimeout(400)
+        },
+      },
+    ],
+  },
+  {
     route: '/administrasjon/personvern',
     label: 'admin-personvern',
     as: 'administrator',

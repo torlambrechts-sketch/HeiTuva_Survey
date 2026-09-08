@@ -74,6 +74,19 @@ async function main() {
     .select('id')
     .single()
 
+  // V2-3a — one segment, so the Målgrupper screen renders a rule rather than an
+  // empty card, and one whose match count is genuinely below the organisation's
+  // threshold so the Q95 badge is REACHABLE. The seed reaching only the states
+  // the current code creates is the failure CLAUDE.md names six times over.
+  await svc.from('segments').insert([
+    {
+      org_id: org.id,
+      name: 'Kun lesere',
+      predicate: [{ field: 'role', op: 'eq', value: 'leser' }],
+      source: 'Manuell',
+    },
+  ])
+
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
