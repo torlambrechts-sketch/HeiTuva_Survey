@@ -7,6 +7,12 @@
 > of the document. **It was caught by checking the heading order, not by the diffstat, which
 > read a plausible `87 insertions, 24 deletions`.** A diffstat that looks reasonable is not
 > evidence the content landed in the right place.
+>
+> **AND WHEN A PHASE OVERTURNS A LINE HERE, ANNOTATE IT — DO NOT EDIT IT TO MATCH.** A plan
+> corrected to match its outcome has destroyed the evidence that anyone chose: it reads as
+> though the built thing had always been the plan, and the measurement that forced the change
+> becomes a detail nobody had to weigh. Leave the original readable, name the decision that
+> overruled it, and point at the phase report. See `DECISIONS.md`'s header.
 
 Phases in dependency order, with 01-briefs §7's scope split applied. This document plans;
 it starts nothing.
