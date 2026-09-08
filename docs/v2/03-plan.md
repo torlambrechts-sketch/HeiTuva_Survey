@@ -196,8 +196,13 @@ verification** is manual/DNS-record display only — no provider API).
 > **WHAT ACTUALLY SHIPPED AS V2-2 (2026-09-07), recorded here so the plan does not
 > misdescribe the repository.** Tor folded «Profil og avsender»'s unblocked half into this
 > phase (V2-1's §4 recommendation), and three threshold decisions — **Q58, Q90, Q91** —
-> arrived mid-phase and were taken here. **Suppression and member state, the scope below,
-> were NOT delivered and are the next thing**; the six negative tests still stand as written.
+> arrived mid-phase and were taken here.
+>
+> **THE SCOPE BELOW — SUPPRESSION AND MEMBER STATE — WAS NOT DELIVERED, AND IT MOVES INTO
+> V2-3 rather than drifting** (Tor, 2026-09-08: a GDPR art. 21 obligation belongs ahead of a
+> screen, not behind one). The six negative tests stand exactly as written; they run in V2-3
+> beside Målgrupper's seven, because both decide the same thing — which addresses
+> `send_round` may resolve into invitations. **Batch C (Q60, Q61) therefore goes with Batch D.**
 > See `docs/v2/reports/V2-2.md § 5`.
 
 Small, legally required (GDPR art. 21), overdue.
@@ -245,10 +250,24 @@ this.
 
 ---
 
-## V2-3 — Målgrupper: groups and segments
+## V2-3 — Målgrupper, and suppression
 
-**Groups and segments only.** Populations are catalogue-blocked and carry retention
-(02-conflicts §B8).
+**Groups and segments, plus the suppression list moved down from V2-2** (Tor, 2026-09-08).
+Populations are catalogue-blocked and carry retention (02-conflicts §B8).
+
+**WHY THE TWO ARE ONE PHASE.** They are the same code path seen twice. A suppression is an
+address `send_round` must not resolve into an invitation; a segment is a rule that decides
+which addresses it resolves at all. Building them apart means writing and testing the
+recipient-resolution path twice, and the two hardest tests in each — the segment freeze
+(Q64) and the re-import case — both hang off exactly that path.
+
+**This makes V2-3 the largest phase in the series: thirteen negative tests, not seven.** If
+it should be split, the cut is Målgrupper then suppression, with suppression still ahead of
+V2-4 — the instruction is that a statutory obligation does not sit behind a screen, not that
+it must share one.
+
+**Batch C (Q60, Q61) is sent with Batch D**, since suppression scope and the member-status
+vocabulary are now decisions this phase needs.
 
 **Scope**
 
@@ -262,13 +281,17 @@ this.
 | `hasThresholdWarn` | NOT BUILT (B.25) | V2:4988 — **a fourth caller of `lib/questions/policy-warnings.ts`, not a fourth copy**, taking k from `app.k_for`. See the note below |
 | Populasjoner | NOT BUILT (B.15) | **Not in this phase.** The section renders the design's unavailable state — never a fabricated count (CLAUDE.md) |
 
-**Schema first.** `groups` gains `kind ('gruppe'|'segment')`, `source`, `synced_at`, and for
-segments a **structured predicate** — jsonb `{field, op, value}` clauses over an allowlisted
+**Schema first.** `suppressions(org_id, email, reason, source, created_by, created_at)`,
+unique on `(org_id, lower(email))`, RLS and policies in the same migration. Status mapping per
+**Q61** — derive rather than duplicate. Then `groups` gains `kind ('gruppe'|'segment')`,
+`source`, `synced_at`, and for segments a **structured predicate** — jsonb `{field, op, value}` clauses over an allowlisted
 field set, never free text evaluated in SQL (**Q65**). A
 `round_audience_members(round_id, member_id, frozen_at)` materialisation. An
 `audience_events` log.
 
-**Negative tests, proven failing before implementation**
+**Negative tests, proven failing before implementation.** Seven from Målgrupper, then six
+carried down from V2-2's suppression scope — thirteen, and the two blockers are #3 and #9.
+
 1. A segment rule naming a field outside the allowlist → refused at write time.
 2. A rule containing SQL → stored as data and never executed; assert no `execute` of user
    text exists in the codebase.
@@ -281,6 +304,19 @@ field set, never free text evaluated in SQL (**Q65**). A
    k=8, and **does not fire at all** for an organisation survey (`k_for` = 0).
 7. The mixed-population send guard is **not** built here and nothing pretends it is: a group
    with a null population cannot satisfy it.
+
+**Carried from V2-2 (GDPR art. 21), same recipient-resolution path:**
+
+8. `send_round` addresses a suppressed email → **the invitation row is not created**, and the
+   refusal is the database's.
+9. **Re-importing the same CSV re-adds a suppressed address → refused. BLOCKER.** This is the
+   failure mode that makes suppression theatre.
+10. A `leser` writes `suppressions` → refused.
+11. Cross-org: org A suppresses into org B → refused.
+12. A suppressed address that is also a group member is excluded from a group-targeted send —
+    **and this is the test that only exists because the two halves are one phase**: it spans a
+    segment's membership and the suppression list at once.
+13. Removing a suppression is an audited administrator action (`audit_events`).
 
 **Standing question 3 applies to test 6**: assert over the SET of sites that can violate the
 property, not the ones you picked. `policyWarnings` will then have four callers, and the
@@ -310,7 +346,7 @@ audience group, at pick time — so it is new work for an existing function, not
 | Builder breach warning (V2:2561) | § Three-pane Builder — it sits in the right pane, which becomes a sheet below `xl`. **A warning behind a closed sheet is not a warning**; surface it on the base layer at mobile, as `SendScreen` already does for the same rule |
 
 **Definition of done**
-- Seven negative tests pass; test 3 is a blocker.
+- Thirteen negative tests pass; tests 3 and 9 are blockers.
 - Census target **≥630 / 38**. 5a3 **≥61 of 74**.
 - Demo seed gains four groups, four segments, **one segment whose membership changes after a
   send**, and one group below k.

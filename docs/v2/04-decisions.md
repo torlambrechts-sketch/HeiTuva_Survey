@@ -28,7 +28,7 @@ One batch per phase, taken **before** the phase starts.
 |---|---|---|---|
 | **A** | V2-0 | Q52●, Q53, Q54, Q55●, Q56 | 2 |
 | **B** | V2-1 | Q57●, Q58●, Q59● | 3 |
-| **C** | V2-2 | Q60●, Q61 | 1 |
+| **C** | ~~V2-2~~ → **V2-3**, sent with D | Q60●, Q61 | 1 |
 | **D** | V2-3 | Q62, Q63●, Q64, Q65●, Q66●, Q67● | 4 |
 | **E** | V2-4 | Q68, Q69●, Q70, Q71 | 1 |
 | **F** | V2-5 | **Q72●●**, Q73● | 2 |
@@ -248,7 +248,11 @@ verneombud is a `leser` who signs statutory duties. Correct the help copy to mat
 Keeps the role model — a security surface 5a3 enumerates against — at three.
 *Confirm: duty capacity (recommended) / a real fourth role / copy only.*
 
-## Batch C — before V2-2
+## Batch C — ~~before V2-2~~ **sent with Batch D, before V2-3**
+
+**Never sent.** Suppression moved into V2-3 on 2026-09-08 (Tor: a GDPR art. 21 obligation
+belongs ahead of a screen, not behind one), so the two decisions it holds are now decisions
+V2-3 needs, and the two batches go together.
 
 **Q60 ●** — *Suppression scope.* Is "har sagt nei til undersøkelser" (V2:4332) an objection to
 **all** surveys from the organisation, or per population / per survey type? The bundle's own
@@ -265,7 +269,7 @@ GDPR art. 21 is an objection to *processing*, so the default must be the broad o
 `suppressions`. No new status column.
 *Confirm: derive (recommended) / a new enum matching the bundle.*
 
-## Batch D — before V2-3
+## Batch D — before V2-3, **sent together with Batch C**
 
 **Q62** — *Q9 amendment: sync moves from Send to Målgrupper.* v2 removes
 `isPasteImport`/`isSyncImport` (V1:4019–4020); Send keeps a one-off list (V2:3020) with
