@@ -11,6 +11,31 @@
  * checked against the CHECK constraint in the live catalogue, so the two cannot
  * drift apart silently.
  *
+ * ── WHICH PART OF THIS FILE IS LOAD-BEARING, BEFORE YOU EXTEND IT ───────────
+ *
+ * **§ 2c is. § 2 is a symptom check and will always be one.**
+ *
+ * § 2 greps source text, and the day after it was written it reported «one
+ * boundary, asked by every surface» over FIVE stale sites — `app.k_for` plus
+ * four `Math.max(k_threshold, 3)` mirrors — because its regex required a
+ * comparison operator and `Math.max(k, 3)` has none. Adding `FLOOR_MIRROR`
+ * fixed that instance. It did not fix the class: clamping and comparing are the
+ * same act in two syntaxes, and there is always a third
+ * (`k_threshold ?? 3`, `Math.min` inverted, a CASE in SQL, a helper called
+ * `atLeast`). **A PROPERTY EXPRESSED AS A PATTERN MATCH OVER SOURCE TEXT IS
+ * ALWAYS A SYMPTOM OF THE PROPERTY, NEVER THE PROPERTY.** Every pattern added
+ * to § 2 buys one more symptom and leaves the class open.
+ *
+ * § 2c is different in kind. It reads `app.k_for`'s body out of `pg_proc` and
+ * asks what the function IS, on the live catalogue, in whatever syntax someone
+ * wrote it. That is the measurement; § 2 is a net for the cases the measurement
+ * cannot reach because they live in TypeScript rather than in the database.
+ *
+ * **So: extend § 2c first.** If a new rule can be asked of the catalogue — of
+ * `pg_proc`, `pg_constraint`, `pg_policies` — ask it there and let § 2 stay the
+ * coarse net it is. Adding a sixth regex to § 2 and calling the class closed is
+ * how this file failed the first time.
+ *
  * The question § 1 answers: does anything CONSTRAIN a survey's threshold
  * against the organisation's default, or does the default only SEED?
  *

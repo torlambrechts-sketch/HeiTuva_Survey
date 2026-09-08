@@ -2338,3 +2338,49 @@ HAS a logo. The prototype has no storage, so it draws the empty slot only. The
 uploaded image renders inside that slot's own frame, above the button, which
 becomes «Bytt» — the minimal consistent option, logged here per CLAUDE.md's
 "when ambiguous" rule.
+
+### D109 — a promise can be wrong in the CAUTIOUS direction, and it is just as visible
+**DECISIONS Q91 was confirmed in V2-2 and not implemented.** `M:0055` moved the
+person floor 3 → 2 in `surveys_k_threshold_floor` and left `app.k_for` — the
+gate every aggregate path routes through — at `greatest(s.k_threshold, 3)`.
+Measured before `M:0057`:
+
+```
+select min(app.k_for(s.id)) from surveys where respondent_kind='person'  -> 3
+select count(*) from surveys where app.k_for(s.id) = 2                   -> 0
+```
+
+**NOBODY WAS EXPOSED, AND THAT IS THE POINT OF THIS ENTRY.** The gate was
+STRICTER than the setting: a survey chosen at 2 withheld until three had
+answered. No cell was revealed that should have been hidden, no aggregate was
+reversible that should not have been. Every other threshold defect this project
+has recorded ran the other way.
+
+**It is a defect of the same size anyway, and the reason is that a promise is
+read by a person.** The respondent screen told someone «Svarene er anonyme, men
+terskelen er satt til to. Da kan den andre som svarer regne seg fram til hva du
+svarte» — a warning about a disclosure the database was preventing. A person
+deciding whether to answer honestly read a threat that did not exist and
+weighed it. **Over-warning is not a safe failure; it is a different wrong
+answer, and it costs exactly what under-warning costs — the reader cannot tell
+which kind they are holding.** The product also spends its warnings' credibility
+this way: a warning that turns out to be false is the reason the next one is
+ignored.
+
+The register's own words for the class, from Q17: «en fast tekst som lover mer
+enn innstillingen holder, er den eneste virkelige feilen i hele denne
+endringen». That sentence names one direction. **This entry widens it: a text
+that promises LESS than the setting holds is the same error, because both are
+texts that do not describe the system.**
+
+**The visible symptom, recorded second because it is the lesser half.** Two
+shipped screens disagreed about the same survey: Bygg rendered «2» from the
+chosen column and Send rendered «3» from a TypeScript mirror of the gate's
+clamp. That mismatch is what a reviewer would have noticed. The promise to the
+respondent is what mattered, and nothing on any screen showed it was wrong.
+
+**Fixed** in `M:0057` by removing the floor from `app.k_for` entirely — not by
+moving it to 2, which is the same defect with a fresher number — and by
+replacing the four TypeScript mirrors with `effectiveK()`. Guarded by
+`scripts/verify/threshold-readers.ts § 2c`, which reads the function's body out
+of `pg_proc` rather than grepping for a shape.

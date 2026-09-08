@@ -261,10 +261,14 @@ which addresses it resolves at all. Building them apart means writing and testin
 recipient-resolution path twice, and the two hardest tests in each — the segment freeze
 (Q64) and the re-import case — both hang off exactly that path.
 
-**This makes V2-3 the largest phase in the series: thirteen negative tests, not seven.** If
-it should be split, the cut is Målgrupper then suppression, with suppression still ahead of
-V2-4 — the instruction is that a statutory obligation does not sit behind a screen, not that
-it must share one.
+**This makes V2-3 the largest phase in the series: thirteen negative tests, not seven.**
+
+**IT IS NOT SPLIT, AND THE SIGNAL TO SPLIT IS NOT THE COUNT** (Tor, 2026-09-08): thirteen
+negative tests in a phase whose subject is an art. 21 obligation is proportionate, and a split
+would put the obligation behind a screen. **If the phase does not close in one verification
+pass and one fix pass, THAT is the signal** — the two-pass rule is the size limit, not the
+test count. Should it fire, the cut is Målgrupper then suppression, with suppression still
+ahead of V2-4.
 
 **Batch C (Q60, Q61) is sent with Batch D**, since suppression scope and the member-status
 vocabulary are now decisions this phase needs.
