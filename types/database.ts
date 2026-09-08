@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       answers: {
@@ -618,6 +643,8 @@ export type Database = {
           lead_member_id: string | null
           name: string
           org_id: string
+          source: string | null
+          synced_at: string | null
         }
         Insert: {
           created_at?: string
@@ -625,6 +652,8 @@ export type Database = {
           lead_member_id?: string | null
           name: string
           org_id: string
+          source?: string | null
+          synced_at?: string | null
         }
         Update: {
           created_at?: string
@@ -632,6 +661,8 @@ export type Database = {
           lead_member_id?: string | null
           name?: string
           org_id?: string
+          source?: string | null
+          synced_at?: string | null
         }
         Relationships: [
           {
@@ -1600,6 +1631,68 @@ export type Database = {
           },
         ]
       }
+      segment_fields: {
+        Row: {
+          available: boolean
+          key: string
+          sort_order: number
+          source_column: string | null
+          value_kind: string
+        }
+        Insert: {
+          available?: boolean
+          key: string
+          sort_order?: number
+          source_column?: string | null
+          value_kind: string
+        }
+        Update: {
+          available?: boolean
+          key?: string
+          sort_order?: number
+          source_column?: string | null
+          value_kind?: string
+        }
+        Relationships: []
+      }
+      segments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          predicate: Json
+          source: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          predicate?: Json
+          source?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          predicate?: Json
+          source?: string | null
+          synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           active: boolean
@@ -2463,6 +2556,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
