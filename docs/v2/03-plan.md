@@ -349,7 +349,10 @@ audience group, at pick time — so it is new work for an existing function, not
 - Thirteen negative tests pass; tests 3 and 9 are blockers.
 - Census target **≥630 / 38**. 5a3 **≥61 of 74**.
 - Demo seed gains four groups, four segments, **one segment whose membership changes after a
-  send**, and one group below k.
+  send**, one group below k, one suppressed address, one bounced member, and — carried from
+  V2-2 — **one SENT survey at `k_threshold` 2**, so Q91's «two» tier is photographed on the
+  Results screen instead of only proven structurally. It cannot be made after the fact: the
+  policy freezes at send.
 
 **Not in it:** populations, the mixed-population send guard (**Q67**, lands with populations),
 retention per population (**Q66**), any sync that actually syncs.
