@@ -184,8 +184,8 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **56 of 75 surfaces
-actively checked** by 5a3, and **38 files / 636 tests** in the census manifest.
+phase, not built. Two numbers carry forward and may only move up: **57 of 77 surfaces
+actively checked** by 5a3, and **40 files / 668 tests** in the census manifest.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
@@ -223,7 +223,12 @@ app-schema function nor a CHECK is a catalogue surface either sweep enumerates,
 a recorded limit of that gate rather than a gap in it — and `M:0056`'s
 `brand_accents` is a new RLS table, allowlisted with `use_cases`' reason and,
 like it, CHECKED rather than trusted: the suite asserts the table has no column
-matching org/survey/count.
+matching org/survey/count. **V2-3a took the census 636 → 668 across 40 files**
+(`tests/db/segments.test.ts` 15, `tests/db/audience-freeze.test.ts` 5, Q62's
+five and the shared-predicate seven) and 5a3 **56 of 75 → 57 of 77**: `segments`
+is a new RLS table that is CHECKED, and `segment_fields` is allowlisted with
+`use_cases`' reason and checked the same way. **The checked number moved up for
+the first time since V1-4.**
 5a3 is unmoved by
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so
