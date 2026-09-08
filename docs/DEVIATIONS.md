@@ -2526,3 +2526,58 @@ the command, and decide which one you are in.
 **Related:** **D109** (the same failure, in copy rather than in a count: a
 warning that did not describe the system), and `DECISIONS.md`'s header rule that
 this narrows.
+
+### D111 — Målgrupper: three controls the bundle draws that this schema cannot fill
+V2-3a builds `adminMalgrupper` (V2:2405–2658). Three of its controls diverge,
+and all three divergences are the **same rule applied three times**: CLAUDE.md's
+never-fabricate rule, which says render the real state, render nothing, or
+render the design's empty treatment.
+
+**(a) The population pill is not rendered** — drawn at V2:2437 (group cards) and
+V2:2458 (segment rows), tinted from `g.pop` (V2:5047, :5051). Neither `groups`
+nor `segments` has a population column, because populations are
+catalogue-blocked (**Q63**). A coloured chip reading «Ansatte» over a column that
+does not exist is indistinguishable in review from a real one, and it survives
+into screenshots. **The Populasjoner card states it once in words** instead of
+every card restating it in a chip — and that card is drawn by the bundle
+unconditionally, so the sentence lands where a reader is already looking.
+«Behandlingsgrunnlag» (V2:2610–2621) is the same case and gets the same
+treatment.
+
+**(b) The rule input is a structured builder, not the bundle's free-text box**
+(V2:2482, with prose example chips at :2484–2486). **Q65** decided the predicate
+is `{field, op, value}` over an allowlisted set, never free text evaluated in
+SQL. **This is the sanctioned exception in CLAUDE.md's control-substitution
+rule**, quoted: *where the prototype's control cannot express a real schema
+constraint — a free-text field standing in for a foreign key, because the mock
+had no database behind it*. The constraint named: `app.validate_segment_predicate`
+refuses any clause whose field is not in `segment_fields`, so a free-text box
+would collect input the database will reject and could not say why.
+
+**The rendered rule stays the bundle's control** — monospace, on its own line
+under the name (V2:2460) — and is **generated from the predicate** rather than
+stored beside it, so `en` works and the sentence cannot drift from what the
+database holds.
+
+**(c) Unavailable fields are offered and DISABLED, with the reason on them.**
+The bundle's own examples name `stillingsprosent`, `startdato` and `land`
+(V2:4319–4322) — fields this product has no column for. Q65: *«the rule editor
+must say so rather than offering fields that can never match»*. Omitting them
+leaves the editor silently shorter than the design with nothing to explain the
+gap; enabling them lets a person build a rule that can never match. Seeding them
+`available = false` is what makes the third option — say so — possible at all.
+
+**Two refusals to guess, recorded because they are the ones a later change is
+most likely to undo:**
+- A segment whose rule cannot be evaluated renders «kan ikke beregnes», **never
+  0**. Zero is a real answer — a segment nobody matches — and the two must not
+  look alike.
+- An audience of unknown size gets **no threshold badge at all**. A warning
+  derived from a number that could not be computed is a guess wearing a
+  warning's clothes, and D109 is the entry about warnings that do not describe
+  the system.
+
+**And one thing the bundle draws that IS kept exactly:** `kind` is derived from
+whether a rule was given (V2:5065, `kind: rule ? "segment" : "gruppe"`). It is
+the one place the design's model and this schema agree without adjustment, so it
+is transcribed rather than reinterpreted.

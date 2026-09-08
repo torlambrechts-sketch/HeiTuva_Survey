@@ -259,6 +259,12 @@ this.
 
 ## V2-3a — Målgrupper: groups and segments
 
+> **BUILT 2026-09-08. Two schema lines below were overturned by Q92 and are struck rather
+> than silently changed** — `groups gains kind` became a separate `segments` table (the three
+> group readers are unfiltered, so a discriminator column is a filter three functions must
+> remember), and `round_audience_members` / `audience_events` were not built (Q64: the freeze
+> already holds through `survey_invitations`). Full account in `docs/v2/reports/V2-3a.md`.
+
 **SPLIT (Tor, 2026-09-08).** Målgrupper here; **suppression and member state are V2-3b**,
 immediately after this phase and ahead of V2-4. Thirteen negative tests plus schema plus UI
 will not close in one verification pass and one fix pass, **and that constraint is what has
