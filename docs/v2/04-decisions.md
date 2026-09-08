@@ -28,6 +28,12 @@ unit of reuse is the function; it is the predicate), and Q92 as «membership or
 rule» (both assumed storage form is what leaks; a person counting in more than
 one cell is). See `DECISIONS.md`'s header.
 
+> **EVERY REMAINING BATCH — E, G, H, I, J, K, L — WAS RE-SENT AS ONE DOCUMENT ON
+> 2026-09-08**, after V2-3b closed: **`docs/v2/06-remaining-decisions.md`**. It restates
+> Q68–Q89 with a DEFAULT-SAFE / NEEDS-YOUR-ANSWER classification and adds Q97–Q103 — the
+> questions the plan leaves open, the two V2-5's generator needs, and the three the V2-3
+> run surfaced. **Answer there, not here.** This file stays as the drafts were written.
+
 ## The batch order
 
 One batch per phase, taken **before** the phase starts.
@@ -431,7 +437,13 @@ RPC / no test mode.*
 
 **Q77** — *Bruksområder's publish gate.* The page markets nine survey types
 (`HeiTuva Bruksomrader.dc.html:51`, `ORDER` :290). All nine exist as seeded packs today
-(CI asserts `packs = 22`), so the D73 gate is satisfied on content.
+~~(CI asserts `packs = 22`)~~, so the D73 gate is satisfied on content.
+
+> **CORRECTED 2026-09-08, while assembling `06-remaining-decisions.md` — D110's shape in
+> this file.** **There is no such CI assertion**, and the measured count is **29**:
+> `select count(*) from public.template_packs`. The claim the number supported still
+> holds — the nine types are seeded — but its evidence did not exist. The struck text
+> stays, per `DECISIONS.md`'s header.
 **Proposed:** ship it once **Q56** is resolved, since the splash's new states link to the
 missing page from the same release.
 *Confirm: ship with Q56 resolved (recommended) / ship the page and defer the splash changes.*
