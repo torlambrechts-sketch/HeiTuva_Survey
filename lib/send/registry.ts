@@ -117,12 +117,52 @@ export const IMPORT_SOURCES = ['csv', 'excel', 'entra', 'google', 'hr', 'paste']
 export type ImportSource = (typeof IMPORT_SOURCES)[number]
 
 /**
- * Which sources actually import today. CSV, Excel and paste are parsing
- * problems and are built; the three directory syncs are integrations with their
- * own auth flows, scheduled for Phase 6 alongside Entra SSO. Their cards render
- * — the design draws six — and explain themselves rather than failing silently.
+ * The sources that parse without an integration behind them. These three are
+ * always available; the three directory syncs are gated by `feature_flags` and
+ * resolved per organisation on the server — see `syncSources` below.
+ *
+ * ── DECISIONS Q62, AND WHY THIS CONSTANT SHRANK ─────────────────────────────
+ *
+ * It used to read `['csv', 'excel', 'paste']` and it was **the only gate on the
+ * three syncs** — a hard-coded client constant standing in for the
+ * `feature_flags` mechanism that `DECISIONS.md` Q9, `docs/v2/03-plan.md` and
+ * **D44** all describe and that no code performed: `entra_sync`, `google_sync`
+ * and `hr_sync` are seeded `false` and were read by nothing. That is D110
+ * instance 2 — a gate nobody reads is not a gate — and Q62 says build it rather
+ * than assert it.
+ *
+ * `excel` stays in the list because it genuinely parses CSV and TSV, which is
+ * what the control actually accepts. **What it does NOT do is read `.xlsx`**,
+ * and Q62's answer to that is a refusal at the file, not a smaller list — see
+ * `looksLikeXlsx`.
  */
-export const IMPLEMENTED_SOURCES: readonly ImportSource[] = ['csv', 'excel', 'paste']
+export const PARSED_SOURCES: readonly ImportSource[] = ['csv', 'excel', 'paste']
+
+/** The three that need an integration, each with the flag that gates it. */
+export const SYNC_SOURCE_FLAGS = {
+  entra: 'entra_sync',
+  google: 'google_sync',
+  hr: 'hr_sync',
+} as const
+
+/**
+ * Is this file an OOXML workbook wearing another name?
+ *
+ * **DECISIONS Q62, and the reason it sniffs bytes rather than the extension.**
+ * `parseRecipients` takes a string, so a real `.xlsx` handed to it is read as
+ * text and produces garbage rows **silently** — under a label reading «Excel
+ * (.xlsx)» and help text promising «Vi leser første ark». CLAUDE.md's
+ * never-fabricate rule decides it: silent garbage from a real file is worse
+ * than a refusal, *because the user cannot tell it happened*.
+ *
+ * An extension check is not enough. A workbook saved as `medlemmer.csv` fails
+ * the name test and still is not text, and that is exactly the file a confused
+ * user produces. Every OOXML file is a ZIP, so the first four bytes are the
+ * honest question: `PK\x03\x04`.
+ */
+export function looksLikeXlsx(head: Uint8Array): boolean {
+  return head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04
+}
 
 export const IMPORT_KEY: Record<ImportSource, { label: string; desc: string }> = {
   csv: { label: 'impCsv', desc: 'impCsvDesc' },

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { parseRecipients } from '@/lib/send/import'
+import { looksLikeXlsx } from '@/lib/send/registry'
+import no from '@/messages/no.json'
+import en from '@/messages/en.json'
 
 /**
  * The import parser is the one place in Phase 3 where a customer hands us a
@@ -94,5 +97,49 @@ describe('parseRecipients', () => {
 
   it('returns nothing for empty input rather than a phantom row', () => {
     expect(parseRecipients('   \n\n ')).toEqual({ rows: [], rejected: [] })
+  })
+})
+
+describe('(Q62) an Excel workbook is refused, not read as text', () => {
+  /**
+   * `parseRecipients` takes a string. A real `.xlsx` handed to it is read as
+   * text and produces garbage rows SILENTLY, under a label reading «Excel
+   * (.xlsx)» and help text promising «Vi leser første ark». CLAUDE.md's
+   * never-fabricate rule decides it: silent garbage from a real file is worse
+   * than a refusal, because the user cannot tell it happened.
+   *
+   * The check is on the BYTES. Every OOXML file is a ZIP, so `PK\x03\x04` is
+   * the honest question — and a name check is not enough, because a workbook
+   * saved as `medlemmer.csv` passes it and still is not text. That file is
+   * exactly what a confused user produces.
+   */
+  const zipHead = () => Uint8Array.from([0x50, 0x4b, 0x03, 0x04])
+
+  it('recognises a workbook by its ZIP signature', () => {
+    expect(looksLikeXlsx(zipHead())).toBe(true)
+  })
+
+  it('recognises one RENAMED to .csv — the name is not the evidence', () => {
+    // Same bytes, and this is the case an extension check would miss.
+    expect(looksLikeXlsx(zipHead())).toBe(true)
+  })
+
+  it('passes real CSV through', () => {
+    const csv = new TextEncoder().encode('e-post,navn\n')
+    expect(looksLikeXlsx(csv.slice(0, 4))).toBe(false)
+  })
+
+  it('passes a UTF-8 BOM through — a CSV Excel itself exports', () => {
+    // Excel writes a BOM when saving CSV, so refusing on it would refuse the
+    // very file the refusal message tells the user to produce.
+    const bom = Uint8Array.from([0xef, 0xbb, 0xbf, 0x65])
+    expect(looksLikeXlsx(bom)).toBe(false)
+  })
+
+  it('the refusal tells the user what to do instead', () => {
+    // A refusal that only says no leaves the user with the same file and no
+    // next step. Both languages name CSV as the way out.
+    expect(no.send.impXlsxRefused).toMatch(/CSV/)
+    expect(en.send.impXlsxRefused).toMatch(/CSV/)
   })
 })

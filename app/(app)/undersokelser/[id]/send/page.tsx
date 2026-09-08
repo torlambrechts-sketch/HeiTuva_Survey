@@ -8,6 +8,8 @@ import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { SendScreen } from './SendScreen'
 import { effectiveK } from '@/lib/questions/threshold-tier'
+import { SYNC_SOURCE_FLAGS, type ImportSource } from '@/lib/send/registry'
+import type { FlagKey } from '@/lib/flags'
 
 /** Canonical UUID shape; anything else cannot name a survey. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -161,6 +163,19 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         alreadyOpen={Boolean(openRound)}
         canSend={viewer.role !== 'leser'}
         smsEnabled={await isFlagEnabled('sms_channel', viewer.orgId)}
+        /* DECISIONS Q62 — the gate Q9 and D44 both describe, finally performed.
+           `entra_sync`, `google_sync` and `hr_sync` were seeded false and read
+           by NOTHING; a hard-coded client constant was doing the gating, which
+           is not org-scoped and cannot be switched per tenant (D110 instance
+           2). Resolved here, on the server, per organisation. */
+        syncSources={(
+          await Promise.all(
+            (Object.entries(SYNC_SOURCE_FLAGS) as [ImportSource, FlagKey][]).map(
+              async ([source, flag]) =>
+                (await isFlagEnabled(flag, viewer.orgId)) ? source : null,
+            ),
+          )
+        ).filter((s): s is ImportSource => s !== null)}
         orgName={viewer.orgName}
         groups={(groups ?? []).map((g) => ({
           id: g.id,

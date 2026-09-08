@@ -909,6 +909,12 @@ makes it a data-not-code violation sitting inside the block V2-3 rewrites.
 deviation should not carry: the census manifest already holds it, and a count
 duplicated into prose is a count that drifts.
 
+**RESOLVED IN V2-3a**, on Q62: the flag gate is now performed rather than
+asserted — `send/page.tsx` resolves `entra_sync`, `google_sync` and `hr_sync`
+through `isFlagEnabled` per organisation, and `IMPLEMENTED_SOURCES` is gone.
+The count is no longer duplicated here; the census manifest holds it (**D110**:
+a number in a document must be derivable by a command).
+
 **(c) And a third claim, from the same family, found with them.** «Excel» is one
 of the three «built» parsers — but the file input accepts `.csv,.tsv,text/csv`
 (`SendScreen.tsx:376`), the handler is `file.text()` (`:380`), and no xlsx

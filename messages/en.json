@@ -359,6 +359,7 @@
     "impPasteDesc": "Emails separated by commas or line breaks",
     "impHintCsv": "Expected columns: email, mobile, name, group — first row is the header",
     "impHintExcel": "We read the first sheet. The columns email, mobile, name and group are recognised automatically",
+    "impXlsxRefused": "This is an Excel workbook (.xlsx), and we cannot read one yet. Save the sheet as CSV or TSV and upload it again — we will not read the workbook as text, because that would produce nonsense without telling you.",
     "impHintPaste": "Paste email addresses or mobile numbers separated by comma, semicolon or line break",
     "impSyncNote": "Connect the directory and groups and employees stay up to date automatically. Leavers are removed at the next sync, and new employees land in the right group.",
     "impSyncComing": "Directory sync is coming in a later version. Use CSV, Excel or paste the list for now.",

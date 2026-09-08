@@ -1186,6 +1186,7 @@ export type MessageKey =
   | 'send.impGoogleDesc'
   | 'send.impHintCsv'
   | 'send.impHintExcel'
+  | 'send.impXlsxRefused'
   | 'send.impHintPaste'
   | 'send.impHr'
   | 'send.impHrDesc'

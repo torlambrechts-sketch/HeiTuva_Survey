@@ -11,7 +11,8 @@ import {
   CADENCE_KEY,
   CHANNELS,
   CHANNEL_KEY,
-  IMPLEMENTED_SOURCES,
+  PARSED_SOURCES,
+  looksLikeXlsx,
   IMPORT_KEY,
   IMPORT_SOURCES,
   REMINDER_DAYS,
@@ -55,6 +56,7 @@ export function SendScreen({
   alreadyOpen,
   canSend,
   smsEnabled,
+  syncSources,
   orgName,
   groups,
   inheritedCadence,
@@ -77,6 +79,9 @@ export function SendScreen({
   alreadyOpen: boolean
   canSend: boolean
   smsEnabled: boolean
+  /** Q62: the sync sources this organisation's `feature_flags` rows enable.
+   *  Resolved on the server — a client constant is not a gate (D110). */
+  syncSources: readonly ImportSource[]
   groups: Group[]
   /**
    * Q21 — the pack's cadence PRE-FILLS the picker and explains itself; it does
@@ -101,6 +106,7 @@ export function SendScreen({
   const [chosenGroups, setChosenGroups] = useState<string[]>([])
   const [importOpen, setImportOpen] = useState(false)
   const [importSource, setImportSource] = useState<ImportSource>('paste')
+  const [importError, setImportError] = useState<string | null>(null)
   const [importDraft, setImportDraft] = useState('')
   const [anonymity, setAnonymity] = useState<AnonymityMode>(initialAnonymity)
   // The live series first, then the pack's default, then «Én gang». A survey
@@ -361,7 +367,7 @@ export function SendScreen({
                     })}
                   </div>
 
-                  {IMPLEMENTED_SOURCES.includes(importSource) ? (
+                  {[...PARSED_SOURCES, ...syncSources].includes(importSource) ? (
                     <div className="mt-3.5">
                       <p className="text-[13px] text-mut">
                         {importSource === 'csv'
@@ -377,10 +383,35 @@ export function SendScreen({
                           aria-label={t('impChooseFile')}
                           onChange={async (e) => {
                             const file = e.target.files?.[0]
-                            if (file) setImportDraft(await file.text())
+                            e.target.value = ''
+                            if (!file) return
+                            // DECISIONS Q62 — REFUSE a workbook rather than
+                            // reading it as text. `parseRecipients` takes a
+                            // string, so a real .xlsx becomes garbage rows
+                            // SILENTLY, under a label promising «Vi leser
+                            // første ark». The check is on the bytes, not the
+                            // name: a workbook saved as `.csv` fails a name
+                            // test and still is not text, and that is exactly
+                            // the file a confused user produces.
+                            const head = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+                            if (looksLikeXlsx(head)) {
+                              setImportError(t('impXlsxRefused'))
+                              return
+                            }
+                            setImportError(null)
+                            setImportDraft(await file.text())
                           }}
                           className="mt-2.5 block w-full text-[13px]"
                         />
+                      ) : null}
+                      {importError ? (
+                        <p
+                          role="alert"
+                          className="mt-2.5 rounded-[10px] px-[14px] py-3 text-[12.5px] leading-[1.55] font-semibold text-ink"
+                          style={{ background: 'var(--ac3)' }}
+                        >
+                          {importError}
+                        </p>
                       ) : null}
                       <textarea
                         rows={5}
