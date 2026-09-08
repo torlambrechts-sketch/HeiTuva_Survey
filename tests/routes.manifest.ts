@@ -359,8 +359,14 @@ export const ROUTES: RouteSpec[] = [
         // has looked at it.
         name: 'regel-felt-valgt',
         setup: async (page) => {
-          const select = page.locator('select').first()
-          await select.selectOption('role')
+          // BY ACCESSIBLE NAME, NOT BY POSITION. `locator('select').first()`
+          // resolved to the shell's language switcher — which is
+          // `opacity-0` over a styled trigger, so it is never visible and the
+          // scenario timed out for thirty seconds on both viewports rather
+          // than photographing the wrong control. Loud, but the state went
+          // unphotographed either way. A positional selector on a page with a
+          // persistent chrome is a selector aimed at whatever loads first.
+          await page.getByLabel(/^(Velg felt|Choose a field)$/).selectOption('role')
           await page.waitForTimeout(400)
         },
       },

@@ -982,7 +982,7 @@
     "mgGroupsDesc": "Fixed lists. Synced groups update automatically.",
     "mgSegmentsTitle": "Segments",
     "mgSegmentsDesc": "Rule-based and self-updating. Change the rule and the history is marked.",
-    "mgPeople": "{count} people · {source}",
+    "mgPeople": "{count, plural, one {# person} other {# people}} · {source}",
     "mgMatches": "{count} matches",
     "mgMatchesUnknown": "the count cannot be computed",
     "mgUpdated": "Updated {when}",

@@ -33,6 +33,37 @@ import { createAudience } from './actions'
  * that can never match». Omitting them would leave the editor silently shorter
  * than the design with no explanation; showing them enabled would let a person
  * build a rule that can never match.
+ *
+ * ── THREE WIDTH CONSTRAINTS REMOVED BELOW `md`, ALL ONE RULE ────────────────
+ *
+ * `verify:responsive` measured `scrollWidth=385` at a 320px viewport — the only
+ * screen in the app over 320 — and the three causes were MEASURED rather than
+ * guessed at, because a 65px overflow has more plausible causes than real ones:
+ *
+ *   badge   340px  «Under virksomhetens terskel (5) — resultater vises ikke»
+ *                  under `whitespace-nowrap`. The single largest cause, and the
+ *                  group card's copy of the same badge already wrapped.
+ *   select  304px  a `<select>` takes its intrinsic width from its WIDEST
+ *                  OPTION, and «stillingsprosent — ikke tilgjengelig ennå» is
+ *                  it — so Q65's own «say so» copy set the page's minimum width.
+ *                  `max-w-full` ALONE DID NOT FIX THIS and the re-run said so
+ *                  (385 → 369, still over). A `<fieldset>` carries a UA
+ *                  `min-inline-size: min-content`, so the select's widest
+ *                  option propagated up through it and `100%` was already
+ *                  measured against a grown parent. Isolated in Chromium at
+ *                  320px, four variants, scrollWidth each time:
+ *                    bare 357 · max-width:100% 357 · +min-width:0 on the
+ *                    select 357 · **min-width:0 on the fieldset AND the
+ *                    select 320**.
+ *                  Either one alone changes NOTHING. That is why both are here
+ *                  and why neither may be tidied away as redundant.
+ *   grid    280px  `minmax(280px,1fr)` is a floor, not a preference.
+ *
+ * RESPONSIVE.md's rule for all three is one sentence: «Remove the width
+ * constraint and let the existing `flex-wrap` do the work.» Each fix is inert
+ * at ≥1280px — `md:whitespace-nowrap`, `max-w-full`, `min(280px,100%)` — so the
+ * desktop rendering the bundle governs is unchanged, which is the only form of
+ * this fix that CLAUDE.md's pixel rule permits.
  */
 export type Audience = {
   id: string
@@ -143,7 +174,7 @@ export function AudiencePanel({
         {groups.length === 0 ? (
           <p className="mt-4 text-[13px] text-mut">{t('mgNoGroups')}</p>
         ) : (
-          <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+          <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))]">
             {groups.map((g) => (
               <div
                 key={g.id}
@@ -196,7 +227,7 @@ export function AudiencePanel({
                     : t('mgMatches', { count: s.count })}
                 </span>
                 {badge(s.count) ? (
-                  <span className="whitespace-nowrap rounded-full bg-ac3 px-[11px] py-[5px] text-[11px] font-bold">
+                  <span className="rounded-full bg-ac3 px-[11px] py-[5px] text-[11px] font-bold leading-[1.4] md:whitespace-nowrap">
                     {t('mgBelowThreshold', { k: orgThreshold })}
                   </span>
                 ) : null}
@@ -223,14 +254,14 @@ export function AudiencePanel({
             {/* The structured builder that replaces the bundle's free-text rule
                 box. Unavailable fields are OFFERED AND DISABLED with the reason
                 — Q65 requires the editor to say so. */}
-            <fieldset className="mt-[9px]">
+            <fieldset className="mt-[9px] min-w-0">
               <legend className="text-[12px] text-mut">{t('mgRuleLegend')}</legend>
               <div className="mt-2 flex flex-wrap gap-[9px]">
                 <select
                   value={field}
                   onChange={(e) => setField(e.target.value)}
                   aria-label={t('mgFieldPlaceholder')}
-                  className="box-border rounded-[10px] border border-line bg-sf px-3.5 py-3 text-[13.5px] text-ink outline-none"
+                  className="box-border min-w-0 max-w-full rounded-[10px] border border-line bg-sf px-3.5 py-3 text-[13.5px] text-ink outline-none"
                 >
                   <option value="">{t('mgFieldPlaceholder')}</option>
                   {fields.map((f) => (

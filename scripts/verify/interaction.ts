@@ -162,6 +162,52 @@ async function main() {
       await page.waitForTimeout(1000)
     }
 
+    // Q65's «the editor must say so rather than offering fields that can never
+    // match» — asserted HERE rather than photographed, and the reason is worth
+    // stating because it was found by opening the capture and looking at it:
+    // **A NATIVE `<select>` NEVER SHOWS ITS OPTIONS IN A SCREENSHOT.** The
+    // `regel-felt-valgt` state photographs the chosen field, which is all a
+    // closed select can show; the disabled ones and their reason live in the
+    // DOM and nowhere on the picture. A clause whose only evidence was that
+    // screenshot had no evidence at all.
+    {
+      await page.goto(`${BASE_URL}/administrasjon/malgrupper`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      const opts = await page.evaluate(() => {
+        const sel = document.querySelector<HTMLSelectElement>('select[aria-label="Velg felt"]')
+        return Array.from(sel?.options ?? []).map((o) => ({
+          value: o.value,
+          disabled: o.disabled,
+          text: o.textContent ?? '',
+        }))
+      })
+      const unavailable = opts.filter((o) => o.disabled && o.value !== '')
+      check(
+        'fields with no column are OFFERED, not omitted',
+        unavailable.length > 0,
+        unavailable.map((o) => o.value).join(', ') || 'none offered — Q65 unsatisfied',
+      )
+      check(
+        'and each says WHY it cannot be chosen',
+        unavailable.length > 0 && unavailable.every((o) => /ikke tilgjengelig/.test(o.text)),
+        unavailable[0]?.text ?? '(no option to read)',
+      )
+      check(
+        'every OTHER field is selectable',
+        opts.some((o) => !o.disabled && o.value !== ''),
+        opts.filter((o) => !o.disabled && o.value !== '').map((o) => o.value).join(', '),
+      )
+      // The failure path 3c asks for: a nameless audience is refused in the
+      // client before it reaches the action, and the refusal is announced.
+      await page.getByRole('button', { name: 'Opprett målgruppe' }).click()
+      const alert = page.getByRole('alert').first()
+      check(
+        'an audience with no name is refused, and says so',
+        await alert.isVisible().catch(() => false),
+        (await alert.textContent().catch(() => '')) ?? '',
+      )
+    }
+
     console.log('\n== 3d: keyboard and focus ==')
 
     for (const [label, path] of [

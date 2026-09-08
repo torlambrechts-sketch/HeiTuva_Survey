@@ -982,7 +982,7 @@
     "mgGroupsDesc": "Faste lister. Synkroniserte grupper oppdateres automatisk.",
     "mgSegmentsTitle": "Segmenter",
     "mgSegmentsDesc": "Regelbaserte og selvoppdaterende. Endrer du regelen, merkes historikken.",
-    "mgPeople": "{count} personer · {source}",
+    "mgPeople": "{count, plural, one {# person} other {# personer}} · {source}",
     "mgMatches": "{count} treff",
     "mgMatchesUnknown": "antall kan ikke beregnes",
     "mgUpdated": "Oppdatert {when}",
