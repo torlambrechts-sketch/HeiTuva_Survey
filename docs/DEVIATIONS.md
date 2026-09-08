@@ -2427,7 +2427,10 @@ of `pg_proc` rather than grepping for a shape.
 ### D110 — a count in a plan is not a measurement, and a gate nobody reads is not a gate
 **Four instances found in one groundwork pass, and they are one shape.** Recorded
 together because each was individually small and dismissable, and the pattern is
-neither. Tor named it, 2026-09-08.
+neither. Tor named it, 2026-09-08. **Extended the same day with a fifth instance
+(a citation that is real, on-topic and the wrong source) and, after V2-3a, with a
+FOURTH CASE in the trichotomy at the foot of this entry — evidence that is real,
+present and structurally mute on the claim.**
 
 | # | The claim | What was true | Where |
 |---|---|---|---|
@@ -2508,8 +2511,8 @@ distinguishes them from the output. The gates have a dependency guard for this
 failures — VERIFY.md Gate 6); **nothing does, or should, guard a command embedded
 in a document.**
 
-So when a document and its command disagree, that means ONE OF THREE THINGS, and
-**only one of them is that the document is stale**:
+So when a document and its evidence disagree — or seem to agree — that means ONE
+OF FOUR THINGS, and **only one of them is that the document is stale**:
 
 1. **The document is stale** — the number moved. Update the document.
 2. **The command cannot run** — dead stack, missing browser, no network. The
@@ -2518,10 +2521,54 @@ So when a document and its command disagree, that means ONE OF THREE THINGS, and
 3. **The command is wrong** — it never measured what the sentence claims, so
    both have always disagreed and nobody looked. Fix the command first; the
    number is unknown until it runs.
+4. **The evidence is MUTE** — real, present, the right artefact, and
+   **structurally incapable of expressing the claim at all**. Nothing
+   disagrees, because the artefact says nothing on the subject. Added
+   2026-09-08 by Tor, from V2-3a.
+
+**CASE 4 IS THE WORST OF THE FOUR AND THE HARDEST TO SEE.** The first three
+announce themselves: a mismatch, an error, a zero. Case 4 produces a green
+gate, an artefact that opens, and a citation that survives every test a
+reviewer would apply — because the artefact *is* the right one, and it is
+simply silent.
+
+**The instance.** V2-3a's report cited
+`artifacts/phase-1/admin-malgrupper.regel-felt-valgt.desktop.png` for Q65's «the
+editor must say so rather than offering fields that can never match». The state
+is the rule builder with a field chosen, and the clause is about the
+*unavailable* fields being offered and disabled with their reason. **A closed
+native `<select>` never draws its options.** The dropdown is rendered by the
+operating system, outside the page and outside any screenshot. So the file
+exists, opens, shows the right screen, and is mute about exactly the thing it
+was cited for. The capture succeeded, the pixel diff passed, the log said `ok`,
+and every gate was green over it. It was found by opening the picture and
+looking at it — the one thing VERIFY.md Gate 3a asks for and no gate can do.
+
+**AND IT IS WORSE THAN THE OTHER THREE FOR A REASON WORTH NAMING: A PICTURE
+LOOKS LIKE EVIDENCE IN A WAY A NUMBER DOES NOT.** A number invites the question
+«where does this come from». A screenshot answers it before it is asked — it is
+a photograph of the running product, and the reader's instinct is that a
+photograph cannot lie. It does not lie here. It is simply not about the claim.
+
+**Case 4 is the neighbour of instance 5 above and they are not the same.**
+Instance 5 cited a real mention of the right subject and it was an *echo* rather
+than the statement — wrong source, right subject. Case 4 has the right source
+and no subject: the artefact carries no version of the claim, true or echoed.
+The first is fixed by preferring the surface that states a rule; the second
+cannot be fixed by choosing a better line, because there is no line.
+
+**THE FIX IS NEVER A BETTER SCREENSHOT.** Q65's clause is now asserted where it
+can be expressed — `verify:interaction` reads the options off
+`select[aria-label="Velg felt"]`: offered rather than omitted, each carrying
+«ikke tilgjengelig», at least one other selectable. The screenshot keeps the job
+it can do, which is the rule builder's active layout, and V2-3a's report **says
+in words why the picture is not the evidence**, because a reader who finds a
+capture beside that clause will otherwise assume it was checked.
 
 **DO NOT BUILD ANYTHING FOR THIS.** A checker for embedded commands would be a
-new gate over prose, and the apparatus is what it is. Read the three cases, run
-the command, and decide which one you are in.
+new gate over prose, and nothing could check case 4 at all — the question «can
+this artefact express this claim» is not mechanical. Read the four cases, run
+the command, open the picture, and decide which one you are in.
 
 **Related:** **D109** (the same failure, in copy rather than in a count: a
 warning that did not describe the system), and `DECISIONS.md`'s header rule that

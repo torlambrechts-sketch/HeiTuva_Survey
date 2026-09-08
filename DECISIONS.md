@@ -55,6 +55,31 @@ THE LINE IT DOES IT ON.** Both instances were caught by someone going and readin
 the artefact; neither was caught by review.
 
 
+**AND THE CITATION MUST BE ABLE TO SAY THE THING. BEFORE CITING AN ARTEFACT, ASK
+WHETHER IT CAN EXPRESS THE CLAIM AT ALL — NOT ONLY WHETHER IT EXISTS** (added
+2026-09-08, Tor, after V2-3a).
+
+The rule above makes a clause carry a line. It does not ask whether that line can
+carry the clause. **An artefact can be real, present, on-topic and structurally
+mute about the very thing it is cited for**, and then the citation passes every
+test a reviewer would apply while proving nothing.
+
+The instance: V2-3a's report cited a screenshot for «the editor must say so
+rather than offering fields that can never match». **A closed native `<select>`
+never draws its options** — the dropdown is rendered by the operating system,
+outside the page and outside any capture. The file exists, opens, shows the right
+screen, and is silent about the clause. Every gate was green over it. It is worse
+than a stale citation because **a picture looks like evidence in a way a number
+does not**: a number invites «where does this come from», and a photograph
+answers that before it is asked.
+
+So the check is one question, asked before the citation is written rather than
+after: *could this artefact show the claim to be FALSE?* If it could not, it
+cannot show it true either, and the claim needs different evidence — usually an
+assertion somewhere the property is expressible. Recorded in full as **D110's
+fourth case**.
+
+
 **A PLAN THAT A PHASE OVERTURNS IS ANNOTATED, NEVER EDITED TO MATCH THE OUTCOME**
 (added 2026-09-08, Tor, standing practice from V2-3a).
 

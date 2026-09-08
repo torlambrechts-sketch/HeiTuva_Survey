@@ -23,6 +23,11 @@ Tailwind: use `md:` (768) and `xl:` (1280). Do not introduce other breakpoints w
 4. **No feature hidden on mobile.** Reflow, collapse, or paginate — never remove. If something genuinely cannot work at 390px, stop and ask; do not silently drop it.
 5. **Content order is preserved** when columns stack: left/primary column first, sidebars after.
 6. Sticky elements: page header only. Do not add sticky footers or bottom bars that the design does not have.
+7. **Two intrinsic minimum widths cause almost every overflow, and neither is visible in the markup.** Rule 1 says the bar; this says where the breach comes from. Both were measured in V2-3a, where `admin-malgrupper` was the only screen in the app over 320px (`scrollWidth=385`).
+   - **A `<fieldset>` carries a UA `min-inline-size: min-content`** — it will not shrink below its content no matter what you set on the child. **`min-w-0` is needed on the FIELDSET as well as on the flex item inside it, and neither alone does anything.** Isolated in Chromium at 320px, `scrollWidth` per variant: bare **357** · `max-width:100%` on the select **357** · `+min-width:0` on the select **357** · `+min-width:0` on the fieldset **320**. A `<select>` inside a plain `<div>` needs only `min-w-0`; inside a `<fieldset>` it needs both. Any fieldset in a later phase inherits this.
+   - **A `<select>` takes its intrinsic width from its WIDEST OPTION**, so a long option label sets the page's minimum width from inside a closed control. In V2-3a the offender was «stillingsprosent — ikke tilgjengelig ennå» — copy a decision required, setting a layout bound nobody wrote. `min-w-0 max-w-full` lets the UA clip it; do not shorten the label to fix layout.
+
+   Both fixes are inert at ≥1280px, which is the only form CLAUDE.md's pixel rule permits — and the general form is rule 1's own sentence: **remove the width constraint**. Find the constraint by measuring `getBoundingClientRect()` across every element and sorting by `right`, not by reading the classes; the offender is routinely a parent that grew, not the element you suspect.
 
 ## Per-pattern rules
 
