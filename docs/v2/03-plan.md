@@ -371,6 +371,11 @@ audience group, at pick time — so it is new work for an existing function, not
   left alone rather than swept: each phase restates its own target when it opens, and editing
   eight future numbers on one measurement is how a plan starts describing a repository nobody
   has looked at.*
+  **`docs/DEVIATIONS.md` D110, instance 3** — and the rule it carries applies here directly:
+  a target is restated by running `npm run verify:policy` and summing
+  `tests/expected-counts.json`, and **the command goes beside the number**:
+  `npm run verify:policy | grep -c '^  ok '` and
+  `python3 -c "import json;d=json.load(open('tests/expected-counts.json'));print(len(d),sum(d.values()))"`.
 - Demo seed gains four groups, four segments, **one segment whose membership changes after a
   send**, one group below k, one suppressed address, one bounced member, and — carried from
   V2-2 — **one SENT survey at `k_threshold` 2**, so Q91's «two» tier is photographed on the

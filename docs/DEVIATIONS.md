@@ -891,7 +891,9 @@ Workspace and HR systems. They are flagged off (`entra_sync`, `google_sync`,
 `hr_sync`) and land in Phase 6 alongside Entra SSO.
 
 **CORRECTED 2026-09-08. Two claims above are wrong, in different ways, and V2-3
-carries the correction rather than relocating the entry.**
+carries the correction rather than relocating the entry. This entry is instance
+2 of four in D110 — «a gate nobody reads is not a gate» is named there, and (a)
+below is what named it.**
 
 **(a) NEVER TRUE — «they are flagged off».** The three flags are seeded `false`
 (`supabase/seed.sql:162-163`) and **read by nothing**: a whole-repo grep returns
@@ -2405,8 +2407,69 @@ chosen column and Send rendered «3» from a TypeScript mirror of the gate's
 clamp. That mismatch is what a reviewer would have noticed. The promise to the
 respondent is what mattered, and nothing on any screen showed it was wrong.
 
+**The document half is instance 4 in D110**: `CLAUDE.md`'s standing invariant 1
+asserted «floor **2** for natural persons since **Q91**» while the function
+returned 3. The sentence was written when the CHECK moved and the function did
+not, and nothing reads prose.
+
 **Fixed** in `M:0057` by removing the floor from `app.k_for` entirely — not by
 moving it to 2, which is the same defect with a fresher number — and by
 replacing the four TypeScript mirrors with `effectiveK()`. Guarded by
 `scripts/verify/threshold-readers.ts § 2c`, which reads the function's body out
 of `pg_proc` rather than grepping for a shape.
+
+### D110 — a count in a plan is not a measurement, and a gate nobody reads is not a gate
+**Four instances found in one groundwork pass, and they are one shape.** Recorded
+together because each was individually small and dismissable, and the pattern is
+neither. Tor named it, 2026-09-08.
+
+| # | The claim | What was true | Where |
+|---|---|---|---|
+| 1 | «Three v2 surfaces hard-code 5» | **Four** rendered surfaces, six logic lines. The missed one is the Send audience picker — **the only one on a screen a user reaches today** | `00-diff.md § B.27`, `02-conflicts.md § A4`; bundle V2:6543–6544, rendered V2:3072–3074 |
+| 2 | «They are flagged off (`entra_sync`, `google_sync`, `hr_sync`)» | The three flags are seeded `false` and **read by nothing**. The actual gate is `IMPLEMENTED_SOURCES`, a hard-coded client constant — not org-scoped, not a row | **D44**; `lib/send/registry.ts:125`, `SendScreen.tsx:364` |
+| 3 | «Census target ≥630 / 38» | Already satisfied before the phase opened — the manifest read **636 / 38**. And «5a3 ≥61 of 74» carried a denominator that had moved to **75** | `03-plan.md`, V2-3's definition of done |
+| 4 | «`app.k_for` (…floor **2** for natural persons since **Q91**)» | The function returned `greatest(s.k_threshold, 3)`. The sentence was written when the CHECK moved and the function did not | `CLAUDE.md` standing invariant 1; see **D109** |
+
+**THE SHAPE.** Every one of these is a **document asserting a fact about the
+system**. None was careless, and none was wrong when written — (1) and (3) were
+inherited forward, (2) described an intention nobody built, (4) described a
+change that landed in one place of two. **A claim about the system decays
+silently while the system moves, and nothing in this project reads prose.**
+
+**WHY THE EXISTING RULE DOES NOT COVER THIS.** `DECISIONS.md`'s header already
+requires that *a clause asserting what any artefact does must carry the line it
+does it on*. All four of these carried citations. A citation proves somebody
+looked once; it does not survive the artefact changing underneath it, and it
+does not help at all when the number was copied from another document rather
+than counted.
+
+**THE NARROWER RULE, which is what actually separates the survivors from these
+four: A NUMBER OR AN ENUMERATION IN A DOCUMENT MUST BE DERIVABLE BY A COMMAND,
+AND THE COMMAND GOES BESIDE IT.**
+
+The numbers in this repository that have never gone stale are exactly the ones
+produced by a run: the census manifest (`tests/expected-counts.json`, checked by
+the suite itself), 5a3's `56 of 75` (`verify:policy` prints it), `verify:copy`'s
+allowlist count, `threshold-readers.ts`'s `1 surface(s) constrain…`. The four
+above were all **typed**. So when a document must carry a count, it carries the
+command that produces it, and a reader who doubts it runs the command instead of
+re-reading the sentence.
+
+**AND ITS OTHER HALF — A GATE NOBODY READS IS NOT A GATE.** Instance 2 is the
+sharpest because the mechanism *looked* built: rows existed, they were seeded to
+the right value, and three separate documents described the gating they perform.
+Nothing called them. **A feature flag with no call site is a comment in a table**,
+and the way to find it is to enumerate call sites rather than to read the seed —
+the same method `threshold-readers.ts § 1` uses for the threshold columns and
+`verify:policy` uses for RLS surfaces.
+
+**Consequence for V2-3, and it is not a new gate** (the apparatus stays frozen):
+the phase restates its own targets from a measurement rather than inheriting
+them, wires `isFlagEnabled` to the three seeded rows or removes them, and fixes
+the enumeration in § B.27 and § A4 by grep rather than by re-reading the list.
+The corrections themselves are in `docs/v2/03-plan.md`, `docs/v2/02-conflicts.md`
+and D44.
+
+**Related:** **D109** (the same failure, in copy rather than in a count: a
+warning that did not describe the system), and `DECISIONS.md`'s header rule that
+this narrows.

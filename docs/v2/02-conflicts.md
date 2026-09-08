@@ -98,6 +98,10 @@ lines across three — and the missed one is the only one attached to a screen a
 today, so a phase that fixed «the three» would have left the live one behind. Found by a
 `grep -n "count < 5"` over the whole bundle rather than by re-reading the list.
 
+**`docs/DEVIATIONS.md` D110, instance 1.** The count here was written once and inherited into
+`00-diff.md § B.27` without being re-counted: **a count in a plan is not a measurement.** When
+this enumeration next changes, change it by running the grep.
+
 **RESOLVED — the file wins.** `app.k_for` (`M:0032:69`) returns **0** for organisation
 surveys and `greatest(k_threshold, 3)` otherwise, so `count < 5` is wrong in both
 directions. Any phase touching an aggregate path carries the two-sided catalogue-derived
