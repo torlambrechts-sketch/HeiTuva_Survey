@@ -370,6 +370,16 @@ export const ROUTES: RouteSpec[] = [
           await page.waitForTimeout(400)
         },
       },
+      {
+        // V2-3b. The Medlemmer card with a search applied — the state that
+        // shows the four derived statuses (Q61) next to each other, which the
+        // default state only shows if the seed happens to order them together.
+        name: 'medlemmer-sok',
+        setup: async (page) => {
+          await page.getByLabel(/^(Søk i medlemmer|Search members)$/).fill('nordiskstudio')
+          await page.waitForTimeout(400)
+        },
+      },
     ],
   },
   {

@@ -57,6 +57,7 @@ export function SendScreen({
   canSend,
   smsEnabled,
   syncSources,
+  suppressed,
   orgName,
   groups,
   inheritedCadence,
@@ -65,6 +66,11 @@ export function SendScreen({
   status,
 }: {
   surveyId: string
+  /** V2-3b · Q60. Lower-cased addresses on the organisation's Reservasjonsliste.
+   *  The DATABASE is what actually refuses these (`M:0060`); this is so the
+   *  person importing can SEE it, rather than reading «150 mottakere» and having
+   *  149 receive mail. CLAUDE.md's never-fabricate rule applied to a count. */
+  suppressed: string[]
   title: string
   /** For the SMS preview — the design's "{{ orgName }} spør: …". */
   orgName: string
@@ -135,6 +141,26 @@ export function SendScreen({
 
   const parsed = useMemo(() => parseRecipients(importDraft), [importDraft])
 
+  /**
+   * V2-3b — the import preview, split by the Reservasjonsliste (V2:4982, :4993).
+   *
+   * The bundle badges a suppressed row «Reservert» and leaves it out of the
+   * count, and both halves matter: `send_round` will refuse these addresses
+   * whatever the screen says, so a preview that counted them would be promising
+   * a send the database is going to decline.
+   */
+  const suppressedSet = useMemo(
+    () => new Set(suppressed.map((e) => e.toLowerCase())),
+    [suppressed],
+  )
+  const importSplit = useMemo(() => {
+    const blocked = parsed.rows.filter((r) => r.email && suppressedSet.has(r.email.toLowerCase()))
+    return {
+      reachable: parsed.rows.filter((r) => !r.email || !suppressedSet.has(r.email.toLowerCase())),
+      blocked,
+    }
+  }, [parsed.rows, suppressedSet])
+
   // The status sentence, from `lib/schedules/status.ts` — the same function the
   // survey row, the context bar and the rounds panel read, so the four cannot
   // disagree about what a paused series says.
@@ -194,7 +220,9 @@ export function SendScreen({
   }
 
   const runImport = () => {
-    merge(parsed.rows)
+    // Only the reachable half. Adding the others would put a name in the
+    // recipient list that the send is then going to drop in silence.
+    merge(importSplit.reachable)
     setImportDraft('')
     setImportOpen(false)
   }
@@ -425,14 +453,22 @@ export function SendScreen({
                         <span className="text-[13px] text-mut">
                           {importDraft.trim()
                             ? t('impSummary', {
-                                ok: parsed.rows.length,
+                                ok: importSplit.reachable.length,
                                 rejected: parsed.rejected.length,
                               })
                             : t('impNone')}
+                          {importSplit.blocked.length ? (
+                            <span
+                              className="ml-2 rounded-full px-[11px] py-[5px] text-[11px] font-bold text-ink"
+                              style={{ background: 'var(--ac3)' }}
+                            >
+                              {t('impSuppressed', { count: importSplit.blocked.length })}
+                            </span>
+                          ) : null}
                         </span>
                         <button
                           type="button"
-                          disabled={!parsed.rows.length}
+                          disabled={!importSplit.reachable.length}
                           onClick={runImport}
                           className="touch-44 cursor-pointer rounded-[10px] border-none bg-ac px-[18px] py-2.5 text-[12.5px] font-semibold text-ink disabled:opacity-50"
                         >

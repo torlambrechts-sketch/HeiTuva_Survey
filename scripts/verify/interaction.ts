@@ -208,6 +208,48 @@ async function main() {
       )
     }
 
+    // V2-3b — the Reservasjonsliste's write path, which the bundle draws no
+    // control for at all. A list nobody can add to is a promise the product
+    // cannot keep, so the control exists (D112) and this is where its failure
+    // path is exercised: an empty address is refused before the action runs.
+    {
+      await page.goto(`${BASE_URL}/administrasjon/malgrupper`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load')
+      await page.getByRole('button', { name: 'Legg til reservasjon' }).click()
+      const alert = page.getByRole('alert').first()
+      check(
+        'an opt-out with no address is refused, and says so',
+        await alert.isVisible().catch(() => false),
+        (await alert.textContent().catch(() => '')) ?? '',
+      )
+
+      // And Q61's four statuses are DERIVED, so the proof they work is that the
+      // seeded member who is on the list reads «Reservert» — a word stored
+      // nowhere. Read off the row rather than the card, so a stray pill
+      // elsewhere cannot satisfy it.
+      const nora = page.locator('div').filter({ hasText: /^Nora Lie/ }).last()
+      const noraText = (await nora.textContent().catch(() => '')) ?? ''
+      check(
+        'a suppressed member reads Reservert, a status no column holds',
+        /Reservert/.test(noraText),
+        noraText.replace(/\s+/g, ' ').slice(0, 80),
+      )
+      const petter = page.locator('div').filter({ hasText: /^Petter Holm/ }).last()
+      const petterText = (await petter.textContent().catch(() => '')) ?? ''
+      check(
+        'an invited member reads Ny',
+        /\bNy\b/.test(petterText),
+        petterText.replace(/\s+/g, ' ').slice(0, 80),
+      )
+      const sofie = page.locator('div').filter({ hasText: /^Sofie Dahl/ }).last()
+      const sofieText = (await sofie.textContent().catch(() => '')) ?? ''
+      check(
+        'a bounced member reads Bounce',
+        /Bounce/.test(sofieText),
+        sofieText.replace(/\s+/g, ' ').slice(0, 80),
+      )
+    }
+
     console.log('\n== 3d: keyboard and focus ==')
 
     for (const [label, path] of [

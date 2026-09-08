@@ -2628,3 +2628,54 @@ most likely to undo:**
 whether a rule was given (V2:5065, `kind: rule ? "segment" : "gruppe"`). It is
 the one place the design's model and this schema agree without adjustment, so it
 is transcribed rather than reinterpreted.
+
+### D112 — Medlemmer and Reservasjonsliste: two controls removed, one added
+V2-3b builds the two cards V2-3a left (V2:2570–2608). Three divergences, and the
+first two are the same rule as D111's three — CLAUDE.md's never-fabricate rule —
+while the third is its mirror image, which is the interesting one.
+
+**(a) The sync line and «Synkroniser nå» are not drawn** (V2:2574, :2578; the
+values at V2:5011–5012). The bundle's subtitle reads «Sist synkronisert i dag
+07:10 fra Entra ID» and the button calls `onSyncNow`. No directory sync exists:
+`entra_sync`, `google_sync` and `hr_sync` are seeded `false`, and **Q62(c) made
+that gate real rather than asserted**, so the flags now genuinely say no. A sync
+timestamp is a number this product does not hold, and a «synchronise now» button
+is an action it cannot perform. The card states that once, in words
+(`mgSyncUnavailable`), rather than showing a plausible time nobody can check.
+
+**(b) «Fjern» per row is not drawn** (V2:2589). This one is NOT a missing column
+— the action exists. `onRemove` in the bundle hides the row locally; the real
+action it maps to is deactivating a member, and **Brukere already performs it**,
+with the role rules, the confirmation and the audit trail that belong to it. A
+second, differently-labelled path to the same destructive action is worse than
+one path: the two will drift, and the one on the audience screen is the one
+nobody will remember to keep in step. The card says where removal lives
+(`mgMembersRemoveNote`). *This is a judgement, not a rule, and it is the entry to
+argue with.*
+
+**(c) The Reservasjonsliste GAINS an add row and a per-row «Opphev», which the
+bundle draws nowhere.** V2:2595–2608 is a read-only list; objections are supposed
+to arrive through `unsubNote`'s «avmeldingslenke» (V2:5022), which is not built
+and is not in this phase.
+
+**A suppression list nobody can write to is worse than no list at all**, and it
+is D110's instance 2 in a user interface: the mechanism *looks* built — a table,
+a policy, a guard on three insertion points — and nothing can put a row in it.
+The screen would state a legal promise the product cannot keep. CLAUDE.md's rule
+for a state the design genuinely lacks is to choose the minimal consistent option
+and log it, so: an email field, an optional reason, and a button, styled exactly
+as «Ny målgruppe» two cards above, plus a per-row lift. Administrator-only —
+**this is the one place Q94's widening deliberately does not apply**, because
+recording or lifting a person's objection to being processed is a privacy action
+and not audience composition.
+
+The copy for `unsubNote` is replaced rather than kept (`mgSuppressHow`): the
+bundle's sentence describes the unsubscribe link as working today. Ours says
+where objections come from now, and that the link comes later.
+
+**Behandlingsgrunnlag moved cards, not screens.** D111(c) put it at the bottom of
+`AudiencePanel`; the bundle draws it in a two-column grid BESIDE the
+Reservasjonsliste (V2:2595–2621), which could not be built until that card
+existed. It now is, and the pair is the grid the bundle draws — with
+`minmax(min(300px,100%),1fr)` per RESPONSIVE.md global rule 7 rather than a bare
+300px floor.

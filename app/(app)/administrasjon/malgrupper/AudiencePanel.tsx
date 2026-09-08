@@ -158,7 +158,7 @@ export function AudiencePanel({
   }
 
   return (
-    <div className="mt-5 flex flex-col gap-[18px]">
+    <>
       {/* ── Populasjoner (V2:2408–2423) — the unavailable treatment, Q63 ─── */}
       <section className="rounded-[18px] border border-line bg-sbg px-6 py-[22px]">
         <h2 className="font-display text-[22px] font-medium">{t('mgPopulationsTitle')}</h2>
@@ -322,14 +322,6 @@ export function AudiencePanel({
           </div>
         ) : null}
       </section>
-
-      {/* ── Behandlingsgrunnlag (V2:2610–2621) — unavailable, Q63 ────────── */}
-      <section className={CARD}>
-        <h2 className="font-display text-[21px] font-medium">{t('mgLawfulBasisTitle')}</h2>
-        <p className="mt-1 max-w-[640px] text-[13px] leading-[1.6] text-mut">
-          {t('mgLawfulBasisUnavailable')}
-        </p>
-      </section>
-    </div>
+    </>
   )
 }

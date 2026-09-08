@@ -66,3 +66,77 @@ export async function createAudience(input: unknown): Promise<AudienceResult> {
   revalidatePath('/administrasjon/malgrupper')
   return { ok: true, kind }
 }
+
+/**
+ * V2-3b — recording and lifting an objection. DECISIONS **Q60** (org-wide).
+ *
+ * ── WHY THIS EXISTS WHEN THE BUNDLE DRAWS NO CONTROL FOR IT ─────────────────
+ *
+ * The bundle's Reservasjonsliste (V2:2595–2608) is a read-only list; objections
+ * arrive through `unsubNote`'s «avmeldingslenke», which is not built. **A table
+ * with no writer is D110's instance 2** — a feature flag with no call site is a
+ * comment in a table — and a suppression list nobody can add to is worse than
+ * none, because the screen states a promise the product cannot keep.
+ *
+ * CLAUDE.md: where the design genuinely lacks a state, choose the minimal
+ * consistent option and log it. So: an add row styled exactly as «Ny målgruppe»
+ * is styled two cards above, and a per-row lift. **D112.**
+ *
+ * Administrator-only, and this is the one place Q94's widening does NOT apply.
+ * Composing an audience is routine; recording that a person objected to being
+ * processed, or lifting that objection, is a privacy action.
+ */
+const SuppressionInput = z.object({
+  email: z.string().trim().toLowerCase().email().max(320),
+  reason: z.string().trim().max(200).optional(),
+})
+
+export async function addSuppression(input: unknown): Promise<AdminResult> {
+  const viewer = await requireViewer()
+  if (viewer.role !== 'administrator') return { ok: false, error: 'forbidden' }
+
+  const parsed = SuppressionInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('suppressions').insert({
+    org_id: viewer.orgId,
+    email: parsed.data.email,
+    reason: parsed.data.reason || null,
+    source: 'manuell',
+  })
+  if (error) {
+    if (error.code === '23505') return { ok: false, error: 'duplicate' }
+    console.error(`addSuppression failed: ${error.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  revalidatePath('/administrasjon/malgrupper')
+  return { ok: true }
+}
+
+/**
+ * Lifting is a DELETE, not an update — `suppressions` has no update policy,
+ * deliberately: an objection is recorded or it is lifted, never edited. The
+ * audit row is written by `app.audit_suppression_lift` rather than here, so it
+ * exists however the row is removed.
+ */
+export async function liftSuppression(id: string): Promise<AdminResult> {
+  const viewer = await requireViewer()
+  if (viewer.role !== 'administrator') return { ok: false, error: 'forbidden' }
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('suppressions')
+    .delete()
+    .eq('id', id)
+    .eq('org_id', viewer.orgId)
+  if (error) {
+    console.error(`liftSuppression failed: ${error.message}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  revalidatePath('/administrasjon/malgrupper')
+  return { ok: true }
+}

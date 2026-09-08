@@ -7,7 +7,9 @@ import {
   type FieldRow,
   type SegmentClause,
 } from '@/lib/audiences/segments'
+import { memberStatus } from '@/lib/audiences/member-status'
 import { AudiencePanel, type Audience, type Field } from './AudiencePanel'
+import { MembersPanel, type MemberRow, type SuppressionRow } from './MembersPanel'
 
 const FIELD_KEY: Record<string, string> = {
   role: 'mgFieldRole',
@@ -105,13 +107,86 @@ export default async function AudiencesTab() {
     }),
   )
 
+  // ── V2-3b · Q61: the four statuses, DERIVED ────────────────────────────────
+  //
+  // Three reads, no fifth column. `suppressions` is org-wide (Q60) so it is a
+  // set of addresses; `bounced_at` is read from the member's MOST RECENT
+  // invitation, because an address that bounced in March and delivered in June
+  // is not bouncing.
+  const [{ data: memberRows }, { data: suppressed }] = await Promise.all([
+    supabase
+      .from('org_members')
+      .select('id, name, email, status, created_at')
+      .eq('org_id', viewer.orgId)
+      .order('name'),
+    supabase
+      .from('suppressions')
+      .select('id, email, reason')
+      .eq('org_id', viewer.orgId)
+      .order('created_at', { ascending: false }),
+  ])
+
+  const suppressedSet = new Set((suppressed ?? []).map((s) => s.email.toLowerCase()))
+
+  // The latest bounce per address. `member_id` (Q64, `M:0059`) is the right key
+  // and is only written for group sends, so this matches on the address — which
+  // is what «this address does not answer» is about anyway.
+  const { data: bounces } = await supabase
+    .from('survey_invitations')
+    .select('email, bounced_at')
+    .not('bounced_at', 'is', null)
+    .in('email', (memberRows ?? []).map((m) => m.email))
+    .order('bounced_at', { ascending: false })
+  const bouncedAt = new Map<string, string>()
+  for (const b of bounces ?? []) {
+    const key = (b.email ?? '').toLowerCase()
+    if (key && !bouncedAt.has(key)) bouncedAt.set(key, b.bounced_at!)
+  }
+
+  const members: MemberRow[] = (memberRows ?? [])
+    .map((m) => {
+      const key = m.email.toLowerCase()
+      const bounced = bouncedAt.get(key) ?? null
+      const status = memberStatus({
+        accountStatus: m.status ?? 'active',
+        suppressed: suppressedSet.has(key),
+        bouncedAt: bounced,
+      })
+      // Q61's «inactive → (hidden)». `null` rather than a fifth word, so a
+      // forgotten filter renders nothing instead of inventing one.
+      if (!status) return null
+      return {
+        id: m.id,
+        name: m.name || m.email,
+        email: m.email,
+        status,
+        // The bundle's `mb.meta` («Entra ID · i dag») is a sync provenance this
+        // product does not hold. What it DOES hold is why the status is what it
+        // is, which is the more useful sentence anyway.
+        meta:
+          status === 'reservert'
+            ? t('mgMemberObjected')
+            : status === 'bounce'
+              ? t('mgMemberBounced', { when: when(bounced) })
+              : t('mgMemberSince', { when: when(m.created_at) }),
+      } satisfies MemberRow
+    })
+    .filter((m): m is MemberRow => m !== null)
+
   return (
-    <AudiencePanel
-      groups={groupRows}
-      segments={segmentRows}
-      fields={fieldRows.map((f): Field => ({ key: f.key, available: f.available }))}
-      orgThreshold={org?.default_k_threshold ?? 5}
-      canCreate={viewer.role === 'administrator' || viewer.role === 'redaktor'}
-    />
+    <div className="mt-5 flex flex-col gap-[18px]">
+      <AudiencePanel
+        groups={groupRows}
+        segments={segmentRows}
+        fields={fieldRows.map((f): Field => ({ key: f.key, available: f.available }))}
+        orgThreshold={org?.default_k_threshold ?? 5}
+        canCreate={viewer.role === 'administrator' || viewer.role === 'redaktor'}
+      />
+      <MembersPanel
+        members={members}
+        suppressions={(suppressed ?? []) as SuppressionRow[]}
+        isAdministrator={viewer.role === 'administrator'}
+      />
+    </div>
   )
 }

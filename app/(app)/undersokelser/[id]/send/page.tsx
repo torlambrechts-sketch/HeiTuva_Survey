@@ -38,19 +38,23 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   if (error) throw new Error(`send survey read failed: ${error.message}`)
   if (!survey) notFound()
 
-  const [{ count: questionCount }, { data: groups }, { data: openRound }] = await Promise.all([
-    supabase
-      .from('survey_questions')
-      .select('id', { count: 'exact', head: true })
-      .eq('survey_id', id),
-    supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
-    supabase
-      .from('survey_rounds')
-      .select('id, round_no, status')
-      .eq('survey_id', id)
-      .eq('status', 'open')
-      .maybeSingle(),
-  ])
+  const [{ count: questionCount }, { data: groups }, { data: openRound }, { data: suppressedRows }] =
+    await Promise.all([
+      supabase
+        .from('survey_questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('survey_id', id),
+      supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
+      supabase
+        .from('survey_rounds')
+        .select('id, round_no, status')
+        .eq('survey_id', id)
+        .eq('status', 'open')
+        .maybeSingle(),
+      // V2-3b · Q60. Readable by every member on purpose: a redaktør about to
+      // send needs to know why the count is lower than the group.
+      supabase.from('suppressions').select('email').eq('org_id', viewer.orgId),
+    ])
 
   // The live series (Q22, Q23). Read through RLS as the viewer — since M:0044's
   // predicate swap a leser reads it too, which is what puts the ↻ chip on their
@@ -176,6 +180,11 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
             ),
           )
         ).filter((s): s is ImportSource => s !== null)}
+        /* V2-3b · Q60. The list the import preview badges against. The
+           DATABASE refuses these regardless (`M:0060`); this is so the person
+           importing can see it before they send, rather than reading a count
+           that is going to be quietly smaller. */
+        suppressed={(suppressedRows ?? []).map((r) => r.email.toLowerCase())}
         orgName={viewer.orgName}
         groups={(groups ?? []).map((g) => ({
           id: g.id,
