@@ -22,6 +22,7 @@
   "tests/db/round-freeze.test.ts": 6,
   "tests/db/schedules-rls.test.ts": 6,
   "tests/db/segments.test.ts": 15,
+  "tests/db/snapshot-reads.test.ts": 9,
   "tests/db/suppressions.test.ts": 12,
   "tests/db/tasks.test.ts": 32,
   "tests/db/test-mode.test.ts": 9,

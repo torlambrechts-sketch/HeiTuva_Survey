@@ -361,7 +361,13 @@ async function main() {
       })
       const payload = (made ?? {}) as { snapshot_id?: string; content_hash?: string; error?: string }
 
-      const { data: row, error } = await admin
+      // `svc`, not `admin`, since S3/M:0094: SELECT on `aggregates` is revoked
+      // from every client role, because reading it directly walked round the
+      // leser rule compose_report applies (audit B6-03). The assertion below is
+      // about what is STORED, so the role that can see everything is the right
+      // one to make it with — if even that view carries no resurrectable cell,
+      // no narrower view can.
+      const { data: row, error } = await svc
         .from('result_snapshots')
         .select('id, survey_id, content_hash, aggregates, created_at')
         .eq('id', payload.snapshot_id ?? '')

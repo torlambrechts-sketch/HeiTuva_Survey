@@ -591,9 +591,18 @@ describe('snapshot_results — a snapshot cannot preserve what the gate removed'
     expect(out.snapshot_id).toMatch(/^[0-9a-f-]{36}$/)
     expect(out.content_hash).toMatch(/^[0-9a-f]{64}$/)
 
-    // Read it back through the member's own client — result_snapshots has a
-    // select policy, unlike responses/answers.
-    const { data, error } = await ctx.admin
+    // Read back through the SERVICE client since S3/M:0094. `aggregates` used
+    // to be selectable by any org member, which is how a leser could read a
+    // published report's quotes and attributed rows straight off the table
+    // (audit B6-03) — SELECT on the column is now revoked from every client
+    // role and the payload is reached only through the RPCs.
+    //
+    // The claim under test is unaffected and is the stronger one: it is about
+    // what is STORED, not about who may read it. Reading with a role that can
+    // see everything is the right way to assert that even THAT view carries no
+    // resurrectable cell.
+    // `admin()` from tests/helpers is the SERVICE-ROLE client, despite the name.
+    const { data, error } = await admin()
       .from('result_snapshots')
       .select('aggregates')
       .eq('id', out.snapshot_id)
