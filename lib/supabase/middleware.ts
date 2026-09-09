@@ -64,6 +64,16 @@ export async function updateSession(request: NextRequest) {
     // privacy notice nobody can read before signing up is not a notice.
     path === '/personvern' ||
     path === '/databehandleravtale' ||
+    // V2-8. Bruksområder is a MARKETING page — it is what the splash's use-case
+    // section links to, and its whole audience is people with no account.
+    //
+    // The list above is the reason this was worth a defect rather than a line:
+    // the route lives under `app/(marketing)/`, which reads like a promise the
+    // router does not make. Middleware decides what is public, and it decides by
+    // an explicit path list. `verify:browser` caught it — «asked for
+    // /bruksomrader as anon but the browser ended up on /logg-inn» — because the
+    // manifest declares the visitor, not because anything checked the folder.
+    path === '/bruksomrader' ||
     path.startsWith('/_next') ||
     path === '/favicon.ico'
 

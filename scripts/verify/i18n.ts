@@ -71,7 +71,7 @@ async function isSeededContent(value: string): Promise<boolean> {
   const like = `%${value}%`
   const [
     packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
-    dutyTitle, dutyLaw,
+    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis,
   ] =
     await Promise.all([
       svc.from('template_packs').select('id').ilike('title', like).limit(1),
@@ -99,10 +99,35 @@ async function isSeededContent(value: string): Promise<boolean> {
       // equal seeded content.
       svc.from('duty_definitions').select('key').ilike('title', like).limit(1),
       svc.from('duty_definitions').select('key').ilike('law', like).limit(1),
+      // V2-8 added two seeded-content sources this list was missing, and it
+      // found them the way the others were found: a message value that HAPPENS
+      // to equal seeded content, accused as chrome.
+      //
+      // A question's own text is content — the strongest case in the whole
+      // list, since it is what the respondent reads — and `survey_questions`
+      // was not consulted at all. `template_packs.questions` is the same text
+      // one level up, inside the pack's jsonb.
+      //
+      // Bruksområder quotes real example questions on purpose: a page telling
+      // you what a survey asks is more useful with the survey's own words than
+      // with invented ones. That is what put `usecases.pulsEx1` on the
+      // dashboard's English render, where the seeded question of the same name
+      // was already showing.
+      svc.from('survey_questions').select('id').ilike('text', like).limit(1),
+      // A pack's own legal reference — «Åpenhetsloven §§ 4–5 · frist 30. juni»,
+      // «ARP — kartlegges annethvert år». It is the statute's wording, and it
+      // stays Norwegian on the English page for the same reason
+      // `duty_definitions.law` does.
+      svc.from('template_packs').select('id').ilike('legal_ref', like).limit(1),
+      // `duty_definitions.basis` — «Lønnskartlegging annethvert år. Redegjøres
+      // for i årsberetningen.» It is the duty's own statutory cadence, rendered
+      // on Rapporter, and it is text rather than jsonb: I wrote the opposite in
+      // a comment here and the gate corrected me by still failing.
+      svc.from('duty_definitions').select('key').ilike('basis', like).limit(1),
     ])
   const found = [
     packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
-    dutyTitle, dutyLaw,
+    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis,
   ].some((r) => (r.data?.length ?? 0) > 0)
   seededCache.set(value, found)
   return found

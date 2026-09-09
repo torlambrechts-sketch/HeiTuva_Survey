@@ -69,6 +69,7 @@ export default async function SplashPage() {
           desc: t(`drivers${i}Desc` as 'drivers1Desc'),
         })),
         navUse: t('navUse'),
+        useAll: t('useAll'),
         useTitle: t('useTitle'),
         useBody: t('useBody'),
         useCases: list(6, (i) => ({

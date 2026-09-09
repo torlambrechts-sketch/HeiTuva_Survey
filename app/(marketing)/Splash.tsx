@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useActionState, useState } from 'react'
 import { Logo, Wordmark } from '@/components/Logo'
 import { requestDemo, signUpFromSplash, type SplashState } from './actions'
@@ -67,6 +69,7 @@ export type SplashCopy = {
   driverTitle: string
   drivers: { stat: string; title: string; desc: string }[]
   navUse: string
+  useAll: string
   useTitle: string
   useBody: string
   useCases: { tag: string; cadence: string; title: string; desc: string; chips: string[] }[]
@@ -626,6 +629,19 @@ export function Splash({
               </div>
             </div>
           ))}
+        </div>
+        {/* V2-8. The splash's six cards are a summary; /bruksomrader is the nine
+            with their setup, question types and report. The link is added WITH
+            the page — a link to a page that does not exist is the defect D118
+            recorded, four phases old, and this phase's DoD names it. */}
+        <div className="mt-6">
+          <Link
+            href="/bruksomrader"
+            className="touch-44 inline-flex items-center rounded-[11px] border px-[18px] py-[11px] text-[13.5px] font-semibold no-underline"
+            style={{ borderColor: LINE, background: SF, color: INK }}
+          >
+            {copy.useAll}
+          </Link>
         </div>
       </section>
 

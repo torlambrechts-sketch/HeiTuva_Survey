@@ -45,13 +45,36 @@ const NEAR_GENERIC = 14
  *
  * Digits exclude a following «%»: «58 % svar» is a response RATE.
  */
+/**
+ * ── AND \b IS NOT A WORD BOUNDARY IN NORWEGIAN ──────────────────────────────
+ *
+ * V2-8 found this by hand: the gate could not see «åtte».
+ *
+ * JavaScript's `\b` is defined on the ASCII word class, so `å` is a NON-word
+ * character. In «terskelen til åtte» the character before `å` is a space —
+ * also non-word — so there is no boundary there and `\båtte\b` never matches.
+ * The gate has therefore been blind to one of the ten Norwegian numerals it
+ * lists since it was written, and it is not a harmless one: **8 is the
+ * threshold the statutory harassment pack locks**, which makes it the numeral
+ * most likely to appear beside a threshold word in copy that matters.
+ *
+ * Every other numeral in both lists is ASCII, so nothing else was affected —
+ * which is exactly why it survived: the gate was right nine times out of ten
+ * and silent on the tenth. D110's fourth case, arriving as a regex flag.
+ *
+ * The fix is a boundary that knows about letters rather than about ASCII:
+ * `(?<![\p{L}\d])` … `(?![\p{L}\d])` under the `u` flag.
+ */
+const B0 = String.raw`(?<![\p{L}\d])`
+const B1 = String.raw`(?![\p{L}\d])`
+
 const NUMERALS: Record<string, string> = {
-  no: String.raw`\b(?:\d{1,2}(?!\s*%)|to|tre|fire|fem|seks|sju|syv|åtte|ni|ti)\b`,
-  en: String.raw`\b(?:\d{1,2}(?!\s*%)|two|three|four|five|six|seven|eight|nine|ten)\b`,
+  no: String.raw`${B0}(?:\d{1,2}(?!\s*%)|to|tre|fire|fem|seks|sju|syv|åtte|ni|ti)${B1}`,
+  en: String.raw`${B0}(?:\d{1,2}(?!\s*%)|two|three|four|five|six|seven|eight|nine|ten)${B1}`,
 }
 
-const GATE = String.raw`\b(?:terskel\w*|threshold\w*)\b`
-const GENERIC = String.raw`\b(?:svar|svarene|svart|answers?|answered|responses?)\b`
+const GATE = String.raw`${B0}(?:terskel\p{L}*|threshold\p{L}*)${B1}`
+const GENERIC = String.raw`${B0}(?:svar|svarene|svart|answers?|answered|responses?)${B1}`
 
 function nearRe(numeral: string, word: string, gap: number) {
   return new RegExp(
@@ -143,6 +166,20 @@ const ALLOWED: Record<string, string> = {
   // cannot disagree with the threshold it describes. Interpolating {k} here
   // would be worse, not better: it would let the sentence «kan den som svarer
   // regne seg fram til hva den andre svarte» render at 5, where it is false.
+  // V2-8, Bruksområder. THE ONE FIXED THRESHOLD A PUBLIC PAGE MAY STATE, and it
+  // is allowed because it is a fact about a TEMPLATE rather than a promise
+  // about the gate: `template_packs.policy` for `trakassering-ytringsklima`
+  // carries `{"k_threshold": 8, "locked": true}`, so the pack sets 8 and an
+  // organisation cannot lower it. `tests/db/use-cases-page.test.ts` asserts the
+  // 8 against that row rather than trusting this reason — and asserts that NO
+  // OTHER use-case string carries a fixed threshold, because «Anonymt, terskel
+  // 5» appeared three times and «Vises fra 5 svar» once before this phase
+  // corrected them. Scope, per D110's 2026-09-09 addition: this covers the
+  // locked harassment threshold ONLY; every other number on that page is
+  // derived from the packs at render time.
+  'usecases.trakasseringSetupV3': 'the 8 is template_packs.policy.k_threshold, locked by the pack',
+  'usecases.trakasseringAnonNote': 'same locked 8, in words',
+
   'admin.thresholdTwoWarning': 'the 2 is the condition under which the string renders at all',
   'admin.thresholdTwoGdpr': 'same — rendered only at 2',
   'builder.policyTwoText': 'same — the builder\u2019s tier, rendered only at 2',

@@ -240,6 +240,26 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-8 — Bruksområder. PUBLIC, so mobile-first pixel-perfect at 380-420px
+    // per CLAUDE.md rather than RESPONSIVE.md.
+    route: '/bruksomrader',
+    label: 'bruksomrader',
+    as: 'anon',
+    phase: 'phase-6',
+    states: [
+      { name: 'default' },
+      {
+        // One use case open: the list state shows none of the setup, the
+        // question types or the report, which is most of the page.
+        name: 'sak',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /Psykososial kartlegging|Psychosocial mapping/ }).click()
+          await page.waitForTimeout(400)
+        },
+      },
+    ],
+  },
+  {
     // V2-7 — test mode (V2:6637). The banner (V2:3323) is the state worth
     // photographing: it is what tells an editor that nothing they do here is
     // stored, and `p_dry_run` is what makes that true.

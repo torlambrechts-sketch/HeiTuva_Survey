@@ -3180,3 +3180,127 @@ unable to tell «cannot test this» from «cannot test at all», which is the di
 and `admin.mgPopulationsUnavailable` both preserve. **The difference from V2-4's hidden
 advance button is that the refusal here has a sentence and a way back; there it had a
 database error code.**
+
+### D120 — Bruksområder: every question count the bundle states is wrong
+
+**Accepted, and the correction is a derivation rather than nine new numbers.**
+`HeiTuva Bruksomrader.dc.html` hard-codes a question count and a reading time per use case.
+Measured against the seeded packs, **all nine are false**:
+
+| use case | page claims | pack has |
+|---|---|---|
+| `puls` | 5 | 4 (`ukentlig-puls`) |
+| `medarbeider` | 38 | **no pack at all** |
+| `psykososial` | 38 | 7 (`psykososial-kartlegging`) |
+| `trakassering` | 16 | 5 (`trakassering-ytringsklima`) |
+| `likestilling` | 21 | 6 (`likestilling-deltid`) |
+| `aktsomhet` | 27 | 6 (`leverandor-apenhetsloven`) |
+| `onboarding` | 8 | 4 (`oppstartssjekk`) |
+| `kunde` | 6 | 5 (`csat`) |
+| `exit` | 7 | 5 (`sluttsamtale`) |
+
+This is a **public** page, so it is D73 — *no public page claims a capability the product
+does not have* — and it is CLAUDE.md's *never fabricate data in the UI* nine times over, in
+the exact form the rule warns about: **a number indistinguishable in review from a real
+one.** Replacing them with nine corrected numbers would only move the staleness, so the page
+**derives the count from `template_packs.questions`**. A pack that gains a question updates
+the page with nobody editing it, and `tests/db/use-cases-page.test.ts` fails if a count is
+ever written back into the copy.
+
+**The plan's «all nine already seeded as packs» was one short.** `medarbeider` has no pack.
+It renders with no count and an explicit line saying the template is not finished, rather
+than inheriting the bundle's 38 — «render the real state, render nothing, or render the
+design's empty/unknown treatment».
+
+### D121 — Q56's struck links were never built, and the Bruksområder link now exists
+
+**Accepted.** Q56 CONFIRMED: strike the «Se detaljer» links on the splash's ranked list,
+which point at `HeiTuva Lovpalagt.dc.html#<page>` — a prototype file with no product behind
+it. **The ranked list was never built at all**, so `r.hasPage` is not merely never true; the
+whole block is absent, and the deviation is satisfied by an absence rather than by a
+condition. Recorded so a later phase building that block knows the links are struck by
+decision rather than forgotten.
+
+Going the other way: the splash's use-case section now carries **«Se alle ni bruksområder
+→»**, and it was added **with** the page it points at. D118 is the reason that sentence is
+worth writing down — a menu item pointed at `/undersokelser/<id>/test` for four phases
+before the route existed.
+
+### D122 — six more false sentences in the Bruksområder copy
+
+**Accepted.** The same sweep V2-6 ran over the help articles, applied to this copy before it
+shipped. Each was measured against the running database.
+
+| Sentence | Why it is false |
+|---|---|
+| «Anonymt, terskel 5» ×3 | **Q55's class, and this phase's DoD names it.** The threshold is the organisation's; a public page stating 5 is the categorical five V2-0 corrected |
+| «Vises fra 5 svar» | Same, a fourth time |
+| «Enheter under terskelen **slås sammen** i rapporten» | `app.suppress_partition` suppresses. D109's cautious direction, and V2-6 corrected the same sentence in a help article |
+| «Funn under terskel, med hjemmel» | Q72: the trigger is audience size. Third place this sentence has been found |
+| «Anonymt, **kjønnsdelt** rapport» | **There is no gender field anywhere in the schema** — `segment_fields` carries group, land, member_since, role, startdato, status, stillingsprosent. The product cannot split a report by gender |
+| «frisvar **gjennomgås manuelt**» | No manual free-text review exists. `quote_candidates` is an editor choosing quotes for a report, which is what the replacement says |
+
+**One fixed number stays and is checked rather than allowed:** «Forsterket, terskel 8» for
+harassment. `template_packs.policy` for `trakassering-ytringsklima` carries
+`{"k_threshold": 8, "locked": true}`, so the 8 is a fact about the template rather than a
+promise about the gate — and the test asserts it against that row rather than exempting the
+string by name.
+
+### D123 — `verify:copy` could not see «åtte», and 8 is the sensitive-topic threshold
+
+**Found by hand in V2-8, and it is D110's fourth case arriving as a regex flag.**
+
+The gate looks for a numeral near a threshold word, with the Norwegian numerals written as
+`\b(?:\d{1,2}|to|tre|fire|fem|seks|sju|syv|åtte|ni|ti)\b`. **JavaScript's `\b` is defined on
+the ASCII word class**, so `å` is a NON-word character. In «terskelen til åtte» the character
+before `å` is a space — also non-word — so there is no boundary there and `\båtte\b` never
+matches.
+
+    node -e 'console.log(/\båtte\b/iu.test("terskelen til åtte"))'   // false
+    node -e 'console.log(/\bfem\b/iu.test("terskel fem svar"))'      // true
+
+**The gate has been blind to one of the ten numerals it lists since it was written**, and it
+is not a harmless one: **8 is the threshold the statutory harassment pack locks**, which
+makes it the numeral most likely to appear beside a threshold word in copy where it matters.
+Every other numeral in both lists is ASCII, so the gate was right nine times out of ten and
+silent on the tenth — which is exactly why it survived four phases of green.
+
+Fixed with a boundary that knows about letters rather than about ASCII —
+`(?<![\p{L}\d])` … `(?![\p{L}\d])` under the `u` flag — and `terskel\w*` becomes
+`terskel\p{L}*` for the same reason. **The repaired gate immediately surfaced the string it
+had been blind to**, which is the second time in this run that repairing a check earned
+itself on its first run (V2-4's placeholder premise was the first).
+
+**What it did NOT find:** nothing else. The sweep over both message files after the fix
+returned four hits, all four the same harassment threshold in two languages, and all four are
+the locked pack value. So the blindness cost nothing in the end — but it cost nothing by
+luck, and the entry records that distinction rather than the outcome.
+
+### D124 — five more capability claims in the Bruksområder copy, found in the FIX PASS
+
+**Accepted, and how they were found is the point.** D122's six came out of a regex sweep over
+the copy before it shipped. These five came out of **opening the capture and reading the tip
+box** — the sweep's pattern did not contain «egen rolle» or «HR-systemet», so it could not
+have found them.
+
+| Sentence | Why it is false |
+|---|---|
+| «Verneombudet har **egen rolle i HeiTuva** og **godkjenner spørsmålene** før utsending» | Two claims in one line: `app.member_role` has three values (D106, third appearance), and **there is no approval step before a send** |
+| «Hent tallene aggregert per stillingsgruppe **under Integrasjoner**» | There is no Integrasjoner screen, and `hr_sync` is a `feature_flags` row that is OFF |
+| «Slå på automatisk oppfølging med **eskalering til innkjøpsansvarlig**» | Reminders exist (`app.enqueue_reminders`); escalation to a named person does not |
+| «**Sendes automatisk etter startdatoen**» / «**Koble til HR-systemet**, så sendes sjekken automatisk» / «Startdato i HR-systemet» | Nothing is triggered by a start date. The recurrence machinery (Q20/Q22) is what exists, and the copy now says that |
+| «**Sluttdato i HR-systemet**» | Same flag, same absence |
+
+`tests/db/use-cases-page.test.ts` now bans all eleven phrases, in one list with a reason each.
+
+**One thing the fix taught the test.** My first replacement read «Verneombudet er **ikke** en
+egen rolle i HeiTuva», and the check failed on it — correctly by its own rule and wrongly
+about the sentence, because **a substring check cannot read negation**. The sentence was
+reworded rather than the check exempted: a check taught to ignore «ikke» is one a future
+false claim could hide behind by adding a word.
+
+**And the count is the finding under the findings.** Across V2-6 and V2-8, **twenty-one
+sentences in bundle copy were false against the running product** — ten in the help articles,
+eleven here. None was caught by a gate; all were caught by measuring a claim against the
+database, one at a time. The gates protect the schema and the data. **Nothing mechanical
+protects prose, and prose is what a user reads to decide whether to trust the numbers.**
