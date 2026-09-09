@@ -818,3 +818,147 @@ promises «Summerte tall beholdes». It is not a feature and it is not waiting o
 is waiting on a connection string. What is still absent from prod is listed by capability in
 `docs/v2/06-remainder.md § 2.2`; the two entries that matter most are unchanged from that
 document — **`M:0068`, the round-freeze data-loss repair, is still not applied.**
+
+---
+
+## 2026-09-09 — the remaining twenty-seven applied; prod is at the repository head
+
+**`M:0062`–`M:0088` applied to `heituva-prod` (`jmhhszsnjfqgclxzhciq`) in filename order,
+through `mcp__Supabase__apply_migration`, each file sent verbatim.** All twenty-seven returned
+`{"success": true}`. With the three from earlier the same day (`M:0058`, `M:0060`, `M:0061`)
+and the prod-only `segments_predicate_verbatim_body` repair, **Q103's thirty are complete.**
+
+**`supabase db push` was not the route, and the reason is an environment fact rather than a
+preference.** `db.jmhhszsnjfqgclxzhciq.supabase.co` does not resolve from this container and
+the poolers that do resolve have 5432/6543 blocked — only 443 is open, through
+`HTTPS_PROXY`. The command's own error is `LegacyDbConnectError … getaddrinfo ENOTFOUND`.
+The connection string exists and is unusable from here; the MCP is the only path, and it was
+authorised. **The standing preference for `db push` is unchanged and so is its reason — it
+sends the file, and `apply_migration` retypes it.**
+
+**The capability notice at the top of this session said the Supabase MCP required
+authentication and could not be used. It was stale.** One `list_migrations` call settled it,
+which is the rule recorded above applied for the second time in two days.
+
+### The fingerprint — mirror method, both hashes
+
+The local was `supabase db reset` to a clean build of all 116 files immediately before the
+comparison, so the mirror is prod's intended state and not a working tree carrying something
+else.
+
+| | local mirror (0001–0088) | heituva-prod |
+|---|---|---|
+| `n_columns` | **452** | **452** |
+| `columns` | `cb777034252616e1880ce470ff13c082` | `cb777034252616e1880ce470ff13c082` |
+| `constraints` | `c6958ca034dfb7bd77d491b713e79bb3` | `c6958ca034dfb7bd77d491b713e79bb3` |
+| `policies` | `cfa9f6f9db325495b3006698f5539da0` | `cfa9f6f9db325495b3006698f5539da0` |
+| `rls_tables` | `cb5cf4623fdd6ef241a935afc0426afd` | `cb5cf4623fdd6ef241a935afc0426afd` |
+| `functions` | `5a3cca176199c50d23be31cfcec54532` | `5a3cca176199c50d23be31cfcec54532` |
+| `grants` | `eb550ec99d7a02b2a3fa018d97b00dc3` | `eb550ec99d7a02b2a3fa018d97b00dc3` |
+| `enums` | `113b10fde591212cbecd19621b2afca5` | `113b10fde591212cbecd19621b2afca5` |
+
+**All eight match.** The ninth check — the raw per-function `md5(prosrc)` — was run beside it,
+as the section above now requires:
+
+```
+fns  normalised_aggregate              raw_aggregate
+94   059cc13d4f347642ebcc11460931d881  ed2448faff77bf418d2522957d702da8   local
+94   059cc13d4f347642ebcc11460931d881  d96841c2bbf87e9dc828d3ad39c223ca   prod
+```
+
+**Normalised identical, raw different: twenty-four of ninety-four functions differ in comment
+text only** — by construction, since the normalisation removes exactly comments and
+whitespace. Enumerated: `cadence_interval`, `forbid_translation_edit_after_send`,
+`forbid_version_mutation`, `guard_sso_break_glass`, `map_pack_use_cases`, `preset_title_free`,
+`report_quotes`, `resolve_token`, `resume_schedule`, `suppress_partition`, `sync_survey_target`
+(app); `claim_membership`, `dashboard_summary`, `get_benchmarks`, `get_heatmap`, `get_quotes`,
+`get_themes`, `get_trends`, `quote_candidates`, `results_summary`, `sign_duty`,
+`snapshot_report`, `snapshot_results`, `survey_response_counts` (public).
+
+**None of the twenty-seven this run applied is in that list.** Every function this run
+created or replaced matches local byte for byte, because every file was pasted verbatim
+rather than summarised. **The divergence is the older debt** — the hand-applies of
+2026-09-05/07/08, which the eight-hash fingerprint was never able to see and which the ninth
+check made visible for the first time yesterday.
+
+**IT IS NOT SAFE TO REPAIR BY RE-APPLYING THE DEFINING MIGRATION, AND THAT IS WORTH WRITING
+DOWN BEFORE SOMEBODY TRIES.** Four of the twenty-four — `results_summary`,
+`dashboard_summary`, `get_benchmarks`, `sync_survey_target` — were later rewritten in place by
+`M:0077`, which patches `pg_get_functiondef` output rather than shipping a body. Re-applying
+their original file would restore the comments **and silently remove V2-7's `is_test`
+filter**, putting the editor's own preview back into every participation denominator. A repair
+has to re-apply the base file and then every patching migration after it, in order. It is a
+reconstruction, not a re-run, and it is not urgent: behaviour is provably identical.
+
+### Ledger, reconciled
+
+Thirty-five rows carried MCP-assigned versions rather than the repository's filename versions.
+Rewritten keyed on name, each one checked first for a unique name and a free target:
+
+```
+repo_files 116 · repo_versions_missing_from_ledger 0
+```
+
+**Every one of the 116 files is present at its own version; `supabase db push` would now see
+nothing pending.** Forty-six ledger rows remain that no repo file matches: forty-two are the
+2026-09-04/05 double-apply duplicates (each of those names also carries its repo version, so
+nothing is missing), three are prod-only repairs
+(`recurrence_paused_at_repair`, `overview_activity_repair_to_committed`,
+`segments_predicate_verbatim_body`) and one is `overview_activity_revoke_public`. **Clearing
+the forty-two is a bulk delete on the remote ledger, which CLAUDE.md says is stop-and-ask —
+so they stand, harmlessly: an extra row never causes a re-apply.**
+
+### Invariants, read from prod's own catalogue
+
+| Invariant | Result on prod |
+|---|---|
+| SELECT policy on `responses` / `answers` | **none** — `[]` |
+| RLS on the vault | `responses` true, `answers` true |
+| Anonymity CHECK | `CHECK ((anonymity_at_submission <> 'anonymous') OR (invitation_id IS NULL))` |
+| Tables without RLS | **none** — `[]` |
+| Functions inserting into `responses` | **exactly one: `submit_response`** |
+| `app.k_threshold()` | 5 |
+| k floor / ceiling | `k_threshold >= 2 or respondent_kind = 'organisation'`; `<= 10`; org default 2–10 |
+| `anon`-executable | the six by design **plus `redeem_live_voucher`** (V2-9's voucher, allowlisted in 5a3) |
+| SECURITY DEFINER without a pinned `search_path` | **none** — `[]` |
+
+**The role-based half of the invariant suite did not run against prod and is not claimed.**
+Cross-org isolation, «leser cannot read answers» and token replay need real persona sessions
+over a Postgres connection, and neither is reachable from this container. What stands in for
+them is the `policies` hash: prod's RLS predicates are byte-identical to the local build the
+suite passes against. That is a strong argument and it is not the measurement, and the
+difference is the point of this file.
+
+### Advisors, re-read against the synced schema
+
+**No new security class.** `rls_enabled_no_policy` on `answers`/`responses`/`demo_requests`
+(invariant 1, by design); the anon-executable SECURITY DEFINER list is now **seven**, the six
+plus `redeem_live_voucher`; `auth_leaked_password_protection` is still the launch-gate item.
+
+**Two WARNs that are new since the 2026-09-05 reading, and BOTH ARE IN THE COMMITTED
+MIGRATIONS RATHER THAN IN PROD.** Verified against the freshly reset local, where they are
+identical:
+
+1. `function_search_path_mutable` × 6 — `app.task_step_index`, `app.below_threshold`,
+   `app.live_word_floor`, `app.guard_live_is_anonymous`, `app.guard_run_mode_anonymous`,
+   `app.guard_quiz_policy`. **None is SECURITY DEFINER** (the invariant table above reads
+   zero), and all six are in `app`, which PostgREST does not expose.
+2. `auth_rls_initplan` × 1 — `dashboard_presets_sel` is `auth.role() = 'authenticated'`
+   rather than `(select auth.role()) = …`, from `M:0047`.
+
+**Both have been true in the repository since V1-4 and nothing saw them, because the advisors
+are only ever read against prod and prod was nineteen migrations behind.** That is the same
+shape as every finding this project has turned on — a control that was exactly true about what
+it measured, and silent about a room it never reached. Logged for the remainder, not fixed:
+the apparatus is frozen and the sequencing is Tor's.
+
+### Prod's head after this run
+
+**116 of 116 repository migrations applied**, the last being `20260909000088`
+(`token_carries_run_mode`). 162 ledger rows. `max(version)` is **not** that file: it is
+`20260909125210`, the prod-only `segments_predicate_verbatim_body` repair, which sorts above
+every filename version because it was stamped with a clock rather than a filename. Worth
+knowing before reading a head off `max(version)` again — **a repair row is the newest thing in
+that table and it is not the newest migration.** `M:0068` — the round-freeze repair — is applied: every path that closes
+a round now freezes its numbers, and the retention job no longer destroys a round's aggregates
+before anything wrote them down.
