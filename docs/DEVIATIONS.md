@@ -3544,10 +3544,33 @@ under WCAG (large starts at 14pt bold / 18.66px), so the requirement is **4.5:1*
 380–420px — the one class of screen where the person reading it did not choose to be there and
 cannot zoom out of the problem.
 
-**NOTHING IS RESTYLED. The colour ships as drawn and the question goes to Tor**, because this
-is the bundle winning on visuals against a quality that is not negotiable, and CLAUDE.md gives
-the bundle visuals. Darkening `#F26B21` to clear 4.5:1 is a two-line change and it is not mine
-to make: it is the only one of the four that would move, so the set stops being the drawn set.
+**THE COLOUR WAS NOT MINE TO CHANGE, SO IT WENT TO TOR — and he changed it.**
 
-Recorded here with the numbers so the decision is made against a measurement rather than
-against «looks fine» — the same reason Q83 asked for the measurement in the first place.
+> **DECIDED (Tor, 2026-09-09): darken `--qz1` to clear 4.5:1.**
+
+`--qz1` is therefore **NOT the drawn hex**, and it is the only token in this project that is
+not. The change is the smallest one that answers the measurement: **hue and saturation are
+untouched** — `hsl(21.2, 88.9%)`, the drawn colour's own — and only lightness moves,
+**53.9 % → 40.0 %**:
+
+| | Hex | `--sf` on it |
+|---|---|---|
+| Drawn | `#F26B21` | 2.99 : 1 — fails |
+| Shipped | **`#C14B0B`** | **4.82 : 1 — passes AA** |
+
+**40.0 % rather than the 41.4 % that first clears the line.** The minimum passing lightness
+gives 4.53:1, three hundredths above the requirement — a number that survives this calculation
+and might not survive a different renderer's rounding, and which would leave `--qz1` the
+outlier again in a new way. 4.82 sits with the other three (4.95, 5.13, 6.06) instead of just
+under them. The other three are the drawn hexes, unchanged.
+
+`tests/unit/quiz-tiles.test.ts` recomputes all four ratios from the CSS rather than from a
+list, so a future edit to `globals.css` fails here rather than shipping. **The check is the
+property — «every quiz tile carries readable text» — not the four hexes**, which is the
+distinction CLAUDE.md's «an enumeration mistaken for a property» section is about: a test
+pinning the hexes would pass a fifth tile that fails.
+
+Recorded with the numbers throughout, so the decision was made against a measurement rather
+than against «looks fine» — which is the reason Q83 asked for the measurement in the first
+place, and the reason the measurement was worth doing after the default had already been
+taken.

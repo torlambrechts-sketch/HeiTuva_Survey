@@ -385,7 +385,8 @@ the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
 
-**V2-10 took the census 798 → 816 across 52 files** (`tests/db/quiz.test.ts`, 18)
+**V2-10 took the census 798 → 820 across 53 files** (`tests/db/quiz.test.ts` 18,
+`tests/unit/quiz-tiles.test.ts` 4)
 and 5a3 **64 of 89 → 65 of 90**: `quiz_leaderboard` is a new SECURITY DEFINER
 function and it is CHECKED. **The checked number has now moved up six phases
 running.** No new table — Q84's narrowing plus Q61's «derive, do not duplicate»

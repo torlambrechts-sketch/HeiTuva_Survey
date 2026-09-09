@@ -24,9 +24,13 @@
      existing accents have near-identical luminance — `--ac`, `--ac2` and `--ac3`
      would read as three shades of the same pale thing from the back of a room.
      Contrast of `--sf` on each is MEASURED and recorded in docs/DEVIATIONS.md
-     (D125); `--qz1` does not pass AA and that is an open question, not a
-     rounding. */
-  --qz1: #F26B21;
+     (D125). `--qz1` IS NOT THE DRAWN HEX: the bundle's #F26B21 measured
+     2.99:1 against the option LABEL that sits on it (15px bold = normal text,
+     so 4.5:1 is the requirement, not 3:1). Tor's decision, 2026-09-09: darken
+     it until it clears. Same hue and saturation — hsl(21.2, 88.9%) — lightness
+     53.9% -> 40.0%, giving 4.82:1. The other three are the drawn hexes
+     unchanged: 5.13, 4.95, 6.06. */
+  --qz1: #C14B0B;
   --qz2: #2F6FB0;
   --qz3: #2F7D4F;
   --qz4: #B0343C;
