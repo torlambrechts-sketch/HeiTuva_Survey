@@ -388,14 +388,46 @@ describe('(V2-9) `run_mode` — the column has a writer, and the rule is the dat
     // alone would have missed: set live first, then try to make the survey
     // named. Guarding only the mode column would let the survey arrive at
     // `live` + `named` by the other road.
-    psql(`update public.surveys set run_mode = 'live' where id = '${survey}'`)
+    //
+    // ON ITS OWN SURVEY, WITH NO LIVE SESSION, since S3/M:0093. `survey` above
+    // carries an open session, and the state rule added for A6-4 («named while
+    // a voucher is outstanding») refuses that row first — correctly, but with
+    // its own message, which would leave this test asserting whichever guard
+    // happened to run earlier. A survey with no session can only be refused by
+    // the rule this test is about, so the assertion stays exact rather than
+    // being widened to accept either reason.
+    const orgId = one(`select org_id from public.surveys where id = '${survey}'`)
+    const solo = one(`
+      insert into public.surveys (org_id, title, status, anonymity, run_mode)
+      values ('${orgId}', 'V2-9 16b no session', 'utkast', 'anonymous', 'live')
+      returning id`)
     let err = ''
     try {
-      psql(`update public.surveys set anonymity = 'named' where id = '${survey}'`)
+      psql(`update public.surveys set anonymity = 'named' where id = '${solo}'`)
     } catch (e) {
       err = String((e as { stderr?: string }).stderr ?? e)
     }
     expect(err, 'a live survey cannot be made named').toMatch(/live_requires_anonymous/)
+    psql(`delete from public.surveys where id = '${solo}'`)
+  })
+
+  it('16c. and the state rule catches the road 16b cannot see', () => {
+    // S3/A6-4. ONE update that moves run_mode AND anonymity together satisfies
+    // the rule above — after it the survey is not `live`, so «live requires
+    // anonymous» has nothing to say — and leaves an outstanding voucher on a
+    // named survey. `survey` HAS an open session, which is what makes this the
+    // right fixture for it and the wrong one for 16b.
+    psql(`update public.surveys set run_mode = 'live' where id = '${survey}'`)
+    let err = ''
+    try {
+      psql(`update public.surveys set run_mode = 'standard', anonymity = 'named'
+             where id = '${survey}'`)
+    } catch (e) {
+      err = String((e as { stderr?: string }).stderr ?? e)
+    }
+    expect(err, 'both transition guards are satisfied; the state rule is not').toMatch(
+      /live_session_open/,
+    )
     psql(`update public.surveys set run_mode = 'standard' where id = '${survey}'`)
   })
 

@@ -258,11 +258,22 @@ describe('(Q64 gap 2) deleting a group cannot rewrite the record or widen a link
   it('the four FKs carry the behaviour that was DECIDED, not the one inherited', () => {
     // Asserted from the catalogue rather than described, because the whole
     // finding was that nobody had ever looked at these four values.
+    // POSITION-AWARE since S3/M:0090. `org_members.group_id` became a COMPOSITE
+    // key — `(group_id, org_id) -> groups(id, org_id)` — the moment the column
+    // got a writer, and an `unnest(conkey)` that ignores which target column
+    // each source column points at then reported `org_members.org_id` as a
+    // fifth «FK into groups». It is not one: it is the tenant half of one key.
+    // Unnesting conkey WITH confkey and keeping the pair that lands on
+    // `groups.id` names exactly the reference whose delete behaviour this test
+    // is about, and keeps working however many composites arrive later.
     const rows = psql(
       `select c.conrelid::regclass::text||'.'||a.attname, c.confdeltype
-         from pg_constraint c join unnest(c.conkey) k on true
-         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+         from pg_constraint c
+         join lateral unnest(c.conkey, c.confkey) as u(src, tgt) on true
+         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = u.src
+         join pg_attribute fa on fa.attrelid = c.confrelid and fa.attnum = u.tgt
         where c.contype = 'f' and c.confrelid = 'public.groups'::regclass
+          and fa.attname = 'id'
         order by 1`,
     )
     const by = Object.fromEntries(rows.map((r) => [r[0]!, r[1]!]))
