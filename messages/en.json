@@ -834,6 +834,7 @@
     "dpoTitle": "Data protection officer",
     "usersHeading": "Users",
     "userCount": "{active} active of {total, plural, one {# user} other {# users}}",
+    "userNoGroup": "No group",
     "invitePlaceholder": "name@company.com",
     "usersRoleNote": "Administrator manages settings and privacy. Editor creates and sends surveys. Viewer sees only aggregated results — never individual answers.",
     "statusActive": "Active",

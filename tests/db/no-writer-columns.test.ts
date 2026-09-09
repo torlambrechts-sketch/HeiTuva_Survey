@@ -1,0 +1,118 @@
+import { execFileSync } from 'node:child_process'
+import { describe, expect, it } from 'vitest'
+
+/**
+ * S3 item 2 — the standing question is answered in writing, for all ten.
+ *
+ * CLAUDE.md: *«ASK «WHO WRITES THIS COLUMN?» IN THE MIGRATION THAT ADDS IT.
+ * Not when something looks wrong later — then, in writing, beside the column.»*
+ * Audit `A7a-11` measured how that was going: **fifteen of the sixteen
+ * no-writer columns carried no column comment at all**, which is precisely the
+ * thing the standing question asks for.
+ *
+ * ── WHAT THIS TEST CAN AND CANNOT BE ──────────────────────────────────────
+ *
+ * The property one would want is «every column with no writer says so». That is
+ * not derivable from the catalogue: «has a writer» is a fact about application
+ * code, and deriving it is what the audit spent two independent probes on.
+ *
+ * So this is an ENUMERATION, and — following CLAUDE.md's own rule about them —
+ * it says what it is an enumeration OF: the ten columns the 2026-09-09 audit
+ * identified as having no writer, or none outside the demo seed. It is not the
+ * set of all such columns and does not claim to be. What it buys is that these
+ * ten cannot silently lose their answer, and that the answer keeps the one
+ * shape a reader can grep for.
+ *
+ * The eleventh, when it is found, is added here by the phase that finds it. The
+ * test that would catch the eleventh by itself does not exist and cannot be
+ * written from the database alone; that limitation is recorded in
+ * docs/DEVIATIONS.md D126 rather than papered over.
+ */
+const DB_URL = process.env.LOCAL_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+function psql(query: string): string[][] {
+  const out = execFileSync('psql', [DB_URL, '-tAF\t', '-c', query], { encoding: 'utf8' })
+  return out.split('\n').filter(Boolean).map((r) => r.split('\t'))
+}
+
+/** The audit's no-writer set (01-database.md § 1.3 and § 1.5, A7a/A7b). */
+const NO_WRITER_SET: [table: string, column: string][] = [
+  ['org_members', 'group_id'],
+  ['duties', 'next_due_at'],
+  ['surveys', 'run_mode'],
+  ['survey_invitations', 'bounced_at'],
+  ['groups', 'lead_member_id'],
+  ['report_shares', 'expires_at'],
+  ['live_sessions', 'created_by'],
+  ['live_sessions', 'step'],
+  ['tasks', 'due_at'],
+  ['organizations', 'timezone'],
+]
+
+function commentOf(table: string, column: string): string | null {
+  const rows = psql(`
+    select coalesce(d.description, '')
+      from pg_attribute a
+      join pg_class t on t.oid = a.attrelid
+      join pg_namespace n on n.oid = t.relnamespace
+      left join pg_description d on d.objoid = a.attrelid and d.objsubid = a.attnum
+     where n.nspname = 'public' and t.relname = '${table}' and a.attname = '${column}'`)
+  if (!rows.length) return null
+  return rows[0]?.[0] ?? ''
+}
+
+describe('every column the audit found without a writer answers the question', () => {
+  for (const [table, column] of NO_WRITER_SET) {
+    it(`${table}.${column} says who writes it`, () => {
+      const comment = commentOf(table, column)
+      expect(comment, `${table}.${column} does not exist — the set is stale`).not.toBeNull()
+      expect(
+        comment,
+        `${table}.${column} has no column comment. CLAUDE.md asks the question ` +
+          `IN WRITING, BESIDE THE COLUMN, and this is the column.`,
+      ).not.toBe('')
+      expect(
+        comment,
+        `${table}.${column} has a comment but does not answer «who writes this ` +
+          `column?» — a comment about what the column MEANS is what all fifteen ` +
+          `of the audit's silent columns would have had.`,
+      ).toContain('WHO WRITES IT')
+    })
+  }
+
+  /**
+   * THE ANSWER HAS THREE VALUES, NOT TWO — which the first version of this
+   * assertion got wrong, by testing `!includes('NOTHING')` and counting
+   * «written only by the demo seed» as «has a writer». That is the exact
+   * confusion the standing question exists to remove: a column the seed fills
+   * looks written from every angle except a real organisation's.
+   */
+  const answerOf = (t: string, c: string) => {
+    const comment = commentOf(t, c) ?? ''
+    if (comment.includes('only scripts/seed-demo.ts')) return 'seed-only'
+    if (comment.includes('NOTHING')) return 'nothing'
+    return 'product'
+  }
+
+  it('exactly one has a product writer, and it names the action', () => {
+    const product = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'product')
+    // If a later phase gives a second column a writer, this list moves with it —
+    // deliberately, so that giving a column a writer is a visible act.
+    expect(product.map(([t, c]) => `${t}.${c}`)).toEqual(['org_members.group_id'])
+    expect(commentOf('org_members', 'group_id')).toContain('setMemberGroup')
+  })
+
+  it('two are written by the demo seed and by nothing else', () => {
+    const seedOnly = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'seed-only')
+      .map(([t, c]) => `${t}.${c}`)
+      .sort()
+    // CLAUDE.md's sentence, word for word: «A COLUMN WHOSE ONLY WRITER IS THE
+    // SEED IS EXACTLY THE FINDING». These two are recorded as that rather than
+    // filed with the columns nothing writes at all.
+    expect(seedOnly).toEqual(['live_sessions.step', 'tasks.due_at'])
+  })
+
+  it('the remaining seven are written by nothing at all', () => {
+    const nothing = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'nothing')
+    expect(nothing).toHaveLength(7)
+  })
+})

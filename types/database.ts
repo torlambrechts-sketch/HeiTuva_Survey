@@ -1349,6 +1349,7 @@ export type Database = {
           in_report: boolean
           key: string
           label: string
+          names_individuals: boolean
           on_dashboard: boolean
           sort_order: number
           supports_group_filter: boolean
@@ -1358,6 +1359,7 @@ export type Database = {
           in_report?: boolean
           key: string
           label: string
+          names_individuals?: boolean
           on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean
@@ -1367,6 +1369,7 @@ export type Database = {
           in_report?: boolean
           key?: string
           label?: string
+          names_individuals?: boolean
           on_dashboard?: boolean
           sort_order?: number
           supports_group_filter?: boolean

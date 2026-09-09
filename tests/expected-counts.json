@@ -9,6 +9,8 @@
   "tests/db/fk-tenancy.test.ts": 5,
   "tests/db/help.test.ts": 10,
   "tests/db/live.test.ts": 24,
+  "tests/db/member-group.test.ts": 9,
+  "tests/db/no-writer-columns.test.ts": 13,
   "tests/db/org-threshold.test.ts": 18,
   "tests/db/pack-roles.test.ts": 5,
   "tests/db/policy-panel.test.ts": 15,

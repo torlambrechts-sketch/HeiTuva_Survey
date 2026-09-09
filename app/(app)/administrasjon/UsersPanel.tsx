@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { inviteMember, setMemberRole, setMemberStatus } from './actions'
+import { inviteMember, setMemberGroup, setMemberRole, setMemberStatus } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
 import type { MemberRole } from '@/lib/auth/session'
 
@@ -11,14 +11,25 @@ export type AdminUser = {
   name: string
   email: string
   group: string | null
+  groupId: string | null
   role: MemberRole
   status: 'invited' | 'active' | 'inactive'
   initials: string
 }
 
+export type AdminGroup = { id: string; name: string }
+
 /** Brukere card — HeiTuva.dc.html:1409-1436. Avatar tint by role
  *  (--ac administrator, --ac2 redaktør, --sf2 leser), status column 74px. */
-export function UsersPanel({ users, count }: { users: AdminUser[]; count: { active: number; total: number } }) {
+export function UsersPanel({
+  users,
+  groups,
+  count,
+}: {
+  users: AdminUser[]
+  groups: AdminGroup[]
+  count: { active: number; total: number }
+}) {
   const t = useTranslations('admin')
   const tRole = useTranslations('role')
   const [invite, inviteAction, inviting] = useActionState<AdminResult | null, FormData>(
@@ -115,6 +126,29 @@ export function UsersPanel({ users, count }: { users: AdminUser[]; count: { acti
             {statusLabel(u.status)}
           </span>
           <div className="flex items-center gap-3.5 md:contents">
+          {/* S3/D125 — the writer org_members.group_id never had. No bundle
+              draws this control (the users row renders the group as text), so
+              it is the minimal consistent option: the same select class as the
+              role control beside it, in the row that already shows the group.
+              Placed BEFORE the role select because the row reads
+              «name · email · group» left to right and the control belongs with
+              the value it changes. */}
+          <select
+            defaultValue={u.groupId ?? ''}
+            aria-label={`${t('mgFieldGroup')}: ${u.name}`}
+            onChange={(e) => {
+              const next = e.target.value
+              startTransition(async () => setRowError(await setMemberGroup(u.id, next || null)))
+            }}
+            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
+          >
+            <option value="">{t('userNoGroup')}</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
           <select
             defaultValue={u.role}
             aria-label={`${t('tabBrukere')}: ${u.name}`}

@@ -333,6 +333,86 @@ export async function setMemberRole(memberId: string, role: string): Promise<Adm
   return { ok: true }
 }
 
+/**
+ * S3 — the writer `org_members.group_id` never had.
+ *
+ * CLAUDE.md's standing question, fired for the fifth time and with the largest
+ * blast radius of the five (audit `A7a-1`/`A7b-1`, found independently by two
+ * probes on different methods). The column is read in at least eight places —
+ * Brukere, the Grupper counts, Målgrupper audience sizes, Profil, the Send
+ * screen's group headcount — and, through `responses.respondent_group_id`, by
+ * every per-group aggregate, heatmap cell, trend and report filter. Its only
+ * writer was `scripts/seed-demo.ts`, which is CLAUDE.md's own sentence word for
+ * word: the demo works, every gate is green, and no user can ever set it.
+ *
+ * ── THE CONTROL IS NOT IN ANY BUNDLE, AND THAT IS THE DEVIATION ───────────
+ *
+ * Measured, not assumed: none of the three handoffs draws a control that puts a
+ * member in a group. The users row renders `{{ u.email }} · {{ u.group }}` as
+ * text; the two «Gruppe» selects are report filters; and the prototype's own
+ * invite handler assigns the string «Uten gruppe» from mock state. So this is
+ * an unspecified control rather than one that was missed, and CLAUDE.md's rule
+ * for that is the minimal consistent option, logged — D125.
+ *
+ * Minimal means: the same `select` class as the role control one line below, in
+ * the row that already shows the group, writing the column the schema already
+ * has. Nothing new is invented — no membership screen, no bulk assignment, no
+ * second group per person. `org_members.group_id` is scalar and Q92 turns on
+ * that being so (k does not compose), which is also why this is a select and
+ * not a multi-select.
+ */
+export async function setMemberGroup(
+  memberId: string,
+  groupId: string | null,
+): Promise<AdminResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+  if (!z.string().uuid().safeParse(memberId).success) return { ok: false, error: 'invalid' }
+  // '' from a <select> means «Uten gruppe» and is the way to clear it.
+  const parsed = z.string().uuid().nullable().safeParse(groupId === '' ? null : groupId)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data: before } = await supabase
+    .from('org_members')
+    .select('email, org_id, group_id')
+    .eq('id', memberId)
+    .single()
+  if (!before || before.org_id !== admin.orgId) return { ok: false, error: 'forbidden' }
+
+  // The group must belong to the SAME organisation. RLS would already refuse a
+  // group the administrator cannot see, but a cross-tenant reference is the
+  // failure this project has now hit through three different constructs, so it
+  // is checked here rather than left to a policy to imply.
+  if (parsed.data !== null) {
+    const { data: group } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('id', parsed.data)
+      .eq('org_id', admin.orgId)
+      .maybeSingle()
+    if (!group) return { ok: false, error: 'invalid' }
+  }
+
+  const { error } = await supabase
+    .from('org_members')
+    .update({ group_id: parsed.data })
+    .eq('id', memberId)
+  if (error) {
+    console.error(`setMemberGroup failed: ${error.message}`)
+    return { ok: false, error: dbError(error) }
+  }
+
+  // Which group a person is in decides which aggregate they land in, so the
+  // change is audited exactly as a role change is.
+  await audit(admin.orgId, 'member.group', before.email ?? memberId, {
+    from: before.group_id,
+    to: parsed.data,
+  })
+  revalidatePath('/administrasjon')
+  return { ok: true }
+}
+
 export async function setMemberStatus(memberId: string, active: boolean): Promise<AdminResult> {
   const admin = await requireAdmin()
   if (!admin) return { ok: false, error: 'forbidden' }

@@ -834,6 +834,7 @@
     "dpoTitle": "Personvernombud",
     "usersHeading": "Brukere",
     "userCount": "{active} aktive av {total, plural, one {# bruker} other {# brukere}}",
+    "userNoGroup": "Uten gruppe",
     "invitePlaceholder": "navn@bedrift.no",
     "usersRoleNote": "Administrator styrer innstillinger og personvern. Redaktør lager og sender undersøkelser. Leser ser bare summerte resultater — aldri enkeltsvar.",
     "statusActive": "Aktiv",

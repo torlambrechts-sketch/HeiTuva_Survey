@@ -15,10 +15,20 @@ export default async function UsersTab() {
   // an org with three of them.
   const { data, error } = await supabase
     .from('org_members')
-    .select('id, name, email, role, status, groups!org_members_group_id_fkey(name)')
+    .select('id, name, email, role, status, group_id, groups!org_members_group_id_fkey(name)')
     .eq('org_id', viewer.orgId)
     .order('created_at', { ascending: true })
   if (error) throw new Error(`org_members read failed: ${error.message}`)
+
+  // S3/D125: the options for the group control. Read here rather than in the
+  // panel so the row renders from data the server already has, and ordered by
+  // name because the bundle's own group lists are.
+  const { data: groupRows } = await supabase
+    .from('groups')
+    .select('id, name')
+    .eq('org_id', viewer.orgId)
+    .order('name', { ascending: true })
+  const groups = (groupRows ?? []).map((g) => ({ id: g.id, name: g.name }))
 
   const users: AdminUser[] = (data ?? []).map((m) => {
     const name = m.name || m.email
@@ -27,6 +37,7 @@ export default async function UsersTab() {
       name,
       email: m.email,
       group: (m.groups as unknown as { name: string } | null)?.name ?? null,
+      groupId: m.group_id,
       role: m.role as MemberRole,
       status: m.status as AdminUser['status'],
       initials: initialsOf(name),
@@ -36,6 +47,7 @@ export default async function UsersTab() {
   return (
     <UsersPanel
       users={users}
+      groups={groups}
       count={{ active: users.filter((u) => u.status === 'active').length, total: users.length }}
     />
   )

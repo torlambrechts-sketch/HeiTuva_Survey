@@ -3574,3 +3574,92 @@ Recorded with the numbers throughout, so the decision was made against a measure
 than against «looks fine» — which is the reason Q83 asked for the measurement in the first
 place, and the reason the measurement was worth doing after the default had already been
 taken.
+
+---
+
+## D125 — a control no bundle draws, for the column that made every group empty
+
+**S3, 2026-09-09.** `org_members.group_id` had no writer. The audit made it the lead finding
+(`A7a-1` / `A7b-1`, found independently by two probes on deliberately different methods), and
+the consequence was not subtle: a group could be created and **nobody could ever be put in one**
+— every group count 0, the Send screen's group picker targeting an empty set, every per-group
+result permanently `insufficient_data`, the blind-spot generator seeing only empty groups. With
+every gate green, because `scripts/seed-demo.ts` filled the column and the demo therefore worked.
+
+**The deviation is that no bundle draws the control.** Measured across all three handoffs rather
+than assumed:
+
+| Where one would be | What is actually drawn |
+|---|---|
+| Brukere row | `{{ u.email }} · {{ u.group }}` — text |
+| Grupper card | name, count, `ansvarlig {{ g.lead }}`, a progress bar, a × — no member list |
+| The two «Gruppe» selects | report and dashboard **filters**, not assignment |
+| The prototype's invite handler | assigns the literal string «Uten gruppe» from mock state |
+
+So this is not a control that was missed in implementation; it is one the design never had. CLAUDE.md's
+rule for that is the minimal consistent option, logged — not an invented feature.
+
+**Minimal, here, means:** one `select` on the Brukere row, in the same control class as the role
+select one line below it, in the row that already displays the group, with an empty option
+(«Uten gruppe») so a member can be taken out as well as put in. No membership screen, no bulk
+assignment, no second group per person — `org_members.group_id` is scalar and **Q92 turns on its
+being so** (k does not compose), which is also why it is a select and not a multi-select.
+
+`setMemberGroup` audits the change as `member.group`, exactly as a role change is audited, because
+which group a person is in decides which aggregate they land in.
+
+**And the constraint moved with the writer.** The audit had filed this column's tenancy as a
+LIMITATION (`A7a-10`): `tests/db/fk-tenancy.test.ts` «reasons about the tenancy risk of six columns
+no code ever writes; every one of its reasons is correct about a case that cannot arise». Adding the
+writer makes the case arise. `M:0090` therefore replaces the plain
+`(group_id) references groups(id)` with the composite `(group_id, org_id) references
+groups(id, org_id) on delete set null (group_id)` — M:0065's shape, for M:0065's reason: null the
+reference, keep the tenant. The application check in `setMemberGroup` is not the rule; it is a rule
+about one code path, and this project has been bitten three times by reasoning about the path
+instead of the state.
+
+**Reversible, and worth naming as such:** if the next handoff draws membership somewhere else, this
+select is one component and one action to move.
+
+---
+
+## D126 — «who writes this column?», answered for all ten
+
+**S3, 2026-09-09.** CLAUDE.md's standing question has two answers, and the audit found that neither
+had been written down. `A7a-11`: **fifteen of the sixteen no-writer columns carried no column
+comment at all** — the specific thing the standing question asks for.
+
+Ten columns now answer it, in the words `WHO WRITES IT`, and `tests/db/no-writer-columns.test.ts`
+asserts they keep doing so. **The answer turned out to have three values, not two**, which the first
+version of that test got wrong by treating «written only by the demo seed» as «has a writer» — the
+exact confusion the standing question exists to remove:
+
+| Answer | Columns |
+|---|---|
+| a server action | `org_members.group_id` (D125) |
+| only `scripts/seed-demo.ts` | `live_sessions.step`, `tasks.due_at` |
+| nothing at all | `duties.next_due_at`, `surveys.run_mode`, `survey_invitations.bounced_at`, `groups.lead_member_id`, `report_shares.expires_at`, `live_sessions.created_by`, `organizations.timezone` |
+
+**Only one got a writer, and the reason is a rule rather than a budget.** For the other nine the
+control does not exist in any bundle, and a writer for a control nobody drew is an invented feature.
+`group_id` is the exception because its absence made a **shipped** feature permanently empty rather
+than merely unreachable.
+
+Three of the seven are worth stating plainly, because their consequence is larger than «a column is
+NULL»:
+
+- **`report_shares.expires_at`** — every report share link is **permanent**, and there is no
+  revocation anywhere in the product. `report_for_share_token` and `compose_report` both read the
+  column and both treat NULL as «never expires». Deleting the row is the only revocation that
+  exists and no screen reaches it.
+- **`surveys.run_mode`** — a real editor cannot move a survey off `standard`, so Live and the whole
+  of V2-10's quiz are reachable only from psql.
+- **`duties.next_due_at`** — Oversikt's «Krever handling» is permanently empty on a real
+  organisation.
+
+**What this does NOT give you.** The test is an enumeration, and it says so: it is the set of ten
+the 2026-09-09 audit found, not the set of all columns without writers. «Has a writer» is a fact
+about application code and is not derivable from the catalogue — deriving it is what the audit spent
+two independent probes on. The eleventh instance will be found by a person, not by this test, and it
+is added here by the phase that finds it. Recorded rather than papered over, because a test that
+looked total while being partial is worse than one that states its scope.
