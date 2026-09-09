@@ -37,9 +37,13 @@ export default async function OverviewPage() {
       .from('duties')
       .select('definition_key, next_due_at')
       .eq('org_id', viewer.orgId),
+    // V2-4 · Q68 (DEFAULTED). `loop_actions` is superseded by `tasks` and the
+    // table is dropped (`M:0062`). This card keeps its drawing and changes its
+    // SOURCE — «Sløyfen lukket» is what the task register is, read four rows at
+    // a time. What Q68 actually retires is the second WRITE path; see D113.
     supabase
-      .from('loop_actions')
-      .select('id, text, due_at, done, created_at')
+      .from('tasks')
+      .select('id, title, due_at, status, created_at')
       .eq('org_id', viewer.orgId)
       .order('created_at', { ascending: false })
       .limit(4),
@@ -227,9 +231,12 @@ export default async function OverviewPage() {
       activity={activity}
       loop={(loop ?? []).map((l) => ({
         id: l.id,
-        text: l.text,
+        text: l.title,
         when: l.due_at ? dateFmt(l.due_at) : null,
-        done: l.done,
+        // «done» is now the register's own terminal step rather than a boolean
+        // somebody set. A task reaches `lukket` only through the close guard,
+        // so this count means «assessed and closed» rather than «ticked».
+        done: l.status === 'lukket',
       }))}
       // The design shows the wizard prompt as a dismissible row. There is
       // nothing to dismiss until there is something else to do, so it stands in

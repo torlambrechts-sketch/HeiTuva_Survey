@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { ComplianceCard } from './ComplianceCard'
-import { LoopActionForm } from './LoopActionForm'
 
 export type ActionItem = {
   key: string
@@ -150,7 +149,18 @@ export async function OverviewScreen({
             <span className="text-[13px] text-mut">
               {t('loopGrade', { done: doneLoop, total: totalSurveys })}
             </span>
-            {canEdit ? <LoopActionForm label={t('addAction')} /> : null}
+            {/* V2-4 · Q68 (DEFAULTED): the second WRITE path is what «do not run
+                both» is about, and it is this form. Adding a task now happens in
+                one place — Oppgaver — where the lifecycle and the close guard
+                are. The card keeps its drawing and links there. D113. */}
+            {canEdit ? (
+              <Link
+                href="/oppgaver"
+                className="touch-44 rounded-[10px] border border-line bg-transparent px-[15px] py-[9px] text-[12.5px] font-semibold text-ink"
+              >
+                {t('addAction')}
+              </Link>
+            ) : null}
           </div>
         </div>
 

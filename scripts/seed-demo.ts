@@ -540,15 +540,69 @@ async function main() {
     if (layoutError) throw new Error(`seed dashboard_layouts: ${layoutError.message}`)
   }
 
-  // loop_actions — produced by "Lukket sløyfen" on Oversikt, written by the
-  // member so `loop_cud_ins` is what admits it.
-  const { error: loopError } = await asAdmin.from('loop_actions').insert({
-    org_id: org.id,
-    survey_id: above.id,
-    text: 'Sette av tid til dypt arbeid på tirsdager',
-    owner_member_id: adminMember!.id,
-  })
-  if (loopError) throw new Error(`seed loop_actions: ${loopError.message}`)
+  // V2-4 · Q68 (DEFAULTED): `loop_actions` is superseded by `tasks` and dropped
+  // (`M:0062`). The register replaces it, and it needs a row at EVERY one of the
+  // six steps plus one late and one awaiting effect — the screen has no seedable
+  // state otherwise, which is the fixture gap CLAUDE.md names six times over.
+  const { data: ownerMember } = await svc
+    .from('org_members')
+    .select('id')
+    .eq('org_id', org.id)
+    .eq('email', PERSONAS.administrator.email)
+    .single()
+
+  const taskSeed: {
+    title: string
+    kind: string
+    status: 'foreslatt' | 'besluttet' | 'pagar' | 'gjennomfort' | 'effektvurdert' | 'lukket'
+    law?: string
+    due: string
+  }[] = [
+    // NOTE the sources: none of these names a group, a question or a score.
+    // Q72 decided what a task may contain, and the bundle's own fixture
+    // (V2:4168) breaks it — «Psykososial kartlegging · under terskel» with
+    // `law: "aml. § 4-3 (3)"` discloses that a sub-threshold group scored badly.
+    // The seed does not reproduce it.
+    { title: 'Kartlegge ytringsklima', kind: 'risikovurdering', status: 'foreslatt', law: 'arbeidsmiljo', due: '2026-11-01' },
+    { title: 'Svar på innsynskrav', kind: 'innsynskrav', status: 'besluttet', law: 'apenhet', due: '2026-10-03' },
+    { title: 'Revisjon hos leverandør', kind: 'leverandoroppfolging', status: 'pagar', law: 'apenhet', due: '2026-10-01' },
+    // Awaiting effect assessment — `gjennomfort` is what the stat tile counts.
+    { title: 'Møtefrie torsdager', kind: 'tiltak', status: 'gjennomfort', due: '2026-10-15' },
+    { title: 'Lønnskartlegging per stillingsgruppe', kind: 'tiltak', status: 'effektvurdert', law: 'likestilling', due: '2026-11-01' },
+    { title: 'Ny fadderordning for nyansatte', kind: 'tiltak', status: 'lukket', due: '2026-09-01' },
+    // Over frist — a past due date on an open task is the only way the «over
+    // frist» tile is reachable.
+    { title: 'Undersøkelse etter varsel', kind: 'undersokelsesplikt', status: 'pagar', law: 'trakassering', due: '2026-08-20' },
+  ]
+
+  for (const t of taskSeed) {
+    // Inserted at the target status rather than advanced into it: the guard is
+    // on UPDATE, and walking six steps per row would need six assessments this
+    // fixture has no reason to invent.
+    const { data: task, error: taskError } = await svc
+      .from('tasks')
+      .insert({
+        org_id: org.id,
+        title: t.title,
+        kind: t.kind,
+        law_ref: t.law ?? null,
+        owner_member_id: ownerMember?.id ?? null,
+        due_at: t.due,
+        status: t.status,
+      })
+      .select('id')
+      .single()
+    if (taskError) throw new Error(`seed tasks(${t.title}): ${taskError.message}`)
+    // The two terminal steps carry the row the close guard requires, so the
+    // register's own rule is satisfied by the fixture rather than bypassed.
+    if (t.status === 'effektvurdert' || t.status === 'lukket') {
+      await svc.from('task_effect_assessments').insert({
+        task_id: task!.id,
+        assessed_by: ownerMember?.id ?? null,
+        note: 'Effekten er vurdert i neste runde.',
+      })
+    }
+  }
 
   // import_jobs and notifications have no producer that a seed can call
   // (imports are parsed client-side, notifications are not yet emitted), so

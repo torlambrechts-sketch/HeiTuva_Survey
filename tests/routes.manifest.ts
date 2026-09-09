@@ -212,15 +212,11 @@ export const ROUTES: RouteSpec[] = [
           await page.getByRole('menu').waitFor({ state: 'visible' })
         },
       },
-      {
-        // The "Legg til tiltak" input, which replaces the prototype's
-        // placeholder row (D65).
-        name: 'loop-action-open',
-        setup: async (page) => {
-          await page.getByRole('button', { name: 'Legg til tiltak' }).click()
-          await page.getByLabel('Legg til tiltak').waitFor({ state: 'visible' })
-        },
-      },
+      // V2-4 · Q68 (DEFAULTED). The «Legg til tiltak» INPUT is gone — creating a
+      // task happens in one place now, Oppgaver, where the lifecycle and the
+      // close guard are. The card keeps its drawing and its button links there
+      // (D113), so there is no longer an open-state to photograph here. The
+      // state moved rather than vanished: `oppgaver/ny-oppgave` below.
     ],
   },
   {

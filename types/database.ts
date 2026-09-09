@@ -774,61 +774,6 @@ export type Database = {
           },
         ]
       }
-      loop_actions: {
-        Row: {
-          created_at: string
-          done: boolean
-          due_at: string | null
-          id: string
-          org_id: string
-          owner_member_id: string | null
-          survey_id: string | null
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          done?: boolean
-          due_at?: string | null
-          id?: string
-          org_id: string
-          owner_member_id?: string | null
-          survey_id?: string | null
-          text: string
-        }
-        Update: {
-          created_at?: string
-          done?: boolean
-          due_at?: string | null
-          id?: string
-          org_id?: string
-          owner_member_id?: string | null
-          survey_id?: string | null
-          text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "loop_actions_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loop_actions_owner_member_id_fkey"
-            columns: ["owner_member_id"]
-            isOneToOne: false
-            referencedRelation: "org_members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loop_actions_survey_id_fkey"
-            columns: ["survey_id"]
-            isOneToOne: false
-            referencedRelation: "surveys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notifications: {
         Row: {
           created_at: string
@@ -2104,6 +2049,166 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_effect_assessments: {
+        Row: {
+          assessed_at: string
+          assessed_by: string | null
+          id: string
+          note: string | null
+          round_id: string | null
+          task_id: string
+        }
+        Insert: {
+          assessed_at?: string
+          assessed_by?: string | null
+          id?: string
+          note?: string | null
+          round_id?: string | null
+          task_id: string
+        }
+        Update: {
+          assessed_at?: string
+          assessed_by?: string | null
+          id?: string
+          note?: string | null
+          round_id?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_effect_assessments_assessed_by_fkey"
+            columns: ["assessed_by"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_effect_assessments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "survey_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_effect_assessments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_kinds: {
+        Row: {
+          key: string
+          sort_order: number
+        }
+        Insert: {
+          key: string
+          sort_order?: number
+        }
+        Update: {
+          key?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          due_at: string | null
+          id: string
+          kind: string
+          law_ref: string | null
+          org_id: string
+          owner_member_id: string | null
+          source_kind: string
+          source_ref: string | null
+          status:
+            | "foreslatt"
+            | "besluttet"
+            | "pagar"
+            | "gjennomfort"
+            | "effektvurdert"
+            | "lukket"
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind: string
+          law_ref?: string | null
+          org_id: string
+          owner_member_id?: string | null
+          source_kind?: string
+          source_ref?: string | null
+          status?:
+            | "foreslatt"
+            | "besluttet"
+            | "pagar"
+            | "gjennomfort"
+            | "effektvurdert"
+            | "lukket"
+          title: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind?: string
+          law_ref?: string | null
+          org_id?: string
+          owner_member_id?: string | null
+          source_kind?: string
+          source_ref?: string | null
+          status?:
+            | "foreslatt"
+            | "besluttet"
+            | "pagar"
+            | "gjennomfort"
+            | "effektvurdert"
+            | "lukket"
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_kind_fkey"
+            columns: ["kind"]
+            isOneToOne: false
+            referencedRelation: "task_kinds"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "tasks_law_ref_fkey"
+            columns: ["law_ref"]
+            isOneToOne: false
+            referencedRelation: "duty_definitions"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "tasks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_owner_member_id_fkey"
+            columns: ["owner_member_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_source_ref_fkey"
+            columns: ["source_ref"]
+            isOneToOne: false
+            referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
         ]

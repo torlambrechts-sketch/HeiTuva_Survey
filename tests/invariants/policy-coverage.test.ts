@@ -84,7 +84,7 @@ async function buildFixture() {
     survey_id: survey.id, kind: 'low_score_follow_up',
     config: { threshold: 2, question_id: question.id },
   })
-  const loop = await insert(a, 'loop_actions', { org_id: org.id, text: uniq('Cov tiltak') })
+  const loop = await insert(a, 'tasks', { org_id: org.id, title: uniq('Cov tiltak'), kind: 'tiltak' })
   const notification = await insert(a, 'notifications', {
     org_id: org.id, member_id: leserMember.id, kind: 'round_closed', payload: {},
   })
@@ -226,25 +226,27 @@ describe('logic_rules', () => {
   })
 })
 
-describe('loop_actions — added in Phase 5 with no denial test', () => {
+describe('tasks — the register loop_actions was superseded by (V2-4, Q68)', () => {
   test('POSITIVE CONTROL: a leser in the org reads it', async () => {
-    // loop_sel is is_org_member: "sløyfen lukket" is meant to be seen by
-    // everyone, which is the whole point of closing the loop publicly.
-    expect(await visible(fx.leser.client, 'loop_actions', { id: fx.loop.id })).toBe(1)
+    // `tasks_sel` is `is_org_member`, and that is deliberate: the register is
+    // the organisation's compliance record, not a private queue. A leser must
+    // be able to see what is owed — the same reasoning `loop_sel` carried for
+    // «sløyfen lukket», which is the surface this one replaces.
+    expect(await visible(fx.leser.client, 'tasks', { id: fx.loop.id })).toBe(1)
   })
   for (const who of OUTSIDE_READERS) {
     test(`${who} cannot read it`, async () => {
-      expect(await visible(reader(who), 'loop_actions', { id: fx.loop.id })).toBe(0)
+      expect(await visible(reader(who), 'tasks', { id: fx.loop.id })).toBe(0)
     })
   }
   test('a leser cannot write one', async () => {
     const { error } = await fx.leser.client
-      .from('loop_actions').insert({ org_id: fx.org.id, text: 'leser' }).select()
+      .from('tasks').insert({ org_id: fx.org.id, title: 'leser', kind: 'tiltak' }).select()
     expect(error).not.toBeNull()
   })
   test('another organisation cannot write one into this org', async () => {
     const { error } = await fx.outsider.client
-      .from('loop_actions').insert({ org_id: fx.org.id, text: 'fremmed' }).select()
+      .from('tasks').insert({ org_id: fx.org.id, title: 'fremmed', kind: 'tiltak' }).select()
     expect(error).not.toBeNull()
   })
 })
