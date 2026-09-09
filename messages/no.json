@@ -332,7 +332,9 @@
     "unknownTarget": "ukjent antall",
     "logicIf": "HVIS",
     "previewYes": "Ja",
-    "previewNo": "Nei"
+    "previewNo": "Nei",
+    "testCta": "Test undersøkelsen",
+    "testHint": "Du svarer som en respondent. Ingenting lagres."
   },
   "send": {
     "title": "Slik når den fram",
@@ -1246,7 +1248,16 @@
     "promiseOrganisation": "Du svarer på vegne av {virksomhet}. Svaret vises med virksomhetens navn og kan bli gjort offentlig tilgjengelig.",
     "peerOrganisation": "Svar fra virksomheter vises ikke samlet — de leses enkeltvis.",
     "promiseAnonymousTwo": "Svarene er anonyme, men terskelen er satt til {kWord}. Da kan den andre som svarer regne seg fram til hva du svarte: de kjenner sitt eget svar og ser resultatet. Svar bare det du er villig til at den andre ser.",
-    "promiseChooseTwo": "Du velger selv om du vil være anonym, men terskelen er satt til {kWord}. Da kan den andre som svarer regne seg fram til hva du svarte: de kjenner sitt eget svar og ser resultatet."
+    "promiseChooseTwo": "Du velger selv om du vil være anonym, men terskelen er satt til {kWord}. Da kan den andre som svarer regne seg fram til hva du svarte: de kjenner sitt eget svar og ser resultatet.",
+    "testModeTitle": "Testmodus",
+    "testModeNote": "Svarene lagres ikke. All logikk kjører som for en ekte respondent.",
+    "testExit": "Avslutt test",
+    "testDoneNote": "Dette var en test. Ingenting ble lagret, og resultatene er urørt.",
+    "testBackToBuilder": "Tilbake til byggeren",
+    "testRestart": "Test på nytt",
+    "testNoRound": "Undersøkelsen er ikke sendt ennå, så det finnes ingen runde å teste mot.",
+    "testUnavailable": "Kunne ikke åpne testen. Prøv igjen.",
+    "testLoading": "Åpner testen …"
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",

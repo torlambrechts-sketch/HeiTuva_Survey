@@ -332,7 +332,9 @@
     "unknownTarget": "unknown count",
     "logicIf": "IF",
     "previewYes": "Yes",
-    "previewNo": "No"
+    "previewNo": "No",
+    "testCta": "Test the survey",
+    "testHint": "You answer as a respondent. Nothing is stored."
   },
   "send": {
     "title": "How it reaches them",
@@ -1246,7 +1248,16 @@
     "promiseOrganisation": "You are answering on behalf of {virksomhet}. Your answer is shown with the organisation’s name and may be made publicly available.",
     "peerOrganisation": "Answers from organisations are not shown together — each is read on its own.",
     "promiseAnonymousTwo": "Answers are anonymous, but the threshold is set to {kWord}. That means the other person answering can work out what you answered: they know their own answer and they see the result. Only answer what you are willing for them to see.",
-    "promiseChooseTwo": "You choose whether to answer anonymously, but the threshold is set to {kWord}. That means the other person answering can work out what you answered: they know their own answer and they see the result."
+    "promiseChooseTwo": "You choose whether to answer anonymously, but the threshold is set to {kWord}. That means the other person answering can work out what you answered: they know their own answer and they see the result.",
+    "testModeTitle": "Test mode",
+    "testModeNote": "Answers are not stored. Everything else runs exactly as it does for a real respondent.",
+    "testExit": "Leave test",
+    "testDoneNote": "That was a test. Nothing was stored, and the results are untouched.",
+    "testBackToBuilder": "Back to the builder",
+    "testRestart": "Test again",
+    "testNoRound": "The survey has not been sent yet, so there is no round to test against.",
+    "testUnavailable": "The test could not be opened. Try again.",
+    "testLoading": "Opening the test …"
   },
   "surveyNav": {
     "back": "Back to surveys",

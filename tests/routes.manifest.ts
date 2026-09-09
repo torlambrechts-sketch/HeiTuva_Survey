@@ -240,6 +240,40 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-7 — test mode (V2:6637). The banner (V2:3323) is the state worth
+    // photographing: it is what tells an editor that nothing they do here is
+    // stored, and `p_dry_run` is what makes that true.
+    // Reached the way a person reaches it — from the Builder's preview pane —
+    // rather than by a URL the harness composes. A capture that navigates
+    // straight to a route proves the route renders and not that anything leads
+    // to it, which is how V2-4's nav item nearly shipped pointing at nothing.
+    route: '/undersokelser',
+    label: 'test-modus',
+    as: 'administrator',
+    phase: 'phase-6',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          // Through the row menu's «Svar selv (test)» (V2:1049), which has
+          // pointed at /undersokelser/<id>/test since Phase 2 — a PENDING route
+          // until this phase built it. The Builder's own CTA (V2:894) is the
+          // other entry and needs a sent survey; this one reaches it from the
+          // list, which is where the harness already is.
+          //
+          // The FIRST row is the active survey, not a draft: a draft has no
+          // round, and `mint_test_token` answers `no_round` rather than
+          // inventing one.
+          await page.getByRole('button', { name: /Flere valg|More options/ }).first().click()
+          await page.getByRole('menu').first().waitFor()
+          await page.getByRole('menuitem', { name: /Svar selv \(test\)|Answer it yourself/ }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/test'))
+          await page.waitForTimeout(1200)
+        },
+      },
+    ],
+  },
+  {
     // V2-6 — Hjelp og støtte (V2:1944-2146). Q74 DEFAULTED: two tabs, not three.
     route: '/hjelp',
     label: 'hjelp',
@@ -1129,7 +1163,7 @@ export const ROUTES: RouteSpec[] = [
  *  the capture script reports them as pending instead of failing. */
 export const PENDING_ROUTES: { route: string; phase: string; note: string }[] = [
   { route: '/r/[token]', phase: 'phase-5', note: 'Shared report — captured by verify:export, which mints a token' },
-  { route: '/undersokelser/[id]/test', phase: 'phase-3', note: '"Svar selv" — the respondent flow' },
+
 
 ]
 

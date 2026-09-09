@@ -219,12 +219,31 @@ describe('(Q60) a suppressed address is not invited, by any path', () => {
     expect(inserters.length, 'at least the three known points, in two functions').toBeGreaterThanOrEqual(2)
     expect(inserters).toEqual(expect.arrayContaining(['app.run_due_schedules', 'public.send_round']))
 
+    // ── NARROWED IN V2-7, BY A PROPERTY AND NOT BY A NAME ────────────────────
+    //
+    // `public.mint_test_token` arrived as a fourth insertion point and THIS TEST
+    // CAUGHT IT, which is the derivation doing exactly what it was written for.
+    // It is nonetheless the one insertion that must NOT consult the predicate:
+    // an objection means «do not send me surveys», not «do not let me do my
+    // job», and refusing an administrator their own preview because they once
+    // opted out would be a functional bug caused by a privacy setting, with
+    // nothing on screen to explain it.
+    //
+    // So the exemption is written as the PROPERTY that makes it safe — the row
+    // it writes is `is_test`, and a test invitation asks nobody anything — not
+    // as a name on a list. A fifth insertion point that writes a REAL invitation
+    // still fails here; one that writes only test rows passes for a reason a
+    // reader can check. `tests/db/test-mode.test.ts` holds the other half: a
+    // test row is in no count and the scheduler does not copy it forward.
     const unguarded = psql(
       `select n.nspname||'.'||p.proname from pg_proc p
          join pg_namespace n on n.oid = p.pronamespace
         where n.nspname in ('public','app')
           and p.prosrc ~* 'insert\\s+into\\s+(public\\.)?survey_invitations'
           and p.prosrc !~* 'is_suppressed'
+          -- writes ONLY test invitations: every insert it performs sets is_test
+          and not (p.prosrc ~* 'is_test'
+                   and p.prosrc !~* 'insert into public\\.survey_invitations[^;]*\\)\\s*values[^;]*false')
         order by 1`,
     ).map((r) => r[0]!)
 

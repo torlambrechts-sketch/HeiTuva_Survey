@@ -16,6 +16,7 @@
   "tests/db/segments.test.ts": 15,
   "tests/db/suppressions.test.ts": 12,
   "tests/db/tasks.test.ts": 32,
+  "tests/db/test-mode.test.ts": 9,
   "tests/db/use-cases.test.ts": 9,
   "tests/invariants/attributed-results.test.ts": 23,
   "tests/invariants/duty-signing.test.ts": 21,

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { estimatedMinutes } from '@/lib/questions/registry'
 import type { DraftQuestion } from './types'
@@ -60,9 +61,19 @@ function previewChips(
 export function PreviewPane({
   title,
   questions,
+  surveyId,
+  canTest,
 }: {
   title: string
   questions: DraftQuestion[]
+  /** V2-7 — «Test undersøkelsen» (V2:894) needs the survey it opens. */
+  surveyId: string
+  /**
+   * A preview needs a round to test against, so the CTA is only offered on a
+   * survey that has been sent. Offering it on a draft would be an action the
+   * database refuses — the same rule the Oppgaver advance button follows.
+   */
+  canTest: boolean
 }) {
   const t = useTranslations('builder')
   const tr = useTranslations('respondent')
@@ -72,7 +83,20 @@ export function PreviewPane({
       className="sticky top-0 rounded-2xl border border-line p-5"
       style={{ background: 'var(--sf2)' }}
     >
-      <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('previewTitle')}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('previewTitle')}</div>
+        {canTest ? (
+          // V2:894. «Svarene lagres ikke» is the banner's promise on the other
+          // side of this link, and `p_dry_run` is what makes it true.
+          <Link
+            href={`/undersokelser/${surveyId}/test`}
+            className="touch-44 cursor-pointer whitespace-nowrap rounded-[9px] border-none bg-ac px-[15px] py-[9px] text-[12.5px] font-bold text-ink no-underline"
+          >
+            ▷ {t('testCta')}
+          </Link>
+        ) : null}
+      </div>
+      {canTest ? <p className="mt-1.5 text-[12px] leading-[1.5] text-mut">{t('testHint')}</p> : null}
       <div
         className="mx-auto mt-3 w-full max-w-[300px] rounded-[34px] px-3 pb-[18px] pt-[14px]"
         style={{ background: 'var(--ink)', boxShadow: '0 18px 40px rgba(25,21,16,.18)' }}

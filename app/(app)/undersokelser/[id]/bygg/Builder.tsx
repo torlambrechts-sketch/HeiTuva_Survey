@@ -384,7 +384,15 @@ export function Builder({
       ) : null}
 
       {tab === 'preview' ? (
-        <PreviewPane title={draft.title} questions={draft.questions} />
+        <PreviewPane
+          title={draft.title}
+          questions={draft.questions}
+          surveyId={surveyId}
+          /* `locked` means the survey has been sent, which is exactly when a
+             round exists to test against. A draft has none, and `mint_test_token`
+             would answer `no_round`. */
+          canTest={locked}
+        />
       ) : null}
     </div>
   )

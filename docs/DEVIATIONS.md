@@ -3146,3 +3146,37 @@ so a re-seed from a newer bundle that reinstates one fails rather than ships.
 `hr_sync`, which is a disabled flag. Deleting it would leave a reader unable to tell «not
 documented» from «not built», so the article ships with `requires_flag` set and renders an
 explicit line saying the feature is not switched on yet.
+
+### D118 — «Svar selv (test)» has pointed at a route that did not exist since Phase 2
+
+**Closed by V2-7, and recorded because of how long it stood.** `SurveyRow.tsx:287` links every
+survey's row menu to `/undersokelser/<id>/test`, and that route **was not built** until this
+phase. It was not silently broken — `tests/routes.manifest.ts` carried it in `PENDING_ROUTES`
+with the note *«Svar selv» — the respondent flow*, so the 404 check knew about it and the
+prefetch guard did not count it. **Known, tracked, and shipped as a menu item a user could
+click for four phases.**
+
+That is the honest shape of it: the apparatus did its job and the gap still reached the
+product, because a pending route is a decision to ship a dead link rather than a defect the
+gate can catch. Worth naming so the next `PENDING_ROUTES` entry is read as a debt with an
+owner rather than as coverage.
+
+### D119 — test mode ships two entry points and the CTA is hidden on a draft
+
+**Accepted.** The bundle has two: the Builder's preview pane (V2:894, «▷ Test undersøkelsen»)
+and the surveys row menu (V2:1049, «Svar selv (test)»). Both ship, and both reach the same
+route.
+
+**The Builder's CTA is hidden on an unsent survey**, because `mint_test_token` needs an open
+round and a draft has none. This is V2-4's rule — *a UI must not offer an action it knows the
+database will refuse* — and it is the reason the capture reaches the screen through the row
+menu instead: the seeded draft the Builder harness opens is exactly the case where the CTA is
+correctly absent.
+
+**The row menu's entry is NOT hidden**, and that is deliberate rather than an oversight: a
+menu is a list of what exists, and the destination explains itself — «Undersøkelsen er ikke
+sendt ennå, så det finnes ingen runde å teste mot». Hiding it there would leave a reader
+unable to tell «cannot test this» from «cannot test at all», which is the distinction D116
+and `admin.mgPopulationsUnavailable` both preserve. **The difference from V2-4's hidden
+advance button is that the refusal here has a sentence and a way back; there it had a
+database error code.**

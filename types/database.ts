@@ -1871,6 +1871,7 @@ export type Database = {
           group_id: string | null
           id: string
           identity_provider: string | null
+          is_test: boolean
           lang: string
           member_id: string | null
           name: string | null
@@ -1892,6 +1893,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           identity_provider?: string | null
+          is_test?: boolean
           lang?: string
           member_id?: string | null
           name?: string | null
@@ -1913,6 +1915,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           identity_provider?: string | null
+          is_test?: boolean
           lang?: string
           member_id?: string | null
           name?: string | null
@@ -2638,6 +2641,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      mint_test_token: { Args: { p_survey: string }; Returns: Json }
       overview_activity: { Args: { p_org: string }; Returns: Json }
       publish_duty: {
         Args: { p_duty: string; p_label?: string }
@@ -2696,6 +2700,7 @@ export type Database = {
         Args: {
           p_anon_choice?: boolean
           p_answers: Json
+          p_dry_run?: boolean
           p_lang: string
           p_token: string
         }

@@ -39,6 +39,8 @@ export function Respondent({
   engage,
   alreadyResponded,
   questions,
+  testMode = false,
+  onExitTest,
 }: {
   token: string
   locale: Locale
@@ -51,6 +53,15 @@ export function Respondent({
   engage: Record<string, unknown>
   alreadyResponded: boolean
   questions: RespondentQuestion[]
+  /**
+   * Q76 — the same flow, previewed. V2:3323's banner promises «All logikk kjører
+   * som for en ekte respondent», so this component is NOT forked: the flag is
+   * carried to `submit_response` as `p_dry_run` and everything above the write
+   * runs unchanged. A second copy of the respondent flow for previewing would be
+   * a preview of the copy.
+   */
+  testMode?: boolean
+  onExitTest?: () => void
 }) {
   const t = useTranslations('respondent')
   const tLang = useTranslations('lang')
@@ -107,6 +118,7 @@ export function Respondent({
         lang: locale,
         answers: payload,
         anonChoice: anonymity === 'optional' ? anonChoice : null,
+        dryRun: testMode,
       })
       if (result.ok) setDone(true)
       else if (result.error === 'already') setDone(true)
@@ -136,13 +148,48 @@ export function Respondent({
   }, [anonymity, kThreshold, respondentKind, locale, orgName, t])
 
   if (done)
-    return <ThankYou thankYou={e.thank_you} token={token} respondentKind={respondentKind} />
+    return (
+      <ThankYou
+        thankYou={e.thank_you}
+        token={token}
+        respondentKind={respondentKind}
+        testMode={testMode}
+        onExitTest={onExitTest}
+        onRestart={() => {
+          setAnswers({})
+          setStep(0)
+          setMissing(false)
+          setDone(false)
+          setFailed(false)
+        }}
+      />
+    )
 
   const isLast = !oneAtATime || step === total - 1
   const pct = total ? Math.round(((step + 1) / total) * 100) : 0
 
   return (
     <Shell>
+      {testMode ? (
+        // V2:3323. «Svarene lagres ikke. All logikk kjører som for en ekte
+        // respondent» — both halves are true because the dry run returns AFTER
+        // every validation and BEFORE the insert (Q76, `M:0075`).
+        <div className="mx-auto mb-3.5 max-w-[520px] rounded-[14px] bg-ac px-[18px] py-4 text-ink">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="min-w-[150px] flex-1">
+              <span className="block text-[13.5px] font-bold">{t('testModeTitle')}</span>
+              <span className="mt-0.5 block text-[12.5px]">{t('testModeNote')}</span>
+            </span>
+            <button
+              type="button"
+              onClick={onExitTest}
+              className="touch-44 cursor-pointer whitespace-nowrap rounded-[9px] border border-[rgba(25,21,16,.25)] bg-transparent px-3.5 py-[9px] text-[12px] font-semibold text-ink"
+            >
+              {t('testExit')}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-3.5">
         <div className="min-w-0">
           <div className="text-[13px] text-mut">
@@ -345,6 +392,9 @@ export function Respondent({
  * than vanishing.
  */
 function ThankYou({
+  testMode = false,
+  onExitTest,
+  onRestart,
   thankYou,
   token,
   respondentKind,
@@ -352,6 +402,9 @@ function ThankYou({
   thankYou?: string
   token: string
   respondentKind: 'person' | 'organisation'
+  testMode?: boolean
+  onExitTest?: () => void
+  onRestart?: () => void
 }) {
   const t = useTranslations('respondent')
   return (
@@ -359,7 +412,35 @@ function ThankYou({
       <div className="rounded-2xl border border-line bg-sf px-8 py-[50px] text-center">
         <div className="font-display text-[40px] font-medium leading-none">{t('thanks')}</div>
         <p className="mt-2 text-sm text-mut">{thankYou?.trim() || t('thanksSub')}</p>
-        <PeerResults token={token} respondentKind={respondentKind} />
+        {testMode ? (
+          // V2:3558. The sentence is the whole point of the state: the editor
+          // has just been through the real flow and needs to know that nothing
+          // of it survived. `p_dry_run` is what makes it true rather than a
+          // reassurance.
+          <>
+            <div className="mt-5 rounded-[12px] bg-ac px-4 py-3.5 text-left text-[13px] leading-[1.5]">
+              {t('testDoneNote')}
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={onExitTest}
+                className="touch-44 min-h-[48px] cursor-pointer rounded-[12px] border-none bg-ink px-[22px] py-[13px] text-[14px] font-bold text-sf"
+              >
+                {t('testBackToBuilder')}
+              </button>
+              <button
+                type="button"
+                onClick={onRestart}
+                className="touch-44 min-h-[48px] cursor-pointer rounded-[12px] border border-line bg-transparent px-[22px] py-[13px] text-[14px] font-semibold text-ink"
+              >
+                {t('testRestart')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <PeerResults token={token} respondentKind={respondentKind} />
+        )}
       </div>
     </Shell>
   )

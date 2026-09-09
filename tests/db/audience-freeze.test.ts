@@ -161,9 +161,22 @@ describe('(Q64) BLOCKER — a membership change after send moves no denominator'
     // both — they BUILD an audience, which is the one moment live membership is
     // the right source. They are named with that reason rather than pattern-
     // matched, so a third builder appearing here has to be justified by a person.
+    //
+    // V2-7 added a third, and THIS TEST CAUGHT IT — the derivation working.
+    // `mint_test_token` reads `org_members` for one thing only: the editor's own
+    // address, so the preview invitation is addressed to the person previewing
+    // rather than to a recipient. It computes no denominator, and the row it
+    // writes is excluded from every one of them
+    // (`tests/db/test-mode.test.ts` asserts that over the catalogue). The reason
+    // is here rather than a name being silently added, per D110's addition:
+    // **state the scope of the exemption, not only that there is one.**
     const BUILDERS: Record<string, string> = {
       send_round: 'builds the audience — the one moment live membership is correct',
       run_due_schedules: 'builds round N+1 by copying round N, and may read members',
+      mint_test_token:
+        'V2-7: reads org_members ONLY for the previewing editor’s own address, and ' +
+        'computes no denominator — the row it writes is is_test and is excluded from ' +
+        'all of them',
     }
     const offenders = psql(
       `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace

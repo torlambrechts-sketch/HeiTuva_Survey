@@ -25,6 +25,8 @@ const SubmitInput = z.object({
   answers: AnswerMap,
   /** Only meaningful when the survey's anonymity is 'optional'. */
   anonChoice: z.boolean().nullable().optional(),
+  /** Q76 — a preview. Validated like every other boundary value (invariant 6). */
+  dryRun: z.boolean().optional(),
 })
 
 export type SubmitResult =
@@ -49,6 +51,11 @@ export async function submitResponse(input: unknown): Promise<SubmitResult> {
     p_lang: parsed.data.lang,
     p_answers: parsed.data.answers as never,
     p_anon_choice: parsed.data.anonChoice ?? null,
+    // Q76 — test mode. The flag changes what happens AFTER validation and never
+    // whether validation runs, so a preview exercises the same refusals a
+    // respondent would meet. Default false: an omitted flag is a real
+    // submission, which is the safe direction for a boolean nobody set.
+    p_dry_run: parsed.data.dryRun ?? false,
   })
 
   if (error) {
