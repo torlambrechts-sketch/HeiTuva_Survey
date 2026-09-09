@@ -2557,6 +2557,40 @@ and no subject: the artefact carries no version of the claim, true or echoed.
 The first is fixed by preferring the surface that states a rule; the second
 cannot be fixed by choosing a better line, because there is no line.
 
+**CASE 4 HAS A SECOND INSTANCE, AND IT IS NOT A CITATION — IT IS A CAPTURE.**
+Added 2026-09-09 (Tor), from V2-9. The first draft of the Live page built the QR's
+join URL as
+
+```ts
+`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/l/${session.code}`
+```
+
+and **that variable does not exist in this project** — measured, `.env.local` defines
+only the two Supabase ones. The QR would have encoded `/l/ABC123` with an empty
+origin: a real, valid, correctly-rendered QR code that scans to nothing.
+
+Tor's reading, which is why it belongs here rather than as its own entry: *«the QR that
+photographs correctly and scans to nothing is the same class as the `<select>` I cited
+as evidence for a clause it cannot show. The picture is real and mute about the claim.
+`NEXT_PUBLIC_SITE_URL` not existing would never have appeared in a capture.»*
+
+**The two instances sit on opposite sides of the same artefact, which is what makes the
+class general rather than a screenshot problem.**
+
+| | Instance 1 (V2-3a) | Instance 2 (V2-9) |
+|---|---|---|
+| The artefact | a **citation** — a screenshot offered as evidence | a **capture** — a screenshot taken as verification |
+| What is real | the screen, correctly rendered | the QR, correctly rendered |
+| What is mute | the closed `<select>`'s options | whether the encoded URL resolves |
+| What no gate could see | a control the OS draws outside the page | a string that is syntactically fine and semantically empty |
+
+So the rule is not «be careful which screenshot you cite». It is: **an artefact that looks
+like evidence can be silent about the claim, whether you are offering it or collecting
+it** — and the question to ask of either is the same one, *what would this look like if
+the claim were false?* A QR encoding a broken URL photographs identically to one encoding
+a working one. A pixel diff over it passes. **The only check that distinguishes them is
+scanning it, which is the capture's equivalent of opening the picture and looking.**
+
 **THE FIX IS NEVER A BETTER SCREENSHOT.** Q65's clause is now asserted where it
 can be expressed — `verify:interaction` reads the options off
 `select[aria-label="Velg felt"]`: offered rather than omitted, each carrying

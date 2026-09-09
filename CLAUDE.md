@@ -95,6 +95,15 @@ Two consequences, both cheap:
 6. Zod validation at every server boundary. Service-role key server-side only.
 7. No respondent free text in logs, error payloads, or analytics. Sentry scrubbing configured.
 8. Schema changes only via `supabase/migrations/`. Never edit applied migrations; add new ones.
+   **ASK «WHO WRITES THIS COLUMN?» IN THE MIGRATION THAT ADDS IT.** Not when something looks
+   wrong later — then, in writing, beside the column. A column with no writer produces a
+   feature that is fully built, fully read, green on every gate, and reachable only from
+   psql; the seed sets it, so even the demo works. **Three instances, and they are why this
+   is a standing question rather than a lesson:** D102's pre-`M:0040` survey state, `created_by`
+   (which V2-4's audit found had no writer at all), and V2-9's `surveys.run_mode` — read by the
+   Live page, read by the context bar, set by the seed, writable by no editor. If the answer is
+   «nothing yet», say so in the column comment and log it; if the answer is «a server action»,
+   the phase that adds the column adds the action, and a test asserts it exists.
 
 ## Data-not-code
 Question types, template packs, statutory duties, report sections, quality-flag rules, benchmarks, feature flags, and UI messages are **data** (seeded tables / registries). One renderer per question type keyed off the registry. Adding a pack/duty/language is a migration or a row, not a component.
@@ -177,6 +186,17 @@ left pointing at something that stopped existing under it".**
 This has now been rediscovered five separate times (D50, D51, D57, the duty-archive case,
 and V2-3b's FK pair — which then bit a second time in the same migration, when an audit
 trigger on a lifted objection tried to write a row for an organisation already erased).
+
+**AND THE GENERAL FORM, WHICH ARRIVES THROUGH TRIGGERS AS WELL AS THROUGH FOREIGN KEYS
+(V2-9): A GUARD ON ONE TRANSITION IS NOT A GUARD ON THE STATE.** Everything above is about
+writing the rule as what it *means* rather than as the operation you happened to be
+thinking about, and the same slip has a second shape: guarding the column that carries the
+new value, and leaving every other road to the same state open. `app.guard_run_mode_anonymous`
+was first written `before update of run_mode` — correct for «switch this survey to live»,
+and blind to «make this live survey named», which reaches `live` + `named` by setting the
+mode first and the anonymity second. Both columns are in the trigger now. **When you guard
+a combination, enumerate the columns the combination is made of, not the one the user
+happened to touch.**
 
 ## A catch-all is a decision, not a safety measure
 **A catch-all is not a safety measure, it is a decision to make one class of failure
