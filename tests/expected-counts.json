@@ -8,6 +8,7 @@
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/db/fk-tenancy.test.ts": 5,
   "tests/db/help.test.ts": 10,
+  "tests/db/live-round-tenancy.test.ts": 6,
   "tests/db/live.test.ts": 24,
   "tests/db/member-group.test.ts": 9,
   "tests/db/no-writer-columns.test.ts": 13,

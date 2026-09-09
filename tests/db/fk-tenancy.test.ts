@@ -38,6 +38,34 @@ function one(query: string): string {
   return psql(query)[0]?.[0] ?? ''
 }
 
+/**
+ * ── THIS QUERY HAS A NAMED BLIND SPOT, AND IT COST A BLOCKER ──────────────
+ *
+ * S3, 2026-09-09. The comment below calls this «the property, not a list of
+ * names», and against the tables it can see, it is. But the two `exists`
+ * clauses require BOTH source and target to carry a LITERAL `org_id` column,
+ * and that is itself an enumeration: it is the set of tables whose tenancy is
+ * written down directly, standing in for the set of tables that HAVE a tenant.
+ *
+ * `survey_rounds` has no `org_id`. It is org-scoped TRANSITIVELY, through
+ * `survey_id -> surveys.org_id`. So every foreign key into it falls outside
+ * this query, and one of them — `live_sessions.round_id` — was the audit's
+ * BLOCKER (`A5-1`): an administrator of any organisation could route anonymous
+ * respondents' answers into another organisation's round. This test was
+ * structurally incapable of reporting it, and stayed green throughout.
+ *
+ * Eleven single-column keys sit in that blind spot. `tests/db/live-round-tenancy.test.ts`
+ * covers the round-shaped ones as a property derived from the catalogue — «a
+ * table that names its own tenant AND names a round must make the two agree» —
+ * because those are the ones where the unbound value can route a write. The
+ * rest point at global registries or `auth.users`.
+ *
+ * This query is NOT widened here. Doing so is a change to the verification
+ * apparatus mid-fix, which CLAUDE.md freezes, and the eleven would arrive as
+ * findings that are almost all fine. What is added is the sentence a reader
+ * needs: THIS TEST'S GREEN MEANS «no single-column key between two tables that
+ * both spell out org_id», and nothing wider than that.
+ */
 /** The enumeration itself — the property, not a list of names. */
 const CLASS_QUERY = `
   with fk as (
@@ -75,9 +103,13 @@ const KNOWN: Record<string, string> = {
   'template_packs.author_member_id': 'attribution; same',
   'dsr_requests.handled_by': 'attribution on a GDPR handling record; same, and worth fixing sooner for that reason',
   'groups.lead_member_id': 'attribution; same',
-  // Membership shape rather than attribution.
-  'org_members.group_id':
-    'a member pointing at a foreign group reads as UNGROUPED — `groups` RLS refuses the row, so no name and no aggregate follows it',
+  // `org_members.group_id` USED TO LIVE HERE, with the reason «a member
+  // pointing at a foreign group reads as UNGROUPED». The reason was correct
+  // and, as the audit put it (A7a-10), correct about a case that could not
+  // arise: nothing wrote the column. S3 gave it a writer, so the case became
+  // reachable, and M:0090 made the key composite in the same change. The entry
+  // is removed rather than reworded — the test above fails on a dead entry, and
+  // that is how this line got deleted rather than left to rot.
   // Read by something, and defended at the point of reading.
   'reports.snapshot_id':
     'INERT BY A DELIBERATE GUARD: `compose_report` selects `where sn.id = v_rep.snapshot_id AND sn.org_id = v_rep.org_id AND sn.survey_id = v_survey`, so a foreign pointer yields no snapshot and the live path runs instead',
