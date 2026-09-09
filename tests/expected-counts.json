@@ -4,6 +4,7 @@
   "tests/db/audience-freeze.test.ts": 10,
   "tests/db/blind-spots.test.ts": 9,
   "tests/db/branding.test.ts": 19,
+  "tests/db/catalogue-invariants.test.ts": 5,
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/db/fk-tenancy.test.ts": 5,
   "tests/db/help.test.ts": 10,

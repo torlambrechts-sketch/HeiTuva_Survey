@@ -32,16 +32,47 @@ function words(text: string): string[] {
 }
 
 /**
- * Postgres regexes use \m and \M for word boundaries; JavaScript uses \b.
- * The seeded patterns are written for Postgres because the column is
- * `text`-typed for use from SQL too, so translate rather than duplicating each
- * pattern in two dialects.
+ * Postgres regexes use \m and \M for word boundaries; JavaScript's `\b` is the
+ * obvious translation and it is the WRONG one. **`\b` is ASCII-only: `æ`, `ø`
+ * and `å` are non-word characters to it, so it puts a word boundary in the
+ * middle of a Norwegian word.** These patterns are evaluated against Norwegian
+ * a customer types, which makes that a live defect and not a pedantry.
+ *
+ * Found by audit after `verify:copy` was blind to «åtte» for the same reason
+ * (D113). The two sites fail in OPPOSITE DIRECTIONS, and which one you get is
+ * decided by where the non-ASCII letter sits:
+ *
+ *   - **Non-ASCII in the PATTERN** (`\båtte\b`) — `\b` never holds before `å`
+ *     after a space, so the rule matches NOTHING. Silent. That was D113.
+ *   - **Non-ASCII in the DATA**, which is this file: every alternative here is
+ *     ASCII (`du`, `og`, `ikke`), so `\b` is strictly more permissive than the
+ *     correct boundary and the rule can only ever OVER-match — a pronoun
+ *     warning on a word that merely contains `du` next to an `å`. Loud.
+ *
+ * Measured before fixing, over every Norwegian string this repo holds — the
+ * question bank, its translations, `ui_messages`, the help articles, all of
+ * `messages/no.json` and the prose of all three design bundles: 2227 strings,
+ * 96 634 characters, **zero divergence between the two translations**. So this
+ * repairs a defect that had not yet fired on shipped copy. It is fixed anyway,
+ * because the input this actually runs on is a question a customer writes, and
+ * that corpus does not exist yet.
+ *
+ * Exported so `policy-warnings.ts` uses this boundary rather than its own copy:
+ * the two files each carried this function, which is how one of them would have
+ * been repaired and the other left behind.
  */
-function toJsRegex(pattern: string): RegExp | null {
+export function toJsRegex(pattern: string): RegExp | null {
   try {
-    return new RegExp(pattern.replace(/\\m/g, '\\b').replace(/\\M/g, '\\b'), 'i')
+    return new RegExp(
+      pattern.replace(/\\m/g, '(?<![\\p{L}\\p{N}_])').replace(/\\M/g, '(?![\\p{L}\\p{N}_])'),
+      'iu',
+    )
   } catch {
-    // A malformed pattern is a seed bug, not a reason to break the editor.
+    // A malformed pattern is a seed bug, not a reason to break the editor —
+    // this runs on every keystroke in the Builder. But a catch that returns
+    // null makes the rule VANISH, which is the failure class D115 names: it is
+    // only sound because `tests/unit/quality.test.ts` compiles every seeded
+    // pattern from the catalogue and asserts none of them lands here.
     console.error(`quality_rules: unusable pattern ${pattern}`)
     return null
   }

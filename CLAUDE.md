@@ -65,6 +65,13 @@ Two consequences, both cheap:
   4. `CLAUDE.md` and `VERIFY.md` — the third path, and which surface it governs.
   5. `docs/v2/00-diff.md § 0.3` — the per-surface governance row.
   6. **Commit the rendered directory**, and check it landed: `git status artifacts/`.
+  7. **RUN THE SECURITY-COPY SWEEP OVER THE NEW BUNDLE'S PROSE — once per bundle, not
+     once.** A bundle's copy is a CLAIM SET, and every claim about who can see what, what is
+     kept, what is merged, or how many roles there are is a promise the running product
+     either honours or does not. Twenty-one sentences across the v2 bundle were false against
+     the database; «Kjønnsdelt rapport» promised a field that exists nowhere in the schema,
+     on a public page. **Nothing mechanical protects prose** — the gates protect schema and
+     data — so this step is the protection, and it has to run again for every handoff.
   A baseline reported but never committed is the shape this project has hit six times —
   green for something that structurally could not be seen: `ui_messages` cross-tenant behind
   a green 5a3; V1-6's screen whose visual gate had only ever photographed the old state;
@@ -171,6 +178,35 @@ This has now been rediscovered five separate times (D50, D51, D57, the duty-arch
 and V2-3b's FK pair — which then bit a second time in the same migration, when an audit
 trigger on a lifted objection tried to write a row for an organisation already erased).
 
+## A catch-all is a decision, not a safety measure
+**A catch-all is not a safety measure, it is a decision to make one class of failure
+invisible, and it is only sound if you know which class.** You will know it as one thing;
+what lands inside it will be another, and the handler will swallow that just as faithfully.
+The defence does not fail — it works as designed, on the wrong thing.
+
+That is not hypothetical here. `M:0070` wrapped `generate_blind_spot_tasks` in
+`exception when others then null` for a failure named in the comment beside it: «the AI
+prompt row is missing». What landed inside it was «the call site is wrong» — the migration
+had patched `send_round` at all five occurrences of a `replace()` anchor, four of them error
+paths — and the handler hid every one. It was found by asking why the demo seed produced no
+generated task, not by any gate.
+
+So: **name the conditions.** `when unique_violation or foreign_key_violation` is a decision
+about a class, written down, and it is fine. `when others` is the absence of one. The same
+reasoning governs any defence that turns a loud failure into no failure at all — a
+`try/catch` that returns `null`, a `?? fallback` over a parse — and where the swallow is
+genuinely necessary at runtime (an evaluator that must not throw on a keystroke), it is only
+acceptable if a test proves the swallowed case does not occur. `lib/questions/quality.ts`'s
+`toJsRegex` is the worked example: it returns `null` on a pattern it cannot compile, which
+would silently disable a rule, and `tests/db/catalogue-invariants.test.ts` compiles every
+seeded pattern and asserts none of them lands there.
+
+**The assertion is the half that matters, and it must be catalogue-derived rather than a
+list.** Scoped to the one function I already knew about, the test would have had the same
+shape as the defence it was written about. It sweeps `pg_proc` across `app` and `public`;
+the answer is currently zero, so there is no allowlist, and the next handler like mine fails
+a test in the commit that adds it (D115).
+
 ## Control substitution
 The design's control is authoritative. Substituting a different control for layout or
 convenience is restyling and is forbidden. The single exception: where the prototype's
@@ -272,7 +308,10 @@ D113).
 carries a message, and `help_articles` and `help_article_translations` are
 allowlisted with reasons and checked against them. **The checked number moved up
 a fourth phase running**; V2-7 and V2-8 left it unchanged, because a modified RPC
-is not a new surface and V2-8 added no table.
+is not a new surface and V2-8 added no table. **The block's three carries took it
+769 → 774 across 50 files**, all in one new file: `tests/db/catalogue-invariants.test.ts`
+holds the catalogue-derived zero-catch-all sweep (D115) and the seeded-pattern
+dialect check (D116). 5a3 is unmoved — neither is a catalogue surface.
 
 **Two gate repairs, both of which earned themselves on their first run.**
 `verify:copy` could not see «åtte» — JavaScript's `\b` is ASCII-only, so `å` is

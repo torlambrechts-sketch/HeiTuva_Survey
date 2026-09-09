@@ -138,6 +138,40 @@ Written down because the alternative is that the next phase re-derives it, and i
 just as easily re-derive it the other way — leaving a decision unapplied because a bundle
 "governs" the screen it lands on.
 
+### A BUNDLE'S COPY IS A CLAIM SET TO BE VERIFIED, NOT A SPECIFICATION TO BE IMPLEMENTED
+
+**Added 2026-09-09 (Tor), after V2-6 and V2-8.** This is the **third** thing this section now
+says about what a bundle is, and it is the one that constrains the other two. The table
+assigns VISUAL governance. The row above says a bundle is also a SOURCE when it states a
+rule. This row says what to do when a statement in a bundle is **false**.
+
+**A new bundle's copy is a CLAIM SET to be verified against the running product, not a
+specification to be implemented.** Every sentence about who can see what, what is kept, what
+is merged, how many roles there are, or which file formats import is a promise the database
+either honours or does not — and the bundle is drawn by someone who cannot run the schema.
+Treating such a sentence as a specification builds the promise's *words* while leaving its
+*substance* absent, which is the worst outcome available: a user reads it, believes it, and
+nothing contradicts them.
+
+**The instance that makes this non-theoretical.** «Kjønnsdelt rapport» promised a field that
+**exists nowhere in the schema**, on a **public** page. Twenty-one sentences of bundle copy
+were proven false against the running product across V2-6 and V2-8 — «Fire roller» where
+`app.member_role` has three, «CSV og Excel» where the importer refuses `.xlsx`, «slås sammen
+i rapporten» where `suppress_partition` suppresses rather than merges, «varsles eieren i
+Teams» where Teams is not built — and **not one of them was caught by any gate.**
+
+**Why no gate caught them, stated plainly rather than as a defect list.** The gates protect
+schema and data: RLS, policies, constraints, counts, catalogue sweeps. **Nothing mechanical
+protects prose** — and prose is what a user reads to decide whether to trust the numbers.
+That is the honest boundary of this apparatus, not a hole in it. The apparatus is frozen and
+this row does not add a gate; the protection is a human step, and CLAUDE.md's ADDING A BUNDLE
+checklist now carries it as **step 7: the security-copy sweep runs ONCE PER BUNDLE, not
+once.**
+
+Where a claim is false, the correction is a decision like any other and outranks the bundle's
+wording (the Q55 precedent above). `tests/db/help.test.ts` pins the six corrected sentences
+so a re-seed from a newer bundle cannot put one back.
+
 ### AWAITING A DRAWING — one control, and what the next bundle is compared against
 
 **Added 2026-09-08 (Tor), after V2-3b.** The table below assigns governance among three

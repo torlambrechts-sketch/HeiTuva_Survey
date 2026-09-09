@@ -272,13 +272,11 @@ describe('(Q72) the blind-spot generator fires on audience size, never on a find
                where n.nspname = 'public' and p.proname = 'send_round') q`))
     expect(calls, 'exactly one call site, on the success path').toBe(1)
 
-    const swallows = Number(one(`
-      select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-       where n.nspname = 'public' and p.proname = 'send_round'
-         and regexp_replace(p.prosrc, '--[^\n]*', '', 'g') ~ 'when others'`))
-    expect(
-      swallows,
-      'no catch-all: a handler that hides everything hides the bug that made it necessary',
-    ).toBe(0)
+    // The catch-all half of this finding MOVED to
+    // `tests/db/catalogue-invariants.test.ts`, and moved deliberately: scoped to
+    // `send_round` it was a LIST of one — the same shape as the defence it was
+    // written about. It now sweeps every function in `app` and `public`, so the
+    // next handler like mine fails a test in the commit that adds it rather
+    // than in the phase that trips over it. See D115.
   })
 })

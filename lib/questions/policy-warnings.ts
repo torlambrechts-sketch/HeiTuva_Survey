@@ -20,7 +20,7 @@
  * fixed sentence, and this one has to name the question it is about. The
  * substitution happens here so the row stays a plain string in the database.
  */
-import type { QualityRule } from './quality'
+import { toJsRegex, type QualityRule } from './quality'
 
 export type PolicyWarning = { key: string; text: string }
 
@@ -34,15 +34,6 @@ export type PolicyState = {
 
 /** The bundle shows at most two pronoun warnings, so a long survey cannot bury the panel. */
 const MAX_PRONOUN_WARNINGS = 2
-
-function toJsRegex(pattern: string): RegExp | null {
-  try {
-    return new RegExp(pattern.replace(/\\m/g, '\\b').replace(/\\M/g, '\\b'), 'i')
-  } catch {
-    console.error(`quality_rules: unusable policy pattern ${pattern}`)
-    return null
-  }
-}
 
 /**
  * **Is this audience too small to ever produce a result?**

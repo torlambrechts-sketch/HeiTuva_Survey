@@ -3304,3 +3304,128 @@ sentences in bundle copy were false against the running product** — ten in the
 eleven here. None was caught by a gate; all were caught by measuring a claim against the
 database, one at a time. The gates protect the schema and the data. **Nothing mechanical
 protects prose, and prose is what a user reads to decide whether to trust the numbers.**
+
+---
+
+### D115 — a catch-all is a decision to make one class of failure invisible, and it is only sound if you know which class
+
+**2026-09-09, carried from Tor after the V2-5..V2-8 block. This is ONE finding, not two.**
+
+I had logged the five-fold `send_round` patch and the handler that hid it as separate items.
+They are the same item, and the general form is now in `CLAUDE.md` beside the
+referential-maintenance rule:
+
+> **A catch-all is not a safety measure, it is a decision to make one class of failure
+> invisible, and it is only sound if you know which class.**
+
+**What actually happened, stated in the form that generalises.** I wrote
+
+```sql
+exception when others then null;
+```
+
+around `app.generate_blind_spot_tasks(p_survey)` in `M:0070`, and I knew exactly what it was
+for — the comment beside it said so: *the AI prompt row may not be seeded*. What landed
+inside it was a different class entirely: **the call site was wrong.** `M:0070` had patched
+`send_round` with `replace(src, '  return jsonb_build_object(', …)`, and `replace()` replaces
+every occurrence — there are five, four of them error paths where `v_round` is not yet
+selected. The handler swallowed all five failures exactly as designed.
+
+**The defence did not fail. It worked, on the wrong thing.** That is the whole finding, and
+it is why «add a catch-all to be safe» is not a safety argument: safety would require knowing
+that the class you named is the only class that can arrive there, and you almost never do.
+
+**The fix, in two halves, of which only the second is durable.**
+
+1. `M:0072` strips the four wrong insertions, asserts the success return is unique before
+   replacing (so a future edit that adds a second one fails the migration rather than
+   silently patching twice), and narrows the handler to the class it was actually for:
+   `when unique_violation or foreign_key_violation`. That is a decision about a class,
+   written down.
+2. **`tests/db/catalogue-invariants.test.ts` asserts there is no `when others` anywhere in
+   `app` or `public`.** This is the half that matters — half 1 fixes one function, half 2
+   stops the next one.
+
+**And the test is CATALOGUE-DERIVED, not a list — which is the point, not a detail.** The
+assertion I first wrote was scoped to `send_round`, i.e. to the one function I already knew
+about. **That is the same shape as the defence it was written about**: a rule aimed at the
+case you have in mind, blind to the case that arrives. It now sweeps `pg_proc` across both
+schemas. The current answer is **zero**, so there is no allowlist at all, which is the
+strongest form this assertion can take, and a second test asserts the sweep enumerates >80
+functions — because an empty-set claim is also what a broken query returns.
+
+**The recorded LIMIT.** The check reads `when others`, which is how PL/pgSQL spells a
+catch-all. A handler listing thirty conditions would be one in spirit and would pass. That is
+a bound on the test, written down, not a gap it hides.
+
+**The same reasoning applies outside SQL,** and the worked example is in this codebase:
+`lib/questions/quality.ts`'s `toJsRegex` returns `null` on a pattern it cannot compile, which
+would silently disable a quality rule for ever. It must not throw — it runs on every keystroke
+in the Builder — so the swallow stays, and it is acceptable **only** because the same test
+file compiles every seeded pattern from the catalogue and asserts none of them lands there.
+
+---
+
+### D116 — `\b` is ASCII-only, and the direction of the error depends on which side the Norwegian letter is on
+
+**2026-09-09, carried from Tor: «check whether `\b` appears against Norwegian anywhere else
+in the harness. The flag is wrong everywhere it appears.»**
+
+D113 found `verify:copy` blind to «åtte» because JavaScript's `\b` is an ASCII word boundary:
+`å` is a non-word character to it, so `\båtte\b` never matches after a space. Tor's reading
+of that — that «åtte» being the blind one is the kind of coincidence that is not one, because
+**the rare numeral is the one a threshold uses** — came with an instruction to audit the rest
+of the harness.
+
+**The audit.** `grep -rn '\\b' scripts/verify/*.ts tests/**/*.ts lib/**/*.ts` returns exactly
+two more sites, and both are the same construction:
+
+| Site | Code |
+|---|---|
+| `lib/questions/quality.ts:40` | `pattern.replace(/\\m/g, '\\b').replace(/\\M/g, '\\b')` |
+| `lib/questions/policy-warnings.ts:38` | identical, a verbatim copy |
+
+Both translate Postgres's `\m`/`\M` word boundaries into JavaScript's `\b`, and both run
+against **Norwegian a customer types** — the three seeded `quality_rules` patterns:
+`\m(og|eller)\M`, `\m(ikke|aldri)\M` and the policy panel's pronoun rule. Tor's prediction
+holds: the flag is wrong at every site it appears.
+
+**What measurement added that the prediction did not: the two sites fail in OPPOSITE
+DIRECTIONS, and which one you get is decided by where the non-ASCII letter sits.**
+
+- **Non-ASCII in the PATTERN** (`\båtte\b`) — the boundary can never hold, so the rule
+  matches **nothing**. Silent. That was D113, and it is the dangerous direction.
+- **Non-ASCII in the DATA**, which is these two sites — every alternative here is ASCII
+  (`du`, `og`, `ikke`), so ASCII-`\b` is *strictly more permissive* than the correct boundary
+  and the rule can only ever **over-match**: a pronoun warning on a word that merely contains
+  `du` beside an `å`. Loud.
+
+That is a proof, not an observation: since every alternative begins and ends with an ASCII
+word character, `{c : c ∉ ASCII-word} ⊇ {c : c ∉ Unicode-word}`, so the ASCII match set
+contains the correct one. A miss is impossible at these two sites; a false positive is the
+only available failure.
+
+**Measured before fixing, over every Norwegian string this repo holds** — the question bank
+and its translations, `ui_messages`, the help articles, all of `messages/no.json`, and the
+prose of all three design bundles:
+
+```
+corpus: 2227 strings, 96634 chars of Norwegian
+double_barreled  blind 0   false-positive 0
+negation         blind 0   false-positive 0
+policy_pronoun   blind 0   false-positive 0
+```
+
+**Zero divergence.** So this repairs a defect that had not yet fired on any shipped copy —
+said plainly rather than dressed up as a near miss. It is fixed anyway, because the corpus
+these rules actually run against is a question a customer has not written yet.
+
+**The fix, and the deduplication that is part of it.** The boundary becomes
+`(?<![\p{L}\p{N}_])` … `(?![\p{L}\p{N}_])` with the `u` flag, and **`toJsRegex` now exists
+once**: exported from `quality.ts`, imported by `policy-warnings.ts`, which had carried a
+verbatim copy. Two copies of one rule is how one of them gets repaired and the other is left
+behind — and that, not the boundary, is what would have produced the next instance of this.
+
+`tests/db/catalogue-invariants.test.ts` asserts the repaired boundary against a rule read
+from the catalogue (so a re-seed is checked too): `du` in «trives du i jobben» still matches,
+`du` inside `pådu` no longer does.
