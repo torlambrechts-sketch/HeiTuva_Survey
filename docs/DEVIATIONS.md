@@ -3663,3 +3663,111 @@ about application code and is not derivable from the catalogue — deriving it i
 two independent probes on. The eleventh instance will be found by a person, not by this test, and it
 is added here by the phase that finds it. Recorded rather than papered over, because a test that
 looked total while being partial is worse than one that states its scope.
+
+---
+
+## D127 — the gates that cannot see what they are trusted for
+
+**S4, 2026-09-09.** The audit's § 4.5, written down here because a limitation nobody records is
+indistinguishable from a limitation nobody has. These are not defects: every one is a gate that
+works, is green, and is green about something narrower than its name suggests. **Two of the seven
+were closed in this session; five stand.**
+
+### Closed
+
+- **`C3-2` — the hooks gate could not fail.** `react-hooks/exhaustive-deps` is a WARNING and
+  `eslint .` carried no `--max-warnings`, so a warning could accumulate for ever. CI now runs
+  `eslint . --max-warnings 0`, and it passes today; the point is that it keeps passing.
+- **CI ran 289 of 824 tests — 35.1%.** Four of seventeen gates. All seventeen now run on every
+  push (S2), across three parallel jobs.
+
+### Standing, with what each one's green actually means
+
+**`B7b-02` — `verify:copy` reads the file, not the table the product serves.** `lib/i18n/messages.ts`
+layers seeded `ui_messages` OVER `messages/*.json`, so the table wins at render time. The gate
+reads the JSON. Its green means «the repository's copy is clean», not «the product says this».
+That is D110's case 4 with a gate in place of a screenshot: real, on-topic, and structurally mute
+on the claim. **The consequence was live on prod for weeks and was fixed by hand in S1**, not by
+any gate. Not widened here — the apparatus is frozen — but it is the one of the five most worth
+widening next, because it is the only one whose blind spot has already produced a false claim to
+a user.
+
+**`A8-8` — Gate 5a3 hard-codes `nspname = 'public'`.** The 38 SECURITY DEFINER functions in the
+`app` schema are outside every automated check. Its «65 of 90» means «65 of the 90 catalogue
+surfaces IN `public`». This is why the number did not move for any of S3's six migrations: an
+`app`-schema function is not a surface it enumerates, and neither is a CHECK constraint or a
+column.
+
+**`A5-2` — `fk-tenancy.test.ts` requires BOTH tables to carry a literal `org_id`.** Eleven
+single-column keys sit outside that enumeration, and one of them was the BLOCKER. **Partly
+addressed in S3:** the test's header now states the blind spot in its own words, and
+`tests/db/live-round-tenancy.test.ts` covers the round-shaped cases as a catalogue-derived
+property. The query itself is unchanged, so the other nine keys remain unexamined by it.
+
+**`C4-7` — nothing measures bundle size or page weight.** Twenty-two verification scripts, none
+of them about what the browser downloads. A regression here is invisible to every gate and
+visible to every user on a slow connection.
+
+**`A2-8` / `A3-11` — nothing forces RLS, and nothing asserts «RLS on every table».** All
+SECURITY DEFINER functions bypass every policy by design, which is the architecture; the
+limitation is that `grep -rn relrowsecurity tests/` is empty, so **disabling RLS on a table would
+remove it from 5a3's enumeration rather than fail anything.** The denominator would shrink and
+the ratio might even improve. That is the sharpest of the five, and it is the one whose fix is
+least obvious: the assertion has to be about a set that is itself derived from the thing being
+asserted.
+
+### Why none of these was fixed here
+
+CLAUDE.md freezes the verification apparatus: *«Do not add gates, meta-checks, manifests or rules
+mid-phase.»* S3 was a fix pass over defects, and every one of these is apparatus. What S3 did do
+is REPAIR two existing checks where its own changes had made them imprecise — `audience-freeze`'s
+FK map and `live.test` 16b — which is the permitted kind of change and the kind that pays for
+itself immediately.
+
+**The reason to write them down rather than carry them:** each of these gates will be cited, by
+someone, as evidence that a thing is safe. The sentence that matters is not «this gate is
+limited» but **what its green means**, which is what each entry above states.
+
+---
+
+## D128 — `get_peer_results` names the question when it refuses the number
+
+**S4, 2026-09-09. Decided by Tor: acceptable. The reasoning, written down, because «acceptable»
+without it is indistinguishable from «not looked at».**
+
+`get_peer_results` is the respondent-facing peer comparison: a person who has answered a shared
+survey can see how the group answered. Below the threshold it returns `insufficient_data` — and
+it returns **the question text alongside the refusal** (audit `B2-10`).
+
+**What is actually disclosed, stated exactly.** The caller already holds a valid token for this
+round, so they have already been shown the survey and every question in it by
+`get_survey_for_token`. The question text is therefore **not new information to this caller**: the
+refusal names something they were handed a moment earlier. What the branch withholds is what it
+is supposed to withhold — n, the distribution and the average.
+
+**Why the shape of the refusal still matters, and why it is the right one here.** The alternative
+is a refusal that names nothing, which is the rule `redeem_live_voucher` follows for a different
+reason: *«A code that is wrong, closed, expired or never existed must be indistinguishable, or the
+refusal itself enumerates live sessions to an unauthenticated caller.»* That reasoning does not
+transfer. There the caller is **unauthenticated and guessing**; here they hold a token that
+already entitles them to the question. A silent refusal would cost a respondent the one thing the
+screen is for — knowing WHICH question has too few answers to show — and buy nothing, because
+nothing is concealed from them.
+
+**The half that is a real limitation, and it is about k rather than about text.** `B2-10` also
+records that the k this branch gates on **can be 2**. At k=2 a peer comparison is CLAUDE.md's own
+«disclosure by arithmetic»: the reader knows their own answer, sees the pair's result, subtracts.
+That is not a defect in `get_peer_results` — it is Q91's tier, already carried by
+`thresholdTier`, the respondent promise copy and the policy panel's warning, all of which say so
+in the respondent's own language before they answer. The function is consistent with the promise
+the product makes; the promise at 2 is the thing a customer is warned about.
+
+**What would change this decision:** a peer comparison that ran on a survey whose respondents had
+NOT been shown the questions — a digest, a notification, a link into results rather than into the
+survey. There is no such surface today. If one is built, this entry is the thing to re-read.
+
+**Not written into the function's own comment**, deliberately: that would be a migration, and a
+migration to production for a paragraph of reasoning is a schema change to say something a
+document says better. `B2-03`'s separate finding — that `submit_response` has no replay bar on a
+share-link token, so the caller who READS this is the caller who SETS its k — remains open and is
+listed as such in the S1–S4 report.

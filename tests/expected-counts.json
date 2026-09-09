@@ -57,6 +57,7 @@
   "tests/unit/registry-strings.test.ts": 5,
   "tests/unit/results-present.test.ts": 17,
   "tests/unit/schedule-status.test.ts": 8,
+  "tests/unit/sentry-scrub.test.ts": 8,
   "tests/unit/threshold-line.test.ts": 5,
   "tests/unit/threshold-tier.test.ts": 13
 }

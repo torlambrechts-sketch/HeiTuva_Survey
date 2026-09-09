@@ -1,6 +1,20 @@
 /**
- * Sentry, EU region, opt-in by DSN — shared by the server, edge and client
- * entry points (instrumentation.ts, instrumentation-client.ts).
+ * Sentry, EU region, opt-in by DSN — the SERVER and edge entry point
+ * (instrumentation.ts). There is no client entry point any more.
+ *
+ * ── WHY THE CLIENT HALF IS GONE (S3, audit C4-1) ──────────────────────────
+ *
+ * `instrumentation-client.ts` shipped 81 kB of Sentry to every visitor and
+ * MAY NEVER HAVE INITIALISED: `Sentry.init` was guarded by `if (enabled)`, but
+ * the file also carried `export const onRouterTransitionStart =
+ * Sentry.captureRouterTransitionStart` — an unconditional live reference — so
+ * the guard removed the CALL and not the MODULE. The cost was unconditional
+ * whether or not a DSN was ever configured.
+ *
+ * It fell hardest on the surface CLAUDE.md holds to 380–420px: `/s/[token]` was
+ * the heaviest route in the product at 227 kB, of which Sentry was 82 kB.
+ *
+ * Server-side reporting is unaffected and costs a visitor nothing.
  *
  * CLAUDE.md rule 7: no respondent free text in logs or error payloads. The
  * scrubber below is the enforcement: it drops request bodies and cookies
@@ -27,13 +41,41 @@ function scrub(value: unknown, depth = 0): unknown {
   return value
 }
 
+/**
+ * Paths where the URL IS the credential. `/s/<token>` is a respondent's
+ * one-time invitation, `/r/<token>` a report share link, `/l/<code>` a live
+ * voucher — none of them is a secret held in a header the scrubber already
+ * drops; each is the address itself (audit B5-3, B5-4).
+ *
+ * A property rather than a list of three, as far as it can be: the segment
+ * after any of these prefixes is replaced whatever it looks like, so a
+ * malformed or truncated token is scrubbed too. The prefixes themselves are an
+ * enumeration, and it is an enumeration OF «routes whose first path segment
+ * authenticates the caller» — the three that exist. A fourth is added here by
+ * the phase that adds the route.
+ */
+const CREDENTIAL_PATHS = /\/(s|r|l)\/[^/?#]+/g
+
+function scrubUrl(url: string): string {
+  return url.replace(CREDENTIAL_PATHS, (_m, p: string) => `/${p}/[token]`)
+}
+
 export function beforeSend(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
   if (event.request) {
     delete event.request.data
     delete event.request.cookies
+    // The URL is scrubbed, not deleted: the ROUTE is what makes an error
+    // report useful, and it survives. Only the segment that authenticates goes.
+    if (typeof event.request.url === 'string') {
+      event.request.url = scrubUrl(event.request.url)
+    }
     if (event.request.headers) {
       delete event.request.headers['cookie']
       delete event.request.headers['authorization']
+      for (const h of ['referer', 'referrer'] as const) {
+        const v = event.request.headers[h]
+        if (typeof v === 'string') event.request.headers[h] = scrubUrl(v)
+      }
     }
   }
   delete event.user

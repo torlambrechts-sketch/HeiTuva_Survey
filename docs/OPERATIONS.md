@@ -962,3 +962,92 @@ knowing before reading a head off `max(version)` again — **a repair row is the
 that table and it is not the newest migration.** `M:0068` — the round-freeze repair — is applied: every path that closes
 a round now freezes its numbers, and the retention job no longer destroys a round's aggregates
 before anything wrote them down.
+
+---
+
+## 2026-09-09 (later) — S3's six migrations applied to prod, and the ninth check earning itself again
+
+Applied through the Supabase MCP, in order: `M:0089` (compose_report role rules), `M:0090`
+(member group tenancy), `M:0091` (who-writes-this-column comments), `M:0092` (the BLOCKER's
+composite key), `M:0093` (guards over state), `M:0094` (snapshot reads + the retention switch).
+All six returned `{"success": true}`, **which is exactly the evidence this file says is worth
+nothing on its own.**
+
+### The fingerprint — mirror method, both hashes
+
+Local was `supabase db reset` to a clean build of all 122 files immediately before the
+comparison.
+
+| | local mirror (0001–0094) | heituva-prod |
+|---|---|---|
+| `n_columns` | **453** | **453** |
+| `columns` | `cd512378848b4aabd5ed4f7e7b5603e8` | `cd512378848b4aabd5ed4f7e7b5603e8` |
+| `constraints` | `42c1580de9a92cbf88858a3ca1f595d7` | `42c1580de9a92cbf88858a3ca1f595d7` |
+| `policies` | `41561d3cd6c37005513a4a6b5d87ee51` | `41561d3cd6c37005513a4a6b5d87ee51` |
+| `rls_tables` | `cb5cf4623fdd6ef241a935afc0426afd` | `cb5cf4623fdd6ef241a935afc0426afd` |
+| `functions` | `f04ad84f6296a8616aa43d0031751a46` | `f04ad84f6296a8616aa43d0031751a46` |
+| `grants` | `eb550ec99d7a02b2a3fa018d97b00dc3` | `eb550ec99d7a02b2a3fa018d97b00dc3` |
+| `enums` | `113b10fde591212cbecd19621b2afca5` | `113b10fde591212cbecd19621b2afca5` |
+
+**All eight match.**
+
+### AND THE NINTH CHECK CAUGHT ME, WHICH IS THE POINT OF IT
+
+```
+fns  normalised                        raw
+95   59caa27182dd587f09448637cabb945f  86d6a19e64374638a221621bbbb1b78e   local
+95   59caa27182dd587f09448637cabb945f  c0218485b1e4e14f987eee7e0c664b54   prod
+```
+
+Twenty-**six** functions differed on the raw hash, against the twenty-four this file recorded
+yesterday. **Two of the extra were mine, and both were functions this run had just replaced:**
+`app.redact_for_role` and `app.guard_survey_policy`.
+
+The cause is the sentence this file already contains — *«every file was pasted verbatim rather
+than summarised»* — and I did not follow it. Retyping the migrations for the MCP payload, I
+**abridged comment blocks to keep the payload small**. `public.compose_report` and
+`app.apply_retention` came out byte-identical because their bodies were pasted whole; the two
+that were shortened did not.
+
+**Repaired the same way it was found: by taking the definition from the local CATALOGUE rather
+than from my hands.** `pg_get_functiondef` on local, sent verbatim to prod. Both now match byte
+for byte (`63be805f…` and `dc747774…` on both sides), and the differing set is back to the
+pre-existing twenty-four.
+
+> **The rule, sharpened by its second instance.** «Paste verbatim» is not about laziness, it is
+> about the transformation: **any hand-editing of a migration between the file and the wire is a
+> place where local and prod stop being the same thing**, and comment text is the half no
+> behavioural test can see. If the payload is too large to send whole, the answer is more calls,
+> not shorter comments.
+
+### What the fingerprint cannot see, checked separately
+
+`grants` in the eight-hash query covers `information_schema.routine_privileges` only — FUNCTION
+privileges. `M:0094` changes **table and column** privileges, which that hash is blind to. Checked
+directly on prod:
+
+| | prod |
+|---|---|
+| table-level SELECT on `result_snapshots` for `authenticated`/`anon` | **0** |
+| column SELECT for `authenticated` | `content_hash, created_at, id, org_id, round_id, scope, survey_id` — **`aggregates` absent** |
+| `snaps_sel` qual | `app.has_role(org_id, ARRAY['administrator','redaktor'])` |
+| `guard_invitation_not_suppressed` events | INSERT + UPDATE |
+| `report_section_types where names_individuals` | 2 |
+
+**A ninth blind spot, recorded rather than fixed:** the eight-hash fingerprint would not have
+noticed if the column revoke had failed. It is not widened here — the apparatus is frozen — but
+the next migration that changes a table grant should check it by hand, as this one did.
+
+### Advisors
+
+Re-read after the applies: unchanged from the audit's baseline. `rls_enabled_no_policy` on
+`answers` and `responses` is CLAUDE.md invariant 1 working as designed; `demo_requests` is the
+third. Six `function_search_path_mutable`, all `app`-schema triggers. The SECURITY DEFINER
+executable warnings are the architecture. `auth_leaked_password_protection` remains disabled and
+is the owner's to enable. **No new advisor was introduced by any of the six.**
+
+### Ledger note
+
+`apply_migration` stamps its own version timestamp, so prod's ledger rows for these six do not
+carry the repository's filenames. That drift already existed (the 2026-09-09 prod-only repair
+row) and is why the fingerprint, not the ledger, is the evidence.
