@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
+  anonClient,
   leserClient,
   outsiderClient,
   redaktorClient,
@@ -126,6 +127,14 @@ describe('(Q69) the close guard refuses the transition it is about', () => {
     // far from the trigger.
     const id = await newTask('Eid av noen som slutter', { owner_member_id: ownerId })
 
+    // AND THIS CAUGHT THE RULE A SECOND TIME, IN A THIRD FORM. `M:0064` made the
+    // owner key composite so a reference cannot cross a tenancy boundary, and
+    // wrote `on delete set null` — which on a composite key nulls EVERY
+    // referencing column, `org_id` included. `org_id` is not null, so this
+    // delete failed with 23502 until `M:0065` said what was meant:
+    // `on delete set null (owner_member_id)`. Null the reference, keep the
+    // tenant. The test written for CLAUDE.md's note caught a new instance of it
+    // introduced by a fix for something else.
     const { error } = await svc.from('org_members').delete().eq('id', ownerId)
     expect(error, 'the member can be deleted').toBeNull()
     members.length = 0
@@ -351,6 +360,108 @@ describe('(Q72) what a task may reference, and what it may not', () => {
   })
 })
 
+describe('(Q97) lukket is terminal, and the remedy is a row', () => {
+  it('the correction reference is a real column with a composite key', () => {
+    // Q97's confirmation tells the operator that an error is corrected by a new
+    // task referencing the closed one. **That sentence is only true if the
+    // reference exists**, and a screen promising a remedy the schema cannot
+    // express is the defect this phase hit twice before this one — Teams, and
+    // the weekly digest.
+    const cols = psql(
+      `select a.attname from pg_constraint c
+         join unnest(c.conkey) k on true
+         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+        where c.conname = 'tasks_corrects_task_id_fkey' order by a.attname`,
+    ).map((r) => r[0]!)
+    expect(cols, 'a correction cannot reference another organisation s task').toEqual([
+      'corrects_task_id', 'org_id',
+    ])
+  })
+
+  it('a task cannot correct itself', async () => {
+    const id = await newTask('Retter seg selv')
+    const { error } = await svc.from('tasks').update({ corrects_task_id: id }).eq('id', id)
+    expect(error?.message ?? '').toMatch(/tasks_corrects_not_self/)
+  })
+
+  it('a correction survives its target being deleted — the record is the point', async () => {
+    // If deleting the closed task took the correction with it, the chain Q97
+    // relies on would be one administrator's cleanup away from disappearing.
+    // `on delete set null (corrects_task_id)` keeps the correction and drops
+    // only the link — the same «null the reference, keep the row» shape M:0065
+    // settled one column over.
+    const closed = await newTask('Blir slettet', { status: 'effektvurdert' })
+    await svc.from('task_effect_assessments').insert({ task_id: closed, note: 'Vurdert' })
+    await svc.from('tasks').update({ status: 'lukket' }).eq('id', closed)
+
+    const fix = await newTask('Retter den slettede', { corrects_task_id: closed })
+    await svc.from('tasks').delete().eq('id', closed)
+
+    const { data } = await svc.from('tasks').select('corrects_task_id').eq('id', fix).single()
+    expect(data, 'the correction is still there').not.toBeNull()
+    expect(data!.corrects_task_id, 'and only the link went').toBeNull()
+  })
+})
+
+describe('the class test 8 belonged to — a foreign key carries EXISTENCE, not tenancy', () => {
+  it('a duty cannot be owned by another organisation s member', async () => {
+    // FOUND BY THE CHECK TOR ASKED FOR, and it was live: `saveDutySettings`
+    // (`rapporter/actions.ts:141`) takes `ownerMemberId` from the request,
+    // validates only that it is a uuid, and writes it. Demonstrated before the
+    // fix: «ACCEPTED: duty <id> in another org now owned by member <id>».
+    //
+    // A statutory duty's owner is who a compliance record names and who its
+    // reminders address. `M:0064` makes the key composite, so no caller can
+    // write it — the fix does not depend on the action remembering.
+    const { data: mine } = await svc
+      .from('org_members')
+      .select('id')
+      .eq('org_id', orgId)
+      .limit(1)
+      .single()
+    const { data: theirDuty } = await svc
+      .from('duties')
+      .select('id')
+      .eq('org_id', otherOrgId)
+      .limit(1)
+      .maybeSingle()
+    if (!theirDuty) return // no cross-org duty seeded; nothing to assert against
+
+    const { error } = await svc
+      .from('duties')
+      .update({ owner_member_id: mine!.id })
+      .eq('id', theirDuty.id)
+    expect(error?.code, 'refused by the composite key, through the SERVICE role').toBe('23503')
+  })
+
+  it('a task cannot be owned by another organisation s member either', async () => {
+    const { data: theirMember } = await svc
+      .from('org_members')
+      .select('id')
+      .eq('org_id', otherOrgId)
+      .limit(1)
+      .single()
+    const id = await newTask('Fremmed eier')
+    const { error } = await svc
+      .from('tasks')
+      .update({ owner_member_id: theirMember!.id })
+      .eq('id', id)
+    expect(error?.code).toBe('23503')
+  })
+
+  it('BOTH owner keys are composite, read back from the catalogue', () => {
+    for (const name of ['duties_owner_member_id_fkey', 'tasks_owner_member_id_fkey']) {
+      const cols = psql(
+        `select a.attname from pg_constraint c
+           join unnest(c.conkey) k on true
+           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+          where c.conname = '${name}' order by a.attname`,
+      ).map((r) => r[0]!)
+      expect(cols, `${name} carries the organisation`).toEqual(['org_id', 'owner_member_id'])
+    }
+  })
+})
+
 describe('(Q68) loop_actions is gone, not running in parallel', () => {
   it('the table no longer exists', () => {
     expect(psql(`select to_regclass('public.loop_actions') is null`)[0]![0]).toBe('t')
@@ -362,5 +473,72 @@ describe('(Q68) loop_actions is gone, not running in parallel', () => {
         where n.nspname in ('public','app') and p.prosrc ~ 'loop_actions' order by 1`,
     ).map((r) => r[0]!)
     expect(readers, 'a dropped table with a live reader is the worst of both').toEqual([])
+  })
+})
+
+describe('(5a3) the task-kind registry is public by design, and carries nobody', () => {
+  it('anon may read it, and it has no org id, no survey id and no count', async () => {
+    // Gate 5a3 allowlists `task_kinds` with a REASON, and a reason nobody
+    // checks is a comment — `use_cases`, `brand_accents` and `segment_fields`
+    // each prove the same claim the same way. It arrived OPEN in this phase's
+    // verification pass, which is the gate doing its job on a table that did
+    // not exist a day earlier.
+    const { data, error } = await anonClient().from('task_kinds').select('*')
+    expect(error, 'anon may read the registry').toBeNull()
+    const columns = Object.keys(data![0]!)
+    expect(columns.filter((c) => /org|survey|count|_id$|user/i.test(c))).toEqual([])
+  })
+
+  it('and the LABEL is not in the table — the kind is a key, the copy is i18n', async () => {
+    // Data-not-code cuts both ways: adding a kind is a row, but the row must
+    // not carry Norwegian, or a sixth kind would ship untranslatable.
+    const { data } = await anonClient().from('task_kinds').select('*')
+    expect(Object.keys(data![0]!).sort()).toEqual(['key', 'sort_order'])
+  })
+})
+
+describe('(fix pass) «Effektvurdert» is named after a record, and needs one', () => {
+  /**
+   * FOUND BY OPENING THE CAPTURE, not by a gate. `oppgaver.default.desktop.png`
+   * showed «Møtefrie torsdager» at Gjennomført offering «Flytt til
+   * Effektvurdert» beside the prompt to record the assessment — a button into a
+   * state called *effect assessed*, with no assessment. `M:0062`'s guard tested
+   * only at `lukket`, which is the right place for the statutory outcome and one
+   * step too late for the record. CLAUDE.md's «never fabricate data in the UI»,
+   * one level above a value: THE STATE IS THE FABRICATED DATUM.
+   */
+  it('a task at Gjennomført cannot enter Effektvurdert with no assessment row', async () => {
+    const id = await newTask('Effektvurdert uten vurdering', { status: 'gjennomfort' })
+    const { error } = await svc.from('tasks').update({ status: 'effektvurdert' }).eq('id', id)
+    expect(error?.message ?? '', 'refused by name').toMatch(/task_effect_state_needs_assessment/)
+    const after = psql(`select status from public.tasks where id = '${id}'`)[0]![0]
+    expect(after, 'and the row did not move').toBe('gjennomfort')
+  })
+
+  it('and it succeeds the moment the assessment exists', async () => {
+    const id = await newTask('Effektvurdert med vurdering', { status: 'gjennomfort' })
+    const { error: insErr } = await svc
+      .from('task_effect_assessments')
+      .insert({ task_id: id, note: 'Målt i neste runde.' })
+    expect(insErr, 'the assessment is recorded first').toBeNull()
+    const { error } = await svc.from('tasks').update({ status: 'effektvurdert' }).eq('id', id)
+    expect(error, 'the same transition is now allowed').toBeNull()
+  })
+
+  it('the statutory check at `lukket` STAYS — it is not made redundant', async () => {
+    // Forward-only transitions mean `lukket` is reachable only through
+    // `effektvurdert`, so the older check looks implied. It states the rule that
+    // matters (V2:5197, aml. § 3-1 / ldl. § 26) at the boundary that matters, and
+    // «no DELETE policy today» is a fact about a migration, not a property of the
+    // table. Both predicates are present in the shipped function.
+    // Asserted in the catalogue rather than by reading a body back through the
+    // psql helper, which splits on newlines and would compare only line one.
+    const [both] = psql(
+      `select p.prosrc ~ 'task_effect_state_needs_assessment'
+           and p.prosrc ~ 'task_close_needs_effect_assessment'
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'app' and p.proname = 'guard_task_close'`,
+    )
+    expect(both![0], 'both predicates are in the shipped function').toBe('t')
   })
 })

@@ -60,6 +60,24 @@ function nearRe(numeral: string, word: string, gap: number) {
   )
 }
 
+/**
+ * Remove ICU placeholders — `{k}`, and nested plural forms such as
+ * `{n, plural, one {# kanal} other {# kanaler}}` — so that what remains is only
+ * the string's FIXED text. Braces nest, so this counts depth rather than
+ * matching a pattern; a lone `#` is an ICU plural's own count and goes with
+ * them.
+ */
+function stripPlaceholders(text: string): string {
+  let out = ''
+  let depth = 0
+  for (const ch of text) {
+    if (ch === '{') depth++
+    else if (ch === '}') depth = Math.max(0, depth - 1)
+    else if (depth === 0) out += ch === '#' ? '' : ch
+  }
+  return out
+}
+
 function asserts(lang: string, text: string): boolean {
   const n = NUMERALS[lang]!
   return nearRe(n, GATE, NEAR_GATE).test(text) || nearRe(n, GENERIC, NEAR_GENERIC).test(text)
@@ -72,10 +90,22 @@ function asserts(lang: string, text: string): boolean {
  */
 const ALLOWED: Record<string, string> = {
   // Interpolated: the number comes from the data, so the string cannot lie.
-  'admin.anonExplainer': 'interpolates {k} from organizations.default_k_threshold',
-  'admin.orgThresholdNote': 'interpolates {k}; the «tre» in it is the CHECK floor, which is fixed',
+  'admin.anonExplainer':
+    'the {k} comes from organizations.default_k_threshold; the fixed «to» is\n     surveys_k_threshold_floor',
+  // Reason was «the «tre» in it is the CHECK floor». THE FLOOR HAS BEEN 2 SINCE
+  // Q91, and the string itself was corrected then — «aldri settes under to».
+  // Only the reason stayed at three, for two phases, saying the wrong thing
+  // about a string that was right. The repaired check found it on first run.
+  'admin.orgThresholdNote':
+    'the {k} is the org default; the fixed «to» is surveys_k_threshold_floor',
   'admin.orgThresholdChip': 'interpolates {k} — it IS the picker',
-  'admin.pMinResponsesDesc': 'interpolates {k}',
+  // WAS 'interpolates {k}' — and that reason was TRUE ABOUT ONE CLAUSE AND READ
+  // AS TRUE ABOUT THE STRING. It also carried a fixed «aldri under 3», false
+  // against `surveys_k_threshold_floor` (2), and the entry hid it for two
+  // phases. See the premise note below `asserts`. The reason now names the
+  // constraint, like the `legal.*` entries, so the next floor change finds it.
+  'admin.pMinResponsesDesc':
+    'the {k} is the org default; the fixed «2» is surveys_k_threshold_floor',
   'dashboard.thresholdLine': 'interpolates the k of the selection (Q42)',
   // Corrected during V2-2: I allowlisted `respondent.promise` believing it was
   // the derived anonymity promise. It is the greeting, «Har du 90 sekunder?»,
@@ -111,6 +141,7 @@ const ALLOWED: Record<string, string> = {
   'dash.streakOne': 'the 1 is a WEEK count — «har svart 1 uke på rad»',
   'dashboard.heatNoteGeneric': 'the 4,2 / 3,6 are colour-band scores; the string already says «under terskelen»',
   'builder.cLavDesc': 'the 1–2 are SCALE VALUES that trigger a follow-up, not a gate',
+  'results.insightSplit': 'the 1–2 are SCALE VALUES on the answer scale, not a gate',
   'splash.heroBody': 'the numbers are minutes and seconds to build and answer',
 }
 
@@ -129,7 +160,6 @@ for (const lang of ['no', 'en']) {
     for (const [key, value] of Object.entries(entries)) {
       if (typeof value !== 'string') continue
       const full = `${ns}.${key}`
-      const interpolates = /[{#]/.test(value)
       const reason = ALLOWED[full]
       // Recorded BEFORE any early exit below: a key that exists but takes the
       // stale-reason branch must not also be reported as DEAD. Mutation-testing
@@ -145,21 +175,55 @@ for (const lang of ['no', 'en']) {
       // string. Such an entry can only ever be consulted when the string does
       // NOT interpolate — because interpolating strings are skipped below — and
       // that means the reason has stopped being true.
-      if (reason && /interpolat|derived/i.test(reason) && !interpolates) {
+      // The honest form of an «interpolates» reason is not «this string contains
+      // a placeholder» — that was the premise the skip below used to rest on,
+      // and `admin.pMinResponsesDesc` is what it cost. It is: ONCE THE
+      // PLACEHOLDERS ARE GONE, NOTHING IS LEFT ASSERTING. One rule covers both
+      // ways such an entry rots — the placeholder removed entirely, and a fixed
+      // number added beside one that stayed.
+      if (
+        reason &&
+        /interpolat|derived/i.test(reason) &&
+        asserts(lang, stripPlaceholders(value))
+      ) {
         hits.push({
           lang,
           key: full,
-          text: `STALE ALLOWLIST ENTRY — allowed because it «${reason}», but it no longer does:\n      ${value}`,
+          text:
+            `MISLEADING ALLOWLIST ENTRY — allowed because it «${reason}», but with the ` +
+            `placeholders removed it STILL puts a numeral near a threshold word, so the ` +
+            `reason covers only part of the string:\n      ${value}`,
         })
         continue
       }
 
-      // A string that INTERPOLATES cannot assert a fixed number: the value comes
-      // from the data, so it is true by construction. That is the whole remedy
-      // Q55 applied, and it is a property of the string rather than a list of
-      // which strings are fine.
-      if (interpolates) continue
-      if (!asserts(lang, value)) continue
+      // ── THE PREMISE THIS CHECK USED TO HOLD, AND WHY IT WAS FALSE ─────────
+      //
+      // It read: «a string that INTERPOLATES cannot assert a fixed number: the
+      // value comes from the data, so it is true by construction» — and it
+      // skipped the whole string on that basis. V2-4's copy sweep found the
+      // counterexample by hand:
+      //
+      //   admin.pMinResponsesDesc
+      //   «Standard {k} svar for nye undersøkelser · ALDRI UNDER 3 · …»
+      //
+      // The interpolation makes the FIRST clause true by construction and says
+      // nothing whatever about the second. The DB floor is 2
+      // (`surveys_k_threshold_floor`), so «aldri under 3» was false, on the very
+      // panel where an administrator sets the number, one divider above a
+      // sibling sentence that correctly said «aldri settes under to».
+      //
+      // The gate reasoned about the STRING. The claim lives in a CLAUSE. That is
+      // this file's own opening lesson — THE DERIVATION MUST DESCRIBE THE
+      // PROPERTY, NOT A SYMPTOM OF IT — turned back on itself: «the string
+      // interpolates» is a SYMPTOM of «the number comes from the data», and the
+      // property is per-clause.
+      //
+      // So: strip the ICU placeholders and test what is LEFT. A numeral still
+      // near a threshold word once the interpolated parts are gone is a fixed
+      // number the data cannot correct.
+      const fixed = stripPlaceholders(value)
+      if (!asserts(lang, fixed)) continue
       if (reason) continue
       hits.push({ lang, key: full, text: value })
     }
@@ -187,9 +251,9 @@ for (const key of Object.keys(ALLOWED)) {
 
 if (hits.length === 0) {
   console.log(
-    `threshold-copy: CLEAN — no un-allowlisted, non-interpolated string puts a numeral ` +
-      `within ${NEAR_GATE} chars of «terskel»/«threshold» or ${NEAR_GENERIC} chars of ` +
-      `«svar»/«answer», in either language.`,
+    `threshold-copy: CLEAN — with ICU placeholders stripped, no un-allowlisted string ` +
+      `puts a numeral within ${NEAR_GATE} chars of «terskel»/«threshold» or ` +
+      `${NEAR_GENERIC} chars of «svar»/«answer», in either language.`,
   )
   console.log(`  ${Object.keys(ALLOWED).length} key(s) allowlisted, each with a reason.`)
   process.exit(0)

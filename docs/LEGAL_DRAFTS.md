@@ -70,6 +70,23 @@ named — so the next floor change finds them by grep rather than by memory. **I
 whether the number is right**, only that a fixed number is present and was reasoned about. A
 review that relies on the gate has misunderstood it.
 
+**A second clause now needs the reviewer, and it is not about the threshold.**
+`legal.dpa9P` states that a signed copy of the agreement, carrying the customer's
+name and date, **«finnes under Administrasjon → Personvern og GDPR →
+Dokumentasjon»**. That surface exists and renders four document rows, each with a
+not-yet-uploaded meta line, under `admin.docsComing` — *«Dokumentopplasting
+kommer i en senere fase»* (`app/(app)/administrasjon/personvern/page.tsx:37`,
+`:74`). **The DPA asserts, in the present tense, that a document is in a place
+where no document is.** V2-4's copy sweep found it.
+
+It is a draft inaccuracy rather than a shipped false promise — `draftNotice`
+holds the whole page — and it is recorded here rather than fixed because the two
+honest repairs are a lawyer's choice, not a developer's: either the clause moves
+to the future tense, or the surface has to carry the document before the notice
+comes down. **The second reading is the one that matters: emptying `draftNotice`
+while `docsComing` still renders would make the contract false at the moment it
+becomes a contract.** The sign-off commit must check that row.
+
 ---
 
 The `legal.draftNotice` banner renders on both pages until the key is emptied

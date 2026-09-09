@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { STEP_KEY, TASK_STEPS, isLate, nextStep, stepIndex, type TaskStatus } from '@/lib/tasks/lifecycle'
-import { TASK_ERROR_KEY, advanceTask, assessTaskEffect } from './actions'
+import { TASK_ERROR_KEY, advanceTask, assessTaskEffect, createCorrectingTask } from './actions'
 
 /**
  * Oppgaver — V2:2152–2214.
@@ -47,6 +47,8 @@ export type TaskRow = {
   status: TaskStatus
   mine: boolean
   assessed: boolean
+  /** Q97: the task this one was created to correct, if any. */
+  corrects: string | null
 }
 
 const CARD = 'rounded-[16px] border border-line bg-sf px-[22px] py-5'
@@ -58,12 +60,30 @@ const FILTER_KEY: Record<(typeof FILTERS)[number], string> = {
   lov: 'taskFilterLov',
 }
 
+/**
+ * «Effektvurdert» is named after a record, so the database refuses the step until
+ * that record exists (`task_effect_state_needs_assessment`, `M:0067`). The button
+ * is hidden rather than left to fail: **a UI must not offer an action it knows
+ * the database will refuse** — the same principle that stops it offering a skip.
+ * The teal prompt below the card is what the user does instead, and it is already
+ * there.
+ */
+function blockedOnAssessment(r: { status: TaskStatus; assessed: boolean }): boolean {
+  return r.status === 'gjennomfort' && !r.assessed
+}
+
 export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: boolean }) {
   const t = useTranslations('tasks')
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('alle')
   const [busy, startTransition] = useTransition()
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Q97: `lukket` is terminal, so the last step asks first. A terminal state
+   *  should announce itself — the drawing has no such step, and this is the one
+   *  thing V2-4 adds that the bundle does not draw. */
+  const [closing, setClosing] = useState<string | null>(null)
+  const [correcting, setCorrecting] = useState<string | null>(null)
+  const [correction, setCorrection] = useState('')
 
   const late = (r: TaskRow) => isLate(r.dueAt, r.status)
 
@@ -101,7 +121,14 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
           {/* Q71: not «varsles i Teams». */}
           <p className="mt-[3px] text-[13px] text-mut">{t('taskChannels')}</p>
         </div>
-        <div className="flex flex-wrap gap-[3px] rounded-[999px] bg-sf2 p-1">
+        {/* RESPONSIVE.md §"Chip rows" — the row gap must keep the 44px hit areas of
+            vertically adjacent chips apart when the pill wraps. `gap-[3px]` is the
+            design's inner gap and it is 1px under the rule's own floor; the fix is
+            the SPACING, which is layout and may change, never the chip, which is a
+            token. Same values as `ReportsScreen.tsx:94` and `ReportSidePanel.tsx:121`,
+            which are this exact control — a third variant would be a third thing to
+            keep in step. */}
+        <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -191,12 +218,15 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
                   >
                     {t(STEP_KEY[r.status])}
                   </span>
-                  {canEdit && next ? (
+                  {canEdit && next && !blockedOnAssessment(r) ? (
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() =>
-                        run(() => advanceTask({ id: r.id, to: next }), 'taskAssessed')
+                        // The last step asks first; every other step does not.
+                        next === 'lukket'
+                          ? setClosing(r.id)
+                          : run(() => advanceTask({ id: r.id, to: next }), 'taskAssessed')
                       }
                       className="touch-44 flex-none cursor-pointer rounded-[10px] border border-line bg-transparent px-4 py-2.5 text-[12.5px] font-semibold text-ink"
                     >
@@ -204,6 +234,89 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
                     </button>
                   ) : null}
                 </div>
+
+                {r.corrects ? (
+                  <div className="mt-2 text-[12px] text-mut">
+                    {t('taskCorrects', { title: r.corrects })}
+                  </div>
+                ) : null}
+
+                {closing === r.id ? (
+                  /* Q97, and it is the whole of the decision in one paragraph:
+                     closing is final, and an error is corrected by a new task
+                     referencing this one. The remedy is real — `corrects_task_id`
+                     with a composite key behind it — because a screen promising
+                     one the schema cannot express is the defect this phase has
+                     already hit twice. */
+                  <div className="mt-3 rounded-[12px] border border-line bg-sbg px-4 py-3.5">
+                    <div className="text-[13px] font-bold">{t('taskCloseTitle')}</div>
+                    <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.55]">
+                      {t('taskCloseBody')}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setClosing(null)
+                          run(() => advanceTask({ id: r.id, to: 'lukket' }), 'taskAssessed')
+                        }}
+                        className="touch-44 cursor-pointer rounded-[10px] border-none bg-ac px-[18px] py-2.5 text-[12.5px] font-bold text-ink"
+                      >
+                        {t('taskCloseConfirm')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClosing(null)}
+                        className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-[18px] py-2.5 text-[12.5px] font-semibold text-ink"
+                      >
+                        {t('taskCloseCancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {canEdit && r.status === 'lukket' ? (
+                  correcting === r.id ? (
+                    <div className="mt-3 rounded-[12px] border border-dashed border-line bg-bg px-4 py-3.5">
+                      <div className="text-[12.5px] font-bold">{t('taskCorrectTitle')}</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <input
+                          value={correction}
+                          onChange={(e) => setCorrection(e.target.value)}
+                          placeholder={t('taskCorrectPlaceholder')}
+                          aria-label={t('taskCorrectTitle')}
+                          className="touch-44-field [--field-pad-y:11px] box-border min-w-0 flex-1 basis-[220px] rounded-[10px] border border-line bg-sf px-3.5 py-3 text-[13px] text-ink outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            if (!correction.trim()) return setError(t('taskCorrectNeedTitle'))
+                            setCorrecting(null)
+                            const title = correction.trim()
+                            setCorrection('')
+                            run(
+                              () => createCorrectingTask({ correctsTaskId: r.id, title }),
+                              'taskCorrectDone',
+                            )
+                          }}
+                          className="touch-44 cursor-pointer rounded-[10px] border-none bg-ac px-[18px] py-2.5 text-[12.5px] font-bold text-ink"
+                        >
+                          {t('taskCorrectSave')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setCorrecting(r.id)}
+                      className="touch-44 mt-3 cursor-pointer rounded-[9px] border border-line bg-transparent px-3.5 py-2 text-[11.5px] font-semibold text-mut"
+                    >
+                      {t('taskCorrectStart')}
+                    </button>
+                  )
+                ) : null}
 
                 <div className="mt-3.5 flex flex-wrap gap-1.5">
                   {TASK_STEPS.map((s, i) => (

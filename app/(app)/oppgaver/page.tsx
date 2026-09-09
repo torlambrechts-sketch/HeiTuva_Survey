@@ -33,7 +33,7 @@ export default async function TasksPage() {
     supabase
       .from('tasks')
       .select(
-        'id, title, kind, law_ref, source_kind, source_ref, owner_member_id, due_at, status, created_at',
+        'id, title, kind, law_ref, source_kind, source_ref, owner_member_id, due_at, status, created_at, corrects_task_id',
       )
       .eq('org_id', viewer.orgId)
       .order('due_at', { ascending: true, nullsFirst: false }),
@@ -90,6 +90,11 @@ export default async function TasksPage() {
     // and a compliance record with two assessments of one action is a record
     // nobody can read.
     assessed: false,
+    // Q97: the closed task this one corrects, by title, so the register reads
+    // as a chain rather than as two unrelated rows.
+    corrects: r.corrects_task_id
+      ? (list.find((x) => x.id === r.corrects_task_id)?.title ?? null)
+      : null,
   }))
 
   const { data: assessed } = await supabase

@@ -818,7 +818,7 @@
     "groupsEmpty": "Ingen grupper ennå.",
     "privacyHeading": "Personvern",
     "pMinResponses": "Skjul resultater under terskelen",
-    "pMinResponsesDesc": "Standard {k} svar for nye undersøkelser · aldri under 3 · lovpålagte maler har egen terskel",
+    "pMinResponsesDesc": "Standard {k} svar for nye undersøkelser · aldri under 2 · lovpålagte maler har egen terskel",
     "pMinResponsesLocked": "Alltid på — håndheves i databasen",
     "pIpLogging": "Ikke lagre IP-adresse",
     "pIpLoggingDesc": "Svar kan da ikke spores tilbake til enhet",
@@ -832,8 +832,8 @@
     "r12": "12 måneder",
     "r24": "24 måneder",
     "r0": "Ingen automatisk sletting",
-    "retentionNoteNever": "Rådata slettes aldri automatisk. Summerte tall beholdes.",
-    "retentionNoteMonths": "Rådata slettes etter {months} måneder. Summerte tall beholdes.",
+    "retentionNoteNever": "Rådata slettes aldri automatisk. Tall som allerede er frosset i en publisert rapport, beholdes uansett.",
+    "retentionNoteMonths": "Rådata slettes etter {months} måneder. Tall som allerede er frosset i en publisert rapport, beholdes.",
     "dsrInnsyn": "Innsyn i egne data",
     "dsrInnsynDesc": "Respondenten ber om kopi av det som er lagret",
     "dsrRetting": "Retting av opplysninger",
@@ -1764,6 +1764,17 @@
     "taskErrNeedsEffect": "Oppgaven kan ikke lukkes før effekten er vurdert.",
     "taskErrStepSkipped": "En oppgave flyttes ett steg om gangen.",
     "taskErrStepBackwards": "En oppgave kan ikke flyttes tilbake.",
-    "taskErrSaveFailed": "Klarte ikke å lagre. Prøv igjen."
+    "taskErrSaveFailed": "Klarte ikke å lagre. Prøv igjen.",
+    "taskCloseTitle": "Lukking er endelig",
+    "taskCloseBody": "Når du lukker en oppgave, kan den ikke åpnes igjen. Det er fordi en lukket oppgave sier at plikten er oppfylt, og en lukking som kan angres sier ikke det. Har du lukket noe ved en feil, retter du det med en ny oppgave som viser til denne — begge blir stående.",
+    "taskCloseConfirm": "Ja, lukk oppgaven",
+    "taskCloseCancel": "Avbryt",
+    "taskCorrectStart": "Rett med ny oppgave",
+    "taskCorrectTitle": "Ny oppgave som retter denne",
+    "taskCorrectPlaceholder": "Hva skal gjøres i stedet?",
+    "taskCorrectSave": "Opprett",
+    "taskCorrectDone": "Oppgaven er opprettet og viser til den lukkede",
+    "taskCorrects": "Retter: {title}",
+    "taskCorrectNeedTitle": "Gi den nye oppgaven en tittel"
   }
 }

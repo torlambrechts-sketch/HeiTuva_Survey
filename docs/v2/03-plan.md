@@ -685,8 +685,29 @@ small group scored badly from one whose small group scored well.
 
 **UI.** Oppgaver, built in V2-4. What changes is what the card says.
 
+**Carried in from V2-4, and NOT optional scope — a promise is already corrected to work
+around it.** The retention job destroys a round's aggregates unless a snapshot exists, and
+two of the three live closers never take one:
+
+    app.close_rounds_with_survey | NO SNAPSHOT   (trigger, survey status change)
+    app.run_due_schedules        | NO SNAPSHOT   (cron, hourly)
+    public.close_round           | SNAPSHOTS — and has no UI caller
+
+`M:0023` added the snapshot and its header names this exact failure. **The trap, written
+down so the fix is not a no-op:** `snapshot_results` checks `app.can_edit_survey`, which is
+false for the cron role, so calling it from `run_due_schedules` returns `forbidden` and
+writes nothing — a fix that looks applied and does nothing, which is D110's mute. The
+trigger path carries V2-3b's other hazard: writing a snapshot during an organisation cascade
+recreates data under a row being erased. **Both need their own negative tests**, which is
+why V2-4 corrected the COPY (`admin.retentionNoteMonths`, now «tall som allerede er frosset
+i en publisert rapport») rather than the behaviour, in its fix pass. See `V2-4.md § 3` and
+`docs/DEVIATIONS.md` D113 § 3.
+
 **Definition of done**
 - Tests 1, 2 and 3 are blockers.
+- The two auto-close paths take a snapshot, each with a test proving it failing first —
+  including one that runs as the cron role, because that is the case a naive fix silently
+  skips.
 - Census target **≥670 / 39**. 5a3 unchanged or higher.
 - The `docs/DEVIATIONS.md` entry for the changed bundle copy exists, citing D103 as precedent.
 - **Logged as a limit:** no gate here can see what a free-text string discloses to a reader who

@@ -47,6 +47,8 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   quality_rules: 'question-quality heuristics; data-not-code',
   theme_rules: 'free-text theme stems; data-not-code',
   benchmarks: 'seeded Norwegian reference values; DECISIONS Q8',
+  task_kinds:
+    'the five kinds a task may have (V2-4, Q70); data-not-code, same shape as `use_cases`, `brand_accents` and `segment_fields` — a row carries a key and a sort order, and no org id, no survey id and no count. The LABEL for each kind lives in `messages/*.json` under the key, so the registry itself is language-free and carries nothing about anyone. `tests/db/tasks.test.ts` CHECKS that claim against the column list rather than repeating it here',
   segment_fields:
     'the fields a segment rule may name (Q65); data-not-code, same shape as `use_cases` and `brand_accents` — a row carries a key, a column name and an availability flag, and no org id, no survey id and no count. The `available = false` rows exist so the editor can SAY a field is unavailable rather than being silently shorter than the design. `tests/db/segments.test.ts` CHECKS the claim against the column list rather than repeating it here',
   brand_accents:

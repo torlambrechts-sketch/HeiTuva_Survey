@@ -2788,3 +2788,214 @@ Reservasjonsliste (V2:2595–2621), which could not be built until that card
 existed. It now is, and the pair is the grid the bundle draws — with
 `minmax(min(300px,100%),1fr)` per RESPONSIVE.md global rule 7 rather than a bare
 300px floor.
+
+### D113 — the security-copy sweep: three promises, and the gate that could not see one of them
+
+**Not a phase.** Tor: *«enumerate it as a list inside whichever phase you are already
+in. Do not open a phase for it, and do not send me the list for a decision — if most
+promises hold it is a defect list you handle, and if most do not, tell me then.»*
+**Most hold.** So this is the defect list, and it stays here.
+
+**What was swept.** `messages/no.json` carries 1728 strings. 235 use
+security-or-capability vocabulary; narrowing to *promise-shaped sentences* — a
+declarative claim of at least 25 characters, not a button label — leaves **105
+shipped strings**, which is the load-bearing set. They collapse to about forty
+distinct propositions, because the anonymity promise alone is said eleven ways.
+Every one was checked against the running database or the shipped call site, not
+against the plan.
+
+    python3 - <<'PY'   # the enumeration, kept so the number is re-derivable
+    import json, re
+    m = json.load(open('messages/no.json')); flat = {}
+    def walk(o, p=''):
+        for k, v in o.items():
+            n = f"{p}.{k}" if p else k
+            walk(v, n) if isinstance(v, dict) else flat.setdefault(n, v)
+    walk(m)
+    core = re.compile(r'anonym|ikke kobl|kan ikke se|ingen kan|aldri|slettes automatisk|'
+                      r'slettes etter|krypter|terskel|minst \d| \d+ svar|slås sammen|logges|'
+                      r'uigjenkall|permanent|endelig|kan ikke endre|oppbevar|personopplysning|'
+                      r'GDPR|tilgang til|har ikke tilgang|sikker', re.I)
+    print(len([1 for v in flat.values() if isinstance(v, str) and core.search(v) and len(v) >= 25]))
+    PY
+
+**102 of 105 hold, and they hold in the database rather than in the UI.** Spot
+checks, each with the command that produced it: the anonymity CHECK is
+`responses_anonymous_unlinked`, and `responses` has no IP or user-agent column to
+strip (`information_schema.columns` lists eight, none of them either);
+`submitted_hour` is truncated in `public.submit_response`, the sole write path;
+`answers` and `responses` carry **zero** RLS policies, so «aldri enkeltsvar» is
+structural rather than enforced; `audit_no_update` is `BEFORE DELETE OR UPDATE`,
+so «revisjonslogg som ikke kan endres» is exact; `get_themes` gates on
+`count(distinct response_id) >= v_k`, which is precisely what
+`reports.noteThemes` claims — *«terskelen gjelder antall personer, ikke antall
+treff»*; `get_heatmap` takes `max(app.k_for(...))` over the selection, which is
+the «strengeste terskel» the dashboard promises; `suppressions` allows INSERT and
+DELETE to `administrator` only, so «bare en administrator kan oppheve den» holds.
+
+**And one of them was nearly reported as broken.** `builder.lockedNotice` —
+*«Spørsmålene kan ikke endres nå»* — appeared unenforced: no trigger on
+`questions`, no status test in `app.can_edit_survey`. Both true and both
+irrelevant. **There is no `questions` table**; it is `survey_questions`, and
+`sq_freeze_after_send` covers `INSERT OR DELETE OR UPDATE` on it. Impersonating a
+real administrator through the RLS path PostgREST uses, the update raised
+`survey … has an open or closed round; its questions are frozen`. **Absence in a
+query I wrote is not absence in the database** — CLAUDE.md's orientation rule, in
+miniature, caught by probing rather than by concluding.
+
+---
+
+#### 1 · «aldri under 3» — false, on the panel where the number is set
+
+`admin.pMinResponsesDesc` shipped as *«Standard {k} svar for nye undersøkelser ·
+**aldri under 3** · lovpålagte maler har egen terskel»*. The floor is **2**:
+
+    CHECK ((k_threshold >= 2) OR (respondent_kind = 'organisation'))   -- surveys_k_threshold_floor
+    CHECK ((default_k_threshold >= 2) AND (default_k_threshold <= 10)) -- organizations_…_range
+
+An over-promise, which is the dangerous direction — and it sat one divider above
+`admin.orgThresholdNote`, which says «aldri settes under to» **on the same
+panel**. `PrivacyPanel.tsx:78` and `:212`. Fixed in both languages.
+
+The number is nobody's invention from a bundle: no handoff contains it. It is
+residue of Q55, which set the floor at three, and Q91, which moved it to two —
+the same clause family `docs/LEGAL_DRAFTS.md` already records as having carried
+two false numbers. **This is its third.**
+
+#### 2 · why `verify:copy` did not catch it — a mute of a new kind
+
+`scripts/verify/threshold-copy.ts` exists for exactly this string, and passed
+CLEAN over it for two phases. Two things hid it, and they are different failures:
+
+**(a) The check reasoned about the STRING; the claim lives in a CLAUSE.** Its
+premise, in its own words, was *«a string that INTERPOLATES cannot assert a fixed
+number: the value comes from the data, so it is true by construction»*, and on
+that basis `if (interpolates) continue` skipped the whole string. But
+`admin.pMinResponsesDesc` interpolates in one clause and asserts a fixed number
+in the next. The interpolation makes the *first* clause true by construction and
+says nothing whatever about the second. **This is the file's own opening lesson
+turned back on itself** — *THE DERIVATION MUST DESCRIBE THE PROPERTY, NOT A
+SYMPTOM OF IT*. «The string interpolates» is a symptom; the property is
+per-clause. It now strips ICU placeholders and tests what is left.
+
+**(b) The allowlist entry read `'admin.pMinResponsesDesc': 'interpolates {k}'`**
+— a reason **true about one clause and read as true about the string**. That is
+D110's fourth case, the MUTE, in a form the fourth case did not anticipate: not a
+stale reason, not a dead key, but an *accurate and incomplete* one. The file
+already warns that «an entry without a reason is a place a finding goes to be
+forgotten»; this shows a **partial** reason does the same job, more convincingly,
+because it survives review.
+
+The stale-entry check is restated as the property rather than the symptom: an
+entry whose reason claims interpolation is honest only if, *with the placeholders
+removed, nothing is left asserting*. One rule now covers both ways such an entry
+rots — the placeholder removed entirely, and a fixed number added beside one that
+stayed.
+
+**The repaired check earned itself on its first run, which is the argument for
+repairing it rather than deleting the string.** It immediately surfaced two more
+entries with the same defect. `admin.anonExplainer`'s reason mentioned only the
+interpolation, not its fixed «to». And `admin.orgThresholdNote` was allowed
+because *«the «tre» in it is the CHECK floor, which is fixed»* — **the floor has
+been 2 since Q91, and the string itself was corrected then.** Only the reason
+stayed at three, for two phases, saying the wrong thing about a string that was
+right. Both reasons now name `surveys_k_threshold_floor`, in the form the
+`legal.*` entries were already written in.
+
+`results.insightSplit` also became visible and is a true negative — its «1–2» are
+scale values, the same reason `builder.cLavDesc` already carries. Allowlisted
+with it. 17 entries, gate CLEAN.
+
+**One honest cost, stated rather than discovered later.** The rule fires on any
+reason that *claims interpolation as its justification* while a fixed number
+survives stripping. It cannot read prose, so the pressure it applies is to stop
+leading with «interpolates» and name the constraint instead. Three reasons were
+rewritten that way. A reason that never mentions interpolation is not checked by
+this rule at all — that is a limit of the check, not a gap it closed.
+
+#### 3 · «Summerte tall beholdes» — true only by luck, and the bundle wrote it
+
+`admin.retentionNoteMonths` shipped as *«Rådata slettes etter {months} måneder.
+**Summerte tall beholdes.**»*, directly under the retention selector. It is the
+bundle's own sentence, identically in all three handoffs
+(`HeiTuva.dc.html:5602`, v1 `:3951`, legacy `:3271`) — so this is a
+bundle-versus-reality conflict, and CLAUDE.md settles it: *this file wins on
+security, the bundle wins on visuals*. Q55 is the standing precedent for exactly
+this move.
+
+`app.apply_retention` deletes `answers` then `responses` for any org with
+`retention_months > 0`. Nothing snapshots first. Aggregates survive **only** where
+a `result_snapshots` row already exists. Measured on the seeded database:
+
+    surveys_with_responses_and_no_snapshot | surveys_with_responses
+    -------------------------------------- + ----------------------
+                                        34 |                     36
+
+Confirmed end to end rather than reasoned: ageing one seeded survey's responses
+past its 12-month retention and running `app.apply_retention()` left **0
+responses and 0 answers** and 5 surviving snapshots — the mechanism works, and it
+only works where somebody already fired it.
+
+**And the reachable paths do not fire it.** Three live functions close a round:
+
+    app.close_rounds_with_survey | NO SNAPSHOT   (trigger, survey status change)
+    app.run_due_schedules        | NO SNAPSHOT   (cron, hourly)
+    public.close_round           | SNAPSHOTS
+
+`M:0023` added the snapshot to `close_round`, and its header names this exact
+failure — *«the retention job deletes answers on schedule, and a trend line loses
+its earlier points because nothing ever wrote them down»*. **Two of the three
+closers bypass the fix, and one of them is the cron path that creates the
+multi-round case in the first place.** `close_round` itself has no UI caller
+(`grep -rn "close_round" app lib` → nothing), so the only snapshot a user can
+reach today is `publish_duty → snapshot_report`, from
+`app/(app)/rapporter/actions.ts:209`.
+
+The copy now says what is true: *«Tall som allerede er frosset i en publisert
+rapport, beholdes.»* **The behaviour gap is logged for V2-5, not patched here**,
+and the reason is a trap worth writing down: `snapshot_results` checks
+`app.can_edit_survey`, which is false for the cron role, so calling it from
+`run_due_schedules` returns `forbidden` and writes nothing — **a fix that looks
+applied and is a no-op**, which is the same mute this deviation is otherwise
+about. The trigger path carries V2-3b's hazard instead: writing a snapshot during
+an organisation cascade recreates data under a row being erased. Both need
+negative tests, and V2-4 has had its build.
+
+#### 4 · this phase's third instance of one class
+
+`weekly_digest` — a flag with no call site, written into a user-facing promise —
+was found while fixing that exact class of defect. The sweep found two more of
+the same shape: `close_round`, which snapshots and which nothing calls; and
+`snapshot_results`, reachable only through it and through a scheduler that lacks
+the rights to use it. **A mechanism that exists in the schema, is correct, is
+tested, and has no live caller reads in review exactly like a working feature** —
+and the user-facing sentence above it is what makes the absence load-bearing.
+Three instances in one phase is what makes it a class rather than an incident.
+
+#### 5 · two claims that are false and not yet shipped — carried forward, not fixed
+
+Neither surface is built, so neither is a defect today; both would become one the
+moment its phase renders the bundle's copy as drawn.
+
+- **`liveGuard` (V2:6147, V2-9's live view).** The block V2:6130–6190 contains
+  exactly one occurrence of any threshold concept — `liveGuard`'s own promise.
+  `liveStage.counter` is `String(sv.responses.length) + " svar"` at V2:6169,
+  unconditional, and `liveRevealed` at V2:6175 is a free client-side toggle. The
+  prototype's live screen promises a gate it does not have.
+- **«Grupper under terskelen slås sammen i rapporten» (V2:4227, V2-6 help).**
+  `app.suppress_partition` **suppresses**; it does not merge. Sub-threshold rows
+  become `{n: null, avg: null, suppressed: true}`, and a second pass hides the
+  smallest visible row when exactly one is hidden — which
+  `reports.suppressedNote` already describes correctly. The help text describes a
+  different algorithm. **Wrong in the cautious direction, which is D109's class:
+  merging would disclose less than suppressing does, so the copy under-sells the
+  protection.** Just as visible in review, and just as wrong.
+
+- **`legal.dpa9P`** says a signed DPA *«finnes under Administrasjon → Personvern
+  og GDPR → Dokumentasjon»*. The surface renders four rows with a
+  not-yet-uploaded meta line and `docsComing` — *«Dokumentopplasting kommer i en
+  senere fase»*. The text is held behind `legal.draftNotice` (*«UTKAST — denne
+  teksten er ikke gjennomgått av jurist ennå»*), so this is a **draft
+  inaccuracy**, not a shipped false promise, and it goes to
+  `docs/LEGAL_DRAFTS.md` by the route V2-2 established rather than into a code
+  fix. Recorded there.

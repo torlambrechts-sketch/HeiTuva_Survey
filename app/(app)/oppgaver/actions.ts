@@ -110,3 +110,51 @@ export async function assessTaskEffect(input: unknown): Promise<TaskResult> {
   revalidatePath('/oppgaver')
   return { ok: true }
 }
+
+const Correction = z.object({
+  correctsTaskId: z.string().uuid(),
+  title: z.string().trim().min(1).max(200),
+})
+
+/**
+ * Q97's remedy, and the reason it is built rather than only described.
+ *
+ * `lukket` is terminal, so the close confirmation tells the operator that an
+ * error is corrected by a new task referencing the closed one. **A screen
+ * promising a remedy the schema cannot express is the defect this phase has
+ * already hit twice** — Teams, and the weekly digest — so the reference is a
+ * real column with a composite key behind it (`M:0066`), not a sentence.
+ *
+ * The new task inherits KIND and LAW_REF from the one it corrects, because a
+ * correction of a statutory duty is the same duty: making the operator retype
+ * the hjemmel is how a correction ends up filed under the wrong law.
+ */
+export async function createCorrectingTask(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = Correction.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data: old } = await supabase
+    .from('tasks')
+    .select('kind, law_ref, owner_member_id, org_id')
+    .eq('id', parsed.data.correctsTaskId)
+    .eq('org_id', viewer.orgId)
+    .maybeSingle()
+  if (!old) return { ok: false, error: 'invalid' }
+
+  const { error } = await supabase.from('tasks').insert({
+    org_id: viewer.orgId,
+    title: parsed.data.title,
+    kind: old.kind,
+    law_ref: old.law_ref,
+    owner_member_id: old.owner_member_id,
+    corrects_task_id: parsed.data.correctsTaskId,
+  })
+  if (error) return { ok: false, error: fromDatabase(error.message) }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}

@@ -818,7 +818,7 @@
     "groupsEmpty": "No groups yet.",
     "privacyHeading": "Privacy",
     "pMinResponses": "Hide results below the threshold",
-    "pMinResponsesDesc": "Default {k} answers for new surveys · never below 3 · statutory templates carry their own",
+    "pMinResponsesDesc": "Default {k} answers for new surveys · never below 2 · statutory templates carry their own",
     "pMinResponsesLocked": "Always on — enforced in the database",
     "pIpLogging": "Do not store IP address",
     "pIpLoggingDesc": "Answers cannot then be traced back to a device",
@@ -832,8 +832,8 @@
     "r12": "12 months",
     "r24": "24 months",
     "r0": "No automatic deletion",
-    "retentionNoteNever": "Raw data is never deleted automatically. Aggregated figures are kept.",
-    "retentionNoteMonths": "Raw data is deleted after {months} months. Aggregated figures are kept.",
+    "retentionNoteNever": "Raw data is never deleted automatically. Figures already frozen in a published report are kept either way.",
+    "retentionNoteMonths": "Raw data is deleted after {months} months. Figures already frozen in a published report are kept.",
     "dsrInnsyn": "Access to own data",
     "dsrInnsynDesc": "The respondent asks for a copy of what is stored",
     "dsrRetting": "Rectification",
@@ -1764,6 +1764,17 @@
     "taskErrNeedsEffect": "The task cannot be closed before its effect has been assessed.",
     "taskErrStepSkipped": "A task moves one step at a time.",
     "taskErrStepBackwards": "A task cannot be moved backwards.",
-    "taskErrSaveFailed": "Could not save. Try again."
+    "taskErrSaveFailed": "Could not save. Try again.",
+    "taskCloseTitle": "Closing is final",
+    "taskCloseBody": "Once you close a task it cannot be reopened. A closed task says the duty was discharged, and a closure that can be undone does not say that. If you closed something by mistake, correct it with a new task that refers to this one — both records remain.",
+    "taskCloseConfirm": "Yes, close the task",
+    "taskCloseCancel": "Cancel",
+    "taskCorrectStart": "Correct with a new task",
+    "taskCorrectTitle": "New task correcting this one",
+    "taskCorrectPlaceholder": "What should be done instead?",
+    "taskCorrectSave": "Create",
+    "taskCorrectDone": "The task was created and refers to the closed one",
+    "taskCorrects": "Corrects: {title}",
+    "taskCorrectNeedTitle": "Give the new task a title"
   }
 }

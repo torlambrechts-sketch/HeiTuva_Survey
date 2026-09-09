@@ -255,6 +255,16 @@ same-person lift audit, which also proved `created_by` had no writer at all.
 any of them: a CHECK constraint is neither an RLS table nor a SECURITY DEFINER
 function, and a function in the `app` schema is enumerated by neither sweep, so
 neither is a catalogue surface — recorded limits of that gate, not gaps in it.
+**V2-4 took the census 692 → 724 across 43 files** — `tests/db/tasks.test.ts`
+carries 32 — and 5a3 **58 of 78 → 59 of 80**: `tasks` and
+`task_effect_assessments` are new RLS tables and both are CHECKED, `task_kinds`
+is allowlisted with `use_cases`' reason and checked the same way, and
+`loop_actions` was dropped. **The checked number has now moved up three phases
+running.** The phase also REPAIRED an existing gate rather than adding one:
+`verify:copy` skipped any string containing a placeholder, so a fixed number in
+a second clause was invisible — it strips ICU placeholders and tests what is
+left, and found two more allowlist reasons wrong on its first run (V2-4 § 3,
+D113).
 
 **Run order changes what 5a3 can prove, not the number.** 55 of 71 either way. But
 the script only counts a surface as *proven* when there was a real row for the

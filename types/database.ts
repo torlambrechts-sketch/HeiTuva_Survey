@@ -398,10 +398,10 @@ export type Database = {
           },
           {
             foreignKeyName: "duties_owner_member_id_fkey"
-            columns: ["owner_member_id"]
+            columns: ["owner_member_id", "org_id"]
             isOneToOne: false
             referencedRelation: "org_members"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
         ]
       }
@@ -2119,6 +2119,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          corrects_task_id: string | null
           created_at: string
           due_at: string | null
           id: string
@@ -2138,6 +2139,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          corrects_task_id?: string | null
           created_at?: string
           due_at?: string | null
           id?: string
@@ -2157,6 +2159,7 @@ export type Database = {
           title: string
         }
         Update: {
+          corrects_task_id?: string | null
           created_at?: string
           due_at?: string | null
           id?: string
@@ -2176,6 +2179,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_corrects_task_id_fkey"
+            columns: ["corrects_task_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "org_id"]
+          },
           {
             foreignKeyName: "tasks_kind_fkey"
             columns: ["kind"]
@@ -2199,17 +2209,17 @@ export type Database = {
           },
           {
             foreignKeyName: "tasks_owner_member_id_fkey"
-            columns: ["owner_member_id"]
+            columns: ["owner_member_id", "org_id"]
             isOneToOne: false
             referencedRelation: "org_members"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "tasks_source_ref_fkey"
-            columns: ["source_ref"]
+            columns: ["source_ref", "org_id"]
             isOneToOne: false
             referencedRelation: "surveys"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
         ]
       }
