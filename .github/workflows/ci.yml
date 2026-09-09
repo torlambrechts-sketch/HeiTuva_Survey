@@ -1,13 +1,38 @@
 name: CI
 
+# S2 — the seventeen gates VERIFY.md defines, all of them, on every change.
+#
+# Four used to run here (tsc, eslint, db lint, the invariant suite) and thirteen
+# ran only when somebody remembered to type them. A gate nobody schedules is a
+# gate that reports on the last machine it happened to run on, which is the
+# shape this project keeps finding: green for something that structurally could
+# not be seen.
+#
+# Three jobs rather than one, because they need different machines: `static`
+# needs no database, `database` needs Postgres and no browser, and `browser`
+# needs Postgres, a production build and Chromium. They run in parallel, so the
+# wall clock is the slowest one (~15 min of gate time) rather than their sum.
+#
+# WITHIN each job the gates run in `verify:all`'s own order. That order is not
+# arbitrary — verify:hermetic deliberately does NOT reset the database, and
+# verify:roundtrip writes extra rows on purpose — so it is the order that is
+# known to pass, and reordering it would be inventing a new experiment.
+
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # Every verify script passes --local and reads these fixed development keys
+  # from scripts/verify/local-env.ts, which is what pins the harness to the
+  # local stack rather than to the production project.
+  SUPABASE_SERVICES: realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
 
 jobs:
   static:
@@ -21,7 +46,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npx eslint .
+      # --max-warnings 0: a warning nobody fails on is a warning that
+      # accumulates. This is the eslint half of Gate 1 (verify:quality); the
+      # db-lint half runs in `database`, which has a database to lint.
+      - run: npx eslint . --max-warnings 0
       - name: Build
         run: npx next build
         env:
@@ -30,8 +58,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.CI_SUPABASE_ANON_KEY || 'placeholder' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ vars.CI_SUPABASE_SERVICE_KEY || 'placeholder' }}
 
-  invariants:
-    name: security invariants
+  database:
+    name: database gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +72,7 @@ jobs:
           version: latest
 
       - name: Start local Supabase
-        run: supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,mailpit
+        run: supabase start -x ${{ env.SUPABASE_SERVICES }},mailpit
 
       # Proves every migration applies from scratch and the seed lands.
       - name: Apply migrations and seed
@@ -61,14 +89,14 @@ jobs:
               select count(*) into bank     from public.question_bank;
               select count(*) into sections from public.report_section_types;
               select count(*) into presets  from public.dashboard_presets;
-              -- V1-4: `sections` rose 11 -> 12 when `duties` joined the
-              -- registry as a dashboard-only row, and `panels` is the
+              -- V1-4: \`sections\` rose 11 -> 12 when \`duties\` joined the
+              -- registry as a dashboard-only row, and \`panels\` is the
               -- dashboard subset that a layout may name (DECISIONS Q51). The
               -- second number is the one that matters: it is the vocabulary,
-              -- and it must NOT include `stream` while Q26 stands.
+              -- and it must NOT include \`stream\` while Q26 stands.
               select count(*) into panels   from public.report_section_types where on_dashboard;
-              -- V1-5: five new packs (DECISIONS Q45), 17 -> 22. `uses` is the
-              -- use-case registry and `unmapped` is the one that matters: a
+              -- V1-5: five new packs (DECISIONS Q45), 17 -> 22. \`uses\` is the
+              -- use-case registry and \`unmapped\` is the one that matters: a
               -- shipped pack with no use case draws a library card with no
               -- eyebrow, and the mapping runs in a function both the migration
               -- and the seed call.
@@ -85,9 +113,119 @@ jobs:
       - run: npm ci
       - run: npx tsx scripts/seed-i18n.ts --local
       - run: npx tsx scripts/seed-help.ts --local
+      # The db suite reaches states the bare seed does not create, and 5a3 can
+      # only report a surface PROVEN when a real row existed for the policy to
+      # refuse — so the demo seed runs before the gates, exactly as verify:all
+      # arranges it locally.
+      - run: npm run seed:demo
 
-      - name: Invariant suite
-        run: npx vitest run tests/invariants
+      - name: Gate 2 — verify:copy
+        run: npm run verify:copy
 
-      - name: supabase db lint
+      # `npx vitest run` rather than `verify:db`, because it is the whole suite:
+      # tests/invariants AND tests/db AND tests/unit, plus the census, which
+      # fails if a file collects fewer tests than tests/expected-counts.json
+      # committed for it.
+      - name: Gates 3 and 4 — the whole suite and the census
+        run: npx vitest run
+
+      - name: Gate 5a3 — verify:policy
+        run: npm run verify:policy
+
+      - name: Gate 5b — verify:attack
+        run: npm run verify:attack
+
+      - name: Gate 5f — verify:load
+        run: npm run verify:load
+
+      - name: Gate 1 (db half) — supabase db lint
         run: supabase db lint --level warning
+
+  browser:
+    name: browser gates
+    runs-on: ubuntu-latest
+    # The longest of the three. hermetic alone runs the whole suite twice with a
+    # deliberate pollution step between them.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        # Mailpit is NOT excluded here: verify:send drives the mail worker and
+        # reads back what arrived, so the capture inbox is part of the gate.
+        run: supabase start -x ${{ env.SUPABASE_SERVICES }}
+
+      - run: supabase db reset
+      - run: npm ci
+      - run: npx tsx scripts/seed-i18n.ts --local
+      - run: npx tsx scripts/seed-help.ts --local
+      - run: npm run seed:demo
+
+      # tests/visual/browsers.setup.ts refuses to start when a browser a project
+      # needs is missing, so a missing dependency never arrives disguised as six
+      # failing screenshots.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Every gate below calls ensureServer, which refuses a build wired to the
+      # production project and refuses a build older than the source. Building
+      # once here means the first gate does not pay for it alone.
+      - name: Build against the local stack
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+          SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
+      - name: Gate 2a — verify:roundtrip
+        run: npm run verify:roundtrip
+
+      - name: Gate 5a2 — verify:hermetic
+        run: npm run verify:hermetic
+
+      - name: Gate 5c — verify:interaction
+        run: npm run verify:interaction
+
+      - name: Gate 5d — verify:i18n
+        run: npm run verify:i18n
+
+      - name: Gate 5e — verify:respondent
+        run: npm run verify:respondent
+
+      - name: verify:send
+        run: npm run verify:send
+
+      - name: verify:export
+        run: npm run verify:export
+
+      - name: verify:splash
+        run: npm run verify:splash
+
+      - name: Gate 5 — verify:browser
+        run: npm run verify:browser
+
+      - name: verify:responsive
+        run: npm run verify:responsive
+
+      - name: Gate 5g — verify:visual
+        run: npm run verify:visual
+
+      # The pixel diffs are the one output worth keeping off a red run: a
+      # screenshot gate that fails without showing what moved costs a second run.
+      - name: Upload captures on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: |
+            artifacts/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
