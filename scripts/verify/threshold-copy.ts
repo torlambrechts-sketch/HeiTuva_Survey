@@ -87,6 +87,18 @@ function asserts(lang: string, text: string): boolean {
  * Allowed, each with the reason it is allowed. An entry without a reason is a
  * place a finding goes to be forgotten — the same rule Gate 5a3's allowlist
  * carries.
+ *
+ * ── AND THE REASON MUST STATE ITS SCOPE, NOT ONLY ITS CONTENT ───────────────
+ *
+ * `admin.pMinResponsesDesc` was allowed because it «interpolates {k}». It does.
+ * It also carried «aldri under 3» against a floor of 2, and the entry hid that
+ * for two phases. **A partial reason survives review because a reviewer checks
+ * whether the reason is TRUE, not whether it is SUFFICIENT** — so an accurate
+ * half-reason is confirmed by the very reading that should have caught it.
+ * «interpolates {k} in clause 1, asserts nothing in clause 2» would have failed
+ * review on sight. D110's fourth case, and its 2026-09-09 addition.
+ *
+ * So: where a string has more than one clause, say what each clause does.
  */
 const ALLOWED: Record<string, string> = {
   // Interpolated: the number comes from the data, so the string cannot lie.

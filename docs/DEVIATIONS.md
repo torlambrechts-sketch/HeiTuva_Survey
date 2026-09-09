@@ -2570,6 +2570,33 @@ new gate over prose, and nothing could check case 4 at all — the question «ca
 this artefact express this claim» is not mechanical. Read the four cases, run
 the command, open the picture, and decide which one you are in.
 
+**AN ADDITION TO CASE 4, NOT AN INSTANCE OF IT (Tor, 2026-09-09, from V2-4).**
+The V2-3a instance is an artefact that is mute. V2-4 found the same silence
+produced by something that is not silent at all: **a reason that is TRUE and
+INSUFFICIENT.**
+
+`scripts/verify/threshold-copy.ts` allowlisted `admin.pMinResponsesDesc` with the
+reason `'interpolates {k}'`. The string is *«Standard {k} svar for nye
+undersøkelser · **aldri under 3** · lovpålagte maler har egen terskel»*. It does
+interpolate `{k}` — the reason is accurate — and it also carries a fixed **3**
+against a floor of **2**. The gate reasoned about the STRING; the claim lives in
+a CLAUSE.
+
+> **State the SCOPE of an allowlist reason, not only its content.**
+> «interpolates {k} in clause 1, asserts nothing in clause 2» would have failed
+> review on sight.
+
+**And that is what made it lethal rather than merely wrong: a partial reason
+survives review because a reviewer checks whether the reason is TRUE, not
+whether it is SUFFICIENT.** A false reason is caught by the first person who
+reads it. An accurate one that covers half its subject is *confirmed* by that
+same reading, and the confirmation is what the finding then hides behind. It is
+case 4's silence arriving through a sentence that speaks.
+
+The scope rule applies to every allowlist in this repository — 5a3's, the
+census's, this one's — because all three are «a name, and a reason for excusing
+it», and none of them records what the reason does *not* cover.
+
 **WHAT A RULE LIKE THIS CAN ACTUALLY ACHIEVE, which is less than it sounds and
 still worth having** (Tor, 2026-09-08, on V2-3b's third Docker death).
 
@@ -2879,12 +2906,15 @@ SYMPTOM OF IT*. «The string interpolates» is a symptom; the property is
 per-clause. It now strips ICU placeholders and tests what is left.
 
 **(b) The allowlist entry read `'admin.pMinResponsesDesc': 'interpolates {k}'`**
-— a reason **true about one clause and read as true about the string**. That is
-D110's fourth case, the MUTE, in a form the fourth case did not anticipate: not a
-stale reason, not a dead key, but an *accurate and incomplete* one. The file
-already warns that «an entry without a reason is a place a finding goes to be
-forgotten»; this shows a **partial** reason does the same job, more convincingly,
-because it survives review.
+— a reason **true about one clause and read as true about the string**. **This is
+an ADDITION to D110's fourth case rather than an instance of it**, and it is
+recorded there in Tor's words: *state the SCOPE of an allowlist reason, not only
+its content — «interpolates {k} in clause 1, asserts nothing in clause 2» would
+have failed review on sight.* The file already warns that «an entry without a
+reason is a place a finding goes to be forgotten»; a **partial** reason does the
+same job more convincingly, because a reviewer checks whether a reason is TRUE,
+not whether it is SUFFICIENT — so an accurate half-reason is *confirmed* by the
+reading that should have caught it.
 
 The stale-entry check is restated as the property rather than the symptom: an
 entry whose reason claims interpolation is honest only if, *with the placeholders

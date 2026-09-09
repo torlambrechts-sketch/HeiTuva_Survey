@@ -235,8 +235,18 @@ Output in this exact structure, nothing else:
    judgement: which gate the chain exited at, and which gates were therefore never
    executed. One line, written when it happens, so the next reading is a fact.
 
-   **EVERY GATE IS NAMED WITH ITS STATE: RAN GREEN, RAN RED, OR DID NOT RUN WITH THE
-   REASON. READY FOR REVIEW IS NOT AVAILABLE WHILE ANY GATE STANDS AS DID-NOT-RUN.**
+   **EVERY GATE IS NAMED WITH ITS STATE: RAN GREEN, RAN RED, DID NOT RUN WITH THE
+   REASON, OR RAN AGAINST CODE THAT WAS NOT THE CODE. READY FOR REVIEW IS NOT
+   AVAILABLE WHILE ANY GATE STANDS AS DID-NOT-RUN.**
+
+   **RAN AGAINST CODE THAT WAS NOT THE CODE** was added after V2-4 (Tor, 2026-09-09)
+   and is not a did-not-run: it produced numbers, and they were numbers about
+   something else. **A green from a server the harness later refuses to rebuild is
+   void, not a pass.** V2-4's `verify:responsive` reported «172 measured, 0 blockers»
+   and the refusal arrived one gate later, at `roundtrip` — *«a server is already
+   running, but source files are newer than the build it is serving»*. Re-run on a
+   killed server, that same screen had two blockers. Void the result and re-run the
+   chain; do not carry the number forward.
 
    Added after V2-2, from an instance where every part of the apparatus worked and the
    report format had nowhere to put what it said. `verify:visual` refuses to start when a

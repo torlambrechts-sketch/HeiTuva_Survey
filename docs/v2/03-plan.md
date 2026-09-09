@@ -617,6 +617,57 @@ V2-5, not here.
 
 ## V2-5 — Tasks from a survey's blind spots
 
+### ITEM 0, AND IT COMES BEFORE THE PHASE'S OWN SUBJECT — data loss on a schedule
+
+**Tor, 2026-09-09: «close_round is no longer a copy defect … that is data loss on a
+schedule, promised in the bundle throughout. Treat it as V2-5's first item, not one of its
+items.»**
+
+`app.apply_retention` deletes `answers` then `responses` on a daily cron and snapshots
+nothing first. A round's aggregates survive only where a `result_snapshots` row already
+exists. Three live functions close a round:
+
+    app.close_rounds_with_survey | NO SNAPSHOT   (trigger, survey status change)
+    app.run_due_schedules        | NO SNAPSHOT   (cron, hourly)
+    public.close_round           | SNAPSHOTS — and has no UI caller
+
+`M:0023` added the snapshot to `close_round` and its header names this exact failure —
+*«the retention job deletes answers on schedule, and a trend line loses its earlier points
+because nothing ever wrote them down»*. **Both reachable closers bypass it**, and one of
+them is the cron path that creates the multi-round case the fix was written for.
+«Summerte tall beholdes» was drawn under the retention selector in **all three handoffs**
+and was false in every one of them; V2-4 corrected the copy so nothing shipped claims what
+the code does not do, which is the stopgap, not the fix.
+
+**THE TRAP, and it decides how the tests are written.** `snapshot_results` checks
+`app.can_edit_survey`, which is **false for the cron role**, so calling it from
+`run_due_schedules` returns `forbidden` and writes nothing — a fix that looks applied and
+does nothing, D110's mute. Tor: **«Assert the row exists after the scheduled path runs, not
+that the call returned.»** So:
+
+- Test A — run `app.run_due_schedules()` as the cron role over a due schedule with an open
+  round, then `select count(*) from public.result_snapshots where round_id = <the closed
+  round>` and require **1**. Never assert on the function's return value.
+- Test B — the same for the `surveys` status-change trigger, which additionally must not
+  write during an organisation cascade (V2-3b's hazard: a snapshot recreates data under a
+  row being erased). Delete the organisation and require the delete to succeed.
+- Test C — `app.apply_retention()` after a scheduled close, then assert the aggregates are
+  still readable. This is the property; A and B are the mechanism.
+
+Proven failing before implementation, like every other negative test in this project.
+
+### ITEM 0b — the FK tenancy class, inherited as a list
+
+`docs/v2/reports/V2-4.md`'s annotation enumerates all thirteen with a per-instance probe
+result. **Eleven are reachable.** `reports.duty_id` is first — it is the only one with a
+behavioural effect, and the effect is **availability**: `publish_duty` selects its report
+with no org filter, so a foreign report makes an organisation's own duty unpublishable.
+`notifications.member_id` is **INCONCLUSIVE, not safe** — build the fixture and probe it.
+The remaining ten are attribution columns and should be decided as a group, because
+`duties.owner_member_id` looked exactly that harmless until it was probed.
+
+### The phase's own subject
+
 Its own phase, negative tests first, the Q17 treatment. **Q72 and Q73 are CONFIRMED**, so
 this phase is unblocked — but its shape changed with them, and the phase is renamed because
 the old name described the trigger that was rejected.
@@ -685,29 +736,12 @@ small group scored badly from one whose small group scored well.
 
 **UI.** Oppgaver, built in V2-4. What changes is what the card says.
 
-**Carried in from V2-4, and NOT optional scope — a promise is already corrected to work
-around it.** The retention job destroys a round's aggregates unless a snapshot exists, and
-two of the three live closers never take one:
-
-    app.close_rounds_with_survey | NO SNAPSHOT   (trigger, survey status change)
-    app.run_due_schedules        | NO SNAPSHOT   (cron, hourly)
-    public.close_round           | SNAPSHOTS — and has no UI caller
-
-`M:0023` added the snapshot and its header names this exact failure. **The trap, written
-down so the fix is not a no-op:** `snapshot_results` checks `app.can_edit_survey`, which is
-false for the cron role, so calling it from `run_due_schedules` returns `forbidden` and
-writes nothing — a fix that looks applied and does nothing, which is D110's mute. The
-trigger path carries V2-3b's other hazard: writing a snapshot during an organisation cascade
-recreates data under a row being erased. **Both need their own negative tests**, which is
-why V2-4 corrected the COPY (`admin.retentionNoteMonths`, now «tall som allerede er frosset
-i en publisert rapport») rather than the behaviour, in its fix pass. See `V2-4.md § 3` and
-`docs/DEVIATIONS.md` D113 § 3.
-
 **Definition of done**
 - Tests 1, 2 and 3 are blockers.
-- The two auto-close paths take a snapshot, each with a test proving it failing first —
-  including one that runs as the cron role, because that is the case a naive fix silently
-  skips.
+- **Item 0 is done before the phase's own subject starts**: both auto-close paths take a
+  snapshot, proven by tests A, B and C above, which assert the ROW and never the return.
+- **Item 0b**: `reports.duty_id` made composite with a test on the publish path;
+  `notifications.member_id` probed with a real fixture and its answer recorded.
 - Census target **≥670 / 39**. 5a3 unchanged or higher.
 - The `docs/DEVIATIONS.md` entry for the changed bundle copy exists, citing D103 as precedent.
 - **Logged as a limit:** no gate here can see what a free-text string discloses to a reader who
