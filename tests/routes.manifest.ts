@@ -240,6 +240,46 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-9 — Live (V2:1829-1927), the presenter's screen.
+    //
+    // Reached the way a presenter reaches it: from the survey list, through the
+    // context bar's «Kjør live» button, which renders only when
+    // `surveys.run_mode = 'live'`. Navigating rather than deep-linking is what
+    // the Builder's entry already does, and it means the capture also proves
+    // the button appears at all — a screen photographed by URL would look
+    // identical whether or not anything led to it.
+    //
+    // ONE STATE, and that is a statement rather than an omission. The reveal,
+    // the counter and the bars all depend on Q78, which is OPEN: until Tor
+    // answers, the counter is hidden below k and the reveal is refused below k,
+    // so «revealed» is not a state this build can reach on the demo seed by
+    // design. `docs/v2/07-v2-9-opening.md` and the phase report both say so.
+    route: '/undersokelser',
+    label: 'live',
+    as: 'administrator',
+    phase: 'phase-6',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          // `pickSurvey` and not a row click, for the reason its own comment
+          // gives: rows are ordered by creation time, so `.first()` addresses a
+          // position rather than a survey. **This route was captured wrong
+          // twice before that mattered** — the first attempt clicked the row
+          // title, which is a span and not a link at all; the second clicked
+          // the first «Se svar» and landed on «Pulssjekk utvikling», a survey
+          // in standard mode, so «Kjør live» was correctly absent and the
+          // failure looked like a missing button rather than a wrong survey.
+          // The ERROR screenshot is what said which — a capture that fails
+          // usefully because it photographs where it actually was.
+          await pickSurvey(page, 'Arbeidsmiljø')
+          await page.getByRole('link', { name: /^(Kjør live|Run live)$/ }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/live'))
+        },
+      },
+    ],
+  },
+  {
     // V2-8 — Bruksområder. PUBLIC, so mobile-first pixel-perfect at 380-420px
     // per CLAUDE.md rather than RESPONSIVE.md.
     route: '/bruksomrader',

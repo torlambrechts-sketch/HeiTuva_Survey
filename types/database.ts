@@ -2196,6 +2196,7 @@ export type Database = {
           policy_locked: boolean
           respondent_kind: string
           results_scope: "ledelse" | "ledere_eget_team" | "alle_ansatte"
+          run_mode: string
           source_lang: string
           status: "utkast" | "aktiv" | "lukket"
           target: number | null
@@ -2217,6 +2218,7 @@ export type Database = {
           policy_locked?: boolean
           respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
+          run_mode?: string
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
           target?: number | null
@@ -2238,6 +2240,7 @@ export type Database = {
           policy_locked?: boolean
           respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
+          run_mode?: string
           source_lang?: string
           status?: "utkast" | "aktiv" | "lukket"
           target?: number | null

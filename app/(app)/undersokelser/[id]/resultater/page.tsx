@@ -54,7 +54,7 @@ export default async function ResultsPage({
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, results_scope, created_at, k_threshold, respondent_kind')
+    .select('id, title, audience_label, status, anonymity, results_scope, created_at, k_threshold, respondent_kind, run_mode')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -139,6 +139,7 @@ export default async function ResultsPage({
   return (
     <>
       <SurveyContextBar
+        liveMode={survey.run_mode === 'live'}
         surveyId={survey.id}
         title={survey.title}
         audience={survey.audience_label}

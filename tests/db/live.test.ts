@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { anonClient, leserClient, outsiderClient, type Client } from './clients'
 
@@ -363,5 +364,68 @@ describe('(V2-9) RLS on live_sessions', () => {
       expires_at: new Date(Date.now() + 3600_000).toISOString(),
     })
     expect(error, 'a leser reads aggregates; it does not run the room').not.toBeNull()
+  })
+})
+
+describe('(V2-9) `run_mode` — the column has a writer, and the rule is the database’s', () => {
+  it('16. live cannot be set on a named survey — refused one step EARLIER than the session', () => {
+    // The same rule as test 4, at the point where the editor picks the mode
+    // rather than at the point where the presenter presses the button. Without
+    // this, a named survey could carry `run_mode = 'live'`, show «Kjør live» on
+    // the context bar, and refuse only when pressed — a user learning a rule by
+    // being stopped instead of by being told.
+    let err = ''
+    try {
+      psql(`update public.surveys set run_mode = 'live' where id = '${named}'`)
+    } catch (e) {
+      err = String((e as { stderr?: string }).stderr ?? e)
+    }
+    expect(err, 'a named survey cannot be switched to live').toMatch(/live_requires_anonymous/)
+  })
+
+  it('16b. and the guard fires on an ANONYMITY change too, not only on the mode', () => {
+    // The asymmetric half, and the one a `before update of run_mode` trigger
+    // alone would have missed: set live first, then try to make the survey
+    // named. Guarding only the mode column would let the survey arrive at
+    // `live` + `named` by the other road.
+    psql(`update public.surveys set run_mode = 'live' where id = '${survey}'`)
+    let err = ''
+    try {
+      psql(`update public.surveys set anonymity = 'named' where id = '${survey}'`)
+    } catch (e) {
+      err = String((e as { stderr?: string }).stderr ?? e)
+    }
+    expect(err, 'a live survey cannot be made named').toMatch(/live_requires_anonymous/)
+    psql(`update public.surveys set run_mode = 'standard' where id = '${survey}'`)
+  })
+
+  it('17. `quiz` is NOT an accepted value — a mode with nothing behind it', () => {
+    // V2-10 builds quiz. Until then the CHECK refuses the value, so a survey
+    // cannot be switched into a mode whose features do not exist. Deliberately
+    // unlike Q100's `suppressions.source = 'avmelding'`, which stays in its
+    // CHECK with no writer: that value records how a row got there, while this
+    // one is a capability claim the UI acts on.
+    let err = ''
+    try {
+      psql(`update public.surveys set run_mode = 'quiz' where id = '${survey}'`)
+    } catch (e) {
+      err = String((e as { stderr?: string }).stderr ?? e)
+    }
+    expect(err, 'quiz is refused by the CHECK').toMatch(/run_mode|check constraint/i)
+  })
+
+  it('18. THE COLUMN HAS A WRITER — asserted, because it nearly did not', () => {
+    // `run_mode` was built, read by the Live page, read by the context bar and
+    // set by the demo seed — with no way for an editor to write it. Every gate
+    // was green and the feature was reachable only from psql. That is the shape
+    // D102 and `created_by` both had, and the question that caught all three is
+    // «who writes this column».
+    //
+    // Asserted over the SOURCE rather than by clicking, so it survives a
+    // rewrite of the panel: a server action must both name the column and
+    // validate it.
+    const src = readFileSync('app/(app)/undersokelser/[id]/bygg/actions.ts', 'utf8')
+    expect(src, 'a server action writes run_mode').toMatch(/run_mode:\s*parsed\.data\.runMode/)
+    expect(src, 'behind a Zod enum that excludes quiz').toMatch(/z\.enum\(\['standard', 'live'\]\)/)
   })
 })

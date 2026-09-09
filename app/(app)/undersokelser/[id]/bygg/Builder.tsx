@@ -19,6 +19,7 @@ import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
+import { RunModePanel } from './RunModePanel'
 import {
   ADD_DESC_KEY,
   ADD_LABEL_KEY,
@@ -58,6 +59,7 @@ export function Builder({
   canEdit,
   locked,
   policy,
+  runMode,
 }: {
   surveyId: string
   initial: BuilderDraft
@@ -66,6 +68,8 @@ export function Builder({
   canEdit: boolean
   locked: boolean
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
+  /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
+  runMode: string
 }) {
   const t = useTranslations('builder')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
@@ -315,6 +319,30 @@ export function Builder({
             )
           })}
         </div>
+      ) : null}
+
+      {/* V2-9 — «Kjøremodus» sits at the TOP of the Innstillinger pane
+          (V2:565), above the policy: it decides what the rest of the pane is
+          about. */}
+      {tab === 'settings' ? (
+        <RunModePanel
+          surveyId={surveyId}
+          runMode={runMode}
+          anonymity={policy.anonymity}
+          strings={{
+            title: t('runModeTitle'),
+            desc: t('runModeDesc'),
+            standard: t('runModeStandard'),
+            standardDesc: t('runModeStandardDesc'),
+            live: t('runModeLive'),
+            liveDesc: t('runModeLiveDesc'),
+            quiz: t('runModeQuiz'),
+            quizDesc: t('runModeQuizDesc'),
+            quizNote: t('runModeQuizNote'),
+            namedSurvey: t('runModeNamedSurvey'),
+            failed: t('policyError_failed'),
+          }}
+        />
       ) : null}
 
       {/* The v1 bundle inserts this ABOVE "Klar til utsending?" (:577, :636) —

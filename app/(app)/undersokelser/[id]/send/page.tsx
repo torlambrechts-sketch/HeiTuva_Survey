@@ -31,7 +31,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, langs, k_threshold, respondent_kind, policy_locked, template_pack_key')
+    .select('id, title, audience_label, status, anonymity, langs, k_threshold, respondent_kind, policy_locked, template_pack_key, run_mode')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -129,6 +129,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <SurveyContextBar
+        liveMode={survey.run_mode === 'live'}
         surveyId={survey.id}
         title={survey.title}
         audience={survey.audience_label}

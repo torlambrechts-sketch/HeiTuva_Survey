@@ -334,7 +334,17 @@
     "previewYes": "Ja",
     "previewNo": "Nei",
     "testCta": "Test undersøkelsen",
-    "testHint": "Du svarer som en respondent. Ingenting lagres."
+    "testHint": "Du svarer som en respondent. Ingenting lagres.",
+    "runModeTitle": "Kjøremodus",
+    "runModeDesc": "Bestemmer hvilke spørsmålstyper og innstillinger du får.",
+    "runModeStandard": "Standard",
+    "runModeStandardDesc": "Puls, medarbeider og lovpålagt",
+    "runModeLive": "Live",
+    "runModeLiveDesc": "Allmøte, workshop og samling",
+    "runModeQuiz": "Quiz",
+    "runModeQuizDesc": "Opplæring og sertifisering",
+    "runModeQuizNote": "Quiz er ikke bygget ennå",
+    "runModeNamedSurvey": "Live krever anonyme svar. QR-koden gir hver enhet en engangslenke, og systemet vet ikke hvem enheten tilhører."
   },
   "send": {
     "title": "Slik når den fram",
@@ -1266,7 +1276,8 @@
     "stepResults": "Resultater",
     "statusUtkast": "Utkast",
     "statusAktiv": "Aktiv",
-    "statusLukket": "Lukket"
+    "statusLukket": "Lukket",
+    "runLive": "Kjør live"
   },
   "surveys": {
     "title": "Undersøkelser",
@@ -2083,5 +2094,39 @@
     "exitAnonNote": "Anonymt og aggregert. Enkeltsvar vises aldri, uansett hvor få som slutter.",
     "exitTipTitle": "Send den etter siste dag",
     "exitTipBody": "Folk svarer mer ærlig når arbeidsforholdet er avsluttet. Bruk privat e-post der dere har den."
+  },
+  "live": {
+    "heading": "Live",
+    "reveal": "Vis resultat",
+    "hide": "Skjul resultat",
+    "settings": "Innstillinger",
+    "open": "Start live",
+    "close": "Avslutt live",
+    "noRound": "Undersøkelsen er ikke sendt ennå, så det finnes ingen runde å kjøre live på.",
+    "notLiveMode": "Denne undersøkelsen står ikke i live-modus. Live krever anonyme svar — koden gir hver enhet en engangslenke, og systemet vet ikke hvem enheten tilhører.",
+    "noSession": "Ingen aktiv økt",
+    "scanHint": "Skann for å svare",
+    "guard": "Live respekterer anonymitetsterskelen. Er det færre svar enn terskelen, vises ingen tall på skjermen.",
+    "counterHidden": "Færre enn {k} svar",
+    "counter": "{n} svar",
+    "barsGated": "Færre enn {k} svar — ingen tall vises.",
+    "cloudTitle": "Ordsky",
+    "cloudFloor": "Ord minst {floor} personer har skrevet",
+    "cloudGated": "Færre enn {k} frisvar — ingen ord vises.",
+    "cloudEmpty": "Ingen ord er skrevet av minst {floor} personer ennå.",
+    "cloudNoQuestion": "Undersøkelsen har ingen frisvar å lage ordsky av.",
+    "priorityTitle": "Prioriteringsøvelse",
+    "priorityUnavailable": "Prioriteringsøvelse er ikke bygget ennå. Den krever en spørsmålstype som fordeler poeng, og den finnes ikke blant de tretten typene.",
+    "audienceTitle": "Deltakerspørsmål",
+    "audienceUnavailable": "Deltakerspørsmål er ikke bygget. Spørsmål fra salen vises på skjermen for kolleger i samme rom, og det krever en moderering som ikke er bestemt.",
+    "closingTitle": "Kunngjøringsskjerm",
+    "closingUnavailable": "Kunngjøringsskjerm er ikke bygget ennå. Den viser hva dere gjør videre, og det er tekst noen skriver — ingenting i basen holder den.",
+    "fullscreenTitle": "Presentasjonsvisning",
+    "fullscreenUnavailable": "Fullskjermvisning er ikke bygget ennå. Skjermbildet du ser her er det eneste som er tegnet."
+  },
+  "liveJoin": {
+    "title": "Bli med",
+    "invalid": "Koden virker ikke. Den kan være avsluttet, utløpt eller feilskrevet.",
+    "back": "Til forsiden"
   }
 }

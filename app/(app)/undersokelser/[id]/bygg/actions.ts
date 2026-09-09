@@ -9,7 +9,12 @@ import { isNewQuestion } from './types'
 
 export type BuilderResult =
   | { ok: true; ids: Record<string, string> }
-  | { ok: false; error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'failed' }
+  | {
+      ok: false
+      // 'namedSurvey' is V2-9's: app.guard_run_mode_anonymous refuses live on a
+      // survey that is not anonymous.
+      error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'namedSurvey' | 'failed'
+    }
 
 const QuestionInput = z.object({
   id: z.string().min(1).max(80),
@@ -369,7 +374,12 @@ const PolicyInput = z.object({
 
 export type PolicyResult =
   | { ok: true }
-  | { ok: false; error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'failed' }
+  | {
+      ok: false
+      // 'namedSurvey' is V2-9's: app.guard_run_mode_anonymous refuses live on a
+      // survey that is not anonymous.
+      error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'namedSurvey' | 'failed'
+    }
 
 export async function setSurveyPolicy(input: unknown): Promise<PolicyResult> {
   const viewer = await requireViewer()
@@ -400,5 +410,55 @@ export async function setSurveyPolicy(input: unknown): Promise<PolicyResult> {
   }
 
   revalidatePath(`/undersokelser/${surveyId}/bygg`)
+  return { ok: true }
+}
+
+/**
+ * V2-9 — «Kjøremodus» (V2:566-575). The writer `surveys.run_mode` would
+ * otherwise not have.
+ *
+ * **This action exists because the column was nearly shipped without one.** The
+ * Live screen reads `run_mode`, the context bar's «Kjør live» button renders on
+ * it, and the demo seed sets it — so every gate was green while the only way a
+ * real editor could reach Live was an UPDATE in psql. That is the shape D102
+ * and `created_by` both had: a state the seed can produce and the product
+ * cannot. Found by asking «who writes this column», which is the question that
+ * has now caught it three times.
+ *
+ * A `redaktør` may set it: it decides how a survey is run, not who may see what,
+ * which is the line `setSurveyPolicy` above draws for the administrator-only
+ * settings. The anonymity rule is the database's — `app.guard_run_mode_anonymous`
+ * (`M:0083`) refuses `live` on a named survey — and is mapped to a named
+ * refusal here rather than falling through to «try again», because retrying will
+ * fail identically every time.
+ */
+const RunModeInput = z.object({
+  surveyId: z.string().uuid(),
+  // `quiz` is not accepted: V2-10 builds it, and `M:0083`'s CHECK would refuse
+  // it anyway. Rejecting it HERE as well means the refusal is a validation
+  // error rather than a database error surfaced as «failed».
+  runMode: z.enum(['standard', 'live']),
+})
+
+export async function setRunMode(input: unknown): Promise<PolicyResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = RunModeInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('surveys')
+    .update({ run_mode: parsed.data.runMode })
+    .eq('id', parsed.data.surveyId)
+    .eq('org_id', viewer.orgId)
+  if (error) {
+    if (/live_requires_anonymous/.test(error.message)) return { ok: false, error: 'namedSurvey' }
+    console.error(`setRunMode failed: ${error.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath(`/undersokelser/${parsed.data.surveyId}/bygg`)
   return { ok: true }
 }

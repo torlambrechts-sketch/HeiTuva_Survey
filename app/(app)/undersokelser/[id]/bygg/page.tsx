@@ -30,7 +30,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target')
+    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target, run_mode')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -99,6 +99,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <SurveyContextBar
+        liveMode={survey.run_mode === 'live'}
         surveyId={survey.id}
         title={survey.title}
         audience={survey.audience_label}
@@ -107,6 +108,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         current="bygg"
       />
       <Builder
+        runMode={survey.run_mode}
         surveyId={survey.id}
         initial={draft}
         rules={rules}

@@ -334,7 +334,17 @@
     "previewYes": "Yes",
     "previewNo": "No",
     "testCta": "Test the survey",
-    "testHint": "You answer as a respondent. Nothing is stored."
+    "testHint": "You answer as a respondent. Nothing is stored.",
+    "runModeTitle": "Run mode",
+    "runModeDesc": "Decides which question types and settings you get.",
+    "runModeStandard": "Standard",
+    "runModeStandardDesc": "Pulse, employee and statutory",
+    "runModeLive": "Live",
+    "runModeLiveDesc": "All-hands, workshop and gathering",
+    "runModeQuiz": "Quiz",
+    "runModeQuizDesc": "Training and certification",
+    "runModeQuizNote": "Quiz is not built yet",
+    "runModeNamedSurvey": "Live requires anonymous answers. The QR gives each device a one-time link, and the system does not know who the device belongs to."
   },
   "send": {
     "title": "How it reaches them",
@@ -1266,7 +1276,8 @@
     "stepResults": "Results",
     "statusUtkast": "Draft",
     "statusAktiv": "Active",
-    "statusLukket": "Closed"
+    "statusLukket": "Closed",
+    "runLive": "Run live"
   },
   "surveys": {
     "title": "Surveys",
@@ -2083,5 +2094,39 @@
     "exitAnonNote": "Anonymous and aggregated. Individual answers are never shown, however few people leave.",
     "exitTipTitle": "Do not read it alone",
     "exitTipBody": "A single exit answer is an anecdote. The year’s answers together are a finding."
+  },
+  "live": {
+    "heading": "Live",
+    "reveal": "Show result",
+    "hide": "Hide result",
+    "settings": "Settings",
+    "open": "Start live",
+    "close": "End live",
+    "noRound": "The survey has not been sent yet, so there is no round to run live on.",
+    "notLiveMode": "This survey is not in live mode. Live requires anonymous answers — the code gives each device a one-time link, and the system does not know who the device belongs to.",
+    "noSession": "No active session",
+    "scanHint": "Scan to answer",
+    "guard": "Live respects the anonymity threshold. With fewer answers than the threshold, no numbers are shown on screen.",
+    "counterHidden": "Fewer than {k} answers",
+    "counter": "{n} answers",
+    "barsGated": "Fewer than {k} answers — no numbers are shown.",
+    "cloudTitle": "Word cloud",
+    "cloudFloor": "Words written by at least {floor} people",
+    "cloudGated": "Fewer than {k} free-text answers — no words are shown.",
+    "cloudEmpty": "No word has been written by at least {floor} people yet.",
+    "cloudNoQuestion": "The survey has no free-text question to build a cloud from.",
+    "priorityTitle": "Priority exercise",
+    "priorityUnavailable": "The priority exercise is not built yet. It needs a question type that distributes points, and there is none among the thirteen types.",
+    "audienceTitle": "Audience questions",
+    "audienceUnavailable": "Audience questions are not built. Questions from the room are shown on screen to colleagues in that room, and that needs a moderation design nobody has decided.",
+    "closingTitle": "Closing screen",
+    "closingUnavailable": "The closing screen is not built yet. It shows what you will do next, and that is text somebody writes — nothing in the database holds it.",
+    "fullscreenTitle": "Presentation view",
+    "fullscreenUnavailable": "Full-screen view is not built yet. The screen you see here is the only one that was drawn."
+  },
+  "liveJoin": {
+    "title": "Join",
+    "invalid": "The code does not work. It may have ended, expired or been mistyped.",
+    "back": "To the front page"
   }
 }

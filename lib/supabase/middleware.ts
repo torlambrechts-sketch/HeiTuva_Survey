@@ -51,6 +51,14 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/logg-inn') ||
     path.startsWith('/auth') ||
     path.startsWith('/s/') || // respondent surface is deliberately unauthenticated
+    // V2-9. `/l/[code]` is the QR's landing: it redeems a live voucher and
+    // redirects to `/s/[token]`. A room scans a code on a wall, so by
+    // definition nobody there has a session — gating it would send thirty
+    // people to a login they do not have, which is the same mistake `/r/`
+    // avoids one route over. It authorises itself from the code inside
+    // `redeem_live_voucher`, and V2-8's lesson applies: a directory name is not
+    // a promise the router makes, so the path is listed HERE, explicitly.
+    path.startsWith('/l/') ||
     // A shared report has no session by design: the unguessable link IS the
     // credential (DECISIONS). compose_report authorises the token itself, so
     // redirecting here would send every recipient to a login they do not have.

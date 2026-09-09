@@ -183,6 +183,12 @@ async function main() {
 
   // A second round, so "Mot forrige runde" and the trend panel compare two real
   // numbers rather than the prototype's placeholder `avg - 0.3`.
+  // V2-9: the survey that runs live. Without this the «Kjør live» button never
+  // renders, and the capture's `live` route would have nothing to click — the
+  // screen was first photographed after setting this by hand in psql, which is
+  // a state no reset reaches and therefore not a state at all.
+  await svc.from('surveys').update({ run_mode: 'live' }).eq('id', above.id)
+
   // V2-9: one live session on the round above, for the reason the objection and
   // the support message above exist — `verify:policy` reports a table PROTECTED
   // BUT UNPROVEN when it is empty, because an empty table is never asked to

@@ -45,6 +45,7 @@ export async function SurveyContextBar({
   audience,
   status,
   recurrence,
+  liveMode,
   current,
 }: {
   surveyId: string
@@ -57,6 +58,13 @@ export async function SurveyContextBar({
    * row, the Send screen and the rounds panel show.
    */
   recurrence?: string
+  /**
+   * V2:231 — «Kjør live», rendered only when the survey is in live mode
+   * (`isLiveMode`). `surveys.run_mode` is the switch, and `M:0083` refuses
+   * `live` on a named survey, so a button that appears here is a button that
+   * will work rather than one that refuses at the last possible moment.
+   */
+  liveMode?: boolean
   current: SurveyStep
 }) {
   const t = await getTranslations('surveyNav')
@@ -96,6 +104,15 @@ export async function SurveyContextBar({
           </span>
         ) : null}
       </div>
+      <div className="flex flex-wrap items-center gap-[9px]">
+        {liveMode ? (
+          <Link
+            href={`/undersokelser/${surveyId}/live`}
+            className="touch-44 flex cursor-pointer items-center whitespace-nowrap rounded-full border-none bg-ink px-[17px] py-[9px] text-[12.5px] font-bold text-sf no-underline"
+          >
+            {t('runLive')}
+          </Link>
+        ) : null}
       {/* RESPONSIVE.md § Tab rails: the rail wraps below md and each step keeps
           its design size, so the three 44px targets stay apart. */}
       <div className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
@@ -118,6 +135,7 @@ export async function SurveyContextBar({
             </Link>
           )
         })}
+      </div>
       </div>
     </div>
   )
