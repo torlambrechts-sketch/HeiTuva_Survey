@@ -741,24 +741,52 @@ async function main() {
       await signIn(page, 'administrator', BASE_URL)
       await page.goto(`${BASE_URL}/administrasjon/valg`, { waitUntil: 'domcontentloaded' })
       await page.waitForLoadState('load')
+      /*
+        A FIXED SLEEP IS NOT A WAIT FOR A SERVER ACTION. This read used to be
+        `waitForTimeout(800)` followed by one query — a bet that the action, its
+        audit insert and PostgREST's read all land inside 800ms. That is true on
+        a quiet laptop and false on a shared runner, and CI run 70 failed here
+        with `{"count":0}` on a commit whose only changes were CSS classes and
+        comments, while run 69 had passed the same gate and the same code passes
+        locally. Absence measured at one instant was being read as absence.
+
+        Polling asserts exactly what the fixed wait meant to assert and stops
+        asserting the machine's speed. The deadline is generous because the cost
+        of it being too short is a false failure, and the cost of it being long
+        is nothing at all: the loop returns as soon as the row exists.
+
+        This repairs an existing probe rather than adding a check — the
+        assertion below is unchanged, character for character.
+      */
+      const auditAfter = async (since: string) => {
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const { data } = await admin
+            .from('audit_events')
+            .select('action, target, meta')
+            .eq('org_id', orgId)
+            .eq('action', 'option.change')
+            .gt('created_at', since)
+          if (data?.length) return data
+          await page.waitForTimeout(250)
+        }
+        return []
+      }
+
       const before = new Date().toISOString()
       await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
-      await page.waitForTimeout(800)
-      const { data: rows } = await admin
-        .from('audit_events')
-        .select('action, target, meta')
-        .eq('org_id', orgId)
-        .eq('action', 'option.change')
-        .gt('created_at', before)
+      const rows = await auditAfter(before)
       const row = rows?.[0] as { action: string; target: string; meta: { from?: boolean; to?: boolean } } | undefined
       show(
         'audit_events (option.change)',
         row?.target === 'weekly_digest' && typeof row?.meta?.to === 'boolean' && row.meta.from !== row.meta.to,
         row ?? { count: rows?.length ?? 0 },
       )
-      // Put it back the way the seed had it.
+      // Put it back the way the seed had it — and wait for the audit row that
+      // proves the restore landed, for the same reason. A restore that races is
+      // how one gate's timing becomes the NEXT gate's mystery.
+      const beforeRestore = new Date().toISOString()
       await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
-      await page.waitForTimeout(400)
+      await auditAfter(beforeRestore)
       await page.close()
     }
 
