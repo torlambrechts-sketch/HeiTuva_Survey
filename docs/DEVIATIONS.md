@@ -3358,6 +3358,45 @@ functions — because an empty-set claim is also what a broken query returns.
 catch-all. A handler listing thirty conditions would be one in spirit and would pass. That is
 a bound on the test, written down, not a gap it hides.
 
+### THE SECOND MECHANISM — the same failure through PRIVILEGES, not a handler
+
+**Added 2026-09-09 (Tor), during V2-9, so this entry is not read as being about
+exception handlers.** It is not. It is about a defence aimed at a class you named, when
+what arrives belongs to a different one — and an `exception when others` is only the
+first mechanism that shape has used here.
+
+`M:0079` and `M:0080` each ended with what every migration in this repository ends with:
+
+```sql
+revoke all on function public.close_live_session(uuid) from public;
+grant  execute on function public.close_live_session(uuid) to authenticated;
+```
+
+Gate 5a3 then reported `close_live_session` and `live_cloud` as **anon
+execute=GRANTED**. The revoke was not wrong, was not misspelt, and did not fail — it
+revoked the **PUBLIC pseudo-role**, while Supabase carries `ALTER DEFAULT PRIVILEGES`
+granting EXECUTE on new functions in `public` to the `anon` role **in its own name**. A
+grant held by `anon` directly is untouched by a revoke aimed at PUBLIC.
+
+**A defence working exactly as designed, on the wrong holder** — which is the same
+sentence as «on the wrong thing», one mechanism over. Fixed in `M:0082` by naming the
+role.
+
+**And it is the third time the ask-the-catalogue distinction has saved something.**
+The rule those three share: *a migration says what you intended; the catalogue says
+what is true.*
+
+| | What was read | What it missed |
+|---|---|---|
+| `M:0070`, D115 above | the migration's `replace()` anchor | five patched call sites, hidden by my own handler |
+| `verify:copy`, D113 | the string as written | a claim living in a second clause |
+| `M:0079`/`M:0080`, here | the revoke as written | a grant held by a different role |
+
+So the generalisation is not «avoid `when others`». It is: **a defence is only as good as
+the enumeration it was aimed at, and the only trustworthy enumeration is the catalogue's.**
+
+---
+
 **The same reasoning applies outside SQL,** and the worked example is in this codebase:
 `lib/questions/quality.ts`'s `toJsRegex` returns `null` on a pattern it cannot compile, which
 would silently disable a quality rule for ever. It must not throw — it runs on every keystroke

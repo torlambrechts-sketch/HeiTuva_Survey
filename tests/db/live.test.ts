@@ -253,9 +253,23 @@ describe('(Q79) the cloud is a PURE AGGREGATE — no queue, no moderator, no tex
   })
 
   it('10. the floor counts DISTINCT RESPONDENTS, not occurrences', () => {
-    // The fixture's fourth «stress» row says it three times. If the floor
-    // counted occurrences, one person could push their own word onto the wall —
-    // the very failure the floor exists to prevent, from the other side.
+    // ── THE CLEAREST STATEMENT OF WHAT THE FLOOR IS FOR ────────────────────
+    //
+    // The right call was found from the other side. The fixture's fourth row is
+    //
+    //     say('stress stress stress')
+    //
+    // — ONE person, three occurrences. Against a floor of 3 over OCCURRENCES
+    // that word clears on her own, and «stress» goes up on the wall in a room
+    // that knows who is present, put there by a single respondent who wrote it
+    // three times. **Her own word, projected, because she repeated herself.**
+    // That is precisely the failure the floor exists to prevent, arriving
+    // through the floor rather than around it.
+    //
+    // Counting DISTINCT RESPONDENTS is what makes the floor mean what it says:
+    // «a word one person wrote never reaches the screen» is a statement about
+    // PEOPLE, and any implementation that counts something else is answering a
+    // different question that happens to use the same number.
     const src = bodyOf('live_cloud')
     expect(src).toMatch(/having\s+count\(distinct/i)
     // And proven by data: a word only the triple-writer used must not appear.

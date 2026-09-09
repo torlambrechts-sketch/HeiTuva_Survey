@@ -321,9 +321,10 @@ the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
 
-**THE DENOMINATOR ABOVE IS CORRECTED, AND THE CORRECTION IS THE POINT.** The
-V2-5→V2-8 line said «61 of 83». Re-measured by removing V2-9's four migrations,
-resetting and running the gate, the state before this phase was **61 of 84** —
+**THE DENOMINATOR ABOVE IS CORRECTED, AND 61 OF 84 IS NOW THE CARRIED NUMBER**
+(Tor, 2026-09-09). The V2-5→V2-8 line said «61 of 83». Re-measured by removing
+V2-9's four migrations, resetting and running the gate, the state before this
+phase was **61 of 84** —
 V2-6 added three tables and V2-7 one function to a denominator of 80, and the
 carried line dropped one. An arithmetic slip in a carried number, not a gap in
 the gate: the CHECKED count of 61 was right both times. Recorded rather than
