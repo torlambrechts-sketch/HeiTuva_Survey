@@ -26,6 +26,11 @@ import type { Locale } from '@/lib/i18n/locales'
 const NAV = [
   { href: '/oversikt', key: 'dash' },
   { href: '/undersokelser', key: 'surveys' },
+  // V2-4: the fifth item, and it is THIRD rather than last — V2:4790 draws
+  // `dash, surveys, tasks, insight, library`. Added here with the screen it
+  // points to, per the plan: a nav item reaching a route that does not exist
+  // is the same defect as a link to a page nobody drew (Q56, D73).
+  { href: '/oppgaver', key: 'tasks' },
   { href: '/dashboard', key: 'insight' },
   { href: '/bibliotek', key: 'library' },
 ] as const

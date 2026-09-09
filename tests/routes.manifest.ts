@@ -220,6 +220,26 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-4 — Oppgaver (V2:2152-2214), the statutory task register.
+    route: '/oppgaver',
+    label: 'oppgaver',
+    as: 'administrator',
+    phase: 'phase-5',
+    states: [
+      { name: 'default' },
+      {
+        // The «Lovpålagt» filter, because the stat tiles and the filter must
+        // agree about what «med hjemmel» counts and the default state cannot
+        // show that.
+        name: 'lovpalagt',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /^(Lovpålagt|Statutory)$/ }).click()
+          await page.waitForTimeout(400)
+        },
+      },
+    ],
+  },
+  {
     route: '/profil',
     label: 'profil',
     as: 'administrator',

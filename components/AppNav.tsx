@@ -20,6 +20,7 @@ export function AppNav({ items }: { items: NavItem[] }) {
   // the item is active for `dashboard` OR `reports`), so both mark it.
   const activeKey = (() => {
     if (pathname.startsWith('/undersokelser')) return 'surveys'
+    if (pathname.startsWith('/oppgaver')) return 'tasks'
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/rapporter')) return 'insight'
     if (pathname.startsWith('/bibliotek')) return 'library'
     if (pathname === '/') return 'dash'
