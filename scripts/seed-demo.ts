@@ -183,6 +183,29 @@ async function main() {
 
   // A second round, so "Mot forrige runde" and the trend panel compare two real
   // numbers rather than the prototype's placeholder `avg - 0.3`.
+  // V2-9: one live session on the round above, for the reason the objection and
+  // the support message above exist — `verify:policy` reports a table PROTECTED
+  // BUT UNPROVEN when it is empty, because an empty table is never asked to
+  // refuse anything. This is also the only state in the seed where a word cloud
+  // has enough distinct respondents to clear `app.live_word_floor()`: six people
+  // wrote about «tid», which is what makes the cloud reachable at all.
+  //
+  // CLOSED, not open. A demo database with a live voucher that still redeems is
+  // a working token in a fixture, and `close_live_session`'s whole point is that
+  // a code on a slide stops working — a seed that left one open would contradict
+  // the guarantee the phase is about.
+  await svc.from('live_sessions').insert({
+    org_id: org.id,
+    survey_id: above.id,
+    round_id: aboveRound.id,
+    code: 'DEMO01',
+    status: 'closed',
+    step: 'Spørsmål 2 av 2',
+    revealed: true,
+    closed_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() - 3600_000).toISOString(),
+  })
+
   const aboveRound2 = await createRound(above, 8, { groupId: org.groupId, roundNo: 2 })
   await submitResponses(
     aboveRound2.tokens,

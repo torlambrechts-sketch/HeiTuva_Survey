@@ -58,6 +58,8 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   brand_accents:
     'the five accents the design offers (V2:4898); data-not-code, same shape as `use_cases` — a row carries a hex, a name key and a contrast ratio, and no org id, no survey id and no number. `tests/db/branding.test.ts` CHECKS that claim against the column list rather than repeating it here',
   use_cases: 'the six shipped use cases; data-not-code, DECISIONS Q24 — a use case carries no org id, no survey id and no number, and the wizard and library read it before a session exists',
+  live_stopwords:
+    'Q79 (V2-9): per-language stopwords for the live word cloud; data-not-code, same shape as `use_cases`, `task_kinds`, `segment_fields` and `help_articles` — a row carries a language and a word, and NOTHING else: no org id, no survey id, no count. `tests/db/live.test.ts` test 13 CHECKS that against the column list rather than repeating it here. Read-only to everyone and writable by nobody, for `help_articles`\' reason: a client that could write this could hide a word from every cloud in the product',
   feature_flags: 'global flags; per-org rows are org-scoped by policy',
   question_bank: 'org_id NULL rows are the shared bank; org rows are org-scoped',
   template_packs: 'org_id NULL rows are the statutory packs; org rows org-scoped',
@@ -71,6 +73,8 @@ const ANON_BY_DESIGN: Record<string, string> = {
   get_survey_for_token: 'renders /s/[token]; token-validated',
   get_peer_results: 'thank-you peer results; token-validated and k-gated',
   compose_report: 'a share link has no session; token or membership checked inside',
+  redeem_live_voucher:
+    'Q79/the QR join path (V2-9), Tor 2026-09-09: THE CODE IS A VOUCHER, NOT A TICKET. A room scans one code and each device redeems it for its own single-use token, then enters the ordinary `submit_response` path — so invariant 2 stays «the only write path is submit_response» rather than becoming «the only write path for this kind». Anon by necessity: there is no session when someone scans. It authorises itself from the code INSIDE the function, exactly as `submit_response` and `get_survey_for_token` do from a token, and it refuses a wrong, closed and expired code with ONE indistinguishable answer so the refusal cannot enumerate sessions. It writes an invitation and never a response',
   request_demo:
     'the splash is public; validates its own input, writes a table no role can read, returns no row handle',
 }

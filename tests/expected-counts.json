@@ -8,6 +8,7 @@
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/db/fk-tenancy.test.ts": 5,
   "tests/db/help.test.ts": 10,
+  "tests/db/live.test.ts": 17,
   "tests/db/org-threshold.test.ts": 18,
   "tests/db/pack-roles.test.ts": 5,
   "tests/db/policy-panel.test.ts": 15,

@@ -313,6 +313,25 @@ is not a new surface and V2-8 added no table. **The block's three carries took i
 holds the catalogue-derived zero-catch-all sweep (D115) and the seeded-pattern
 dialect check (D116). 5a3 is unmoved — neither is a catalogue surface.
 
+**V2-9 took the census 774 → 791 across 51 files** (`tests/db/live.test.ts`, 17)
+and 5a3 **61 of 84 → 64 of 89**. `live_sessions` is a new RLS table that is
+CHECKED and PROVEN on a bare reset because the demo seed carries a closed
+session; `live_stopwords` is allowlisted with `use_cases`' reason and checked
+the same way; `close_live_session` and `live_cloud` are CHECKED, and
+`redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
+**The checked number has now moved up five phases running.**
+
+**THE DENOMINATOR ABOVE IS CORRECTED, AND THE CORRECTION IS THE POINT.** The
+V2-5→V2-8 line said «61 of 83». Re-measured by removing V2-9's four migrations,
+resetting and running the gate, the state before this phase was **61 of 84** —
+V2-6 added three tables and V2-7 one function to a denominator of 80, and the
+carried line dropped one. An arithmetic slip in a carried number, not a gap in
+the gate: the CHECKED count of 61 was right both times. Recorded rather than
+quietly overwritten, because a carried number nobody re-derives is how a wrong
+one survives four phases. The command is
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against
+`grep -E 'enumerated'`.
+
 **Two gate repairs, both of which earned themselves on their first run.**
 `verify:copy` could not see «åtte» — JavaScript's `\b` is ASCII-only, so `å` is
 a non-word character and `\båtte\b` never matches after a space. The gate had

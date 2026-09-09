@@ -804,6 +804,95 @@ export type Database = {
           },
         ]
       }
+      live_sessions: {
+        Row: {
+          closed_at: string | null
+          code: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          opened_at: string
+          org_id: string
+          revealed: boolean
+          round_id: string
+          status: string
+          step: string | null
+          survey_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          code: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          opened_at?: string
+          org_id: string
+          revealed?: boolean
+          round_id: string
+          status?: string
+          step?: string | null
+          survey_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          code?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          opened_at?: string
+          org_id?: string
+          revealed?: boolean
+          round_id?: string
+          status?: string
+          step?: string | null
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "survey_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_survey_tenancy"
+            columns: ["survey_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
+      live_stopwords: {
+        Row: {
+          lang: string
+          word: string
+        }
+        Insert: {
+          lang: string
+          word: string
+        }
+        Update: {
+          lang?: string
+          word?: string
+        }
+        Relationships: []
+      }
       logic_rules: {
         Row: {
           config: Json
@@ -1873,6 +1962,7 @@ export type Database = {
           identity_provider: string | null
           is_test: boolean
           lang: string
+          live_session_id: string | null
           member_id: string | null
           name: string | null
           phone: string | null
@@ -1895,6 +1985,7 @@ export type Database = {
           identity_provider?: string | null
           is_test?: boolean
           lang?: string
+          live_session_id?: string | null
           member_id?: string | null
           name?: string | null
           phone?: string | null
@@ -1917,6 +2008,7 @@ export type Database = {
           identity_provider?: string | null
           is_test?: boolean
           lang?: string
+          live_session_id?: string | null
           member_id?: string | null
           name?: string | null
           phone?: string | null
@@ -1934,6 +2026,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_invitations_live_session_id_fkey"
+            columns: ["live_session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -2565,6 +2664,7 @@ export type Database = {
         Returns: Json
       }
       claim_membership: { Args: never; Returns: string }
+      close_live_session: { Args: { p_id: string }; Returns: Json }
       close_round: { Args: { p_round: string }; Returns: Json }
       compose_report: {
         Args: {
@@ -2631,6 +2731,15 @@ export type Database = {
         Args: { p_group?: string; p_survey: string }
         Returns: Json
       }
+      live_cloud: {
+        Args: {
+          p_lang?: string
+          p_question: string
+          p_round?: string
+          p_survey: string
+        }
+        Returns: Json
+      }
       mail_outbox_archive: { Args: { p_msg_id: number }; Returns: boolean }
       mail_outbox_delete: { Args: { p_msg_id: number }; Returns: boolean }
       mail_outbox_read: {
@@ -2656,6 +2765,7 @@ export type Database = {
         }
         Returns: Json
       }
+      redeem_live_voucher: { Args: { p_code: string }; Returns: Json }
       report_for_share_token: { Args: { p_token: string }; Returns: string }
       request_demo: {
         Args: {
@@ -2731,12 +2841,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2760,11 +2870,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2785,11 +2895,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2810,11 +2920,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2827,11 +2937,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
