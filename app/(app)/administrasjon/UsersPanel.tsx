@@ -94,13 +94,26 @@ export function UsersPanel({
       ) : null}
 
       {users.map((u) => (
-        // RESPONSIVE.md § Data tables, narrow row: three fields that fit, so it
-        // stays a row rather than becoming a card. It stacks below md only
-        // because the controls do not fit at 390px, which that clause allows.
-        // The role select and Deaktiver stay visible at every viewport — both
-        // are consequential controls and the section forbids hiding those
-        // behind an overflow menu. No per-row card chrome: the rows sit on the
-        // section's surface already, and nesting a card in a card is barred.
+        // RESPONSIVE.md § Data tables, narrow row: it stays a row rather than
+        // becoming a card. It stacks below md only because the controls do not
+        // fit at 390px, which that clause allows. Every control stays visible
+        // at every viewport — group, role and Deaktiver all change permissions
+        // or access, and the section forbids hiding those behind an overflow
+        // menu. No per-row card chrome: the rows sit on the section's surface
+        // already, and nesting a card in a card is barred.
+        //
+        // S3 ADDED A FOURTH CONTROL AND THE CLAUSE'S OWN EXAMPLE STOPPED BEING
+        // TRUE. RESPONSIVE.md names this row as the narrow case in as many
+        // words — «email + role select + status fit cleanly» — and that was a
+        // count, not a property. `setMemberGroup`'s select made it four, and
+        // three `flex-none` controls in a non-wrapping row pinned the section
+        // at scrollWidth 418 whatever the viewport: four blockers at 390px and
+        // 320px, and the first CI run of verify:copy's sibling gate is what
+        // found them. The card treatment is not the answer here, because both
+        // of its overrides point the other way — every control is
+        // consequential, and the rows already sit on a card. So the cluster
+        // wraps and the two selects shrink, below md only; above md they are
+        // `flex-none` children of the row exactly as the bundle draws them.
         <div
           key={u.id}
           className="flex flex-col gap-3 border-b border-line py-3.5 md:flex-row md:items-center md:gap-3.5"
@@ -125,8 +138,8 @@ export function UsersPanel({
           >
             {statusLabel(u.status)}
           </span>
-          <div className="flex items-center gap-3.5 md:contents">
-          {/* S3/D125 — the writer org_members.group_id never had. No bundle
+          <div className="flex flex-wrap items-center gap-3.5 md:contents">
+          {/* S3/D129 — the writer org_members.group_id never had. No bundle
               draws this control (the users row renders the group as text), so
               it is the minimal consistent option: the same select class as the
               role control beside it, in the row that already shows the group.
@@ -140,7 +153,7 @@ export function UsersPanel({
               const next = e.target.value
               startTransition(async () => setRowError(await setMemberGroup(u.id, next || null)))
             }}
-            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
+            className="touch-44-field min-w-0 flex-1 rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none md:flex-none"
           >
             <option value="">{t('userNoGroup')}</option>
             {groups.map((g) => (
@@ -156,7 +169,7 @@ export function UsersPanel({
               const next = e.target.value
               startTransition(async () => setRowError(await setMemberRole(u.id, next)))
             }}
-            className="touch-44-field flex-none rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none"
+            className="touch-44-field min-w-0 flex-1 rounded-[10px] border border-line bg-bg px-[11px] py-[9px] text-[13px] text-ink outline-none md:flex-none"
           >
             <option value="administrator">{tRole('administrator')}</option>
             <option value="redaktor">{tRole('redaktor')}</option>

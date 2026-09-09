@@ -20,7 +20,7 @@ export default async function UsersTab() {
     .order('created_at', { ascending: true })
   if (error) throw new Error(`org_members read failed: ${error.message}`)
 
-  // S3/D125: the options for the group control. Read here rather than in the
+  // S3/D129: the options for the group control. Read here rather than in the
   // panel so the row renders from data the server already has, and ordered by
   // name because the bundle's own group lists are.
   const { data: groupRows } = await supabase

@@ -352,7 +352,7 @@ export async function setMemberRole(memberId: string, role: string): Promise<Adm
  * text; the two «Gruppe» selects are report filters; and the prototype's own
  * invite handler assigns the string «Uten gruppe» from mock state. So this is
  * an unspecified control rather than one that was missed, and CLAUDE.md's rule
- * for that is the minimal consistent option, logged — D125.
+ * for that is the minimal consistent option, logged — D129.
  *
  * Minimal means: the same `select` class as the role control one line below, in
  * the row that already shows the group, writing the column the schema already

@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest'
  * The eleventh, when it is found, is added here by the phase that finds it. The
  * test that would catch the eleventh by itself does not exist and cannot be
  * written from the database alone; that limitation is recorded in
- * docs/DEVIATIONS.md D126 rather than papered over.
+ * docs/DEVIATIONS.md D130 rather than papered over.
  */
 const DB_URL = process.env.LOCAL_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 function psql(query: string): string[][] {

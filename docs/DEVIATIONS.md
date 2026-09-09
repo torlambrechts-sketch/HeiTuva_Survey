@@ -3577,7 +3577,17 @@ taken.
 
 ---
 
-## D125 — a control no bundle draws, for the column that made every group empty
+## D129 — a control no bundle draws, for the column that made every group empty
+
+> **Numbered D125 when it was written, and renumbered here.** V2-10 had already taken
+> D125 for the quiz tiles' contrast, and I collided with it. `M:0090` and `M:0091` say
+> «D125» and «D126» in their comments and are NOT edited: they are applied — to prod as
+> well as locally — and CLAUDE.md's rule is that an applied migration is never edited,
+> only superseded. So the two column-comment strings on the running database refer to
+> the old numbers, and this note is the mapping: **D125 → D129, D126 → D130.** Rewriting
+> a comment to tidy a cross-reference would mean a migration whose only purpose is to
+> make prose agree, applied to production, for a documentation defect. That is not a
+> trade worth making, and an undocumented divergence would have been worse than either.
 
 **S3, 2026-09-09.** `org_members.group_id` had no writer. The audit made it the lead finding
 (`A7a-1` / `A7b-1`, found independently by two probes on deliberately different methods), and
@@ -3623,7 +3633,7 @@ select is one component and one action to move.
 
 ---
 
-## D126 — «who writes this column?», answered for all ten
+## D130 — «who writes this column?», answered for all ten
 
 **S3, 2026-09-09.** CLAUDE.md's standing question has two answers, and the audit found that neither
 had been written down. `A7a-11`: **fifteen of the sixteen no-writer columns carried no column
@@ -3636,7 +3646,7 @@ exact confusion the standing question exists to remove:
 
 | Answer | Columns |
 |---|---|
-| a server action | `org_members.group_id` (D125) |
+| a server action | `org_members.group_id` (D129) |
 | only `scripts/seed-demo.ts` | `live_sessions.step`, `tasks.due_at` |
 | nothing at all | `duties.next_due_at`, `surveys.run_mode`, `survey_invitations.bounced_at`, `groups.lead_member_id`, `report_shares.expires_at`, `live_sessions.created_by`, `organizations.timezone` |
 
@@ -3666,7 +3676,7 @@ looked total while being partial is worse than one that states its scope.
 
 ---
 
-## D127 — the gates that cannot see what they are trusted for
+## D131 — the gates that cannot see what they are trusted for
 
 **S4, 2026-09-09.** The audit's § 4.5, written down here because a limitation nobody records is
 indistinguishable from a limitation nobody has. These are not defects: every one is a gate that
@@ -3730,7 +3740,7 @@ limited» but **what its green means**, which is what each entry above states.
 
 ---
 
-## D128 — `get_peer_results` names the question when it refuses the number
+## D132 — `get_peer_results` names the question when it refuses the number
 
 **S4, 2026-09-09. Decided by Tor: acceptable. The reasoning, written down, because «acceptable»
 without it is indistinguishable from «not looked at».**
