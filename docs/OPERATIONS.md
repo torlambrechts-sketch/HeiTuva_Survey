@@ -93,6 +93,83 @@ two secrets are typed once and never committed.
 > truncation above was possible only because the file was read, transformed and re-sent by
 > hand. `db push` sends the file.
 
+---
+
+### THE LIMIT OF THIS FINGERPRINT, WRITTEN DOWN — added 2026-09-09 (Tor)
+
+**The `functions` hash strips `--` comments and collapses whitespace. That was the right
+decision and its price was never recorded.**
+
+It normalises because a raw `md5(prosrc)` diff reported **29 of 74 functions as differing, of
+which exactly ONE mattered** — a signal that drowns, and a check nobody would keep running.
+Normalising made the fingerprint usable.
+
+**The price is that the fingerprint cannot see documentation drift at all**, and on 2026-09-09
+that drift was measured for the first time: all eight hashes matched between prod and a clean
+local mirror, **and twenty-seven of seventy-nine functions differed in comment text.** It had
+accumulated across twelve migrations applied by hand since 2026-09-05 with nothing in the
+apparatus able to catch it — the 2026-09-08 table's «all eight match» was true, and did not
+mean what a reader would assume it meant.
+
+**Same shape as D110's «interpolates {k}» addition: a control exactly true about what it
+measures and silent about a room it never claimed to cover.** The difference, and why it
+belongs here rather than in the deviations log: **this one was deliberate, and the
+deliberation was not written down.** A limit chosen on purpose and left unrecorded is
+indistinguishable, later, from a limit nobody noticed.
+
+> **The normalised hash proves BEHAVIOUR is identical and proves nothing whatever about
+> comments. When what you are checking is whether the SOURCE is the source, run the raw
+> per-function `md5(prosrc)` as well.**
+
+Run both, side by side — the normalised one to know the code is the same, the raw one to know
+the file is:
+
+```sql
+with fn as (
+  select n.nspname||'.'||p.proname as f,
+         md5(lower(regexp_replace(regexp_replace(p.prosrc,'--[^\n]*',' ','g'),'\s+',' ','g'))) as norm,
+         md5(p.prosrc) as raw
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public','app')
+)
+select count(*)                                     as fns,
+       md5(string_agg(f||'='||norm,'|' order by f)) as normalised_aggregate,
+       md5(string_agg(f||'='||raw ,'|' order by f)) as raw_aggregate
+  from fn;
+```
+
+A raw mismatch with a matching normalised aggregate means **comments and whitespace only** —
+by construction, since the normalisation removes exactly those. Report it as a documentation
+divergence, not as drift.
+
+**THE CONTROL EARNED ITSELF ON ITS FIRST RUN, ON THE WORK OF THE PERSON RUNNING IT.** The
+first apply of `M:0058` on 2026-09-09 went out with `app.validate_segment_predicate`'s
+comments stripped — the migration was retyped through a tool parameter and the prose was
+dropped on the way. **The eight-hash fingerprint passed it.** The raw per-function hash showed
+it, and a fourth ledger row (`segments_predicate_verbatim_body`) restored the body verbatim
+before anything else was applied. A check that catches its own operator, on its first use, is
+the kind worth keeping.
+
+**Standing consequence:** `apply_migration` retypes migrations, so it will keep producing this
+drift. `supabase db push` sends the files and does not — a second reason to prefer it, beyond
+the truncation risk named just above.
+
+---
+
+### A STALE CAPABILITY NOTICE READS EXACTLY LIKE A CURRENT ONE — added 2026-09-09 (Tor)
+
+The 2026-09-09 session opened with a system notice saying the Supabase MCP **required
+authentication and could not be used**. It was stale: the MCP was authenticated and working,
+and one `list_projects` call established that in a single round.
+
+**Only a call distinguishes a stale capability notice from a current one.** They are the same
+sentence. This is D110's rule applied to an environment fact rather than to a document — *an
+apply is not evidence, a comparison is* — and the cost is asymmetric: believing a false
+«unavailable» stops work that could proceed, and is **invisible, because nothing fails**.
+
+**Try the tool before reporting it unavailable.** Report unavailability from a failed call,
+naming the call and the error — never from a notice alone.
+
 1. **Apply the Phase 7 migrations to `heituva-prod`** — `0029_sso_break_glass`,
    `0030_split_for_all_policies`, `0031_ui_messages_org_lang_idx`. **DONE on
    2026-09-05** through the Supabase MCP (`apply_migration`), with the repo
@@ -719,9 +796,25 @@ by-design set:
 
 **Nothing was reported against `segments`, `segment_fields` or `suppressions`.**
 
+### VERIFYING BEFORE APPLYING, WHEN THE ANSWER IS «NO CHANGE»
+
+The thirty came from a document — `docs/v2/06-remainder.md`, computed from this file's
+2026-09-08 fingerprint, because the agent's environment had no credentials. It was checked
+against prod two ways before anything was applied, **and both said «no change».**
+
+**That is the case where nobody bothers**, and it is the case the rule is for. A count carried
+forward from a document is a claim about a database, and it stays a claim until something asks
+the database. The check cost two calls and the answer being «unchanged» is not evidence the
+check was unnecessary — it is the only way to know it was.
+
 ### Prod's head after this run
 
 `20260909125210`, 133 ledger rows. **Twenty-seven migrations remain unapplied:**
-`M:0062`–`M:0088`. What is still absent from prod is listed by capability in
+`M:0062`–`M:0088`.
+
+**`M:0068` GOES IN THE FIRST BATCH.** It is the round-freeze repair, and until it is applied
+**prod still destroys a round's aggregates on the retention schedule** while the bundle
+promises «Summerte tall beholdes». It is not a feature and it is not waiting on a decision; it
+is waiting on a connection string. What is still absent from prod is listed by capability in
 `docs/v2/06-remainder.md § 2.2`; the two entries that matter most are unchanged from that
 document — **`M:0068`, the round-freeze data-loss repair, is still not applied.**
