@@ -42,6 +42,7 @@
   "tests/unit/member-status.test.ts": 7,
   "tests/unit/pack-questions.test.ts": 5,
   "tests/unit/policy-warnings.test.ts": 17,
+  "tests/unit/provider-config.test.ts": 11,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/question-roles.test.ts": 12,
   "tests/unit/quiz-tiles.test.ts": 4,

@@ -17,11 +17,17 @@ import type { SmsMessage, SmsProvider, SmsResult } from './types'
 export function captureProvider(): SmsProvider {
   const path = process.env.SMS_CAPTURE_FILE
 
+  // A plain function, not a method: see `lib/mail/ses.ts`.
+  function gap(): string | null {
+    return path ? null : 'SMS_CAPTURE_FILE is not set'
+  }
+
   return {
     name: 'capture',
+    configured: gap,
     async send(message: SmsMessage): Promise<SmsResult> {
       if (!path) {
-        return { ok: false, error: 'SMS_CAPTURE_FILE is not set', retryable: false }
+        return { ok: false, error: gap() ?? 'SMS_CAPTURE_FILE is not set', retryable: true }
       }
       await appendFile(
         path,

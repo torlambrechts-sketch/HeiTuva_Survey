@@ -8,9 +8,13 @@ import type { SmsMessage, SmsProvider, SmsResult } from './types'
  * at call time from process.env and never at import, so a bundle that somehow
  * pulled this in would hold no keys.
  *
- * Unconfigured means "not configured", loudly and non-retryably: an SMS the
- * queue keeps retrying against a gateway that was never set up is a queue that
- * never drains, and the failure is a deployment gap, not a transient.
+ * Unconfigured is reported as a gap through `configured()`, and the worker
+ * refuses to run rather than draining. It used to be reported per message and
+ * non-retryably, on the reasoning that "a queue that never drains" is worse —
+ * right about retrying, wrong about the alternative: the worker archives every
+ * non-retryable failure, so the first run of a never-configured worker
+ * dead-lettered the whole queue. A deployment gap is a startup condition, and
+ * `send()` now reports it retryably so a message can never be spent on one.
  */
 export function linkMobilityProvider(): SmsProvider {
   const user = process.env.LINK_MOBILITY_USER
@@ -20,11 +24,23 @@ export function linkMobilityProvider(): SmsProvider {
   const sender = process.env.SMS_SENDER ?? 'HeiTuva'
   const endpoint = process.env.LINK_MOBILITY_URL ?? 'https://n-eu.linkmobility.io/sms/send'
 
+  // A plain function, not a method: see `lib/mail/ses.ts`.
+  function gap(): string | null {
+    const missing = [
+      user ? null : 'LINK_MOBILITY_USER',
+      password ? null : 'LINK_MOBILITY_PASSWORD',
+      platformId ? null : 'LINK_MOBILITY_PLATFORM_ID',
+      partnerId ? null : 'LINK_MOBILITY_PARTNER_ID',
+    ].filter((v): v is string => v !== null)
+    return missing.length ? `link mobility is not configured: ${missing.join(', ')} not set` : null
+  }
+
   return {
     name: 'link-mobility',
+    configured: gap,
     async send(message: SmsMessage): Promise<SmsResult> {
       if (!user || !password || !platformId || !partnerId) {
-        return { ok: false, error: 'link mobility is not configured', retryable: false }
+        return { ok: false, error: gap() ?? 'link mobility is not configured', retryable: true }
       }
 
       const body = JSON.stringify({

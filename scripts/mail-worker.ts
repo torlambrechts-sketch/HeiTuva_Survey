@@ -100,11 +100,29 @@ async function drain(): Promise<number> {
     const url = `${appUrl}/s/${job.token}`
     const anonymous = anonymity.get(job.survey_id) !== 'named'
     const org = orgName.get(job.org_id) ?? 'HeiTuva'
+
+    // Absent means email — jobs queued before migration 0027 carry no channel.
+    // Anything ELSE is a malformed job and is archived rather than guessed at.
+    //
+    // This used to read `job.channel === 'sms' ? … : …`, which is a two-branch
+    // ternary standing in for a three-case question, so an unknown channel was
+    // DELIVERED AS EMAIL. The type says 'email' | 'sms'; the queue is a jsonb
+    // payload and cannot be made to agree with a TypeScript union, so the check
+    // has to exist at runtime. Unlike a configuration gap, a channel nobody
+    // implements is a property of this message, so archiving it is right:
+    // it is evidence, and it stops.
+    const channel = job.channel ?? 'email'
+    if (channel !== 'email' && channel !== 'sms') {
+      await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
+      console.error(`  archived msg ${m.msg_id}: unknown channel «${String(channel)}»`)
+      continue
+    }
+
     // One person is one address or one phone; the key follows whichever it is.
-    const reachedBy = job.channel === 'sms' ? job.phone : job.email
+    const reachedBy = channel === 'sms' ? job.phone : job.email
 
     let result
-    if (job.channel === 'sms') {
+    if (channel === 'sms') {
       if (!job.phone) {
         // A malformed job, not a transient: archive it as evidence.
         await svc.rpc('mail_outbox_archive', { p_msg_id: m.msg_id })
@@ -112,6 +130,16 @@ async function drain(): Promise<number> {
         continue
       }
       sms ??= smsProvider()
+      const gatewayGap = sms.configured()
+      if (gatewayGap) {
+        // A gateway that was never set up is a deployment gap, not a property
+        // of this message. Left on the queue rather than archived: the
+        // visibility timeout brings it back, and MAX_ATTEMPTS is still the
+        // bound, so an SMS job cannot spin forever either. Email in the same
+        // batch is unaffected — one channel's gap must not stop the other.
+        console.error(`  leaving msg ${m.msg_id} queued: ${gatewayGap}`)
+        continue
+      }
       result = await sms.send({
         to: job.phone,
         text: invitationSms({ orgName: org, surveyTitle: job.survey_title, lang: job.lang, url, anonymous }),
@@ -141,11 +169,11 @@ async function drain(): Promise<number> {
         .from('survey_invitations')
         .update({ sent_at: new Date().toISOString() })
         .eq('round_id', job.round_id)
-      await (job.channel === 'sms' ? mark.eq('phone', job.phone!) : mark.eq('email', job.email!))
+      await (channel === 'sms' ? mark.eq('phone', job.phone!) : mark.eq('email', job.email!))
       await svc.rpc('mail_outbox_delete', { p_msg_id: m.msg_id })
       sent++
       // The address or number is logged, the token is not — the token is the credential.
-      console.log(`  sent ${job.kind} by ${job.channel ?? 'email'} -> ${reachedBy}`)
+      console.log(`  sent ${job.kind} by ${channel} -> ${reachedBy}`)
     } else if (result.retryable) {
       // Left on the queue: the visibility timeout returns it by itself.
       console.error(`  retrying msg ${m.msg_id}: ${result.error}`)
@@ -159,6 +187,21 @@ async function drain(): Promise<number> {
 
 async function main() {
   console.log(`mail worker: mail=${provider.name} sms=${process.env.SMS_PROVIDER ?? 'link-mobility'} target=${useLocal ? 'local' : 'prod'}`)
+
+  // BEFORE the queue is read, never per message.
+  //
+  // Every non-retryable failure below is archived, and an unconfigured provider
+  // used to report exactly that — so the first run of a worker whose mail
+  // provider had never been set up dead-lettered the entire queue, including
+  // invitations that had been waiting to be delivered. The check belongs here
+  // because a deployment gap is a property of the deployment: nothing is read,
+  // nothing is leased, nothing is spent.
+  const gap = provider.configured()
+  if (gap) {
+    console.error(`refusing to drain: ${gap}`)
+    console.error('Nothing was read from the queue. Set the variables and run again.')
+    process.exit(1)
+  }
   if (once) {
     const n = await drain()
     console.log(`drained ${n} message(s)`)

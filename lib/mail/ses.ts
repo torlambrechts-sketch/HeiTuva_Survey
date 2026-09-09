@@ -28,11 +28,38 @@ export function sesProvider(): MailProvider {
   const host = `email.${REGION}.amazonaws.com`
   const path = '/v2/email/outbound-emails'
 
+  /**
+   * Every variable that is missing, so one deploy fixes all of them.
+   *
+   * A plain function rather than `this.configured()` inside `send`: a provider
+   * is a value, and `send` is routinely read off it — the test that found this
+   * does exactly that — so a method that depends on its receiver breaks in the
+   * one situation nobody notices until a message is lost.
+   */
+  function gap(): string | null {
+    const missing = [
+      accessKey ? null : 'AWS_ACCESS_KEY_ID',
+      secretKey ? null : 'AWS_SECRET_ACCESS_KEY',
+      from ? null : 'MAIL_FROM',
+    ].filter((v): v is string => v !== null)
+    return missing.length ? `ses is not configured: ${missing.join(', ')} not set` : null
+  }
+
   return {
     name: 'ses',
+    configured: gap,
     async send(message: MailMessage): Promise<MailResult> {
+      // Narrowed by the same predicate `missing()` reads, so TypeScript can see
+      // the three values are present below; the MESSAGE still comes from
+      // `configured()`, so there is one wording, not two.
       if (!accessKey || !secretKey || !from) {
-        return { ok: false, error: 'ses is not configured', retryable: false }
+        const reason = gap() ?? 'ses is not configured'
+        // Retryable, deliberately: the message must survive the gap. The worker
+        // refuses to drain at all while `configured()` is non-null, so this is
+        // the second line of defence rather than the first — but a permanent
+        // failure here would archive a real invitation, and that is the one
+        // outcome a deployment gap must never produce.
+        return { ok: false, error: reason, retryable: true }
       }
 
       const body = JSON.stringify({

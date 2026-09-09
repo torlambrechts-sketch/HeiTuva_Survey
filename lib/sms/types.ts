@@ -16,5 +16,7 @@ export type SmsResult = { ok: true; id: string } | { ok: false; error: string; r
 
 export interface SmsProvider {
   readonly name: string
+  /** Null when the gateway can send, else the reason. See `MailProvider`. */
+  configured(): string | null
   send(message: SmsMessage): Promise<SmsResult>
 }

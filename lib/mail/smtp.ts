@@ -18,15 +18,23 @@ export function smtpProvider(): MailProvider {
   const port = Number(process.env.SMTP_PORT ?? 54325)
   const from = process.env.MAIL_FROM ?? 'HeiTuva <ingen-svar@heituva.test>'
 
+  // A plain function, not a method: see `ses.ts`.
+  function gap(): string | null {
+    return isLoopback(host)
+      ? null
+      : `the smtp provider is loopback-only and SMTP_HOST is «${host}»; configure ses for real mail`
+  }
+
   return {
     name: 'smtp',
+    configured: gap,
     async send(message: MailMessage): Promise<MailResult> {
-      if (!isLoopback(host)) {
-        return {
-          ok: false,
-          error: 'the smtp provider is loopback-only; configure ses for real mail',
-          retryable: false,
-        }
+      const reason = gap()
+      if (reason) {
+        // Retryable for the reason ses.ts gives: pointing smtp at a real host is
+        // a deployment mistake, and a deployment mistake must not consume the
+        // message it was made on.
+        return { ok: false, error: reason, retryable: true }
       }
 
       return new Promise<MailResult>((resolve) => {
