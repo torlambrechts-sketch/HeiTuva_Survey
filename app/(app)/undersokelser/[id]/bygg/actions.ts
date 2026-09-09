@@ -24,6 +24,14 @@ const QuestionInput = z.object({
   required: z.boolean(),
   commentMode: z.enum(['arv', 'pa', 'av']),
   followUpOnLow: z.boolean(),
+  // V2-10. NULLABLE and with no default, deliberately: the bundle DISPLAYS an
+  // absent key as «Riktig svar: første alternativ» (V2:6507), and turning that
+  // display convenience into a stored 0 would mark the first option correct on
+  // every question ever written — a fabricated answer key, indistinguishable in
+  // review from a deliberate one. `answer_index` is the writer this column
+  // would otherwise not have had.
+  answerIndex: z.number().int().min(0).max(19).nullable().optional(),
+  points: z.number().int().min(0).max(1000).optional(),
   // The per-type shape is documented on the column and enforced by the
   // registry, not here: a config key this version does not know must survive a
   // round trip rather than be stripped by an older deploy.
@@ -151,6 +159,8 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
       required: q.required,
       comment_mode: q.commentMode as never,
       follow_up_on_low: q.followUpOnLow,
+      answer_index: q.answerIndex ?? null,
+      points: q.points ?? 100,
       config: q.config as never,
     }
 
@@ -456,6 +466,44 @@ export async function setRunMode(input: unknown): Promise<PolicyResult> {
   if (error) {
     if (/live_requires_anonymous/.test(error.message)) return { ok: false, error: 'namedSurvey' }
     console.error(`setRunMode failed: ${error.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath(`/undersokelser/${parsed.data.surveyId}/bygg`)
+  return { ok: true }
+}
+
+/**
+ * V2-10, Q84 — the two quiz toggles the narrowing kept.
+ *
+ * `instant` and `certificate` are not parameters. A server action that accepted
+ * them and ignored them would be the D110 shape in code: a signature that reads
+ * as a capability, silent about the fact that nothing happens.
+ */
+const QuizSettingsInput = z.object({
+  surveyId: z.string().uuid(),
+  timeBonus: z.boolean(),
+  teamBoard: z.boolean(),
+})
+
+export async function setQuizSettings(input: unknown): Promise<PolicyResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = QuizSettingsInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('surveys')
+    .update({
+      quiz_time_bonus: parsed.data.timeBonus,
+      quiz_team_board: parsed.data.teamBoard,
+    })
+    .eq('id', parsed.data.surveyId)
+    .eq('org_id', viewer.orgId)
+  if (error) {
+    console.error(`setQuizSettings failed: ${error.message}`)
     return { ok: false, error: 'failed' }
   }
 

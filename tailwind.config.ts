@@ -22,6 +22,11 @@ export default {
         ac3: 'var(--ac3)',
         sbg: 'var(--sbg)',
         sbg2: 'var(--sbg2)',
+        // V2-10, Q83: the four quiz option tiles (V2:4084-4089).
+        qz1: 'var(--qz1)',
+        qz2: 'var(--qz2)',
+        qz3: 'var(--qz3)',
+        qz4: 'var(--qz4)',
       },
       borderRadius: { DEFAULT: '16px', card: '16px' },
       boxShadow: { card: '0 2px 10px rgba(25,21,16,.05)' },

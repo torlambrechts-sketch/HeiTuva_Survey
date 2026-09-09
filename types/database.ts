@@ -37,6 +37,7 @@ export type Database = {
       answers: {
         Row: {
           comment: string | null
+          elapsed_ms: number | null
           follow_up: string | null
           id: string
           question_id: string
@@ -45,6 +46,7 @@ export type Database = {
         }
         Insert: {
           comment?: string | null
+          elapsed_ms?: number | null
           follow_up?: string | null
           id?: string
           question_id: string
@@ -53,6 +55,7 @@ export type Database = {
         }
         Update: {
           comment?: string | null
+          elapsed_ms?: number | null
           follow_up?: string | null
           id?: string
           question_id?: string
@@ -850,10 +853,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "live_sessions_created_by_fkey"
-            columns: ["created_by"]
+            columns: ["created_by", "org_id"]
             isOneToOne: false
             referencedRelation: "org_members"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "live_sessions_org_id_fkey"
@@ -2053,12 +2056,14 @@ export type Database = {
       }
       survey_questions: {
         Row: {
+          answer_index: number | null
           comment_mode: "arv" | "pa" | "av"
           config: Json
           created_at: string
           follow_up_on_low: boolean
           help: string | null
           id: string
+          points: number
           position: number
           required: boolean
           survey_id: string
@@ -2079,12 +2084,14 @@ export type Database = {
             | "field"
         }
         Insert: {
+          answer_index?: number | null
           comment_mode?: "arv" | "pa" | "av"
           config?: Json
           created_at?: string
           follow_up_on_low?: boolean
           help?: string | null
           id?: string
+          points?: number
           position: number
           required?: boolean
           survey_id: string
@@ -2105,12 +2112,14 @@ export type Database = {
             | "field"
         }
         Update: {
+          answer_index?: number | null
           comment_mode?: "arv" | "pa" | "av"
           config?: Json
           created_at?: string
           follow_up_on_low?: boolean
           help?: string | null
           id?: string
+          points?: number
           position?: number
           required?: boolean
           survey_id?: string
@@ -2194,6 +2203,8 @@ export type Database = {
           langs: string[]
           org_id: string
           policy_locked: boolean
+          quiz_team_board: boolean
+          quiz_time_bonus: boolean
           respondent_kind: string
           results_scope: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           run_mode: string
@@ -2216,6 +2227,8 @@ export type Database = {
           langs?: string[]
           org_id: string
           policy_locked?: boolean
+          quiz_team_board?: boolean
+          quiz_time_bonus?: boolean
           respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           run_mode?: string
@@ -2238,6 +2251,8 @@ export type Database = {
           langs?: string[]
           org_id?: string
           policy_locked?: boolean
+          quiz_team_board?: boolean
+          quiz_time_bonus?: boolean
           respondent_kind?: string
           results_scope?: "ledelse" | "ledere_eget_team" | "alle_ansatte"
           run_mode?: string
@@ -2757,6 +2772,10 @@ export type Database = {
       overview_activity: { Args: { p_org: string }; Returns: Json }
       publish_duty: {
         Args: { p_duty: string; p_label?: string }
+        Returns: Json
+      }
+      quiz_leaderboard: {
+        Args: { p_round?: string; p_survey: string }
         Returns: Json
       }
       quote_candidates: {

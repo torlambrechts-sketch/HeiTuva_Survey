@@ -399,19 +399,34 @@ describe('(V2-9) `run_mode` — the column has a writer, and the rule is the dat
     psql(`update public.surveys set run_mode = 'standard' where id = '${survey}'`)
   })
 
-  it('17. `quiz` is NOT an accepted value — a mode with nothing behind it', () => {
-    // V2-10 builds quiz. Until then the CHECK refuses the value, so a survey
-    // cannot be switched into a mode whose features do not exist. Deliberately
-    // unlike Q100's `suppressions.source = 'avmelding'`, which stays in its
-    // CHECK with no writer: that value records how a row got there, while this
-    // one is a capability claim the UI acts on.
+  it('17. `quiz` WAS refused by the CHECK, and V2-10 widened it exactly as M:0083 said', () => {
+    // ── A TEST THAT CHANGED FOR A REASON WRITTEN DOWN IN ADVANCE ───────────
+    //
+    // V2-9 admitted `standard` and `live` only, because nothing behind `quiz`
+    // existed and «a value the UI would act on» is not the same as Q100's
+    // `avmelding`, which merely records how a row got there. `M:0083`'s comment
+    // said in as many words: «V2-10 widens the CHECK in the migration that
+    // builds the thing.» `M:0085` is that migration.
+    //
+    // So the assertion is UPDATED rather than deleted, and it now checks the
+    // predicted end state: the value is accepted by the CHECK, and this survey
+    // is still refused — by `app.guard_quiz_policy` instead, because it is
+    // anonymous and a quiz awards points to a person. **The refusal moved from
+    // «that mode does not exist» to «that mode does not apply here», which is
+    // the whole difference V2-10 makes.**
+    expect(
+      one(`select pg_get_constraintdef(oid) from pg_constraint where conname = 'surveys_run_mode_check'`),
+      'quiz is now an accepted value',
+    ).toMatch(/quiz/)
+
     let err = ''
     try {
       psql(`update public.surveys set run_mode = 'quiz' where id = '${survey}'`)
     } catch (e) {
       err = String((e as { stderr?: string }).stderr ?? e)
     }
-    expect(err, 'quiz is refused by the CHECK').toMatch(/run_mode|check constraint/i)
+    expect(err, 'and this anonymous survey is refused by the quiz guard, not the CHECK')
+      .toMatch(/quiz_requires_named/)
   })
 
   it('18. THE COLUMN HAS A WRITER — asserted, because it nearly did not', () => {

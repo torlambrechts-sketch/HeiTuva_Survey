@@ -344,7 +344,23 @@
     "runModeQuiz": "Quiz",
     "runModeQuizDesc": "Opplæring og sertifisering",
     "runModeQuizNote": "Quiz er ikke bygget ennå",
-    "runModeNamedSurvey": "Live krever anonyme svar. QR-koden gir hver enhet en engangslenke, og systemet vet ikke hvem enheten tilhører."
+    "runModeNamedSurvey": "Live krever anonyme svar. QR-koden gir hver enhet en engangslenke, og systemet vet ikke hvem enheten tilhører.",
+    "quizTitle": "Quizmodus",
+    "quizTimeBonus": "Tidsbonus",
+    "quizTimeBonusDesc": "Raskere riktig svar gir flere poeng",
+    "quizTeam": "Lagtavle",
+    "quizTeamDesc": "Krever navngitte svar",
+    "quizInstant": "Vis riktig svar umiddelbart",
+    "quizInstantUnavailable": "Ikke bygget. Alle svar vises til slutt.",
+    "quizCertificate": "Sertifikat ved bestått",
+    "quizCertificateUnavailable": "Ikke bygget. Quiz har ingen beståttgrense.",
+    "quizGuard": "Quiz krever navngitte svar for å kunne gi poeng, og kan ikke brukes på lovpålagte maler. Begge deler avvises av databasen, ikke bare av skjermen.",
+    "quizAnswerKey": "Riktig svar",
+    "quizPoints": "Poeng",
+    "quizNoKey": "Ingen fasit valgt",
+    "quizNotKeyable": "Denne spørsmålstypen kan ikke ha fasit",
+    "yes": "Ja",
+    "no": "Nei"
   },
   "send": {
     "title": "Slik når den fram",
@@ -614,7 +630,12 @@
     "roundsBelow": "{count} svar · under terskel",
     "roundsNote": "Hver runde er sitt eget datasett. Runder under terskelen viser antall svar, men ikke snittet.",
     "attribDeniedTitle": "Navngitte svar vises ikke for din rolle",
-    "attribDeniedBody": "Denne undersøkelsen har virksomheter som respondenter, og hvert svar står med navn. Leser-rollen ser bare aggregerte tall. Be en administrator eller redaktør om å dele det du trenger."
+    "attribDeniedBody": "Denne undersøkelsen har virksomheter som respondenter, og hvert svar står med navn. Leser-rollen ser bare aggregerte tall. Be en administrator eller redaktør om å dele det du trenger.",
+    "boardTitle": "Lagtavle",
+    "boardGated": "Lag med færre enn {k} svar vises ikke.",
+    "boardEmpty": "Ingen lag har nok svar ennå.",
+    "boardOff": "Lagtavlen er slått av for denne undersøkelsen.",
+    "boardNotQuiz": "Denne undersøkelsen er ikke en quiz."
   },
   "reports": {
     "title": "Rapporter",

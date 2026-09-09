@@ -30,7 +30,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target, run_mode')
+    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target, run_mode, quiz_time_bonus, quiz_team_board')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -41,7 +41,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
 
   const { data: rows, error: qError } = await supabase
     .from('survey_questions')
-    .select('id, type, text, help, required, comment_mode, follow_up_on_low, config')
+    .select('id, type, text, help, required, comment_mode, follow_up_on_low, answer_index, points, config')
     .eq('survey_id', id)
     .order('position')
   if (qError) throw new Error(`builder questions read failed: ${qError.message}`)
@@ -54,6 +54,8 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     required: q.required,
     commentMode: q.comment_mode,
     followUpOnLow: q.follow_up_on_low,
+    answerIndex: q.answer_index,
+    points: q.points,
     config: (q.config ?? {}) as QuestionConfig,
   }))
 
@@ -109,6 +111,8 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
       />
       <Builder
         runMode={survey.run_mode}
+        quizTimeBonus={survey.quiz_time_bonus}
+        quizTeamBoard={survey.quiz_team_board}
         surveyId={survey.id}
         initial={draft}
         rules={rules}

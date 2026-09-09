@@ -20,6 +20,7 @@ import { QuestionCard, tintFor } from './QuestionCard'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
+import { QuizPanel } from './QuizPanel'
 import {
   ADD_DESC_KEY,
   ADD_LABEL_KEY,
@@ -60,6 +61,8 @@ export function Builder({
   locked,
   policy,
   runMode,
+  quizTimeBonus,
+  quizTeamBoard,
 }: {
   surveyId: string
   initial: BuilderDraft
@@ -70,6 +73,9 @@ export function Builder({
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
   /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
   runMode: string
+  /** V2-10, Q84 — the two quiz toggles the narrowing kept. */
+  quizTimeBonus: boolean
+  quizTeamBoard: boolean
 }) {
   const t = useTranslations('builder')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
@@ -150,6 +156,11 @@ export function Builder({
           required: false,
           commentMode: 'arv',
           followUpOnLow: false,
+          // V2-10: a NEW question has no answer key. Null rather than 0 —
+          // `actions.ts` says why at length: a default of 0 marks the first
+          // option correct on every question anyone ever writes.
+          answerIndex: null,
+          points: 100,
           config: { ...specOf(type).defaultConfig },
         },
       ],
@@ -345,6 +356,30 @@ export function Builder({
         />
       ) : null}
 
+      {/* V2-10 — «Quizmodus» (V2:6148) sits directly under «Kjøremodus» and
+          only in quiz mode: it is settings FOR the mode, so showing it in
+          standard mode would offer a control that governs nothing. */}
+      {tab === 'settings' && runMode === 'quiz' ? (
+        <QuizPanel
+          surveyId={surveyId}
+          timeBonus={quizTimeBonus}
+          teamBoard={quizTeamBoard}
+          strings={{
+            title: t('quizTitle'),
+            timeBonus: t('quizTimeBonus'),
+            timeBonusDesc: t('quizTimeBonusDesc'),
+            team: t('quizTeam'),
+            teamDesc: t('quizTeamDesc'),
+            instant: t('quizInstant'),
+            instantUnavailable: t('quizInstantUnavailable'),
+            certificate: t('quizCertificate'),
+            certificateUnavailable: t('quizCertificateUnavailable'),
+            guard: t('quizGuard'),
+            failed: t('policyError_failed'),
+          }}
+        />
+      ) : null}
+
       {/* The v1 bundle inserts this ABOVE "Klar til utsending?" (:577, :636) —
           the policy is what the readiness list is checked against, so it is
           read first. */}
@@ -495,6 +530,7 @@ export function Builder({
             draft.questions.map((q, i) => (
               <QuestionCard
                 key={q.id}
+                quizMode={runMode === 'quiz'}
                 question={q}
                 index={i}
                 total={count}

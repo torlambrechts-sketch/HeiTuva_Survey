@@ -33,6 +33,9 @@ const iconButton =
  * `specOf(type)` says so, which is what CLAUDE.md's data-not-code rule asks
  * for: a fourteenth type is a row in the registry, not a new conditional here.
  */
+/** V2:6510's `quizzable` — the three types that can carry a correct answer. */
+const KEYABLE = new Set(['choice', 'yesno', 'dropdown'])
+
 export function QuestionCard({
   question,
   index,
@@ -40,6 +43,7 @@ export function QuestionCard({
   advanced,
   flags,
   anonymityBreach,
+  quizMode,
   disabled,
   onChange,
   onMove,
@@ -54,6 +58,8 @@ export function QuestionCard({
   advanced: boolean
   flags: QualityFlag[]
   anonymityBreach: boolean
+  /** V2-10: the survey is in quiz mode, so the answer key applies. */
+  quizMode: boolean
   disabled: boolean
   onChange: (patch: Partial<DraftQuestion>) => void
   onMove: (delta: number) => void
@@ -438,6 +444,61 @@ export function QuestionCard({
             {spec.statements ? t('addStatement') : t('addOption')}
           </button>
         </div>
+      ) : null}
+
+      {/* ── V2-10: the answer key (Q84) ────────────────────────────────────
+          Only in quiz mode, and only on the three types that can carry one —
+          `quizzable` is `choice | yesno | dropdown` (V2:6510), and the database
+          says the same thing (`survey_questions_answer_index_typed`) so the
+          rule is not left to this component.
+
+          THE WRITER `answer_index` WOULD OTHERWISE NOT HAVE HAD. V2-9 shipped
+          `run_mode` with no writer — read everywhere, settable only from psql —
+          and CLAUDE.md now asks «who writes this column?» in the migration that
+          adds it. This is that answer for `answer_index` and `points`.
+
+          «Ingen fasit» is a real option and it is the DEFAULT, not a null state
+          to be tidied away: the bundle displays an absent key as «Riktig svar:
+          første alternativ» (V2:6507), and storing that would mark the first
+          option correct on every question ever written. */}
+      {quizMode && KEYABLE.has(question.type) ? (
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-bg px-[13px] py-[11px]">
+          <label className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-[11.5px] font-semibold text-mut">{t('quizAnswerKey')}</span>
+            <select
+              value={question.answerIndex ?? ''}
+              disabled={disabled}
+              onChange={(e) =>
+                onChange({ answerIndex: e.target.value === '' ? null : Number(e.target.value) })
+              }
+              className="touch-44-field min-w-0 rounded-lg border border-line bg-sf px-[10px] py-[7px] text-[13px] text-ink outline-none disabled:opacity-60"
+            >
+              <option value="">{t('quizNoKey')}</option>
+              {(question.type === 'yesno' ? [t('yes'), t('no')] : list('options')).map((o, i) => (
+                <option key={`${o}-${i}`} value={i}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex w-[110px] flex-none flex-col gap-1">
+            <span className="text-[11.5px] font-semibold text-mut">{t('quizPoints')}</span>
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              value={question.points}
+              disabled={disabled}
+              onChange={(e) => onChange({ points: Math.max(0, Math.min(1000, Number(e.target.value) || 0)) })}
+              className="touch-44-field w-full rounded-lg border border-line bg-sf px-[10px] py-[7px] text-[13px] text-ink outline-none disabled:opacity-60"
+            />
+          </label>
+        </div>
+      ) : quizMode ? (
+        // Said rather than hidden: an editor who has switched to quiz mode and
+        // sees no key on a scale question needs to know it is the TYPE, not a
+        // missing control.
+        <p className="mt-3 text-[12px] text-mut">{t('quizNotKeyable')}</p>
       ) : null}
 
       {/* Image options: the design's 3-column grid of upload cards

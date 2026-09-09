@@ -17,6 +17,19 @@
   --ac3: #FBD5C4;
   --sbg: #FBEBBE;
   --sbg2: #F6EEDD;
+
+  /* V2-10, Q83 (DEFAULT TAKEN). The four quiz option tiles, V2:4084-4089.
+     NAMED TOKENS rather than hard-coded hexes because they are FUNCTIONAL, not
+     decorative: a respondent picks by colour and shape at a glance, and the
+     existing accents have near-identical luminance — `--ac`, `--ac2` and `--ac3`
+     would read as three shades of the same pale thing from the back of a room.
+     Contrast of `--sf` on each is MEASURED and recorded in docs/DEVIATIONS.md
+     (D125); `--qz1` does not pass AA and that is an open question, not a
+     rounding. */
+  --qz1: #F26B21;
+  --qz2: #2F6FB0;
+  --qz3: #2F7D4F;
+  --qz4: #B0343C;
 }
 
 @layer base {

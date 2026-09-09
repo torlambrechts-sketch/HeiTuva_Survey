@@ -19,6 +19,14 @@ export type DraftQuestion = {
   required: boolean
   commentMode: CommentMode
   followUpOnLow: boolean
+  /**
+   * V2-10 (Q84). The index of the correct option, for quiz mode. **NULL is a
+   * real value here and means «no key»** — see the note in `actions.ts`: a
+   * default of 0 would fabricate an answer key on every question.
+   */
+  answerIndex: number | null
+  /** V2-10. Points for a correct answer; the bundle's own default is 100 (V2:6507). */
+  points: number
   config: QuestionConfig
 }
 

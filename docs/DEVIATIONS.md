@@ -3502,3 +3502,52 @@ behind — and that, not the boundary, is what would have produced the next inst
 `tests/db/catalogue-invariants.test.ts` asserts the repaired boundary against a rule read
 from the catalogue (so a re-seed is checked too): `du` in «trives du i jobben» still matches,
 `du` inside `pådu` no longer does.
+
+---
+
+### D125 — the quiz tiles' contrast, measured: one of the four does not pass, and it is the label that sits on it
+
+**V2-10, Q83 (DEFAULT TAKEN: new named tokens with a stated role).** The default is taken as
+classified and the tokens are in — `--qz1…--qz4`, `app/globals.css` and `tailwind.config.ts`.
+**What the default also required was that the contrast be MEASURED and recorded, and the
+measurement is the finding.**
+
+`--sf` (`#FFFDF6`) on each tile, WCAG 2.1 relative luminance:
+
+| Token | Hex | Ratio | Verdict |
+|---|---|---|---|
+| `--qz1` | `#F26B21` | **2.99 : 1** | **fails AA at every size** — below even the 3:1 large-text floor |
+| `--qz2` | `#2F6FB0` | 5.13 : 1 | passes AA for normal text |
+| `--qz3` | `#2F7D4F` | 4.95 : 1 | passes AA for normal text |
+| `--qz4` | `#B0343C` | 6.06 : 1 | passes AA for normal text |
+
+**Q83's own draft said `#F26B21` is «~3:1, large text only».** Measured, it is **2.99**, which
+is on the other side of that line — and the line does not apply anyway, which is the second
+half of the finding.
+
+**IT IS NOT AN ICON. IT IS THE ANSWER.** I first read the tile as a coloured square with a
+decorative glyph, which would put it under WCAG 1.4.11 (non-text contrast, 3:1) and make 2.99
+a rounding argument. Reading the markup rather than the colour list says otherwise —
+**V2:3401-3405**: the `<button>` has `background: {{ c.tileBd }}`… `color: {{ c.tileFg }}` and
+carries **two** children, an `aria-hidden` icon **and**
+
+```html
+<span style="flex:1;min-width:0;line-height:1.3">{{ c.label }}</span>
+```
+
+at `font-size:15px; font-weight:700`. So `#FFFDF6` on `#F26B21` is the **option label** — the
+text a respondent has to read in order to answer. 15px bold is 11.25pt, which is *normal* text
+under WCAG (large starts at 14pt bold / 18.66px), so the requirement is **4.5:1** and not 3:1.
+**2.99 against 4.5.**
+
+**And this is a respondent surface**, which CLAUDE.md marks pixel-perfect mobile-first at
+380–420px — the one class of screen where the person reading it did not choose to be there and
+cannot zoom out of the problem.
+
+**NOTHING IS RESTYLED. The colour ships as drawn and the question goes to Tor**, because this
+is the bundle winning on visuals against a quality that is not negotiable, and CLAUDE.md gives
+the bundle visuals. Darkening `#F26B21` to clear 4.5:1 is a two-line change and it is not mine
+to make: it is the only one of the four that would move, so the set stops being the drawn set.
+
+Recorded here with the numbers so the decision is made against a measurement rather than
+against «looks fine» — the same reason Q83 asked for the measurement in the first place.

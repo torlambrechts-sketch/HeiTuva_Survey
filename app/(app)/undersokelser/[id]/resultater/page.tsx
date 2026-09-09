@@ -14,6 +14,7 @@ import {
 import { isGated, type Quotes } from '@/lib/results/types'
 import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
+import { TeamBoard } from './TeamBoard'
 import { ResultsScreen } from './ResultsScreen'
 
 /** Canonical UUID shape; anything else cannot name a survey. */
@@ -136,6 +137,24 @@ export default async function ResultsPage({
       })
     : t('scopePrivate')
 
+  // V2-10. `quiz_leaderboard` answers `forbidden`, `not_a_quiz`,
+  // `board_disabled` or a team list; the three refusals are DISTINGUISHED here
+  // because they are not the same fact — «switched off» and «no team has enough
+  // answers» would otherwise both render as an empty board, which is the
+  // never-fabricate rule applied to an absence rather than to a number.
+  let board: { teams: { team: string; score: number }[]; state: 'ok' | 'off' | 'not_quiz' } = {
+    teams: [],
+    state: 'not_quiz',
+  }
+  if (survey.run_mode === 'quiz') {
+    const { data } = await supabase.rpc('quiz_leaderboard', { p_survey: survey.id })
+    const payload = data as { error?: string; teams?: { team: string; score: number }[] } | null
+    board =
+      payload?.error === 'board_disabled'
+        ? { teams: [], state: 'off' }
+        : { teams: payload?.teams ?? [], state: 'ok' }
+  }
+
   return (
     <>
       <SurveyContextBar
@@ -177,6 +196,24 @@ export default async function ResultsPage({
         attributed={attributed}
         recurrence={await readScheduleChip(survey.id, survey.status)}
       />
+      {/* V2-10 — «Lagtavle», only on a quiz. The RPC is k-gated (`M:0086`):
+          a team score is a per-group breakdown of what people said, and a team
+          of two scoring full marks discloses both of them. */}
+      {survey.run_mode === 'quiz' ? (
+        <div className="mt-[18px]">
+          <TeamBoard
+            teams={board.teams}
+            state={board.state}
+            strings={{
+              title: t('boardTitle'),
+              gated: t('boardGated', { k: survey.k_threshold ?? 5 }),
+              empty: t('boardEmpty'),
+              off: t('boardOff'),
+              notQuiz: t('boardNotQuiz'),
+            }}
+          />
+        </div>
+      ) : null}
     </>
   )
 }

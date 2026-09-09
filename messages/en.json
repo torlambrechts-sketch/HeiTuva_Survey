@@ -344,7 +344,23 @@
     "runModeQuiz": "Quiz",
     "runModeQuizDesc": "Training and certification",
     "runModeQuizNote": "Quiz is not built yet",
-    "runModeNamedSurvey": "Live requires anonymous answers. The QR gives each device a one-time link, and the system does not know who the device belongs to."
+    "runModeNamedSurvey": "Live requires anonymous answers. The QR gives each device a one-time link, and the system does not know who the device belongs to.",
+    "quizTitle": "Quiz mode",
+    "quizTimeBonus": "Time bonus",
+    "quizTimeBonusDesc": "A faster correct answer scores more",
+    "quizTeam": "Team board",
+    "quizTeamDesc": "Requires named answers",
+    "quizInstant": "Show the correct answer immediately",
+    "quizInstantUnavailable": "Not built. All answers are shown at the end.",
+    "quizCertificate": "Certificate on passing",
+    "quizCertificateUnavailable": "Not built. A quiz has no pass mark.",
+    "quizGuard": "A quiz requires named answers in order to award points, and cannot be used on statutory templates. The database refuses both, not just the screen.",
+    "quizAnswerKey": "Correct answer",
+    "quizPoints": "Points",
+    "quizNoKey": "No answer key chosen",
+    "quizNotKeyable": "This question type cannot have an answer key",
+    "yes": "Yes",
+    "no": "No"
   },
   "send": {
     "title": "How it reaches them",
@@ -614,7 +630,12 @@
     "roundsBelow": "{count} answers · below threshold",
     "roundsNote": "Each round is its own dataset. Rounds below the threshold show the response count, but not the average.",
     "attribDeniedTitle": "Named answers are not shown for your role",
-    "attribDeniedBody": "This survey has organisations as respondents, and every answer carries a name. The reader role sees aggregate figures only. Ask an administrator or an editor to share what you need."
+    "attribDeniedBody": "This survey has organisations as respondents, and every answer carries a name. The reader role sees aggregate figures only. Ask an administrator or an editor to share what you need.",
+    "boardTitle": "Team board",
+    "boardGated": "Teams with fewer than {k} answers are not shown.",
+    "boardEmpty": "No team has enough answers yet.",
+    "boardOff": "The team board is switched off for this survey.",
+    "boardNotQuiz": "This survey is not a quiz."
   },
   "reports": {
     "title": "Reports",

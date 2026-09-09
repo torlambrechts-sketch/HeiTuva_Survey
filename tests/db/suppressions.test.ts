@@ -262,6 +262,15 @@ describe('(Q60) a suppressed address is not invited, by any path', () => {
     // still fails here. **The recorded limit:** this reads the body for the
     // column name, so a function that wrote an address through dynamic SQL would
     // slip past — a bound on the check, stated, not a gap it hides.
+    //
+    // **THE TWO EXEMPTIONS ARE NOW A PAIR, AND THE PAIR IS THE POINT.** V2-7's is
+    // «the row it writes is `is_test`, and a test invitation asks nobody
+    // anything»; V2-9's is «the row it writes has no address, so there is nothing
+    // to suppress against». Both are STRUCTURAL rather than discretionary — each
+    // is a fact about what the function CAN write, checkable from the catalogue,
+    // and neither is a name on a list. That is the standard a third exemption has
+    // to meet: not «this one is fine», but «here is the property that makes it
+    // impossible for this one to reach an objector».
     const unguarded = psql(
       `select n.nspname||'.'||p.proname from pg_proc p
          join pg_namespace n on n.oid = p.pronamespace

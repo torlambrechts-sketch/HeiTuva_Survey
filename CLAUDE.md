@@ -213,6 +213,35 @@ mode first and the anonymity second. Both columns are in the trigger now. **When
 a combination, enumerate the columns the combination is made of, not the one the user
 happened to touch.**
 
+## AN ENUMERATION MISTAKEN FOR A PROPERTY — the shape under most of the others
+
+**Added 2026-09-09 (Tor), after V2-9.** Several of the rules below and above are instances of
+one thing, and naming it is cheaper than rediscovering it a fifth time. **The failure is
+writing down the cases you can see and treating that list as the rule.** The list is always
+correct about its members and always silent about the member that has not arrived.
+
+Four instances, four different constructs, one shape:
+
+| Where | The enumeration | The property it should have been |
+|---|---|---|
+| `\b` in a Norwegian regex (D113, D116) | the ASCII word characters | «a letter, in any alphabet» |
+| «interpolates `{k}`» as an allowlist reason (D110 addition) | clause 1 of the string | «nothing in this string asserts a fixed number» |
+| `revoke … from public` (D115, second mechanism) | the PUBLIC pseudo-role | «no unauthenticated role may execute this» |
+| Referential maintenance as «triggers and FKs» (V2-9) | the two constructs that had bitten | «any rule over a column the database may change on your behalf» |
+
+The last one is the clearest, because **CHECK constraints arriving as the third construct is
+what proved the first two were examples someone had read as the list.** Two instances look
+like a category; three make you ask what the category actually is.
+
+**Two consequences, and the second is the one that pays.**
+- A test, an allowlist reason or a guard should be stated as the property, and where it cannot
+  be, the enumeration must say what it is an enumeration OF — this is what
+  «state the SCOPE of an allowlist reason, not only its content» already says one level down.
+- **Prefer the fix that is robust against the construct nobody has thought of.** V2-9's CHECK
+  was repaired by moving the rule to a column no cascade can withdraw, not by adding a fourth
+  disjunct — so the fourth construct, whatever it is, does not need this rule rewritten again.
+  Fix the column, not the predicate.
+
 ## A catch-all is a decision, not a safety measure
 **A catch-all is not a safety measure, it is a decision to make one class of failure
 invisible, and it is only sound if you know which class.** You will know it as one thing;
@@ -355,6 +384,12 @@ session; `live_stopwords` is allowlisted with `use_cases`' reason and checked
 the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
+
+**V2-10 took the census 798 → 816 across 52 files** (`tests/db/quiz.test.ts`, 18)
+and 5a3 **64 of 89 → 65 of 90**: `quiz_leaderboard` is a new SECURITY DEFINER
+function and it is CHECKED. **The checked number has now moved up six phases
+running.** No new table — Q84's narrowing plus Q61's «derive, do not duplicate»
+removed `quiz_attempts` entirely, so there is no per-person score table at all.
 
 **THE DENOMINATOR ABOVE IS CORRECTED, AND 61 OF 84 IS NOW THE CARRIED NUMBER**
 (Tor, 2026-09-09). The V2-5→V2-8 line said «61 of 83». Re-measured by removing
