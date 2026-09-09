@@ -100,8 +100,14 @@ Two consequences, both cheap:
    feature that is fully built, fully read, green on every gate, and reachable only from
    psql; the seed sets it, so even the demo works. **Three instances, and they are why this
    is a standing question rather than a lesson:** D102's pre-`M:0040` survey state, `created_by`
-   (which V2-4's audit found had no writer at all), and V2-9's `surveys.run_mode` — read by the
-   Live page, read by the context bar, set by the seed, writable by no editor. If the answer is
+   (which V2-4's audit found had no writer at all), V2-9's `surveys.run_mode` — read by the
+   Live page, read by the context bar, set by the seed, writable by no editor — and **Q50's
+   `organizations.timezone`, found in the remainder walk: the column exists, is `NOT NULL`,
+   is validated by `app.timezone_known`, and all three `next_run_at` sites read it, while
+   `grep -rn "timezone" app/ lib/` returns one hit and it is a Playwright browser context.**
+   **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
+   the question is not «is the column there» but «who WRITES it». A column that is read
+   everywhere looks finished from every angle except the one that matters. If the answer is
    «nothing yet», say so in the column comment and log it; if the answer is «a server action»,
    the phase that adds the column adds the action, and a test asserts it exists.
 
