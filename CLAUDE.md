@@ -265,6 +265,29 @@ running.** The phase also REPAIRED an existing gate rather than adding one:
 a second clause was invisible — it strips ICU placeholders and tests what is
 left, and found two more allowlist reasons wrong on its first run (V2-4 § 3,
 D113).
+**V2-5 → V2-8 ran as one continuous session.** The census rose 724 → 769 across
+49 files (`round-freeze` 6, `fk-tenancy` 5, `blind-spots` 9, `help` 10,
+`test-mode` 9, `use-cases-page` 6) and 5a3 **59 of 80 → 61 of 83**: V2-6's
+`support_messages` is CHECKED and PROVEN on a bare reset because the demo seed
+carries a message, and `help_articles` and `help_article_translations` are
+allowlisted with reasons and checked against them. **The checked number moved up
+a fourth phase running**; V2-7 and V2-8 left it unchanged, because a modified RPC
+is not a new surface and V2-8 added no table.
+
+**Two gate repairs, both of which earned themselves on their first run.**
+`verify:copy` could not see «åtte» — JavaScript's `\b` is ASCII-only, so `å` is
+a non-word character and `\båtte\b` never matches after a space. The gate had
+been blind to one of the ten Norwegian numerals it lists since it was written,
+and it is the one that matters most: **8 is the threshold the statutory
+harassment pack locks.** Fixed with `(?<![\p{L}\d])`…`(?![\p{L}\d])` (D123).
+And `verify:i18n` gained two seeded-content sources it was missing,
+`survey_questions.text` and `duty_definitions.basis`.
+
+**TWENTY-ONE SENTENCES OF BUNDLE COPY WERE FALSE AGAINST THE RUNNING PRODUCT** —
+ten in the help articles (D117), eleven in Bruksområder (D122, D124). None was
+caught by a gate; every one was caught by measuring a claim against the database.
+The gates protect the schema and the data. **Nothing mechanical protects prose,
+and prose is what a user reads to decide whether to trust the numbers.**
 
 **Run order changes what 5a3 can prove, not the number.** 55 of 71 either way. But
 the script only counts a surface as *proven* when there was a real row for the
