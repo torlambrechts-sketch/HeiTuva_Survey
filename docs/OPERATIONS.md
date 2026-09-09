@@ -584,3 +584,144 @@ Leaked-password protection is still disabled and is still on the launch list.
 be dropped. Nothing in prod's data depends on either — 0 groups, and `member_id` is null on
 both existing invitations, since it is written only by `send_round`'s group loop, which
 `M:0060` introduces and prod does not have.
+
+---
+
+## 2026-09-09 — `M:0058`, `M:0060`, `M:0061` applied to prod (Q103, partial)
+
+**Tor authorised all thirty (`M:0058`, `M:0060`–`M:0088`) and then, on the method question
+below, narrowed this run to the article 21 machinery. Twenty-seven remain unapplied.**
+
+### Why it stopped at three, and it was a method decision rather than a failure
+
+The MCP's `apply_migration` takes SQL as a **tool parameter**, so every migration must be
+read, retyped through the agent's own output, and re-sent — which is precisely what this
+document already warns about:
+
+> «prefer `supabase db push` over pasting file contents through a tool. The truncation above
+> was possible only because the file was read, transformed and re-sent by hand.»
+
+Doing that thirty times, across full rewrites of `send_round`, `run_due_schedules` and
+`submit_response`, is the 2026-09-07 failure mode repeated at scale. It was put to Tor with
+the alternative — a connection string, which would let `supabase db push` send the files
+themselves — and he chose: **apply the article 21 machinery now, hold the remaining 27 for the
+safer method.** `supabase db push --db-url` is what unblocks them.
+
+### What was applied
+
+| | | |
+|---|---|---|
+| `M:0058` | `segments_and_group_source` | `segments`, `segment_fields`, `groups.source`/`synced_at`, Q94's policy fix |
+| `M:0060` | `suppressions` | **GDPR art. 21** — the table, `app.is_suppressed`, the raising guard, and the skip in all three insertion points |
+| `M:0061` | `lift_audit_carries_who_entered` | Q96 — `created_by` default, the lift audit carrying who entered |
+
+A fourth ledger row, `segments_predicate_verbatim_body`, restores
+`app.validate_segment_predicate` with its comments intact. It exists because the first apply
+of `M:0058` was sent with the function's `--` comments stripped: **the eight-hash fingerprint
+normalises comments away and would not have caught it.** Corrected deliberately rather than
+left to a gate that cannot see it.
+
+### THE COUNT WAS DERIVED FROM A DOCUMENT AND THEN VERIFIED TWO WAYS
+
+The remainder document computed «thirty» from this file's 2026-09-08 fingerprint, because the
+agent's environment has no Supabase credentials (`env | grep -c SUPABASE` → 0). Before
+applying anything, that number was checked against prod itself:
+
+1. **`list_migrations` reconciled by NAME** — 116 repo migrations against prod's 89 ledger
+   names: exactly the same thirty missing, plus the three prod-only repairs this document
+   already records (`recurrence_paused_at_repair`,
+   `overview_activity_repair_to_committed`, `overview_activity_revoke_public`).
+2. **A BEFORE fingerprint** — all eight hashes matched the 2026-09-08 table exactly
+   (`n_columns` 377, `columns` `87e2472…`). Prod had not moved since.
+
+### THE AFTER FINGERPRINT — mirror method, per Tor's instruction
+
+The local was reset to prod's **intended** state (`0001`–`0061`, the 27 later migrations moved
+aside) rather than compared against a working tree carrying V2-4 to V2-10.
+
+| | local mirror (0001–0061) | heituva-prod |
+|---|---|---|
+| `n_columns` | **398** | **398** |
+| `columns` | `7d764ab9fd4e695953b39677bf9ae979` | `7d764ab9fd4e695953b39677bf9ae979` |
+| `constraints` | `997b76933d1341141ea21543f59a60cb` | `997b76933d1341141ea21543f59a60cb` |
+| `policies` | `710457fd73c628416285a1b945e984d3` | `710457fd73c628416285a1b945e984d3` |
+| `rls_tables` | `da070624b46147256c48066b10d4b9b6` | `da070624b46147256c48066b10d4b9b6` |
+| `functions` | `81795168d824af4365aca00a2028abd9` | `81795168d824af4365aca00a2028abd9` |
+| `grants` | `bc62f5373760c4061353280a314bf3f1` | `bc62f5373760c4061353280a314bf3f1` |
+| `enums` | `3daa7a71b419145535d7e7349d55b318` | `3daa7a71b419145535d7e7349d55b318` |
+
+**All eight match.**
+
+### A NINTH CHECK, AND IT FOUND SOMETHING THE EIGHT CANNOT SEE
+
+The `functions` hash strips `--` comments and collapses whitespace, by design. So a raw
+`md5(prosrc)` aggregate was compared as well:
+
+| | local mirror | heituva-prod |
+|---|---|---|
+| raw `prosrc` aggregate | `dfc4418833360fb92c57d55d912ad5cc` | `047931e0c5122f11df000d8ed3001375` |
+| **normalised aggregate** | **`0cc580252dc9909fb76acc061ca532f3`** | **`0cc580252dc9909fb76acc061ca532f3`** |
+
+**The normalised aggregate is identical across all 79 functions — the raw one is not.**
+Twenty-seven functions differ in **comment text and whitespace only**, and the six touched
+today are byte-identical. **This divergence PREDATES today**: it comes from the earlier
+hand-applies of 2026-09-05/07/08, which the eight-hash fingerprint was never able to see.
+
+**It is a documentation-fidelity divergence, not a behavioural one.** Prod's stored function
+source is not a faithful copy of the repo's prose, and in a project where the comments carry
+the reasoning that is worth knowing. Recorded rather than repaired: repairing it means
+re-sending 27 function bodies by hand, which is the risk this run was narrowed to avoid.
+**`supabase db push` would close it as a side effect of applying the remaining 27.**
+
+### THE ARTICLE 21 MACHINERY, PROVEN ON PROD
+
+A probe created an organisation, a survey, a round and an objection, exercised the guard and
+the skip, and then **aborted with a RAISE so the whole block rolled back** — verified after:
+`__art21_probe__` organisations left = 0, `suppressions` rows = 0.
+
+```
+PROBE_RESULT guard_raised=t skip_excluded=t invitations_for_objector=0
+```
+
+- `app.is_suppressed` matches case-insensitively (`Objector@Example.Test` → `objector@…`).
+- A direct insert of a suppressed address **raises `recipient_suppressed`**.
+- `send_round` **skips** the objector: zero invitations, nothing queued.
+
+**Prod can no longer send to someone who has objected.** That was the reason this moved to the
+front and it is now discharged.
+
+### Invariants read directly on prod
+
+| Invariant | Prod |
+|---|---|
+| 1 — no client SELECT policy on `responses`/`answers` | **0 policies** |
+| 2 — the anonymity CHECK | `CHECK (((anonymity_at_submission <> 'anonymous'::app.anonymity_mode) OR (invitation_id IS NULL)))` |
+| 3 — RLS on every `public` table | **0 tables without RLS** |
+| Q96 — `created_by` has a writer | default `auth.uid()` |
+| guard + lift-audit triggers | both present and enabled (`tgenabled = 'O'`) |
+
+**What could NOT be run:** the Vitest invariant suite itself, which needs a Postgres connection
+string this environment does not have. The checks above are its structural assertions
+re-expressed as SQL; the role-based ones (a `leser` reading `answers`, cross-org isolation
+through a persona client) need authenticated sessions and were **not** run against prod. Said
+plainly rather than reported as a green suite.
+
+### Advisors, after the apply
+
+`get_advisors(security)` returns **no new finding**. Everything reported is the known,
+by-design set:
+
+- `rls_enabled_no_policy` on `answers` and `responses` — **that IS invariant 1**, and on
+  `demo_requests`, which `request_demo` writes and no role reads.
+- `anon_security_definer_function_executable` ×6 and the `authenticated` equivalent ×26 — the
+  architecture itself; Gate 5a3 governs which are allowlisted and why.
+- `auth_leaked_password_protection` — launch-gate item 2, unchanged.
+
+**Nothing was reported against `segments`, `segment_fields` or `suppressions`.**
+
+### Prod's head after this run
+
+`20260909125210`, 133 ledger rows. **Twenty-seven migrations remain unapplied:**
+`M:0062`–`M:0088`. What is still absent from prod is listed by capability in
+`docs/v2/06-remainder.md § 2.2`; the two entries that matter most are unchanged from that
+document — **`M:0068`, the round-freeze data-loss repair, is still not applied.**
