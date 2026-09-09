@@ -13,9 +13,26 @@ Sent 2026-09-08, after V2-3b closed.
 **●** marks a question touching **the security core or an aggregate path**.
 **●●** marks one where that *is* the question.
 
-**15 DEFAULT-SAFE · 12 NEEDS YOUR ANSWER · 27 total** when sent. **Q88 and Q101 were answered
-on arrival** and are in `DECISIONS.md`; the open set is **14 DEFAULT-SAFE · 11 NEEDS YOUR
-ANSWER · 25**.
+**15 DEFAULT-SAFE · 12 NEEDS YOUR ANSWER · 27 total** when sent.
+
+> **RESOLVED 2026-09-08. Nothing in this document is open except the nine listed below.**
+>
+> - **Q88 and Q101 — ANSWERED** by Tor on arrival. In `DECISIONS.md`.
+> - **The fourteen DEFAULT-SAFE — DEFAULTED, NOT ANSWERED**, on Tor's instruction, and
+>   promoted to `DECISIONS.md` with that stated in each line. They are confirmed and govern
+>   their phases; **the phase report that applies each one must name it as defaulted**, which
+>   is where Tor reviews them and reverses any he disagrees with.
+> - **Q78 and Q84 — SENT IN FULL**, separately, and open.
+> - **Nine remain, and each goes to Tor ONLY when its phase opens** — one message, that
+>   phase's questions only, work continuing on the rest of the phase meanwhile:
+>
+>   | Phase | Questions |
+>   |---|---|
+>   | **V2-4** | **Q97** |
+>   | V2-9 | Q78 ●●, Q79 ●, Q81, Q82 |
+>   | V2-10 | Q83, Q84 ●● |
+>   | V2-11 | Q86 ●, Q87 ●, Q89 |
+>   | *(no phase — Tor's, permanently)* | **Q103 ● — nothing reaches prod without him** |
 
 *Counted from the table below rather than from memory —
 `awk '/^\| # \| Phase/,/^---$/' docs/v2/06-remaining-decisions.md | grep -c 'DEFAULT-SAFE'`
