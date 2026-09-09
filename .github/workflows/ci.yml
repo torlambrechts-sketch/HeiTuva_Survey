@@ -29,10 +29,18 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Every verify script passes --local and reads these fixed development keys
-  # from scripts/verify/local-env.ts, which is what pins the harness to the
-  # local stack rather than to the production project.
-  SUPABASE_SERVICES: realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+  # The containers no gate needs. storage-api and mailpit are NOT here, and the
+  # first run of this workflow is why: the list was carried over from a job that
+  # ran only tests/invariants, where nothing touched Storage. The whole suite
+  # does — tests/db/branding.test.ts asserts the org-logos bucket is private and
+  # that an administrator cannot write into another organisation's prefix — and
+  # it failed with «name resolution failed», which is what a missing container
+  # looks like from the client. An enumeration of what the OLD job needed, used
+  # as if it were the property «what a gate needs».
+  #
+  # Both database-bearing jobs now start the same set, so a gate moving between
+  # them cannot lose a dependency.
+  SUPABASE_SERVICES: realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor
 
 jobs:
   static:
@@ -72,7 +80,7 @@ jobs:
           version: latest
 
       - name: Start local Supabase
-        run: supabase start -x ${{ env.SUPABASE_SERVICES }},mailpit
+        run: supabase start -x ${{ env.SUPABASE_SERVICES }}
 
       # Proves every migration applies from scratch and the seed lands.
       - name: Apply migrations and seed
@@ -158,8 +166,9 @@ jobs:
           version: latest
 
       - name: Start local Supabase
-        # Mailpit is NOT excluded here: verify:send drives the mail worker and
-        # reads back what arrived, so the capture inbox is part of the gate.
+        # verify:send drives the mail worker and reads back what arrived, and
+        # verify:export writes an archived PDF, so mailpit and storage-api are
+        # both part of these gates rather than optional.
         run: supabase start -x ${{ env.SUPABASE_SERVICES }}
 
       - run: supabase db reset
