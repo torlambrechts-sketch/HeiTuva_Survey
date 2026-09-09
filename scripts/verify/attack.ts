@@ -175,6 +175,18 @@ async function main() {
     ['duty_status', { p_duty: '00000000-0000-0000-0000-000000000000' }],
     ['sign_duty', { p_duty: '00000000-0000-0000-0000-000000000000', p_role_key: 'styre' }],
     ['publish_duty', { p_duty: '00000000-0000-0000-0000-000000000000' }],
+    // V2-9. These two belong here more than any of the above, because THIS
+    // PHASE IS WHERE THE REVOKE WAS WRONG. `M:0079` and `M:0080` wrote
+    // `revoke all ... from public`, which is correct and does nothing:
+    // Supabase's ALTER DEFAULT PRIVILEGES grants EXECUTE to `anon` in its own
+    // name, so both stayed callable until `M:0082` revoked from the role. 5a3
+    // caught it by asking the catalogue; this is the probe that catches it by
+    // asking the database as an unauthenticated caller.
+    ['close_live_session', { p_id: '00000000-0000-0000-0000-000000000000' }],
+    ['live_cloud', {
+      p_survey: '00000000-0000-0000-0000-000000000000',
+      p_question: '00000000-0000-0000-0000-000000000000',
+    }],
   ] as const) {
     const r = await anon.rpc(fn as 'aggregate_results', args as never)
     report(`anon calls ${fn}`, ['DENIED'], classify(r.error, null))
@@ -188,6 +200,40 @@ async function main() {
     // "anon sees nothing" claim honest rather than sweeping.
     const r = await anon.from('ui_messages').select('key').limit(1)
     report('anon selects ui_messages (deliberately public)', ['ALLOWED'], classify(r.error, r.data))
+  }
+  {
+    // V2-9, and the same honesty: `redeem_live_voucher` is anon BY DESIGN — a
+    // room scans a code and nobody there has a session. So the probe is not
+    // «is it denied» but the two things that make the grant safe.
+    const r = await anon.rpc('redeem_live_voucher', { p_code: 'ZZZZZZ' })
+    // `classify` takes rows; this RPC returns a jsonb OBJECT, so the call has to
+    // say what it means itself rather than being wrapped into row-shaped
+    // vocabulary that would read «EMPTY» for a successful refusal.
+    report('anon calls redeem_live_voucher (voucher, by design)', ['ALLOWED'], {
+      outcome: r.error ? 'DENIED' : 'ALLOWED',
+      detail: r.error ? r.error.message : 'callable without a session, as the QR requires',
+    })
+    // ONE refusal for every reason. A wrong code, a closed session and an
+    // expired one must be indistinguishable, or the refusal itself enumerates
+    // live sessions to an unauthenticated caller.
+    const body = JSON.stringify(r.data ?? {})
+    report('redeem_live_voucher refuses without saying which', ['ALLOWED'], {
+      outcome:
+        body.includes('not_found_or_closed') && !body.includes('token') ? 'ALLOWED' : 'DENIED',
+      detail: body.slice(0, 80),
+    })
+  }
+  {
+    // And the reason the grant above is not a second write path: the voucher
+    // writes an invitation, never a response. Asserted against the vault by
+    // count, not by reading the function.
+    const before = await svc.from('responses').select('id', { count: 'exact', head: true })
+    await anon.rpc('redeem_live_voucher', { p_code: 'ZZZZZZ' })
+    const after = await svc.from('responses').select('id', { count: 'exact', head: true })
+    report('redeem_live_voucher writes no response', ['ALLOWED'], {
+      outcome: before.count === after.count ? 'ALLOWED' : 'DENIED',
+      detail: `responses ${before.count} -> ${after.count}; submit_response stays the only write path`,
+    })
   }
 
   console.log('\n== 2d: constraint proofs ==')

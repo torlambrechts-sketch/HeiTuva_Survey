@@ -183,9 +183,24 @@ refused, at commit; deleting the organisation is allowed, because by commit time
 points at the group. **The rule is never "this row is sacred"; it is "no record may be
 left pointing at something that stopped existing under it".**
 
-This has now been rediscovered five separate times (D50, D51, D57, the duty-archive case,
-and V2-3b's FK pair — which then bit a second time in the same migration, when an audit
-trigger on a lifted objection tried to write a row for an organisation already erased).
+This has now been rediscovered SIX separate times: D50, D51, D57, the duty-archive case,
+V2-3b's FK pair — which then bit a second time in the same migration, when an audit trigger
+on a lifted objection tried to write a row for an organisation already erased — and V2-9's.
+
+**V2-9's is the one that widens the family, so it is worth a sentence of its own.** It was a
+**CHECK constraint** — a third construct after triggers and foreign keys — and the phase
+introduced it *in the very migration written to accommodate the new case*. The CHECK was
+widened to allow a row that carries `live_session_id`; the column it now depended on was
+`on delete set null`; so erasing an organisation cascaded, nulled that column, and the row
+failed the constraint that had just been relaxed for it. Two individually correct decisions,
+one broken pair, and the symptom miles away: **`dropOrg` failing.**
+
+So the family is not «triggers and foreign keys». It is **any rule written over a column the
+database reserves the right to change on your behalf**, and the question to ask of a new one
+is: *which of the columns this predicate names can be changed by something other than the
+code I am looking at?* A cascade is such a something. The fix is usually the column and not
+the predicate — V2-9 restated the same rule over `channel`, which is `not null` and which
+nothing nulls.
 
 **AND THE GENERAL FORM, WHICH ARRIVES THROUGH TRIGGERS AS WELL AS THROUGH FOREIGN KEYS
 (V2-9): A GUARD ON ONE TRANSITION IS NOT A GUARD ON THE STATE.** Everything above is about

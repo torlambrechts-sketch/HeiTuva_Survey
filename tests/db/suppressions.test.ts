@@ -235,6 +235,33 @@ describe('(Q60) a suppressed address is not invited, by any path', () => {
     // still fails here; one that writes only test rows passes for a reason a
     // reader can check. `tests/db/test-mode.test.ts` holds the other half: a
     // test row is in no count and the scheduler does not copy it forward.
+    //
+    // ── NARROWED AGAIN IN V2-9, BY A DIFFERENT PROPERTY ──────────────────────
+    //
+    // `public.redeem_live_voucher` arrived as a fifth insertion point and THIS
+    // TEST CAUGHT IT TOO — the second time this derivation has stopped a phase
+    // and made it answer, which is the whole reason it is a query and not a list.
+    //
+    // Its exemption is **QR-2, confirmed by Tor**, and it is not the same
+    // exemption `mint_test_token` has. It is this: **a QR path CANNOT honour an
+    // objection, because it does not know who it is speaking to.** A voucher
+    // invitation carries no address at all — the respondent scanned a code in a
+    // room — so `app.is_suppressed(org, email)` has no argument to take. That
+    // follows from the anonymity condition on the QR path rather than weakening
+    // it: knowing enough to suppress and knowing too much to stay anonymous are
+    // the same knowledge.
+    //
+    // **The duty moves to the presenter, not the system.** She shares a code in
+    // a room; someone who does not want to answer does not scan. An objection to
+    // being SENT things is not a duty to prevent voluntary participation in a
+    // meeting one is already in.
+    //
+    // Written as the PROPERTY, like V2-7's: the function's body never names the
+    // `email` column, so it cannot write an address, so there is nothing for the
+    // predicate to be about. A sixth insertion point that DOES write an address
+    // still fails here. **The recorded limit:** this reads the body for the
+    // column name, so a function that wrote an address through dynamic SQL would
+    // slip past — a bound on the check, stated, not a gap it hides.
     const unguarded = psql(
       `select n.nspname||'.'||p.proname from pg_proc p
          join pg_namespace n on n.oid = p.pronamespace
@@ -244,6 +271,8 @@ describe('(Q60) a suppressed address is not invited, by any path', () => {
           -- writes ONLY test invitations: every insert it performs sets is_test
           and not (p.prosrc ~* 'is_test'
                    and p.prosrc !~* 'insert into public\\.survey_invitations[^;]*\\)\\s*values[^;]*false')
+          -- writes NO ADDRESS: nothing to suppress against (V2-9, QR-2)
+          and p.prosrc ~* '\\memail\\M'
         order by 1`,
     ).map((r) => r[0]!)
 

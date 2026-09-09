@@ -429,3 +429,68 @@ describe('(V2-9) `run_mode` — the column has a writer, and the rule is the dat
     expect(src, 'behind a Zod enum that excludes quiz').toMatch(/z\.enum\(\['standard', 'live'\]\)/)
   })
 })
+
+describe('(V2-9 fix pass) the erasure path survives a redeemed voucher', () => {
+  it('19. BLOCKER — an organisation with a redeemed voucher can still be DELETED', () => {
+    // THE SIXTH INSTANCE OF THE REFERENTIAL-MAINTENANCE RULE, and this phase
+    // introduced it in the migration that was meant to accommodate the voucher.
+    //
+    // `M:0081` widened `invitations_reachable_check` to allow a row with
+    // `live_session_id` set, and `M:0079` gave that column `on delete set null`
+    // so erasing a session could not strand the record of who took part. Both
+    // right; together broken. Deleting the organisation cascades to
+    // `live_sessions`, which NULLS `live_session_id` — and the invitation then
+    // has no email, no phone and no session, so the widened CHECK refused the
+    // database's own cascade.
+    //
+    // The symptom was the one CLAUDE.md names: a parent row that cannot be
+    // deleted, discovered far from the rule. `M:0084` states it over `channel`
+    // instead, which nothing nulls.
+    const o = one(`insert into public.organizations (name, default_k_threshold)
+                   values ('${tag}-erase', 5) returning id`)
+    const sv = one(`insert into public.surveys (org_id, title, status, anonymity, respondent_kind, k_threshold)
+                    values ('${o}', 'Slett meg', 'aktiv', 'anonymous', 'person', 5) returning id`)
+    const rd = one(`insert into public.survey_rounds (survey_id, round_no, status, opens_at, question_snapshot)
+                    values ('${sv}', 1, 'open', now(), '[]'::jsonb) returning id`)
+    const c = `LVE${String(process.pid).slice(-3).padStart(3, '0')}`
+    psql(`insert into public.live_sessions (org_id, survey_id, round_id, code, expires_at)
+          values ('${o}', '${sv}', '${rd}', ${q(c)}, now() + interval '1 hour')`)
+    one(`select public.redeem_live_voucher(${q(c)})`)
+    expect(
+      Number(one(`select count(*) from public.survey_invitations i
+                   join public.live_sessions l on l.id = i.live_session_id where l.org_id = '${o}'`)),
+      'a voucher invitation exists',
+    ).toBe(1)
+
+    // The assertion is that this does not throw. GDPR art. 17 is not a feature
+    // a later phase adds back.
+    psql(`delete from public.organizations where id = '${o}'`)
+    expect(Number(one(`select count(*) from public.organizations where id = '${o}'`))).toBe(0)
+  })
+
+  it('20. and the rule now rests on a column no cascade can withdraw', () => {
+    // The general form, asserted so a future widening cannot quietly go back to
+    // a nullable column: ask which of the columns your predicate names can be
+    // changed by something other than the code you are looking at.
+    const def = one(
+      `select pg_get_constraintdef(oid) from pg_constraint where conname = 'invitations_reachable_check'`,
+    )
+    expect(def, 'stated over `channel`').toMatch(/channel/)
+    expect(def, 'and NOT over the cascade-nulled reference').not.toMatch(/live_session_id/)
+    expect(
+      one(`select is_nullable from information_schema.columns
+            where table_name = 'survey_invitations' and column_name = 'channel'`),
+      'and `channel` is NOT NULL, so the disjunct cannot vanish',
+    ).toBe('NO')
+  })
+
+  it('21. `created_by` is a COMPOSITE tenancy FK — V2-5’s own test caught it', () => {
+    const def = one(
+      `select pg_get_constraintdef(oid) from pg_constraint
+        where conrelid = 'public.live_sessions'::regclass and conname = 'live_sessions_created_by_fkey'`,
+    )
+    expect(def, '(created_by, org_id) -> org_members(id, org_id)').toMatch(
+      /FOREIGN KEY \(created_by, org_id\) REFERENCES org_members\(id, org_id\)/,
+    )
+  })
+})
