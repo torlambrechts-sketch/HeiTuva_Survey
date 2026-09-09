@@ -49,6 +49,10 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   benchmarks: 'seeded Norwegian reference values; DECISIONS Q8',
   task_kinds:
     'the five kinds a task may have (V2-4, Q70); data-not-code, same shape as `use_cases`, `brand_accents` and `segment_fields` — a row carries a key and a sort order, and no org id, no survey id and no count. The LABEL for each kind lives in `messages/*.json` under the key, so the registry itself is language-free and carries nothing about anyone. `tests/db/tasks.test.ts` CHECKS that claim against the column list rather than repeating it here',
+  help_articles:
+    'Q75: the help-article registry; data-not-code, same shape as `use_cases`, `brand_accents`, `segment_fields` and `task_kinds` — a row carries a slug, a category key, a read time, a tint, a sort order, a related-slug list and an optional feature-flag name, and NO org id, no survey id and no count. It is read before a session exists on the support links, and it carries no prose at all: the language-specific document lives in `help_article_translations`. `tests/db/help.test.ts` CHECKS the column list against that claim, and separately checks that NO write policy exists — help text is a surface users trust to learn how the product behaves',
+  help_article_translations:
+    'the per-language document for the above. Same reason and the same absence of a write policy; the only identifying thing it could hold is prose somebody wrote about the product',
   segment_fields:
     'the fields a segment rule may name (Q65); data-not-code, same shape as `use_cases` and `brand_accents` — a row carries a key, a column name and an availability flag, and no org id, no survey id and no count. The `available = false` rows exist so the editor can SAY a field is unavailable rather than being silently shorter than the design. `tests/db/segments.test.ts` CHECKS the claim against the column list rather than repeating it here',
   brand_accents:

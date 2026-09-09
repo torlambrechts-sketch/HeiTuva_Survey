@@ -34,7 +34,8 @@
     "verify:load": "tsx scripts/verify/load.ts --local",
     "census:write": "CENSUS_WRITE=1 vitest run",
     "verify:copy": "tsx scripts/verify/threshold-copy.ts",
-    "verify:thresholds": "tsx scripts/verify/threshold-readers.ts"
+    "verify:thresholds": "tsx scripts/verify/threshold-readers.ts",
+    "seed:help": "tsx scripts/seed-help.ts --local"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.73.0",

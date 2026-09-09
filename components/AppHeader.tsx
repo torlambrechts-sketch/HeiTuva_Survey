@@ -65,6 +65,18 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
 
         <WideToggle wideLabel={t('wide')} narrowLabel={t('narrow')} />
 
+        {/* V2:180 — the «?» that opens Hjelp og støtte. Added with the screen it
+            points at: a header control reaching a route that does not exist is
+            the same defect as a link to a page nobody drew. */}
+        <Link
+          href="/hjelp"
+          aria-label={t('helpAndSupport')}
+          title={t('helpAndSupport')}
+          className="touch-44 inline-flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full border border-line bg-transparent p-0 text-[16px] font-bold text-ink no-underline"
+        >
+          ?
+        </Link>
+
         <span className="hidden md:inline-flex">
           <LangPicker current={viewer.locale as Locale} />
         </span>

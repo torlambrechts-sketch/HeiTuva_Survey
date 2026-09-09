@@ -681,6 +681,68 @@ export type Database = {
           },
         ]
       }
+      help_article_translations: {
+        Row: {
+          body: Json
+          lang: string
+          lead: string
+          slug: string
+          title: string
+        }
+        Insert: {
+          body: Json
+          lang: string
+          lead: string
+          slug: string
+          title: string
+        }
+        Update: {
+          body?: Json
+          lang?: string
+          lead?: string
+          slug?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_article_translations_slug_fkey"
+            columns: ["slug"]
+            isOneToOne: false
+            referencedRelation: "help_articles"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      help_articles: {
+        Row: {
+          category_key: string
+          read_minutes: number
+          related_slugs: string[]
+          requires_flag: string | null
+          slug: string
+          sort_order: number
+          tint: string
+        }
+        Insert: {
+          category_key: string
+          read_minutes: number
+          related_slugs?: string[]
+          requires_flag?: string | null
+          slug: string
+          sort_order: number
+          tint: string
+        }
+        Update: {
+          category_key?: string
+          read_minutes?: number
+          related_slugs?: string[]
+          requires_flag?: string | null
+          slug?: string
+          sort_order?: number
+          tint?: string
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           created_at: string
@@ -1356,10 +1418,10 @@ export type Database = {
           },
           {
             foreignKeyName: "reports_duty_id_fkey"
-            columns: ["duty_id"]
+            columns: ["duty_id", "org_id"]
             isOneToOne: false
             referencedRelation: "duties"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "reports_org_id_fkey"
@@ -1669,6 +1731,51 @@ export type Database = {
             columns: ["round_id"]
             isOneToOne: false
             referencedRelation: "survey_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          lang: string
+          member_id: string | null
+          org_id: string
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          lang?: string
+          member_id?: string | null
+          org_id: string
+          subject: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          lang?: string
+          member_id?: string | null
+          org_id?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_member_fkey"
+            columns: ["member_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "support_messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2129,6 +2236,7 @@ export type Database = {
           owner_member_id: string | null
           source_kind: string
           source_ref: string | null
+          source_round_id: string | null
           status:
             | "foreslatt"
             | "besluttet"
@@ -2149,6 +2257,7 @@ export type Database = {
           owner_member_id?: string | null
           source_kind?: string
           source_ref?: string | null
+          source_round_id?: string | null
           status?:
             | "foreslatt"
             | "besluttet"
@@ -2169,6 +2278,7 @@ export type Database = {
           owner_member_id?: string | null
           source_kind?: string
           source_ref?: string | null
+          source_round_id?: string | null
           status?:
             | "foreslatt"
             | "besluttet"
@@ -2220,6 +2330,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "surveys"
             referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "tasks_source_round_id_fkey"
+            columns: ["source_round_id", "source_ref"]
+            isOneToOne: false
+            referencedRelation: "survey_rounds"
+            referencedColumns: ["id", "survey_id"]
           },
         ]
       }
@@ -2609,12 +2726,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2638,11 +2755,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2663,11 +2780,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2688,11 +2805,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2705,11 +2822,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

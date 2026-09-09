@@ -3082,3 +3082,67 @@ that is the good direction: writing Norwegian into that column is exactly what i
 so a fifth statutory duty stays a row rather than becoming a translation task. Recorded
 because the mistake was mine and the catch was structural — the opposite of the shape
 D110 keeps finding, where a green gate hides a real gap.
+
+### D116 — the help centre's contact tab: four channels and a status panel that do not exist
+
+**Accepted.** DECISIONS **Q74 DEFAULTED** (no forum); the rest is CLAUDE.md's «never
+fabricate data in the UI» applied to a screen rather than to a value.
+
+The bundle's contact tab draws three things beside the message form:
+
+    V2:5147  contactRows: Chat («Svarer innen noen minutter i arbeidstiden», Man–fre 08–16),
+             E-post (hjelp@heituva.no, «svar innen én arbeidsdag»), Telefon (+47 21 00 40 60,
+             Man–fre 09–15), Rådgiver («Egen kontaktperson på Bedrift-planen»)
+    V2:5161  statusRows: «Undersøkelser og svar · Normal drift», «E-post og SMS · Normal drift»,
+             «Integrasjoner · Planlagt vedlikehold 12. sep»
+    V2:5158  onContactSend: setState({ contactSent: "Sendt. Vi svarer på tuva@…" }), 2.6s timer
+
+**None of the four channels exists**, and there is no status source of any kind, so
+«Planlagt vedlikehold 12. sep» is an invented date **on the panel a user checks when they
+think something is broken**. That is the worst place in the product for a fake value: it is
+consulted precisely when trust is already in question, and it is indistinguishable from a
+real one.
+
+**And `onContactSend` is a confirmation for something that never happened.** Shipping it
+would be worse than shipping no form at all — a user who believes they have reported a
+problem stops reporting it.
+
+**What ships.** The form writes a real row (`support_messages`, `M:0074`), and the two
+right-hand cards keep their drawing and say what is true: «Chat, telefon og fast rådgiver
+er ikke satt opp ennå. Meldingen over er kanalen som finnes» and «Vi publiserer ikke
+driftsstatus ennå». Q26's stream panel is the precedent — the absence is left visible
+rather than answered with something else, and `admin.mgPopulationsUnavailable` is the same
+move inside this codebase.
+
+**Reversal condition, named so this row cannot silently settle it:** when a support channel
+or a status page actually exists, these cards render it. The deviation is about the absence,
+not about the design.
+
+### D117 — ten sentences in the twelve help articles were false, and this is where they shipped
+
+**Accepted, and the list is the point.** V2-4's security-copy sweep checked the 105
+promise-shaped strings that were **already shipped**; these twelve articles were not, and
+they carried two of that sweep's forward notes. `scripts/seed-help.ts` reads the articles out
+of the bundle and rewrites ten sentences on the way through, **failing if any of them stops
+matching** — a correction that silently matches nothing would leave the bundle's copy in the
+one surface a confused user reads to learn how the product works.
+
+| Sentence | Measured against | Why it is false |
+|---|---|---|
+| «Funn under terskel blir oppgaver med ansvarlig og frist» (V2:4239) | `app.generate_blind_spot_tasks` | Q72: the trigger is audience size. **D114** |
+| «Funn under terskel blir oppgave automatisk» (V2:4270) | same | Q72. **D114** |
+| mock row «Under terskel · krever tiltak» | same | Q72, in four words |
+| «Grupper under terskelen **slås sammen** i rapporten» (V2:4227) | `app.suppress_partition` | It **suppresses** — `{n: null, avg: null, suppressed: true}` plus the second-smallest when exactly one is hidden. **D109's class: wrong in the cautious direction**, and it contradicted `reports.suppressedNote`, which describes the real behaviour |
+| «**Fire** roller styrer hva folk ser» | `app.member_role` | Three values. **D106** |
+| «Verneombud har egen rolle» + its mock row | `duty_signers` | A signature, not an access level. A reader given a role that does not exist looks for it under Brukere and does not find it |
+| «Over frist varsles eieren i **Teams**» | the mail worker and `cron.job` | **Q71: Teams is not built — the THIRD appearance of this claim**, after V2:5198 and V2:2206, which V2-4 corrected. `weekly_digest` was the same shape one field over |
+| «Ved synk holdes gruppene oppdatert automatisk» | `feature_flags` | `entra_sync` and `google_sync` are both OFF |
+| «**CSV og Excel** forventer kolonnene…» | the importer | **Q62: `.xlsx` is refused**, so the sentence named a format the product declines |
+
+`tests/db/help.test.ts` asserts none of these phrases is in any article in either language,
+so a re-seed from a newer bundle that reinstates one fails rather than ships.
+
+**One article's SUBJECT does not exist either.** «Koble til HR- og lønnssystem» describes
+`hr_sync`, which is a disabled flag. Deleting it would leave a reader unable to tell «not
+documented» from «not built», so the article ships with `requires_flag` set and renders an
+explicit line saying the feature is not switched on yet.

@@ -121,6 +121,18 @@ async function main() {
     source: 'manuell',
   })
 
+  // V2-6: one support message, for the same reason the objection above exists —
+  // `verify:policy` reports a table PROTECTED BUT UNPROVEN when it is empty,
+  // because an empty table is never asked to refuse anything. With this row
+  // `support_messages` reports `ok` on a BARE reset rather than only inside
+  // `verify:all`, where the db suite happens to populate it first.
+  await svc.from('support_messages').insert({
+    org_id: org.id,
+    subject: 'Får ikke sendt til hele Utvikling',
+    body: 'To av mottakerne mangler e-post i importen. Hva gjør vi?',
+    lang: 'no',
+  })
+
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },

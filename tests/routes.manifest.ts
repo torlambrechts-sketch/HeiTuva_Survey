@@ -240,6 +240,35 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    // V2-6 — Hjelp og støtte (V2:1944-2146). Q74 DEFAULTED: two tabs, not three.
+    route: '/hjelp',
+    label: 'hjelp',
+    as: 'administrator',
+    phase: 'phase-6',
+    states: [
+      { name: 'default' },
+      {
+        // An open article, because the list state cannot show the step rail, the
+        // mock panel or the «Les videre» links — three quarters of the screen.
+        name: 'artikkel',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /Sett terskelen|Set the threshold/ }).click()
+          await page.waitForTimeout(400)
+        },
+      },
+      {
+        // The contact tab. Its two right-hand cards are D116 — they say what is
+        // true where the bundle drew four support channels and a service-status
+        // panel with an invented maintenance date.
+        name: 'kontakt',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /^(Kontakt oss|Contact us)$/ }).click()
+          await page.waitForTimeout(400)
+        },
+      },
+    ],
+  },
+  {
     route: '/profil',
     label: 'profil',
     as: 'administrator',

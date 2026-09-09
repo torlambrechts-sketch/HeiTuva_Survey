@@ -84,6 +84,7 @@ jobs:
 
       - run: npm ci
       - run: npx tsx scripts/seed-i18n.ts --local
+      - run: npx tsx scripts/seed-help.ts --local
 
       - name: Invariant suite
         run: npx vitest run tests/invariants
