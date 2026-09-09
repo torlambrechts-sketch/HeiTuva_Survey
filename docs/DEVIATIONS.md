@@ -3029,3 +3029,56 @@ moment its phase renders the bundle's copy as drawn.
   inaccuracy**, not a shipped false promise, and it goes to
   `docs/LEGAL_DRAFTS.md` by the route V2-2 established rather than into a code
   fix. Recorded there.
+
+### D114 — Q72 makes two drawn sentences false, and they change on the decision's authority
+
+**Accepted.** DECISIONS **Q72 CONFIRMED**; **D103 is the precedent** — the first time a
+phase changed bundle copy because a decision made the drawn sentence untrue on its own
+screen. The mechanism has now been used twice.
+
+The v2 bundle draws the task generator as fired by findings:
+
+    V2:4239  ["Vurder risiko og sett tiltak",
+              "Funn under terskel blir oppgaver med ansvarlig og frist, med hjemmel synlig."]
+    V2:4270  ["Oppgaven opprettes",
+              "Funn under terskel blir oppgave automatisk, med kilde og hjemmel."]
+
+**Both are false as of V2-5, and they were false in the useful direction — they describe a
+product that would leak.** Q72's finding is that «a finding below threshold» as a trigger
+still discloses by elimination: groups A(12), B(9), C(4), with A and B visible and healthy,
+tells the reader C scored badly. Wrapping the wording does not help, because the PREDICATE
+is over a gated value. The trigger is now
+
+> **this survey has an audience group whose SIZE is below `app.k_for(survey)`**
+
+— a count of people, which Q28 permits, and a property of the audience rather than of the
+responses.
+
+**Neither string is shipped.** Both are help-article content, which is **V2-6's** scope, so
+this entry is the instruction for the phase that writes them rather than a correction to
+something live. The corrected sense: a task is created when a survey has groups that will
+never get their own results, and the duty applies regardless of what those groups answered.
+`tests/db/blind-spots.test.ts` test 2 is what holds it — a task IS produced when every group
+scores 5 of 5, and 2b requires none when every group reaches k however badly they score.
+
+**And the cost is recorded rather than left to be rediscovered as a defect:** the task
+appears more often than a findings-triggered one would, including when nothing is wrong.
+That is tolerable noise — it points at a real blind spot every time, and an employer cannot
+know a sub-threshold group is fine either.
+
+### D115 — `tasks.law_ref` is a key, and the schema is what enforced it
+
+**Not a deviation from the bundle — a note about which control did the work**, logged
+because the next author will otherwise assume it was review.
+
+`M:0070`'s generator wrote `duty_definitions.law` — «Arbeidsmiljøloven § 4-3 ·
+internkontroll» — into `tasks.law_ref`, and the insert failed on `tasks_law_ref_fkey`.
+The column is a **foreign key to `duty_definitions(key)`**; the display text is resolved from
+the registry at render time, which V2-4's Oppgaver page already does
+(`app/(app)/oppgaver/page.tsx:61,68,78`).
+
+**Q70's data-not-code rule was enforced by a constraint rather than by a reviewer**, and
+that is the good direction: writing Norwegian into that column is exactly what it refuses,
+so a fifth statutory duty stays a row rather than becoming a translation task. Recorded
+because the mistake was mine and the catch was structural — the opposite of the shape
+D110 keeps finding, where a green gate hides a real gap.
