@@ -138,7 +138,11 @@ category here).**
   automation in the repository (no git hooks, no other workflow). It runs `tsc`, `eslint`,
   `next build`, `supabase db lint` and `vitest run tests/invariants`. **`tests/db` (313 tests) and
   `tests/unit` (222) never run in CI**, and of the 17 gates chained by `verify:all`, four run.
-  The apparatus this project's confidence rests on runs on a developer's machine or nowhere.
+  **The other thirteen — including Gate 5a3, `verify:copy`, `verify:attack` and every browser
+  gate — run on a developer's machine or nowhere.** And the reason is not cost: timed individually
+  on an idle machine, **all seventeen gates pass and the whole chain takes 979 seconds — 16 min
+  19 s**, of which three browser gates are 57%. The apparatus works, it is green, and nothing
+  schedules it.
 
 **4.6 · Documents that disagree with the system (4 findings).** CLAUDE.md's invariant 1 says k=5;
 the running floor is 2, and 0 for organisation respondents (`A2-12`). CLAUDE.md's census line says

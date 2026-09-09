@@ -184,10 +184,6 @@ executing `time-gates.sh`, both mutating the same database and both appending to
 measurement. Both were killed, the database was reset and reseeded, and the numbers below come from
 a single clean run.
 
-**RUN IN PROGRESS AT THE TIME OF THIS COMMIT — partial.** The gates below completed; the
-browser and mail gates that follow them in the chain had not, and are NOT reported as passing
-or failing. This section is updated in a follow-up commit with the full table.
-
 ```
 GATE                    SECONDS  RESULT
 verify:quality               11  pass
@@ -198,11 +194,38 @@ verify:attack                 1  pass
 verify:roundtrip             38  pass
 verify:hermetic             203  pass
 verify:interaction           23  pass
+verify:i18n                  29  pass
+verify:respondent             3  pass
+verify:send                  11  pass
+verify:export                12  pass
+verify:splash                12  pass
+verify:load                   1  pass
+verify:browser              379  pass
+verify:responsive           165  pass
+verify:visual                15  pass
+TOTAL                       979
 ```
 
-What is already visible: `verify:db` at 72 s dominates everything measured so far, and
-`verify:copy` completes in under a second — the gate that `B7b-02` shows is looking at the
-wrong artefact is also the cheapest one in the chain.
+**All seventeen gates pass.** The chain costs **979 seconds — 16 min 19 s** run serially on an
+idle machine, from a freshly `db reset` and fully seeded database. Every gate that VERIFY.md warns
+may be unavailable was in fact runnable here: WebKit is installed (`webkit-2336`), and inbucket and
+storage-api are both up, so the mail and archive halves of `verify:send` and `verify:export` really
+ran rather than reporting an absent dependency as a failure.
+
+**Three browser gates are 57% of the total**: `verify:browser` 379 s, `verify:responsive` 165 s,
+`verify:visual` 15 s = 559 s. `verify:hermetic` at 203 s is the largest non-browser gate.
+Everything else finishes in under 40 s, and eight of the seventeen finish in under 15.
+
+**The contrast that matters is not the total — it is what runs unattended.** CI executes four of
+these seventeen (`tsc`, `eslint`, `next build`, `supabase db lint`) plus
+`vitest run tests/invariants`, which is **289 of the census's 824 tests (35.1%)**.
+`.github/workflows/ci.yml` is the only automation in the repository — no git hooks, no second
+workflow, no Vercel step beyond the build. So the 979-second chain that this project's confidence
+actually rests on runs **on a developer's machine or nowhere**, and the 13 gates CI never runs
+include `verify:policy` (Gate 5a3), `verify:copy`, `verify:attack` and every browser gate.
+
+That is a LIMITATION rather than a defect: the chain works, it is green, and it is fast enough to
+run. Nothing schedules it.
 
 ---
 
