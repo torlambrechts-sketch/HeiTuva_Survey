@@ -13,7 +13,9 @@ Sent 2026-09-08, after V2-3b closed.
 **●** marks a question touching **the security core or an aggregate path**.
 **●●** marks one where that *is* the question.
 
-**15 DEFAULT-SAFE · 12 NEEDS YOUR ANSWER · 27 total.**
+**15 DEFAULT-SAFE · 12 NEEDS YOUR ANSWER · 27 total** when sent. **Q88 and Q101 were answered
+on arrival** and are in `DECISIONS.md`; the open set is **14 DEFAULT-SAFE · 11 NEEDS YOUR
+ANSWER · 25**.
 
 *Counted from the table below rather than from memory —
 `awk '/^\| # \| Phase/,/^---$/' docs/v2/06-remaining-decisions.md | grep -c 'DEFAULT-SAFE'`
@@ -46,10 +48,10 @@ and the same for the other class. The first draft of this line said 16 and 11.*
 | Q85 | V2-10 | Two quiz refusals are UI-only | ● | **DEFAULT-SAFE** |
 | Q86 | V2-11 | BankID / ID-porten reopens Q4 | ● | **NEEDS YOUR ANSWER** |
 | Q87 | V2-11 | Can a BI export honour `app.k_for` at all | ● | **NEEDS YOUR ANSWER** |
-| Q88 | V2-11 | Sykefravær correlated against risk per unit | ● | **DEFAULT-SAFE** |
+| ~~Q88~~ | V2-11 | Sykefravær correlated against risk per unit | ● | **ANSWERED 2026-09-08 — not a product feature** |
 | Q89 | V2-11 | The integrations program: go or no-go | | **NEEDS YOUR ANSWER** |
 | **Q100** | carried | **Who writes `suppressions.source = 'avmelding'`** | | **DEFAULT-SAFE** |
-| **Q101** | carried | **`bounce` as a suppression source** | | **NEEDS YOUR ANSWER** |
+| ~~**Q101**~~ | carried | **`bounce` as a suppression source** | | **ANSWERED 2026-09-08 — bounce is delivery status, not an objection** |
 | **Q102** | carried | **Per-field operator sets, and sending to a segment** | | **DEFAULT-SAFE** |
 | **Q103** | carried | **Applying `M:0058` and `M:0060` to prod** | ● | **NEEDS YOUR ANSWER** |
 
@@ -213,24 +215,52 @@ path in a product whose second invariant is that there is exactly one.
 
 ### Q78 ●● — The live counter, as a Q28 extension · NEEDS YOUR ANSWER
 
-**This is the largest open question in the plan.** `liveGuard` (V2:6147) is a true statement
-about a *static* check and the design honours it. It does not cover the room: in a group of
-six the audience watches `liveStage.counter` go 4 → 5 and the bars appear.
+**Read the correction first — the draft was wrong about the starting position, and it makes
+the question bigger rather than smaller.**
+
+`04-decisions.md` says `liveGuard` «is a true statement about a static check and the design
+honours it». **Measured, the design does not honour it anywhere.** The whole of the live
+block, V2:6130–6190, contains exactly one occurrence of any threshold concept, and it is
+`liveGuard`'s own copy string:
+
+```
+6147: liveGuard: "Live respekterer anonymitetsterskelen. Er det færre svar enn
+                  terskelen, vises ingen tall på skjermen."
+6169: counter: String(sv.responses.length) + " svar",
+6175: onLiveReveal: () => this.setState(x => ({ liveRevealed: !x.liveRevealed })),
+```
+
+`liveStage.counter` is the **raw response count, unconditional** (V2:6169, rendered at
+V2:1848). `liveRevealed` is a **free client toggle** with no threshold check (V2:6175); the
+bars render under it at V2:1862–1864. **So the bundle asserts a security property it does not
+implement** — D110's shape, in the drawing, about the guarantee the product is sold on. There
+is no existing behaviour to preserve here; the guard is built from nothing.
+
+*(Three line citations in the draft were also off by two: `counter` is V2:6136 not 6138,
+`manualReveal` V2:6137 not 6139, and V2:6177 is the bar mapping rather than the counter. All
+four toggles default **on** — `DEFAULT_LIVE`, V2:4338 — except `questions` and `countdown`.)*
+
+**Now the question itself.** In a group of six, the audience watches the counter go 4 → 5 and
+the bars appear.
 
 **Q28 licenses the number** — counts of people stay visible — but its four enumerated homes
 are asynchronous private reads by an authenticated member. The live counter renders the same
 number **continuously to a co-located audience**. What may be new is not the number but the
 **increment**, watched in real time by a room that already knows who is present: **a
 correlation channel rather than an aggregation**, which is a different kind of thing from
-anything Q28 ruled on, and Q28 was confirmed before any projected surface existed.
+anything Q28 ruled on — and Q28 was confirmed before any projected surface existed.
 
-**Recommend:** counter **off** below the threshold, reveal refused until n ≥ k. Both default
-*on* today (V2:6138, V2:6139), so this is a default change plus a database guard.
+**Recommend:** counter **off** below the threshold, reveal refused until n ≥ k, both enforced
+in the database rather than in the stage component. Three of the four toggles default on
+today, so this is a default change plus a real guard, plus a correction to `liveGuard`'s copy
+if the copy is kept at all.
 
-**Why it needs you:** it is an extension of the k guarantee into a channel the guarantee was
-never written for, and **the phase report will have to say the mitigation is a mitigation and
-not a proof** — no gate can observe a room. That sentence is yours to accept, not mine to
-write on your behalf.
+**Why it needs you, and the part I am explicitly not writing.** No gate can observe a room.
+Whatever is built, the phase report will have to characterise what the guard does and does not
+achieve — **and that sentence is yours.** I will not write the project's own account of the
+limits of its anonymity guarantee on your behalf, and the draft's version of it was mine, not
+yours. Tell me the sentence and I will put it in the report verbatim; or tell me the answer
+and leave the sentence for when the phase runs.
 
 ### Q79 ● — The projected word cloud and its queue · NEEDS YOUR ANSWER
 
@@ -303,7 +333,10 @@ decision and it is yours.
 
 ### Q84 ●● — Quiz has assessment semantics · NEEDS YOUR ANSWER
 
-`certificate` (V2:6152), `quizPass` (V2:6159, default 70), `quizTries` (V2:6161, default 2).
+`certificate` (V2:**6153** — the draft said 6152, which is `instant`), `quizPass` (V2:6159,
+default 70), `quizTries` (V2:6161, default 2). The leaderboard is `quizBoard`, rendered at
+V2:**1928–1941** (the draft's V2:6186 is `closingLines`); its rows are `{team, score, tint}`,
+so it is team-level as claimed — measured, not assumed.
 **An employee who fails a mandatory quiz twice has produced an HR record.** Three
 sub-questions: retention (a failed assessment is employment documentation with a different,
 often statutory, retention and a different art. 17 answer, and `app.apply_retention` has one

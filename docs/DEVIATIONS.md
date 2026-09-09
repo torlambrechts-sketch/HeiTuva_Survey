@@ -2593,6 +2593,35 @@ believing it**, not in preventing the number.
 Recorded here because the same is true of most of this project's rules, and a
 reader who expects prevention will conclude they do not work.
 
+**INSTANCE 6, 2026-09-08 — in the batch document itself, and the cleanest example
+of the shape so far.** Assembling `docs/v2/06-remaining-decisions.md`, Q77's draft
+in `04-decisions.md` read «All nine exist as seeded packs today (CI asserts
+`packs = 22`)». **There is no such assertion anywhere in the suite**, and the
+measured count is **29** (`select count(*) from public.template_packs`).
+
+**THE CLAIM SURVIVED; ITS EVIDENCE NEVER EXISTED.** The nine survey types *are*
+seeded, so the sentence Q77 rests on is true and always was — which is precisely
+why nobody looked. **A citation supporting a true claim is the hardest kind to
+audit, because the only thing wrong with it is that it is not a citation.** This
+is neither instance 5's echo (a real line, wrong source) nor case 4's mute
+artefact (a real artefact, silent on the claim): the referenced artefact **does
+not exist**, and a reader checking the conclusion rather than the citation would
+confirm the entry and move on.
+
+Three line citations in Q78's own draft were wrong by two in the same pass —
+`counter` is V2:6136 not 6138, `manualReveal` V2:6137 not 6139, and V2:6177 is
+the bar mapping rather than the counter. All three were found by opening the
+bundle at those lines while preparing the question, which is the only method that
+finds them. And opening them found something larger, which is in
+`06-remaining-decisions.md` as Q78's first paragraph: **`liveGuard` (V2:6147)
+promises the threshold is respected on the projected screen, and nothing in the
+prototype's live block implements it** — `liveStage.counter` is
+`String(sv.responses.length) + " svar"` (V2:6169) and `liveRevealed` is a free
+client toggle (V2:6175). The only occurrence of any threshold concept in
+V2:6130–6190 is `liveGuard`'s own copy string. **The bundle asserts a security
+property it does not have**, which is this entry's shape with the highest stakes
+it has yet had.
+
 **Related:** **D109** (the same failure, in copy rather than in a count: a
 warning that did not describe the system), and `DECISIONS.md`'s header rule that
 this narrows.
