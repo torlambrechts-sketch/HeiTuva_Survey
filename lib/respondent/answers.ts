@@ -35,6 +35,19 @@ export const AnswerEntry = z.object({
   comment: z.string().max(5000).optional(),
   /** Free text from the low-score follow-up prompt. */
   follow_up: z.string().max(5000).optional(),
+  /**
+   * V2-10, Q84 — how long this answer took, in milliseconds, for the quiz time
+   * bonus. **Optional everywhere and written only in quiz mode**; the RPC drops
+   * a value outside 0…3600000 rather than refusing the submission, because
+   * losing a real answer over a stopwatch is the wrong trade (`M:0087`).
+   *
+   * It is the ONE quiz fact not derivable from rows already held, and it is
+   * safe only because a quiz requires NAMED answers
+   * (`app.guard_quiz_policy`) — so it can never become a timing channel on an
+   * anonymous response. `tests/db/quiz.test.ts` test 5 asserts that pairing
+   * rather than trusting it.
+   */
+  elapsed_ms: z.number().int().min(0).max(3_600_000).optional(),
 })
 export type AnswerEntry = z.infer<typeof AnswerEntry>
 

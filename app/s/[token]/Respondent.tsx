@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Locale } from '@/lib/i18n/locales'
 import { anonymityPromise } from '@/lib/respondent/anonymity-promise'
 import {
@@ -28,6 +28,7 @@ type Engage = {
 }
 
 export function Respondent({
+  quizMode,
   token,
   locale,
   offeredLocales,
@@ -48,6 +49,8 @@ export function Respondent({
   orgName: string
   title: string
   anonymity: 'anonymous' | 'named' | 'optional'
+  /** V2-10: draw `choice` as quiz tiles. Chrome only — the value is the same index. */
+  quizMode: boolean
   kThreshold: number
   respondentKind: 'person' | 'organisation'
   engage: Record<string, unknown>
@@ -88,11 +91,45 @@ export function Respondent({
   const oneAtATime = e.one_question !== false
   const total = questions.length
   const current = questions[step]
-  const shown = oneAtATime ? (current ? [current] : []) : questions
+  // Memoised because V2-10's first-shown clock depends on it: recomputed every
+  // render, the effect below would re-run every render and the eslint rule says
+  // so. The value is the same either way; the identity is what matters.
+  const shown = useMemo(
+    () => (oneAtATime ? (current ? [current] : []) : questions),
+    [oneAtATime, current, questions],
+  )
+
+  /**
+   * V2-10, Q84 — when a question was FIRST SHOWN, per question.
+   *
+   * A ref rather than state: it must not re-render anything, and re-rendering
+   * on every tick is what a `useState` clock would do. `Date.now()` at first
+   * sight, differenced at answer time.
+   *
+   * **Only in quiz mode.** The timing is stored on `answers.elapsed_ms`, which
+   * is safe because a quiz requires NAMED answers — recording how fast an
+   * ANONYMOUS respondent answered would be a timing channel against the
+   * anonymity this product's second invariant is about, and the way to be sure
+   * it never happens is not to measure it.
+   */
+  const shownAt = useRef<Record<string, number>>({})
+  useEffect(() => {
+    if (!quizMode) return
+    for (const q of shown) shownAt.current[q.id] ??= Date.now()
+  }, [quizMode, shown])
 
   const setValue = (q: RespondentQuestion, value: AnswerValue) => {
     setMissing(false)
-    setAnswers((a) => ({ ...a, [q.id]: { ...a[q.id], value } }))
+    setAnswers((a) => ({
+      ...a,
+      [q.id]: {
+        ...a[q.id],
+        value,
+        ...(quizMode && shownAt.current[q.id] !== undefined
+          ? { elapsed_ms: Math.min(3_600_000, Date.now() - shownAt.current[q.id]!) }
+          : {}),
+      },
+    }))
   }
   const setExtra = (q: RespondentQuestion, key: 'comment' | 'follow_up', v: string) =>
     setAnswers((a) => ({ ...a, [q.id]: { ...a[q.id], value: a[q.id]?.value ?? '', [key]: v } }))
@@ -309,7 +346,12 @@ export function Respondent({
               <p className="mt-[7px] text-[13px] text-mut">{t('pickMany')}</p>
             ) : null}
 
-            <QuestionInput question={q} value={entry?.value} onChange={(v) => setValue(q, v)} />
+            <QuestionInput
+              question={q}
+              value={entry?.value}
+              onChange={(v) => setValue(q, v)}
+              quizMode={quizMode}
+            />
 
             {low ? (
               <div className="mt-[18px] rounded-[13px] bg-ac3 p-4">

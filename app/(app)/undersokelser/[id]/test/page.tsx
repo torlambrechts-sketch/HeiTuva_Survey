@@ -42,7 +42,7 @@ export default async function TestModePage({ params }: { params: Promise<{ id: s
 
   const { data: survey } = await supabase
     .from('surveys')
-    .select('id, org_id, title, anonymity, respondent_kind, k_threshold, engage, langs, status')
+    .select('id, org_id, title, anonymity, respondent_kind, k_threshold, engage, langs, status, run_mode')
     .eq('id', id)
     .maybeSingle()
   if (!survey || survey.org_id !== viewer.orgId) notFound()

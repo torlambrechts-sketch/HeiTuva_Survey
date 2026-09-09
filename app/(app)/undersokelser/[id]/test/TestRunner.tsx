@@ -32,6 +32,14 @@ export function TestRunner({
     title: string
     orgName: string
     anonymity: 'anonymous' | 'named' | 'optional'
+    /**
+     * V2-10. **The preview draws the quiz tiles too**, and that is Q76's whole
+     * point restated: «all logikk kjører som for en ekte respondent» (V2:3323).
+     * A dry run that showed the plain option list would be a preview of a
+     * screen no respondent ever sees, which is exactly the class of thing test
+     * mode exists to prevent.
+     */
+    run_mode: string | null
     kThreshold: number
     respondentKind: 'person' | 'organisation'
     engage: Record<string, unknown>
@@ -91,6 +99,7 @@ export function TestRunner({
       orgName={survey.orgName}
       title={survey.title}
       anonymity={survey.anonymity}
+      quizMode={survey.run_mode === 'quiz'}
       kThreshold={survey.kThreshold}
       respondentKind={survey.respondentKind}
       engage={survey.engage}

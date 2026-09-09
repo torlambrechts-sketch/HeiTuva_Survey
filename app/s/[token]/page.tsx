@@ -34,6 +34,8 @@ type TokenSurvey = {
   org_default_lang: string | null
   invitation_lang: string | null
   anonymity: 'anonymous' | 'named' | 'optional'
+  /** V2-10: `standard` | `live` | `quiz`. Chrome only — a quiz draws tiles. */
+  run_mode?: string
   k_threshold?: number
   respondent_kind?: string
   engage: Record<string, unknown> | null
@@ -127,6 +129,7 @@ export default async function RespondentPage({
         orgName={survey.org_name ?? ''}
         title={survey.title}
         anonymity={survey.anonymity}
+        quizMode={survey.run_mode === 'quiz'}
         kThreshold={typeof survey.k_threshold === 'number' ? survey.k_threshold : 5}
         respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}
         engage={survey.engage ?? {}}

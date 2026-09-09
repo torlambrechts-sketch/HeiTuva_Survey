@@ -144,6 +144,11 @@ describe('(V2-10) the anonymity invariants are UNTOUCHED — diffed, not remembe
     // plus Q61's «derive, do not duplicate» removed the table: a quiz runs on a
     // NAMED survey, the answer key is on the question, so a score is a FUNCTION
     // of rows already held. There is no per-person score table to leak.
+    // **THE PLAN'S TEST 2 DID NOT PASS — IT BECAME UNNECESSARY**, and that is
+    // the stronger outcome. It asked to «assert the absence of the FK and of any
+    // query joining them», which is a test about a table that exists. A schema
+    // in which the join CANNOT BE WRITTEN needs no such assertion, and the one
+    // below is cheaper and total: the table is not there.
     expect(one(`select coalesce(to_regclass('public.quiz_attempts')::text, '')`)).toBe('')
     const scoreTables = psql(
       `select table_name from information_schema.columns
@@ -227,6 +232,22 @@ describe('(V2-10) THE LEADERBOARD IS A GATED AGGREGATE, NOT A SCOREBOARD', () =>
       having count(distinct r.id) >= app.k_for('${quiz}')
        order by 1`).map((r) => r[0]!)
     expect(shown, 'Team Design clears k=5').toContain('Team Design')
+    // ── WHY «ABSENT» AND NOT A PLACEHOLDER ROW ─────────────────────────────
+    //
+    // **The next person will be tempted to render Team Ledelse as a greyed row
+    // saying «for få svar», for symmetry with the other gated surfaces.** Do
+    // not. This is the same insight as differencing between report sections: a
+    // gated board that LOOKS COMPLETE leaks through its own silence. A reader
+    // who sees four teams listed, knows the company has six, and finds two of
+    // them rendered as «for få svar» has been told which two — and on a
+    // leaderboard that is «which two did badly», because a team that scored
+    // well and was small would be gated identically.
+    //
+    // The threshold SENTENCE is what carries the honesty (D42: it is a property
+    // of the surface, not a warning that appears when it bites), and
+    // `TeamBoard.tsx` renders it always, including when nothing is hidden. A
+    // sentence saying «teams below k are not shown» discloses nothing; a row
+    // per hidden team discloses the team.
     expect(shown, 'Team Ledelse has two people and is ABSENT — not zero, not «for få svar»')
       .not.toContain('Team Ledelse')
   })
@@ -340,5 +361,64 @@ describe('(V2-10) every column added by this phase has a writer', () => {
     // ignored reads as a capability and is silent about doing nothing.
     expect(src, 'no `instant` parameter').not.toMatch(/instant:\s*z\./)
     expect(src, 'no `certificate` parameter').not.toMatch(/certificate:\s*z\./)
+  })
+})
+
+describe('(V2-10) the respondent surface, and what its payload must NOT carry', () => {
+  it('15. BLOCKER — the token payload does not carry the answer key', () => {
+    // **The one thing a quiz cannot do.** `get_survey_for_token` renders
+    // `/s/[token]`, so anything in that payload is in a network response the
+    // respondent can read. `run_mode` is chrome and is fine; `answer_index`
+    // would hand every respondent the correct answer.
+    //
+    // Asserted against the FUNCTION BODY and against a real call, because the
+    // body could stop selecting it while a `select s.*` elsewhere put it back.
+    const src = one(
+      `select replace(regexp_replace(prosrc, '--[^' || chr(10) || ']*', '', 'g'), chr(10), ' ')
+         from pg_proc where proname = 'get_survey_for_token'`,
+    )
+    expect(src, 'the payload names run_mode').toMatch(/'run_mode'/)
+    expect(src, 'and never the key').not.toMatch(/answer_index/)
+
+    const payload = one(`select public.get_survey_for_token('${tag}-no-such-token', 'no')`)
+    expect(payload, 'and a real call returns no key either').not.toMatch(/answer_index/)
+  })
+
+  it('16. `run_mode` reaches the payload exactly once — D115, again', () => {
+    const n = Number(one(`
+      select (length(src) - length(replace(src, '''run_mode''', '')))
+             / length('''run_mode''')
+        from (select prosrc as src from pg_proc where proname = 'get_survey_for_token') q`))
+    expect(n, 'one insertion point, asserted after the fact as well as before').toBe(1)
+  })
+
+  it('17. the tiles are CHROME — the stored value is the option index either way', () => {
+    // The quiz tile writes `onChange(i)`, exactly as the standard list does.
+    // If it wrote a label or a tile id instead, the answer key comparison in
+    // `quiz_leaderboard` would silently score nobody — and a leaderboard of
+    // zeros looks like a quiz nobody did well in rather than like a bug.
+    const src = readFileSync('app/s/[token]/QuestionInput.tsx', 'utf8')
+    // Sliced from the quiz branch to the end of its own return, by markers that
+    // are part of the code rather than by a formatting-sensitive string — the
+    // first version of this test anchored on a JSX line whose indentation it
+    // guessed, and sliced an empty span, so it asserted nothing about an empty
+    // string and reported a failure that looked like a missing control.
+    const start = src.indexOf('if (quizMode && !multi)')
+    const end = src.indexOf('QUIZ_ICONS[i % 4]', start)
+    expect(start, 'the quiz branch exists').toBeGreaterThan(-1)
+    expect(end, 'and reaches its tile markup').toBeGreaterThan(start)
+    const tiles = src.slice(start, end)
+    expect(tiles, 'the tile writes the index').toMatch(/onClick=\{\(\) => onChange\(i\)\}/)
+    expect(tiles, 'and never the label').not.toMatch(/onChange\(label\)/)
+  })
+
+  it('18. the timing is written only in quiz mode — not on an anonymous survey', () => {
+    // The client half of test 5's pairing. `elapsed_ms` is measured only when
+    // `quizMode`, and quiz mode cannot exist on an anonymous survey because
+    // `app.guard_quiz_policy` refuses it — so the two rules together mean an
+    // anonymous respondent is never timed at all.
+    const src = readFileSync('app/s/[token]/Respondent.tsx', 'utf8')
+    expect(src, 'the clock is gated on quizMode').toMatch(/if \(!quizMode\) return/)
+    expect(src, 'and so is the write').toMatch(/quizMode && shownAt\.current\[q\.id\] !== undefined/)
   })
 })

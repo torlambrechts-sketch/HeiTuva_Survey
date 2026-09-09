@@ -12,7 +12,7 @@
   "tests/db/org-threshold.test.ts": 18,
   "tests/db/pack-roles.test.ts": 5,
   "tests/db/policy-panel.test.ts": 15,
-  "tests/db/quiz.test.ts": 18,
+  "tests/db/quiz.test.ts": 22,
   "tests/db/recurrence.test.ts": 13,
   "tests/db/round-freeze.test.ts": 6,
   "tests/db/schedules-rls.test.ts": 6,

@@ -36,14 +36,43 @@ function pick(on: boolean) {
  * to be here, on their own phones, and it has to work with a keyboard, a screen
  * reader and a thumb.
  */
+/**
+ * V2-10, Q83/D125 — the four quiz option tiles (V2:4084-4089, rendered at
+ * V2:3401-3405). `--qz1` is the ONE token in this project that is not the drawn
+ * hex: `#F26B21` put the label on the tile at 2.99:1 and Tor's decision was to
+ * darken it. `tests/unit/quiz-tiles.test.ts` recomputes every ratio from
+ * `globals.css`, so this list cannot drift below AA without failing.
+ */
+const QUIZ_TILES = ['var(--qz1)', 'var(--qz2)', 'var(--qz3)', 'var(--qz4)'] as const
+
+/**
+ * The four shape markers, V2:4084-4089. They repeat every four options, exactly
+ * as the bundle's `QUIZ_TILES[li % 4]` does — the shape is a SECOND channel
+ * beside the colour, which is what lets somebody who cannot separate the four
+ * hues still tell the tiles apart.
+ */
+const QUIZ_ICONS = [
+  'M12 3l9 16H3z',
+  'M12 2l10 10-10 10L2 12z',
+  'M12 2a10 10 0 100 20 10 10 0 000-20z',
+  'M3 3h18v18H3z',
+] as const
+
 export function QuestionInput({
   question,
   value,
   onChange,
+  quizMode = false,
 }: {
   question: RespondentQuestion
   value: AnswerValue | undefined
   onChange: (v: AnswerValue) => void
+  /**
+   * V2-10. Quiz mode renders `choice` as coloured tiles rather than as the
+   * standard list. It changes the CHROME only: the value written is the same
+   * option index, so `submit_response` and the answer key see no difference.
+   */
+  quizMode?: boolean
 }) {
   const t = useTranslations('respondent')
   const c = (question.config ?? {}) as Cfg
@@ -176,6 +205,45 @@ export function QuestionInput({
       const options = list(c, 'options')
       const multi = c.multi === true
       const chosen = Array.isArray(value) ? (value as number[]) : []
+
+      // V2-10: the quiz tiles (V2:3399-3408). A two-column grid of tall
+      // coloured buttons, each with its shape marker and its label. Only for a
+      // single-choice question: a quiz awards points for THE correct option, so
+      // a multi-select tile grid would be a control promising something the
+      // scoring cannot express.
+      if (quizMode && !multi) {
+        return (
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            {options.map((label, i) => {
+              const on = value === i
+              const tile = QUIZ_TILES[i % 4]!
+              return (
+                <button
+                  key={`${label}-${i}`}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => onChange(i)}
+                  className="touch-44 flex min-h-[84px] min-w-0 cursor-pointer items-center gap-3 rounded-[14px] px-[15px] py-3.5 text-left text-[15px] font-bold"
+                  style={{
+                    background: tile,
+                    color: 'var(--sf)',
+                    border: `3px solid ${on ? 'var(--ink)' : tile}`,
+                    boxShadow: on ? '0 0 0 3px rgba(25,21,16,.12)' : 'none',
+                  }}
+                >
+                  <span className="flex h-[30px] w-[30px] flex-none items-center justify-center">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d={QUIZ_ICONS[i % 4]} />
+                    </svg>
+                  </span>
+                  <span className="min-w-0 flex-1 leading-[1.3]">{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        )
+      }
+
       return (
         <div className="mt-5 flex flex-col gap-2.5">
           {options.map((label, i) => {
