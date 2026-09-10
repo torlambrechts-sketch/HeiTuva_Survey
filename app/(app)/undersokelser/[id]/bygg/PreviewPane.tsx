@@ -123,7 +123,7 @@ export function PreviewPane({
                not. `quizPreviewScore`'s «0 poeng» and «1 av {count}» are both
                real starting state. */
             <div
-              className="mb-3 flex items-center justify-between gap-2.5 rounded-[11px] px-3 py-[9px]"
+              className="mb-3 flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1 rounded-[11px] px-3 py-[9px]"
               style={{ background: 'var(--ac)' }}
             >
               <span className="whitespace-nowrap text-[11.5px] font-bold">

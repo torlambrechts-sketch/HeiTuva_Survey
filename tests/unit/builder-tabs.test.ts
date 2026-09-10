@@ -62,6 +62,18 @@ describe('the right pane has the bundle’s four tabs', () => {
     expect(builder).toContain("{tab === 'settings' ? (\n        <PolicyPanel")
   })
 
+  it('wraps below md, because four flex-1 tabs cannot shrink to 320px', () => {
+    /* CI run 110: every `bygg` state at scrollWidth 329 against 320px, 390px
+       clean. `flex-1` leaves `min-width: auto`, so each tab's floor is its label
+       plus 24px of padding — three fitted, four do not. RESPONSIVE.md § Tab
+       rails says wrap, keep the chips' dimensions, hide nothing, left-align, and
+       give the rows a gap that clears 44px hit areas on adjacent chips. */
+    expect(builder).toContain('flex flex-wrap gap-x-[3px] gap-y-1.5')
+    expect(builder).toContain('md:flex-nowrap')
+    // Nothing hidden and no new control: still one button per tab.
+    expect(builder).not.toMatch(/overflow-x-auto|snap-x/)
+  })
+
   it('no longer floats the build-mode switch above the rail', () => {
     // It lives inside RunModePanel now, which is where V2:580-587 draws it.
     expect(builder).not.toContain("aria-label={t('mode')}")

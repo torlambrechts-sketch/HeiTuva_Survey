@@ -250,8 +250,25 @@ export function Builder({
 
   const rightPane = (
     <div className="flex flex-col gap-[14px]">
+      {/* RESPONSIVE.md § Tab rails and chip groups, applied because B2 made this
+          rail FOUR tabs and CI run 110 found all six `bygg` states at
+          scrollWidth 329 against a 320px viewport — 390px was clean. Three
+          `flex-1` tabs shrank to fit; four cannot, because `flex-1` leaves
+          `min-width: auto` and each button's min-content is its label plus
+          24px of padding.
+
+          The section says exactly what to do and it is not a judgement call:
+          wrap to multiple rows, chips keep their dimensions, nothing hidden, no
+          new interaction, left-aligned. The row gap is the design's 6px step,
+          which clears the 4px minimum the section sets for 44px hit areas on
+          vertically adjacent chips.
+
+          NOTE FOR THE NEXT READER: § Three-pane Builder says the pinned row is
+          «three buttons using the existing tab chip styling». It is four now.
+          That sentence is a COUNT of the tabs that existed when it was written —
+          D129's failure, third instance, same document. */}
       <div
-        className="flex gap-[3px] rounded-[13px] p-1"
+        className="flex flex-wrap gap-x-[3px] gap-y-1.5 rounded-[13px] p-1 md:flex-nowrap md:gap-y-0"
         style={{ background: 'var(--sf2)' }}
         role="tablist"
       >
