@@ -40,6 +40,25 @@ two secrets are typed once and never committed.
 >    you did not know you had made or had failed to make.
 > 3. Only a matching fingerprint is evidence that the apply landed.
 >
+> **4. AND «HOW FAR BEHIND IS PROD» IS THE SAME QUESTION, WITH THE SAME ONLY ANSWER.**
+> `mcp__Supabase__apply_migration` stamps its OWN timestamp into
+> `supabase_migrations.schema_migrations`, not the repo filename's version, so a migration
+> applied through MCP is genuinely applied and its ledger row will never match its file.
+> **A version string is therefore not an identity, and the ledger cannot be diffed against
+> filenames** — not approximately, not as a lower bound. Measured 2026-09-10: 54 of prod's
+> 170 versions had no repo file and 7 repo files had no prod version, and those are ONE
+> artefact seen from two sides, not two findings. All seven were present on prod when
+> probed by object.
+>
+> This was not a hypothetical either. `docs/v2/06-remainder.md` carried «THIRTY MIGRATIONS
+> STAND UNAPPLIED» for a day, derived that way, describing a database that no longer
+> existed — under its own footnote saying to re-run the fingerprint rather than trust the
+> count. **A footnote is not a guard.** The guard is the command sitting where the number
+> is: fingerprint, or an existence probe written from what the migration CREATES, read out
+> of the file rather than guessed. A first probe guessed three object names and returned
+> three zeroes; **a negative from a probe written from memory is not evidence of absence.**
+> `06-remainder.md § 2.0` carries the worked query.
+>
 > **Normalise comments and whitespace before comparing function bodies**, or the signal
 > drowns: raw `md5(prosrc)` reported 29 of 74 functions as differing, of which exactly ONE
 > differed in substance. The other 28 were header comments stripped in transit.

@@ -3582,7 +3582,7 @@ taken.
 
 ---
 
-## D129 — a control no bundle draws, for the column that made every group empty
+### D129 — a control no bundle draws, for the column that made every group empty
 
 > **Numbered D125 when it was written, and renumbered here.** V2-10 had already taken
 > D125 for the quiz tiles' contrast, and I collided with it. `M:0090` and `M:0091` say
@@ -3638,7 +3638,7 @@ select is one component and one action to move.
 
 ---
 
-## D130 — «who writes this column?», answered for all ten
+### D130 — «who writes this column?», answered for all ten
 
 **S3, 2026-09-09.** CLAUDE.md's standing question has two answers, and the audit found that neither
 had been written down. `A7a-11`: **fifteen of the sixteen no-writer columns carried no column
@@ -3681,7 +3681,7 @@ looked total while being partial is worse than one that states its scope.
 
 ---
 
-## D131 — the gates that cannot see what they are trusted for
+### D131 — the gates that cannot see what they are trusted for
 
 **S4, 2026-09-09.** The audit's § 4.5, written down here because a limitation nobody records is
 indistinguishable from a limitation nobody has. These are not defects: every one is a gate that
@@ -3745,7 +3745,7 @@ limited» but **what its green means**, which is what each entry above states.
 
 ---
 
-## D132 — `get_peer_results` names the question when it refuses the number
+### D132 — `get_peer_results` names the question when it refuses the number
 
 **S4, 2026-09-09. Decided by Tor: acceptable. The reasoning, written down, because «acceptable»
 without it is indistinguishable from «not looked at».**
@@ -3787,7 +3787,7 @@ document says better. `B2-03`'s separate finding — that `submit_response` has 
 share-link token, so the caller who READS this is the caller who SETS its k — remains open and is
 listed as such in the S1–S4 report.
 
-## D133 — the bounce path is blocked on the provider, not on us
+### D133 — the bounce path is blocked on the provider, not on us
 
 **2026-09-10, with the Brevo sending path.** `survey_invitations.bounced_at` still has no
 writer, and this entry is the reason it is shipping that way rather than the reason it was
@@ -3828,7 +3828,7 @@ checked by hand is the event that makes this a defect rather than a limitation. 
 then means either a provider whose account exposes transactional webhooks, or an inbound route
 of our own — not a change to this schema, which is already correct and merely unwritten.
 
-## D134 — the provider's `messageId` is discarded, so nothing joins a row to Brevo's log
+### D134 — the provider's `messageId` is discarded, so nothing joins a row to Brevo's log
 
 **Found 2026-09-10, in the first proven production send.** `lib/mail/brevo.ts`
 reads Brevo's response and returns `{ ok: true, id: json.messageId ?? … }`. The
@@ -3870,7 +3870,7 @@ this is logged for the next phase rather than added mid-flight.
 draws, for the same reason, which is why they should be revisited together and not
 separately.
 
-## D135 — a recorded divergence nobody re-checks is the same failure as an unrecorded one
+### D135 — a recorded divergence nobody re-checks is the same failure as an unrecorded one
 
 **Found 2026-09-10, in the file whose only job is to describe production.** Tor
 named the rule. This is a sixth failure mode in **D110**'s family: not a count
