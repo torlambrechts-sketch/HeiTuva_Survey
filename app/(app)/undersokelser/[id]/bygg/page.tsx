@@ -12,7 +12,7 @@ import { Builder } from './Builder'
 import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
 
 /**
- * The Builder route (HeiTuva.dc.html:322-690).
+ * The Builder route (L:322-690).
  *
  * Everything that decides how a question renders comes from the registry in
  * lib/questions, and the quality rules come from the `quality_rules` table, so

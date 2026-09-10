@@ -21,7 +21,7 @@ export function ChipLink({
 }) {
   if (variant === 'segment') {
     // The pill-rail treatment: --sf and a shadow when on, transparent when off
-    // (HeiTuva.dc.html:1562, :3718).
+    // (L:1562, :3718).
     return (
       <Link
         href={href}

@@ -172,6 +172,36 @@ Where a claim is false, the correction is a decision like any other and outranks
 wording (the Q55 precedent above). `tests/db/help.test.ts` pins the **nine** corrected
 sentences so a re-seed from a newer bundle cannot put one back.
 
+### A BUNDLE CITATION CARRIES A BUNDLE PREFIX — `L:` / `V1:` / `V2:`
+
+**Added 2026-09-10 (B0).** `HeiTuva.dc.html` exists three times with three different line
+numberings, so `(HeiTuva.dc.html:387)` is not a citation — it is a line number with no
+coordinate system. The convention, matching what V2-10 already writes:
+
+| Prefix | Bundle |
+|---|---|
+| `L:` | `design-reference/` — the first handoff, Phase 1–7 as built |
+| `V1:` | `design-reference-v1/` — the second handoff |
+| `V2:` | `design-reference-v2/` — the third, and the one § 0.3's table hands to a v2 phase |
+
+**Twenty-eight citations under `bygg/` and `bibliotek/` were backfilled in B0, and the result
+is the reason this row exists: they are MIXED, not all v1.** Twenty-four resolve in the legacy
+bundle and four in v1 — `QuestionCard.tsx`'s `flex:1 1 220px` (`V1:387`), `PolicyPanel`'s panel
+(`V1:577-635`), and Bruksområder in `bibliotek/page.tsx` and `UseCaseCard` (`V1:1873-1893`,
+`V1:1877-1891`). **None resolves in v2.** Each was placed by locating a distinctive marker from
+the cited region in all three bundles — `Videre til utsending` is `L:486 · V1:529 · V2:549`,
+`{{ builderQs }}` is `L:340 · V1:383 · V2:410` — rather than by assuming a handoff.
+
+That mattered: the first pass of the fidelity measurement sampled ONE citation, found it in v1,
+and wrote «all of them are v1's numbers» into a commit. A blanket `V1:` backfill would have
+replaced twenty-four unlabelled citations with twenty-four **falsely labelled** ones, which is
+strictly worse than leaving them bare. **An enumeration mistaken for a property, in the method
+used to fix an enumeration mistaken for a property.**
+
+**113 further citations exist outside `bygg/` and `bibliotek/`** and are unprefixed (`grep -rn "HeiTuva\\.dc\\.html:[0-9]" app/ | wc -l`).
+They are out of B0's scope by construction and are prefixed by the phase that next reads each
+file, not in one sweep.
+
 ### THE BUNDLE CAUGHT UP WITH Q17/Q91 — and the app was already there
 
 **Added 2026-09-10 (Tor supplied a revised `HeiTuva.dc.html`; measured before installing.)**

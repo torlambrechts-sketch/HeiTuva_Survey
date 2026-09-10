@@ -42,6 +42,7 @@
   "tests/unit/anonymity-promise.test.ts": 13,
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/brevo-provider.test.ts": 17,
+  "tests/unit/builder-disclosure.test.ts": 5,
   "tests/unit/company-timezone.test.ts": 6,
   "tests/unit/dashboard-layout.test.ts": 14,
   "tests/unit/dashboard-panels.test.ts": 5,

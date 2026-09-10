@@ -333,7 +333,7 @@ export async function saveSurveyAsTemplate(input: unknown): Promise<BuilderResul
         ...config(q),
       })) as never,
       // Shared with the company, as the design saves it
-      // (HeiTuva.dc.html:3825 sets `private:false`) — the section is called
+      // (L:3825 sets `private:false`) — the section is called
       // "Firmaets maler" and the card's own toggle is what makes one private.
       // Both states stay inside the org either way; RLS scopes the row to it.
       private: false,

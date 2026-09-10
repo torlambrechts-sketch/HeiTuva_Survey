@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { estimatedMinutes } from '@/lib/questions/registry'
 import type { DraftQuestion } from './types'
 
-/** The faces the design renders for a smiley scale (HeiTuva.dc.html:3983). */
+/** The faces the design renders for a smiley scale (L:3983). */
 const SMILEYS = ['☹', '🙁', '😐', '🙂', '😀']
 
 /**
@@ -52,7 +52,7 @@ function previewChips(
 }
 
 /**
- * "Slik ser respondenten det" (HeiTuva.dc.html:650-680).
+ * "Slik ser respondenten det" (L:650-680).
  *
  * A static rendering, not a working respondent flow — that is Phase 3 at
  * /s/[token], where the real one is mobile-first and pixel-perfect against the
@@ -135,7 +135,7 @@ export function PreviewPane({
                 </div>
                 {q.type === 'scale' || q.type === 'slider' ? (
                   // The same per-type default the respondent surface applies
-                  // (HeiTuva.dc.html:2902-2903), so the preview shows what the
+                  // (L:2902-2903), so the preview shows what the
                   // respondent will actually see rather than two blanks.
                   <div className="mt-[6px] flex justify-between text-[11px] text-mut">
                     <span>{q.config.low_label || tr('scaleLowDefault')}</span>

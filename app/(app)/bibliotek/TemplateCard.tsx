@@ -19,7 +19,7 @@ export type TemplatePack = {
 }
 
 /**
- * Template card — HeiTuva.dc.html:1610-1626. 22px padding, 18px radius, tinted
+ * Template card — L:1610-1626. 22px padding, 18px radius, tinted
  * surface, min-height 290px, and the type chips filling the remaining space so
  * "Bruk mal" sits on the card's floor whatever the question count.
  */

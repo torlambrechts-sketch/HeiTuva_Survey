@@ -4,7 +4,7 @@ import { useOptimistic, useState, useTransition } from 'react'
 import { deleteTemplate, setTemplatePrivate } from './actions'
 
 /** The private/shared pill and the delete × on a company template
- *  (HeiTuva.dc.html:1576-1580). */
+ *  (L:1576-1580). */
 export function TemplateAdminControls({
   packId,
   isPrivate,

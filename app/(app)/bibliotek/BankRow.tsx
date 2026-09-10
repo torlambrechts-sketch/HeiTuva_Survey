@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { addBankQuestion, deleteBankQuestion } from './actions'
 
 /**
- * A question-bank row — HeiTuva.dc.html:1665-1679.
+ * A question-bank row — L:1665-1679.
  *
  * RESPONSIVE.md § Data tables, narrow row: badge + text + actions is three
  * fields that fit, so it stays a row and stacks below md only because the

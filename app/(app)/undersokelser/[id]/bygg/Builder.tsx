@@ -45,7 +45,7 @@ let seq = 0
 const newId = () => `${NEW_ID_PREFIX}${++seq}`
 
 /**
- * The Builder (HeiTuva.dc.html:322-690).
+ * The Builder (L:322-690).
  *
  * The whole draft is one piece of client state saved as a whole, debounced.
  * Field-by-field saves were the alternative and are worse here: a reorder
@@ -566,7 +566,7 @@ export function Builder({
             >
               {t('toSend')}
             </Link>
-            {/* The design's three controls (HeiTuva.dc.html:483-489). "Lagre
+            {/* The design's three controls (L:483-489). "Lagre
                 utkast" is a link to the list because the draft is already
                 saved — the debounce owns persistence, so a second Save button
                 that did nothing would be a lie about what it does. */}
