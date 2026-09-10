@@ -89,13 +89,22 @@ Two consequences, both cheap:
      when the bundle was drawn. **Check every host, URL and contact address against the
      PRODUCTION origin, and against whether the mailbox is actually staffed.**
 
-     Measured 2026-09-10: `heituva.no` appears **28 times** in this repository — 8 inside
+     **The first count of this was FOURTEEN, attributed to the bundles, and it was wrong on both
+     the number and the place.** Recorded rather than replaced, because that is what this file
+     says to do with a number nobody re-derived.
+
+     Measured 2026-09-10 —
+     `grep -ro 'heituva\.no' . | grep -v node_modules | grep -v '^./artifacts/' | wc -l` —
+     `heituva.no` appears **28 times** in this repository — 8 inside
      the three bundles, 5 quoted in DEVIATIONS, 9 in `.next/` build output derived from the
      shipped strings, and **6 that reached shipped copy** in `messages/{no,en}.json`. The
      production origin is `https://www.heituva.com`; `heituva.no` is not HeiTuva's domain and
-     never was. Two of the six were `send.smsLinkPlaceholder`, fixed in the file AND in
+     never was. **The useful split is 6 reached shipped copy and 22 did not** — a bundle
+     occurrence is inert, a `messages/*.json` occurrence is a sentence a customer reads.
+     Two of the six were `send.smsLinkPlaceholder`, fixed in the file AND in
      prod's `ui_messages` — **which is two edits, not one: the JSON is the seed, the table is
-     what the product serves, and changing the file changes nothing a user sees.** The other
+     what the product serves, and changing the file changes nothing a user sees — the file alone
+     is a correction nobody receives.** The other
      four are `personvern@heituva.no` in `legal.privacy6P` and `legal.privacy8P`, and they
      are the sharpest case in the category: **inventing a contact address in a privacy notice
      is the same error as inventing an origin, with a worse consequence — a data subject who
@@ -260,7 +269,17 @@ correct about its members and always silent about the member that has not arrive
 specification, two in a CI workflow. Neither of those is a database construct, which is the
 evidence that this section is not a note about Postgres.
 
-Seven instances, seven different constructs, one shape:
+**Extended 2026-09-10, after the mail tranche. Eight instances** — measured, not carried:
+`awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row.
+Tor called the new one the tenth and the ninth correction; the table held seven when I counted it,
+so this is the EIGHTH and the number is written as what re-derives. Said rather than quietly
+matched, because this file already records a carried number that was wrong for four phases
+(«61 of 83»), and the rule out of that — a divergence note carries the command that re-derives it —
+is the one being added beside D110 in the same breath. **If the two missing instances are real they
+are somewhere this table is not, and the command above will keep saying eight until they are in
+it.**
+
+Eight instances, eight different constructs, one shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -271,6 +290,7 @@ Seven instances, seven different constructs, one shape:
 | **RESPONSIVE.md's narrow-row clause** (S3/S2, D129) | «email + role select + status», the controls the row had when the clause was written | «the controls in this row, however many there turn out to be» |
 | `supabase start -x …storage-api…` in CI (S2) | what the *old* job, which ran only `tests/invariants`, needed | «the services the gates in THIS job touch» |
 | `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
+| **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -295,6 +315,35 @@ moves the example.
 The sixth and seventh are the same shape in CI, in one tranche, both mine: three instances in a
 single piece of work, which is the strongest evidence this section has that the shape is not
 about databases.
+
+**THE EIGHTH IS THE YEAR'S IRONY, AND THE ENUMERATION WAS WRITTEN BY ME, IN THE COMMIT THAT SAID
+THE SCRIPT EXISTED TO PREVENT TRANSCRIPTION ERROR.** `scripts/edge-bundle.ts` assembles the
+`mail-worker` payload because there is no `SUPABASE_ACCESS_TOKEN` here and the deploy goes through
+MCP by hand — the step that had already shipped v6 with comment blocks shortened. So the script
+prints per-file md5s, and its commit message says so.
+
+It asserted that each of the entry point's three imports was present before rewriting it, and said
+**nothing about the imports inside the files it copies**. `lib/mail/brevo.ts` is written
+`from './env'` — extension-less, which the app's tsconfig resolves and Deno does not. The running
+function has `./env.ts` **only because I typed the extension in by hand while transcribing an
+earlier payload.** So *the tool built to guarantee fidelity would have regressed the one thing
+hand-transcription got right*, and because `./env` is a VALUE import the failure would have been
+module resolution on the worker's first request — not a caught type error, not a failed deploy
+check, but production returning 500 on the first cron tick after the deploy.
+
+Three things make it the sharpest entry in this table:
+- **The enumeration and the guarantee were in the same file, written in the same sitting.** Knowing
+  the shape by name and having just written it down twice did not prevent committing it.
+- **It was found by a comparison, not by a gate.** `get_edge_function` against the repository —
+  the ninth check, aimed at a function instead of a migration. Nothing in CI knows Deno's
+  resolution rules; `tsc` resolves `./env` happily, which is exactly why the repo file is written
+  that way and is correct there.
+- **The fix was the property, then the proof, in that order.** Rewrite every extension-less
+  relative specifier, then assert over the FINISHED bundle that none survives — so index.ts and any
+  future edit are covered, and a fourth shared module needs no edit here. Then prove the assertion
+  fires before trusting it: a synthetic `./packs.json` gives exit 1 naming file and specifier.
+  «Prefer the fix that is robust against the construct nobody has thought of» applied to a
+  transcription tool.
 
 **Two consequences, and the second is the one that pays.**
 - A test, an allowlist reason or a guard should be stated as the property, and where it cannot

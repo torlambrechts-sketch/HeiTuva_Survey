@@ -2440,6 +2440,11 @@ present and structurally mute on the claim.**
 | 4 | «`app.k_for` (…floor **2** for natural persons since **Q91**)» | The function returned `greatest(s.k_threshold, 3)`. The sentence was written when the CHECK moved and the function did not | `CLAUDE.md` standing invariant 1; see **D109** |
 | 5 | Q64 «the freeze surface is **V2:5033**» — in three documents | **V2:5033 is real, is about the freeze, and is the wrong source.** It is a string inside `auditRows` — the changelog's *echo*. The card that STATES the rule is `freezeNote` at **V2:5030**: «Medlemskapet fryses når undersøkelsen sendes.» The answer to the open question was sitting in the artefact, in its own words | `03-plan.md`, `01-briefs.md`, `04-decisions.md`; bundle V2:5024–5036 |
 
+**A SIXTH FAILURE MODE WAS ADDED 2026-09-10 AS D135 — documentation that was true when
+written, with nothing binding it to reality afterwards.** It belongs to this entry's family
+and is written separately because its fix is mechanical rather than editorial: a divergence
+note carries the command that re-derives it.
+
 **INSTANCE 5 IS A FOURTH FAILURE MODE, and it is the one a citation rule is worst at
 catching** (Tor, 2026-09-08). The first four instances fail because the claim went stale, was
 never built, was already satisfied, or moved underneath. This one fails while being **real,
@@ -3864,3 +3869,62 @@ this is logged for the next phase rather than added mid-flight.
 **Not a blocker for the demo or a known-address pilot** — the same boundary D133
 draws, for the same reason, which is why they should be revisited together and not
 separately.
+
+## D135 — a recorded divergence nobody re-checks is the same failure as an unrecorded one
+
+**Found 2026-09-10, in the file whose only job is to describe production.** Tor
+named the rule. This is a sixth failure mode in **D110**'s family: not a count
+that went stale, not a claim never built, not a citation that is real and wrong —
+**documentation that was TRUE WHEN WRITTEN, with nothing binding it to reality
+afterwards.**
+
+`supabase/functions/README.md` carried a section headed **KNOWN DIVERGENCE,
+recorded rather than deployed over**, saying the deployed `mail-worker` had
+
+```ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function drain(
+  svc: any,
+```
+
+while the repository had `type ServiceClient = any`. It was accurate the day it
+was written and it justified NOT taking a third production deploy for a lint
+pragma, which was the right call. Then some deploy between v2 and v11 carried the
+repository's form, and the paragraph went on asserting the old one. Measured
+against `get_edge_function` on 2026-09-10: **the running function has the
+repository's `ServiceClient`, and has had it for some number of versions nobody
+can now name.** The note stood wrong for four recorded versions.
+
+**Why this is worse than an ordinary stale sentence.** The paragraph existed
+*because* the project had twice been hurt by an unrecorded difference between a
+repository and a running system — `overview_activity` hand-applied, and two
+functions whose comment blocks were abridged in transit. It was the remedy. And a
+remedy that describes production wrongly is more expensive than no remedy at all,
+because the next reader consults it INSTEAD of looking: it is a gate nobody
+reads (D110's own second half) wearing the costume of diligence. **A divergence
+note is a claim about two systems at once, so it decays twice as fast as prose
+about either.**
+
+**The fix is not more documentation.** More prose has the same half-life. It is
+D110's own rule applied to divergence notes specifically: **a divergence note
+carries the command that re-derives it**, beside the claim, so checking costs one
+paste. `supabase/functions/README.md` now says what is divergent AND how the
+comparison was taken (`get_edge_function` against the repository, the ninth check
+aimed at a function instead of a migration), and the same discipline produced
+`npm run edge:bundle`'s per-file md5 manifest — which exists so that «did what I
+sent match what I generated» is a question with an answer rather than a memory.
+
+Applied in the same sitting to two other carried numbers, which is the test of
+whether a rule is real:
+- **CLAUDE.md's enumeration table** now states `awk '/^\| Where \| The
+  enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header, because a
+  correction arrived calling the new instance the tenth when the table held seven.
+  The number is written as what re-derives it, and the disagreement is recorded
+  rather than matched.
+- **The `heituva.no` sweep** states
+  `grep -ro 'heituva\.no' . | grep -v node_modules | grep -v '^./artifacts/' | wc -l`
+  beside its 28, because the first count was fourteen and wrong on both the
+  number and the place.
+
+**The general form, and it is short:** if a sentence asserts something about a
+system you are not looking at while you read it, it needs the command that looks.

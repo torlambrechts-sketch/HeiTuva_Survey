@@ -44,12 +44,22 @@ read the queue at all when the provider is unconfigured.
 
 ## What is deployed, and one known divergence
 
-**Deployed 2026-09-10, version 2** to `jmhhszsnjfqgclxzhciq`, `verify_jwt: false`
-(the function authenticates its own caller — see the header of `index.ts`).
+**Deployed to `jmhhszsnjfqgclxzhciq`, `verify_jwt: false`** (the function
+authenticates its own caller — see the header of `index.ts`). **The version number
+is deliberately not written here** — it said «version 2» while the platform was at
+11, because secret saves redeploy the function and this file cannot know about
+them. Read it from `list_edge_functions`; see § *What the running function actually
+is* for why the two counts differ.
 
 `get_edge_function` returns four files, not five: `types.ts` is imported with
 `import type`, which Deno erases, so the platform tree-shook it out of the
 bundle. Sending it is still correct — it is what the deploy type-checks against.
+
+> **RE-DERIVE BEFORE TRUSTING ANY CLAIM BELOW — it is about a system you are not
+> looking at.** `mcp__Supabase__get_edge_function(project_id, 'mail-worker')`
+> against `npm run edge:bundle`'s manifest. This banner exists because the
+> paragraph that follows stood wrong for four versions (DEVIATIONS **D135**):
+> a divergence note carries the command that re-derives it.
 
 **THE PRAGMA DIVERGENCE THIS SECTION USED TO RECORD IS GONE, and the way it went
 is the point.** It said the deployed function had the `eslint-disable-next-line`
@@ -59,7 +69,12 @@ the running function carries the repository's form — some deploy between v2 an
 now picked it up, and nobody updated this paragraph. **A recorded divergence that
 nobody re-derives is the same failure as an unrecorded one**, just slower: it
 described the running system wrongly for four versions, in the file whose whole
-job is to describe the running system.
+job is to describe the running system. Recorded as **D135**, a sixth failure mode
+in D110's family: documentation true when written, with nothing binding it to
+reality afterwards. It is worse than ordinary staleness because this paragraph
+WAS the remedy for an unrecorded divergence, and a remedy that describes
+production wrongly costs more than none — the next reader consults it instead of
+looking.
 
 **What IS still divergent, measured rather than assumed:** the deployed
 `index.ts` and `brevo.ts` carry SHORTENED versions of several comment blocks —
@@ -97,7 +112,7 @@ unchanged: **if a payload is too large, the answer is more calls, not shorter
 comments.** I took the shortcut anyway under time pressure to unblock a send,
 which is exactly when it gets taken.
 
-## env-check — a one-off diagnostic, to be DELETED
+## env-check — a one-off diagnostic, DELETED 2026-09-10
 
 Deployed 2026-09-10 to answer one question: three probes in a row returned a
 byte-identical key fingerprint, so the value had never changed and the question
@@ -122,11 +137,25 @@ for no benefit.
 present, four trailing characters, and the project ref. It is behind the mail
 worker's own credential.
 
-**DELETE IT once a send is proven.** A standing, authenticated endpoint that
-enumerates environment metadata is small surface but it is surface, and the
-normal `?probe=1` on the worker answers «is the key good» without it. The source
-stays in the repository so it can be redeployed in one call if this ever
-recurs — which is the right trade: cheap to bring back, nothing left running.
+**IT IS GONE.** Deleted by Tor from the dashboard once the send was proven, and
+confirmed here by `list_edge_functions` returning `mail-worker` alone — by
+listing, not by the report that it had been done. The MCP server exposes no
+delete tool for Edge Functions and the CLI needs a `SUPABASE_ACCESS_TOKEN` this
+environment does not have, so naming the click was the whole of what could be
+done from here.
+
+The reasoning that made deletion right, kept because the trade is the reusable
+part: a standing authenticated endpoint that enumerates environment metadata is
+small surface but it is surface, and the worker's own `?probe=1` answers «is the
+key good» without it. `supabase/functions/env-check/index.ts` stays in the
+repository so it can be redeployed in one call if this recurs — cheap to bring
+back, nothing left running.
+
+This heading previously read «to be DELETED» and carried a standing instruction.
+Left that way it would have been a to-do that reads as an open risk forever, or
+worse, a note somebody trusts to mean the endpoint is still up. **D135's rule
+applies to instructions as much as to claims: the state changed, so the note
+changes, and it names how the change was verified.**
 
 ## What the running function actually is, compared on 2026-09-10
 
