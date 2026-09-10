@@ -283,7 +283,55 @@ button.
 | **`verify:responsive`, `verify:visual`** | **never ran** — roundtrip fails ahead of them |
 
 So the two things I most wanted checked — **the two-column type palette and the overlay's
-thirteen-chip row at 390px** — are still unverified, and that is what the re-run is for.
+thirteen-chip row at 390px** — were still unverified, and the re-runs are what follow.
+
+### Runs 108, 110, 112 — three more reds, and the third one is the one to read
+
+**Run 108 — `verify:browser`, `bibliotek-bank`, desktop and mobile.** «An error occurred in the
+Server Components render». Mine, from B3: the labels object handed to `BankRow` carried
+`addedInto: (title) => t(...)`, and `bibliotek/page.tsx` is a **server** component. **A function
+cannot be serialised to a client component**, so the whole bank tab 500s. The draft's title is
+known where the labels are built, so the finished string crosses the boundary instead.
+`targetSurveyTitle` then had no reader and is gone — a prop with no reader is a column with no
+writer one layer up. Asserted as the property: the test reads the whole labels object and fails on
+any `=>` in it.
+
+**Run 108 also gave me the thing I had not been able to see all session:** every Builder capture
+green, **desktop and mobile** — `bygg/default`, `avansert`, `vis`, `innstillinger`, `policy-open`,
+`policy-low-warning`. So B2's four tabs and two-column palette render without console or network
+errors at 1440px and 390px.
+
+**Run 110 — `verify:responsive`, first time it had ever run this session.** All six `bygg` states
+at **scrollWidth 329 against a 320px viewport**; 390px clean everywhere. Established by comparison
+rather than assumed: run 105, on `0273d75` before B0, has `bygg 320px scrollWidth=320` and
+`0 finding(s)`. **The 9px is mine and it arrived with the fourth tab.**
+
+I found the rail in `rightPane`, reasoned that four `flex-1` tabs cannot shrink below label +
+24px padding, wrapped it per RESPONSIVE.md § Tab rails, and shipped that as the fix.
+
+**Run 112 came back byte-identical. 329, all six.** That is the measurement saying the diagnosis
+was wrong, not the fix.
+
+**THERE ARE TWO RAILS.** `rightPane`'s `role="tablist"` renders inside the **sheet**, so it is on
+screen only when the sheet is open. `Builder.tsx:533`'s `xl:hidden` row is pinned under the header
+and renders on **every** `bygg` state at 320px. I fixed the first one I found and called it the
+fix.
+
+**The tell was in the data the whole time.** `bygg/default` has no sheet open and still overflowed.
+`bygg/vis` reports `controls=0` in both the passing and the failing run. Neither is consistent with
+a rail that lives inside a sheet. I had those two numbers in front of me in run 110 and read past
+them, because I had already found something that looked like the answer.
+
+Both wrap now, and the test asserts the property — it **counts** the rails that map `TABS` and
+requires `flex-wrap` on each — so a third fails a unit test rather than a CI round. Proven to fire
+by un-wrapping the pinned row.
+
+**And RESPONSIVE.md itself was wrong, independently.** § Three-pane Builder read «a button row
+pinned under the header — **three buttons** using the existing tab chip styling». Three was a count
+of the tabs that existed the day it was written. **D129's failure, third instance, in the file that
+already carries two write-ups of it** — the narrow-row clause S3 broke while quoting it approvingly,
+and D141's 14px hit-area number measured on one pair. Corrected to «one button per tab … and the
+row wraps», with the instruction to count rather than trust the sentence.
 
 **Not done, deliberately:** no capture state was added for the new Generelt tab. The apparatus is
 frozen and CLAUDE.md names *manifests* explicitly among the things not to add mid-phase. Logged as
