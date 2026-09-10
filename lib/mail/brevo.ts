@@ -243,9 +243,16 @@ export async function brevoAccountProbe(): Promise<{
       message?: string
       email?: string
     }
+    /*
+      400 rather than the send path's 200. Brevo's IP-restriction refusal ends
+      with the URL of the page that fixes it, and at 200 the URL was cut to
+      `https://a` — a diagnostic that names the fault and withholds the remedy.
+      The send path keeps 200 on purpose: that string goes into an error column
+      read in aggregate, not into a human's hands.
+    */
     const detail = res.ok
       ? `account ${body.email ?? 'ok'}`
-      : [body.code, body.message].filter(Boolean).join(': ').slice(0, 200)
+      : [body.code, body.message].filter(Boolean).join(': ').slice(0, 400)
     return { ok: res.ok, status: res.status, detail, key: fingerprint }
   } catch (e) {
     return {
