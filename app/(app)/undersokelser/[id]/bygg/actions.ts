@@ -388,7 +388,18 @@ export type PolicyResult =
       ok: false
       // 'namedSurvey' is V2-9's: app.guard_run_mode_anonymous refuses live on a
       // survey that is not anonymous.
-      error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'namedSurvey' | 'failed'
+      // 'quizGuard' is V2-10's pair, surfaced 2026-09-10 when the card was
+      // unlocked: app.guard_quiz_policy refuses a quiz on an anonymous survey
+      // and on a statutory pack. ONE member for both, because builder.quizGuard
+      // states both halves and the editor needs the rule, not which clause fired.
+      error:
+        | 'forbidden'
+        | 'invalid'
+        | 'locked'
+        | 'belowOrgFloor'
+        | 'namedSurvey'
+        | 'quizGuard'
+        | 'failed'
     }
 
 export async function setSurveyPolicy(input: unknown): Promise<PolicyResult> {
@@ -444,10 +455,14 @@ export async function setSurveyPolicy(input: unknown): Promise<PolicyResult> {
  */
 const RunModeInput = z.object({
   surveyId: z.string().uuid(),
-  // `quiz` is not accepted: V2-10 builds it, and `M:0083`'s CHECK would refuse
-  // it anyway. Rejecting it HERE as well means the refusal is a validation
-  // error rather than a database error surfaced as «failed».
-  runMode: z.enum(['standard', 'live']),
+  /*
+    `quiz` IS accepted. It was excluded here with the note «V2-10 builds it, and
+    M:0083's CHECK would refuse it anyway» — both halves written before V2-10 and
+    false the moment it landed: the feature shipped, and `surveys_run_mode_check`
+    has read `ARRAY['standard','live','quiz']` ever since. Measured against prod
+    on 2026-09-10 rather than taken from the comment.
+  */
+  runMode: z.enum(['standard', 'live', 'quiz']),
 })
 
 export async function setRunMode(input: unknown): Promise<PolicyResult> {
@@ -465,6 +480,12 @@ export async function setRunMode(input: unknown): Promise<PolicyResult> {
     .eq('org_id', viewer.orgId)
   if (error) {
     if (/live_requires_anonymous/.test(error.message)) return { ok: false, error: 'namedSurvey' }
+    // Both quiz guards come back as one named refusal, because `builder.quizGuard`
+    // already states both halves and a reader picking the mode needs the rule,
+    // not which of the two clauses tripped.
+    if (/quiz_requires_named|quiz_not_on_statutory_pack/.test(error.message)) {
+      return { ok: false, error: 'quizGuard' }
+    }
     console.error(`setRunMode failed: ${error.message}`)
     return { ok: false, error: 'failed' }
   }

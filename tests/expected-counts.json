@@ -57,6 +57,7 @@
   "tests/unit/provider-config.test.ts": 14,
   "tests/unit/quality.test.ts": 22,
   "tests/unit/question-roles.test.ts": 12,
+  "tests/unit/quiz-reachable.test.ts": 9,
   "tests/unit/quiz-tiles.test.ts": 4,
   "tests/unit/refusal-copy.test.ts": 11,
   "tests/unit/register-stats.test.ts": 5,

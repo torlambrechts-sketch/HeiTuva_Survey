@@ -343,7 +343,6 @@
     "runModeLiveDesc": "All-hands, workshop and gathering",
     "runModeQuiz": "Quiz",
     "runModeQuizDesc": "Training and certification",
-    "runModeQuizNote": "Quiz is not built yet",
     "runModeNamedSurvey": "Live requires anonymous answers. The QR gives each device a one-time link, and the system does not know who the device belongs to.",
     "quizTitle": "Quiz mode",
     "quizTimeBonus": "Time bonus",

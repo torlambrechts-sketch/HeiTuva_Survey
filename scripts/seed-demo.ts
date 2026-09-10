@@ -189,6 +189,65 @@ async function main() {
   // a state no reset reaches and therefore not a state at all.
   await svc.from('surveys').update({ run_mode: 'live' }).eq('id', above.id)
 
+  /*
+    THE QUIZ, seeded 2026-09-10 — the first state in this file that the product
+    could not reach until the same commit.
+
+    V2-10 built quiz end to end (`M:0085`–`M:0088`, the answer key, the k-gated
+    `quiz_leaderboard`, tiles on `/s/[token]`, the Lagtavle on Resultater) and
+    the run-mode card stayed locked behind «Quiz er ikke bygget ennå». So no
+    seed could honestly carry a quiz: setting `run_mode` in SQL would have been
+    a fixture reaching a state no customer could — DEVIATIONS D139, deliberately.
+    The card is unlocked now, so this is a state a customer reaches, which is
+    the whole difference.
+
+    NAMED and non-statutory, because `app.guard_quiz_policy` refuses both — a
+    quiz awards points to a person, and a duty under the law has no correct
+    answers. The seed does not work around either guard; it satisfies them.
+
+    SIX answer, one over k, so the Lagtavle returns real rows instead of its
+    gated shape. That is what moves `quiz_leaderboard` from CHECKED to PROVEN in
+    `verify:policy`: a k-gated RPC with no data is never asked to refuse.
+  */
+  const quiz = await createSurvey(
+    org.id,
+    'Personvern for nyansatte',
+    [
+      {
+        type: 'choice',
+        text: 'Hvor lenge kan vi lagre svar fra en undersøkelse?',
+        config: { options: ['Så lenge vi vil', 'Så lenge formålet varer', 'For alltid'] },
+      },
+      {
+        type: 'choice',
+        text: 'Hva gjør du hvis en kollega ber om innsyn i egne data?',
+        config: { options: ['Sier nei', 'Sender saken til personvernombudet', 'Ignorerer den'] },
+      },
+    ],
+    { anonymity: 'named', audience: 'Nyansatte', langs: ['no'] },
+  )
+
+  // The fasit. `points` defaults to 100; `answer_index` is what makes a question
+  // scorable and is CHECK-constrained to types that can carry one.
+  for (const [i, q] of quiz.questions.entries()) {
+    await svc.from('survey_questions').update({ answer_index: 1 }).eq('id', q.id)
+    void i
+  }
+
+  await svc.from('surveys').update({ run_mode: 'quiz' }).eq('id', quiz.id)
+
+  const quizRound = await createRound(quiz, 8, { groupId: org.groupId })
+  await submitResponses(
+    quizRound.tokens,
+    (i) => ({
+      // Four of six get the first right, five of six the second: a leaderboard
+      // where every team scores identically shows nothing about the feature.
+      [quiz.questions[0]!.id]: { value: i < 4 ? 1 : 0 },
+      [quiz.questions[1]!.id]: { value: i < 5 ? 1 : 2 },
+    }),
+    6, // > k = 5, so the Lagtavle is not gated
+  )
+
   // V2-9: one live session on the round above, for the reason the objection and
   // the support message above exist — `verify:policy` reports a table PROTECTED
   // BUT UNPROVEN when it is empty, because an empty table is never asked to

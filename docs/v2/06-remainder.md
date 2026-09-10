@@ -111,9 +111,18 @@ decided, no work), **Q78 (live counter — OPEN, with Tor)**, **Q89 (V2-11 — O
 
 - **V2-9:** `live_sessions.step` has no writer — it renders when set and the presenter cannot
   set it. The ten live toggles (V2:6133-6142) are not built as a settings surface.
-- **V2-10:** `quizPreview`'s chips render a pass mark and an attempt count, which Q84 did not
-  build, so they are not rendered at all. **The demo seed has no quiz survey**, so
-  `quiz_leaderboard` is CHECKED but its screen is not photographable.
+- **V2-10 — CORRECTED 2026-09-10, because this line misled the fidelity review.**
+  It read «quizPreview's chips render a pass mark and an attempt count, which Q84 did not build,
+  so they are not rendered at all» — one sentence describing the BUNDLE and the BUILD with no
+  boundary between them, which reads as an outstanding defect. It is not one. The **bundle**
+  unconditionally pushes `(st.quizPass || 70) + " % for å bestå"` and `(st.quizTries || 2) + " forsøk"`;
+  **our `QuizPanel` renders neither**, deliberately and with its reason written beside it. V2-10
+  got this right and nothing is owed.
+  What WAS owed, and was invisible behind that line: **no customer could turn quiz on at all.**
+  `RunModePanel` typed `Mode` as `'standard' | 'live'`, locked the quiz card and printed «Quiz er
+  ikke bygget ennå» — true when written, false from the moment V2-10 landed (D135 in shipped copy).
+  Fixed 2026-09-10; the demo seed now carries a quiz, so `quiz_leaderboard` can be PROVEN rather
+  than CHECKED and the screens can be photographed for the first time. See `docs/review/04-quiz.md`.
 - **V1-6 / D102:** the demo seed reaches only states the current code creates.
 - **Mail tranche (D133, D134):** `bounced_at` has no writer — this Brevo account exposes no
   Transactional → Webhooks, so there is no delivered event and no bounce event (**D133**); and the

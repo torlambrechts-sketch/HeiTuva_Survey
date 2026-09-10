@@ -349,7 +349,7 @@ export function Builder({
             liveDesc: t('runModeLiveDesc'),
             quiz: t('runModeQuiz'),
             quizDesc: t('runModeQuizDesc'),
-            quizNote: t('runModeQuizNote'),
+            quizGuard: t('quizGuard'),
             namedSurvey: t('runModeNamedSurvey'),
             failed: t('policyError_failed'),
           }}
