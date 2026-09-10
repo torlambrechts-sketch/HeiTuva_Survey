@@ -71,3 +71,31 @@ Written down because an unrecorded difference between a repository and a running
 system is how the two stop being the same thing, and this project has paid for
 that lesson twice: `overview_activity` hand-applied, and the two functions whose
 comment blocks were abridged on their way to the MCP payload.
+
+## Deploy log, and a drift I introduced myself
+
+| Version | What |
+|---|---|
+| 1–2 | first deploy; then the `NEXT_PUBLIC_APP_URL` precondition |
+| 4 | `?probe=1`, credential trimming, Brevo's `{code,message}` in the error |
+| 5 | cold start to rule out a stale secret; carried the Q6b classification comment |
+| 6 | the probe's key fingerprint (length, `xkeysib-` prefix, last four) |
+
+**VERSION 6 WAS DEPLOYED WITH ABRIDGED COMMENTS, and that is a divergence, not a
+style choice.** The repository carries the full Q6b reasoning at the
+classification site and the full rationale blocks elsewhere; the v6 payload
+carries shortened versions of several of them, because I trimmed prose to keep
+a hand-transcribed payload manageable.
+
+That is precisely the failure OPERATIONS.md records twice — comments abridged on
+the way to an MCP payload, once in this session's migrations and once the day
+before — and it is recorded here rather than quietly left, because an
+unrecorded difference between a repository and a running system is how the two
+stop being the same thing.
+
+**The behaviour is identical**: every abridgement is inside a comment. Nothing
+executable differs. The next deploy that carries a real code change should be
+sent from the generated bundle in full, and the rule from OPERATIONS.md stands
+unchanged: **if a payload is too large, the answer is more calls, not shorter
+comments.** I took the shortcut anyway under time pressure to unblock a send,
+which is exactly when it gets taken.

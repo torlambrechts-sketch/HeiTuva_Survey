@@ -195,9 +195,31 @@ export async function brevoAccountProbe(): Promise<{
   ok: boolean
   status: number
   detail: string
+  key?: string
 }> {
   const apiKey = readEnv('BREVO_API_KEY')?.trim()
   if (!apiKey) return { ok: false, status: 0, detail: 'BREVO_API_KEY not set' }
+
+  /*
+    A FINGERPRINT OF THE KEY WE ARE ACTUALLY SENDING, so that «Brevo does not
+    know this key» can be told apart from «the secret never took».
+
+    Those are different problems with different fixes and the API cannot
+    distinguish them: a stale secret and a wrong key both come back 401 «Key not
+    found». Without this the only way to choose between them is to ask a human
+    to re-check a dashboard they have already checked.
+
+    WHAT IS DISCLOSED, AND WHY IT IS SAFE. The length, whether it carries
+    Brevo's `xkeysib-` prefix, and the LAST FOUR characters. Four trailing
+    characters of a ~70-character secret leave it computationally untouched —
+    this is the card-number convention — while being the thing a human can
+    compare against a dashboard at a glance. The key itself is never returned,
+    never logged, and this whole path is behind the worker's own authentication.
+  */
+  const fingerprint =
+    `len=${apiKey.length} xkeysib=${apiKey.startsWith('xkeysib-')} ` +
+    `tail=…${apiKey.slice(-4)}`
+
   try {
     const res = await fetch('https://api.brevo.com/v3/account', {
       headers: { 'api-key': apiKey, accept: 'application/json' },
@@ -210,12 +232,13 @@ export async function brevoAccountProbe(): Promise<{
     const detail = res.ok
       ? `account ${body.email ?? 'ok'}`
       : [body.code, body.message].filter(Boolean).join(': ').slice(0, 200)
-    return { ok: res.ok, status: res.status, detail }
+    return { ok: res.ok, status: res.status, detail, key: fingerprint }
   } catch (e) {
     return {
       ok: false,
       status: 0,
       detail: `request failed (${e instanceof Error ? e.name : 'unknown'})`,
+      key: fingerprint,
     }
   }
 }
