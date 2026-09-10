@@ -244,17 +244,42 @@ side already parameterised all three (Q95, V2-3a), so this changes nothing to bu
 means the bundle is now internally inconsistent, saying «under terskelen» in its copy and
 `< 5` in its code, and a later reader should take the copy.
 
-**The rendered baseline: two screens moved, six churn.** `verify:reference` re-rendered v2
-and eight PNGs changed. Rendering the *identical* bundle a second time and comparing
-byte-for-byte, **six of the eight differ from themselves**: `live`, `live-revealed`, `send`,
-`rapport-editor`, `rapport-editor-filter`, `rapport-editor-del`. The prototype calls
-`new Date` in eleven places, so those screens carry a wall-clock value. Only
-**`admin-personvern.png` and `hjelp.png`** changed because of the nine lines. Nothing
-automated consumes these images — VERIFY.md § Gate 3a has a human open them and compare
-property by property — so this is not a broken gate, but it does mean **«the baseline
-changed» is not evidence that the bundle changed**, and a real one-screen diff can hide in
-the noise. Logged, not fixed: the apparatus is frozen, and the fix would be an edit to a
-bundle.
+**The rendered baseline — CORRECTED, and the correction is the point.** The first pass of this
+said «two screens moved, six churn», attributed the churn to `new Date`, and dropped six PNGs.
+Both halves were wrong, because **the comparison that produced them was not the comparison it
+claimed to be**: a `git restore` ran between the two renders, so the second side of the diff was
+git HEAD — an OLD-bundle render — not a second new render. Re-measured with three clean renders
+and HEAD~1 held separately:
+
+| Screen | render↔render (same bundle) | HEAD~1 → new bundle |
+|---|---|---|
+| `admin-personvern` | **0 px** | 25163 px · rows 1291-1409 — line 2790 |
+| `hjelp` | **0 px** | canvas **1970 → 1930** — line 5095's shorter blurb |
+| `rapport-editor` | 27865 px · rows 1538-1669 | 37192 px · rows **590**-1775 — lines 4660/4666 |
+| `rapport-editor-filter` | 3801 px | 16396 px · rows 590-1775 |
+| `rapport-editor-del` | 71699 px | 12044 px · rows 590-1775 |
+| `live`, `live-revealed`, `send` | 551 / 726 / 1262 px | 663 / 630 / 1205 px — **same rows, same magnitude** |
+
+So **five screens moved for the nine lines, not two.** The three `rapport-editor` baselines carry
+lines 4660 and 4666 and are committed, noise included — a baseline still showing «Ledelse har
+færre enn fem svar» would be a false statement, which is worse than a jittery true one. `live`,
+`live-revealed` and `send` show no revision effect at all (their diff against HEAD~1 is
+indistinguishable from their diff against themselves), so they stay as committed.
+
+**And the cause is `Math.random()`, not the clock.** Cropping the differing rows and reading
+them: `send` differs at `…/s/q2rrzlu` versus `…/s/qpagbqf`, and `live` at
+`heituva.no/qwala` — both `uid()`, **V2:4133**, `"q" + Math.random().toString(36).slice(2,8)`.
+**One call site, not eleven.** The eleven `new Date` sites (V2:4533, 5289, 5376, 5395, 5527,
+5531, 5541, 5542, 5547, 5550, 6014) are mostly seeded constants (`new Date(2026, 8, 7 + …)`) or
+`getFullYear()`, and the render-to-render diff for `rapport-editor` **starts at row 1538, below
+the «generert 10. september 2026» line at row ~600** — the date line is byte-identical between
+renders, which rules the clock out directly. `rapport-editor`'s remaining jitter is in the team
+bars (values and colours change between renders); it is downstream of `uid()` on the evidence
+available, but that link is **not established** and is written here as unestablished.
+
+**A visual baseline with non-deterministic content is not a baseline.** Whether to freeze
+`uid()` at capture time or exclude those screens is a decision — `docs/review/05-decisions.md`,
+Q104.
 
 **A gate limit, logged rather than built** (the apparatus is frozen): `verify:copy`
 (`scripts/verify/threshold-copy.ts`) reads `messages/no.json` and `messages/en.json` only.

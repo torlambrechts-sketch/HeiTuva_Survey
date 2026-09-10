@@ -4302,3 +4302,76 @@ link. **Reasoning from the source would not have found it** — the wrap is a
 function of six shipped preset names, one seeded layout title and a 390px
 viewport. Worth recording as a route: when the gate cannot run here, its
 artifact can still be read here.
+
+---
+
+## D142 — Help-article prose is shipped copy that no gate reads (a LIMITATION)
+
+**Measured 2026-09-10. Decided as Q103.**
+
+`verify:copy` (`scripts/verify/threshold-copy.ts`) reads `messages/no.json` and `messages/en.json`
+and nothing else. The twelve help articles are seeded from the design bundle into
+`help_article_translations` (`scripts/seed-help.ts`), so **every sentence in them is shipped copy
+that is structurally invisible to the one gate written to catch a fixed number near a threshold
+word.**
+
+**The instance, and it is not hypothetical.** «Fem er standard. For sensitive temaer bør dere bruke
+åtte.» has been the lead of *Sett terskelen for virksomheten* since V2-6. It asserts a fixed number
+for a threshold that `organizations.default_k_threshold` makes settable 3–10 (`M:0034`) — exactly
+the class Q55 forbids and exactly the shape `verify:copy` was written to find. It sat in production
+until 2026-09-10 and tripped nothing, because it was never in a file the gate opens. It was found by
+reading the corrected bundle's diff, not by any check.
+
+**The apparatus stays frozen, so this is a limit and not a new gate.** The protection is the
+human claim-set sweep in CLAUDE.md's ADDING A BUNDLE checklist, step 7, which now covers
+`help_article_translations` as a surface alongside `messages/*.json` — same treatment, same
+question of every sentence: is this true of the running database? Whether `verify:copy`'s *inputs*
+should grow to include the table is a separate decision and is not taken here.
+
+**What makes it worth a numbered entry rather than a line in a phase report.** The gate is not
+wrong and its allowlist is not stale — it is looking in the right way at the wrong set. That is a
+different failure from a rule with a hole in it, and it is the second time this project has hit it:
+`verify:i18n` was missing `survey_questions.text` and `duty_definitions.basis` for the same reason.
+**A sweep's SCOPE ages exactly like an allowlist's contents**, and nothing re-derives it.
+
+---
+
+## D143 — The rendered reference baselines are non-deterministic, and it hid a real change
+
+**Measured 2026-09-10. Open as Q104.**
+
+Three clean renders of one unchanged bundle, compared byte-for-byte:
+
+| Screen | differs from itself |
+|---|---|
+| `live` | 551 px (0.011%) |
+| `live-revealed` | 726 px (0.011%) |
+| `send` | 1262 px (0.010%) |
+| `rapport-editor` | 27865 px (0.398%), rows 1538-1669 |
+| `rapport-editor-filter` | 3801 px (0.054%) |
+| `rapport-editor-del` | 71699 px (1.025%), rows 1045-1669 |
+| `admin-personvern`, `hjelp` | **0 px** |
+
+**The cause is `Math.random()`, and the first answer I gave was wrong.** Cropping the differing rows
+and reading them: `send` renders `…/s/q2rrzlu` in one pass and `…/s/qpagbqf` in the next; `live`
+renders `heituva.no/qwala`. Both are `uid()` — **V2:4133**, `"q" + Math.random().toString(36).slice(2,8)`.
+**One call site.** The first pass of this attributed it to the clock and named eleven `new Date` sites
+(V2:4533, 5289, 5376, 5395, 5527, 5531, 5541, 5542, 5547, 5550, 6014); those are mostly seeded
+constants (`new Date(2026, 8, 7 + …)`) or `getFullYear()`, and `rapport-editor`'s render-to-render
+diff **starts at row 1538, below its «generert …» date line at row ~600, which is byte-identical
+between renders.** The date was ruled out by the measurement that was supposed to support it.
+`rapport-editor`'s residual jitter is in the team bars; it is downstream of `uid()` on the available
+evidence and that link is **not established**.
+
+**The cost, which is the reason this is an entry and not a footnote.** A baseline that differs from
+itself is read as drift by whoever compares next — and it already caused the opposite error here.
+Three `rapport-editor` baselines were dropped as churn in the same session, when lines 4660 and 4666
+had genuinely moved in them; **five screens changed for the bundle revision, not two.** The
+comparison that produced the wrong count was itself wrong: a `git restore` ran between the two
+renders, so the second side of the diff was git HEAD rather than a second render. **An apply is not
+evidence, a comparison is — and a comparison is only evidence if both sides are what you think they
+are.**
+
+Nothing automated consumes these images (VERIFY.md § Gate 3a has a human open them), so this is not
+a broken gate. Whether to seed `Math.random` in the capture harness, exclude the six screens, or
+accept and annotate is Q104; editing a bundle is not among the options.
