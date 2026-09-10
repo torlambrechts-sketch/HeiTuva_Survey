@@ -226,7 +226,11 @@ one thing, and naming it is cheaper than rediscovering it a fifth time. **The fa
 writing down the cases you can see and treating that list as the rule.** The list is always
 correct about its members and always silent about the member that has not arrived.
 
-Four instances, four different constructs, one shape:
+**Extended 2026-09-10, after S1–S4.** Three more, and all three landed in ONE tranche — one in a
+specification, two in a CI workflow. Neither of those is a database construct, which is the
+evidence that this section is not a note about Postgres.
+
+Seven instances, seven different constructs, one shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -234,10 +238,33 @@ Four instances, four different constructs, one shape:
 | «interpolates `{k}`» as an allowlist reason (D110 addition) | clause 1 of the string | «nothing in this string asserts a fixed number» |
 | `revoke … from public` (D115, second mechanism) | the PUBLIC pseudo-role | «no unauthenticated role may execute this» |
 | Referential maintenance as «triggers and FKs» (V2-9) | the two constructs that had bitten | «any rule over a column the database may change on your behalf» |
+| **RESPONSIVE.md's narrow-row clause** (S3/S2, D129) | «email + role select + status», the controls the row had when the clause was written | «the controls in this row, however many there turn out to be» |
+| `supabase start -x …storage-api…` in CI (S2) | what the *old* job, which ran only `tests/invariants`, needed | «the services the gates in THIS job touch» |
+| `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
 
-The last one is the clearest, because **CHECK constraints arriving as the third construct is
-what proved the first two were examples someone had read as the list.** Two instances look
-like a category; three make you ask what the category actually is.
+The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
+as the third construct is what proved the first two were examples someone had read as the list.**
+Two instances look like a category; three make you ask what the category actually is.
+
+**THE FIFTH IS THE SHARPEST, BECAUSE THE ENUMERATION WAS IN A SPECIFICATION AND THE PHASE THAT
+BROKE IT QUOTED IT WHILE BREAKING IT.** `docs/RESPONSIVE.md` decides card-vs-row by whether the
+controls fit, and then illustrates it: «This is the Brukere case: email + role select + status fit
+cleanly». That parenthesis is a COUNT of the controls that existed the day it was written, not a
+property of the row. S3 added a fourth control to that row — the group select — and the sentence
+became false silently, with no gate able to see it: `verify:responsive` is the gate that would
+have, and it was one of the thirteen that never ran. It failed within one run of being scheduled,
+with four blockers at 390px and 320px.
+
+What makes it worth keeping is the comment S3 wrote directly above the new control. It cited the
+clause **approvingly** — «RESPONSIVE.md § Data tables, narrow row: three fields that fit» — in the
+same edit that made «three» wrong. **A specification's worked example is the most quotable thing
+in it and the part most likely to be an enumeration**, so quoting one back is not evidence that
+you are complying with it. Read the RULE the example illustrates, and ask whether your change
+moves the example.
+
+The sixth and seventh are the same shape in CI, in one tranche, both mine: three instances in a
+single piece of work, which is the strongest evidence this section has that the shape is not
+about databases.
 
 **Two consequences, and the second is the one that pays.**
 - A test, an allowlist reason or a guard should be stated as the property, and where it cannot
