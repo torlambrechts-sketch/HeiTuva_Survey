@@ -4139,6 +4139,30 @@ by `tests/unit/live-step.test.ts`, whose fourth assertion is that the seed no
 longer carries it and whose last is the trigger for bringing `step` back with a
 writer if presenter navigation is ever built.
 
+**A note from the CI run that landed this, worth keeping for the gate rather
+than for the shape.** Dropping the column removed one test from
+`tests/db/no-writer-columns.test.ts`, which loops the set into one `it` per
+entry — 13 became 12 — and the census caught it and failed the run, saying in
+its own words: *a file that collects fewer tests than committed has stopped
+checking something; if the drop is intended, lower the number in the same
+commit.* The drop WAS intended and I had not lowered it. **The census was
+right, and it is the only gate that could have been**: every one of the 969
+tests passed.
+
+Two things follow. First, the census signal is **not available locally in this
+environment** — Docker is unavailable, so `vitest run tests/unit` is the most
+that runs here and the census then reports every db file as «did not run at
+all», which is noise rather than a check. The number can only be verified in
+CI, so lowering a floor is a change whose correctness is not observable at the
+moment it is written.
+
+Second, and this belongs beside **D131**: `verify:hermetic` runs the suite
+twice, before and after deliberate pollution, and inherits its exit code. A
+census failure therefore surfaced as **«NOT HERMETIC»** — a verdict about
+something that run never tested, printed in place of the real cause, on a run
+where the suite was green both times. The gate works; its VERDICT is narrower
+than the word it prints. Logged, not fixed: the apparatus is frozen.
+
 **Where to look for more of it:** any column whose only writer is the seed. That
 set is enumerated and asserted in `tests/db/no-writer-columns.test.ts`, and it
 now holds exactly one — `tasks.due_at`, which should be checked against this
