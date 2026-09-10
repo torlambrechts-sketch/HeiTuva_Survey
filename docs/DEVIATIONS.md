@@ -3945,3 +3945,120 @@ whether a rule is real:
 
 **The general form, and it is short:** if a sentence asserts something about a
 system you are not looking at while you read it, it needs the command that looks.
+
+### D136 — `live_sessions.step` names a position the product cannot be in
+
+**2026-09-10.** Asked to build the missing writer for `live_sessions.step`
+(the sixth «who writes this column» instance), writer-only, no new screen beyond
+what the bundle draws. **The writer was not built, and the reason is the
+finding.**
+
+`step` renders as the small uppercase label above the live stage's question —
+`LiveStage.tsx:209`, bundle V2:1841 `{{ liveStage.step }}`. The demo seed sets
+it to **«Spørsmål 2 av 2»**.
+
+**No live session can be on question 2 of 2.** The stage renders `barsQuestion`,
+and `page.tsx:175` computes it as `firstScale?.text ?? null` — the first scale
+question, chosen on the server. There is no presenter control that moves between
+questions: the bundle's stage carries exactly two buttons, `onLiveReveal` and
+`goBuild`, and the code has no advance either.
+
+So the instruction and the bundle are in conflict, and the conflict is real
+rather than a gap in either: **the writer cannot exist until the navigation it
+would record exists.** Building that navigation is a feature — it changes what
+the live stage shows, needs its own copy, and nobody has drawn or decided it.
+The two ways to write `step` without it are both forbidden here:
+
+- inventing an advance control is the restyling CLAUDE.md's control-substitution
+  rule exists to refuse;
+- writing a plausible label server-side on every render is fabricating data in
+  the UI, and would also make a GET mutate.
+
+**The seed is the sharper half.** D102's standing limitation is that the demo
+seed reaches only states the current code creates. This is that sentence
+inverted: the seed reaches a state the code **cannot** create, and the result is
+a demo that shows a reviewer a navigation feature the product does not have. A
+seeded value is indistinguishable from a working one on screen — which is the
+whole reason «a column whose only writer is the seed is exactly the finding» is
+a rule.
+
+**Two ways out, both decisions rather than work:**
+1. **Build presenter navigation** as its own scoped piece, and `step` becomes
+   its record — the writer follows for free.
+2. **Derive and drop.** `step` is a pure function of (question shown, question
+   count), both of which the page already holds. Q61's «derive, do not
+   duplicate», and V2-10's precedent of removing `quiz_attempts` outright.
+   Dropping a column on the remote project is destructive, so it is asked for
+   rather than taken.
+
+Pinned by `tests/unit/live-step.test.ts` (5). The second assertion fails the day
+presenter navigation arrives — which is the moment this entry stops being true
+and the writer becomes buildable.
+
+### D137 — Turnstile was configured in the dashboard and absent from the deployment
+
+**2026-09-10.** The keys were set, and `request_demo` was still unprotected.
+Measured on the live origin: `https://www.heituva.com/` returns **zero**
+Turnstile markup — no `cf-turnstile` div, no Cloudflare script — with
+`x-vercel-cache: MISS`, `age: 0` and `no-store`, so the page was rendered fresh
+by the running function rather than served from an edge cache.
+
+`Turnstile({ siteKey })` is `if (!siteKey) return null`, and `page.tsx` reads
+`process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY` in a **server** component. Null
+markup therefore means that variable is undefined **inside the running
+deployment** — which is one operand of `turnstileConfigured()`'s AND, so the
+verifier's early `return true` was live.
+
+**Why the variable was set and absent at the same time: Vercel snapshots
+environment variables into a deployment.** Editing them in the dashboard does
+not reach deployments that already exist; a redeploy does. `export const dynamic
+= 'force-dynamic'` removes the *other* staleness — build-time inlining of a
+`NEXT_PUBLIC_` value into the client bundle — and says nothing about the
+function's environment. **I asserted earlier in the same session that no
+redeploy would be needed, and that was wrong**; recorded rather than quietly
+corrected, because it is the kind of half-true mechanism that reads as settled.
+
+**The general form, which is why this is an entry and not a note:** a control
+has TWO configurations — the one an operator edits and the one the running
+system holds — and «I set it» is a claim about the first. `env | grep` on a
+laptop, a dashboard screenshot and a Vercel settings page all confirm the first
+and none confirms the second. The observable is the running system's BEHAVIOUR:
+here, whether the widget the server renders exists at all.
+
+Fixed on the operator's side by a redeploy. Fixed on ours by D138.
+
+### D138 — a half-configured Turnstile passed everything through
+
+**2026-09-10, found while proving D137 rather than by any gate.**
+`turnstileConfigured()` was `Boolean(TURNSTILE_SECRET_KEY && NEXT_PUBLIC_TURNSTILE_SITE_KEY)`
+and `verifyTurnstile` opened with `if (!turnstileConfigured()) return true`.
+
+Two variables, three states — and the third had no handling:
+
+| | old behaviour | now |
+|---|---|---|
+| neither set | pass (local, CI — nothing to solve) | unchanged |
+| both set | enforce | unchanged |
+| **exactly one set** | **pass** | **refuse** |
+
+**The site-key-only case is the dangerous one and it is not exotic**: it is what
+a half-finished configuration looks like, and it *renders Cloudflare's widget on
+the splash* while verifying nothing. A visible control that enforces nothing —
+the reviewer's eye confirms exactly the thing the code is not doing. D115's
+shape (a revoke that grants nothing; an allowlist reason true of one clause),
+arriving on the only unauthenticated write surface in the product.
+
+`Boolean(A && B)` is a correct sentence about A and B and silent about
+A-without-B — the enumeration shape, in two variables. Replaced by
+`turnstileState(): 'absent' | 'partial' | 'configured'`, with **partial
+refusing** and naming which half is missing in the log (never the values). Both
+partial directions are loud: secret-only means no widget and no token,
+site-key-only means a solved widget rejected. Loud is the point — the failure
+mode it replaces was silent on a live origin.
+
+Pinned by `tests/unit/turnstile-state.test.ts` (11), which failed on its
+assertions before the fix — `expected true to be false` on both partial cases —
+and `tests/unit/marketing-guard.test.ts` (5), which asserts the property over
+the file rather than over today's two actions: **every exported server action in
+`app/(marketing)/actions.ts` calls `guard()` before it parses or touches an
+RPC**, with the action list derived from the source.

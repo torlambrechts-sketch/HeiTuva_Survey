@@ -42,12 +42,15 @@
   "tests/unit/anonymity-promise.test.ts": 13,
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/brevo-provider.test.ts": 17,
+  "tests/unit/company-timezone.test.ts": 6,
   "tests/unit/dashboard-layout.test.ts": 14,
   "tests/unit/dashboard-panels.test.ts": 5,
   "tests/unit/engagement.test.ts": 12,
   "tests/unit/i18n-overlay.test.ts": 5,
   "tests/unit/import.test.ts": 20,
+  "tests/unit/live-step.test.ts": 5,
   "tests/unit/mail-env.test.ts": 7,
+  "tests/unit/marketing-guard.test.ts": 5,
   "tests/unit/member-status.test.ts": 7,
   "tests/unit/pack-questions.test.ts": 5,
   "tests/unit/policy-warnings.test.ts": 17,
@@ -62,5 +65,6 @@
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/sentry-scrub.test.ts": 8,
   "tests/unit/threshold-line.test.ts": 5,
-  "tests/unit/threshold-tier.test.ts": 13
+  "tests/unit/threshold-tier.test.ts": 13,
+  "tests/unit/turnstile-state.test.ts": 11
 }

@@ -828,6 +828,7 @@
     "fContact": "Contact person",
     "fEmail": "Email",
     "fDpo": "Data protection officer",
+    "fTimezone": "Time zone for sending",
     "companyNote": "The organisation number and contact person are used in the data processing agreement and in the footer of the invitations respondents receive.",
     "controllerTitle": "Data controller",
     "controllerBody": "{org} is the data controller for the personal data. HeiTuva is the data processor and processes data only on instruction.",

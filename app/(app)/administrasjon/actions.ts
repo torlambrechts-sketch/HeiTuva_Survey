@@ -46,6 +46,19 @@ const CompanyInput = z.object({
   contact_name: z.string().trim().max(200).optional().or(z.literal('')),
   contact_email: z.string().trim().email().max(200).optional().or(z.literal('')),
   dpo: z.string().trim().max(200).optional().or(z.literal('')),
+  /*
+    Q50. Validated here as well as by the `organizations_timezone` trigger,
+    because the trigger raises and a raised exception fails the WHOLE company
+    form on a field the user may not have touched. The shape only — «looks like
+    an IANA zone name» — since the authoritative set is `pg_timezone_names` and
+    duplicating it here would be an enumeration standing in for a lookup.
+  */
+  timezone: z
+    .string()
+    .trim()
+    .min(1)
+    .max(64)
+    .regex(/^(UTC|[A-Za-z]+\/[A-Za-z0-9_+-]+(\/[A-Za-z0-9_+-]+)?)$/),
 })
 
 export async function saveCompany(_prev: AdminResult | null, formData: FormData): Promise<AdminResult> {
@@ -59,6 +72,7 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
     contact_name: formData.get('contact_name'),
     contact_email: formData.get('contact_email'),
     dpo: formData.get('dpo'),
+    timezone: formData.get('timezone'),
   })
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
@@ -72,6 +86,9 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
       contact_name: parsed.data.contact_name || null,
       contact_email: parsed.data.contact_email || null,
       dpo: parsed.data.dpo || null,
+      // NOT `|| null`, unlike its neighbours: the column is NOT NULL with a
+      // real default, and nulling it would raise inside the trigger.
+      timezone: parsed.data.timezone,
     })
     .eq('id', admin.orgId)
   if (error) {

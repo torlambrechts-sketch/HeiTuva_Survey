@@ -828,6 +828,7 @@
     "fContact": "Kontaktperson",
     "fEmail": "E-post",
     "fDpo": "Personvernombud",
+    "fTimezone": "Tidssone for utsending",
     "companyNote": "Organisasjonsnummer og kontaktperson brukes i databehandleravtalen og i bunnteksten på invitasjonene respondentene mottar.",
     "controllerTitle": "Behandlingsansvarlig",
     "controllerBody": "{org} er behandlingsansvarlig for personopplysningene. HeiTuva er databehandler og behandler data kun etter instruks.",
