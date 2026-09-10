@@ -473,7 +473,41 @@ describe('(V2-9) `run_mode` — the column has a writer, and the rule is the dat
     // validate it.
     const src = readFileSync('app/(app)/undersokelser/[id]/bygg/actions.ts', 'utf8')
     expect(src, 'a server action writes run_mode').toMatch(/run_mode:\s*parsed\.data\.runMode/)
-    expect(src, 'behind a Zod enum that excludes quiz').toMatch(/z\.enum\(\['standard', 'live'\]\)/)
+
+    /*
+      REWRITTEN 2026-09-10. This line used to read
+      `expect(src, 'behind a Zod enum that excludes quiz').toMatch(/z\.enum\(\['standard', 'live'\]\)/)`
+      — and it failed the moment quiz became reachable, correctly, because it
+      was pinning the enum's MEMBERSHIP AT THE TIME rather than the rule this
+      test is about.
+
+      The rule is «the column has a writer and the writer validates». «Excludes
+      quiz» was a fact about an unfinished feature, and encoding it as an
+      invariant meant the test would have to be edited by whoever finished it —
+      which is the enumeration-mistaken-for-a-property shape wearing a test's
+      clothes. Worse than the usual case: a test that pins the current state
+      turns finishing the work into breaking the suite, and the cheap way out is
+      to edit the number rather than ask what it was for.
+
+      Stated as the property instead: **the server boundary's enum is exactly the
+      set the database CHECK allows.** Derived from `pg_constraint` at run time,
+      so a fourth mode needs no edit here, and a boundary that drifts from its
+      constraint in EITHER direction fails — too permissive lets a value through
+      to a raised exception surfaced as «failed», too narrow makes a legal state
+      unreachable, which is precisely what happened to quiz for a whole phase.
+    */
+    const [row] = psql(`
+      select pg_get_constraintdef(con.oid)
+        from pg_constraint con
+        join pg_class c on c.oid = con.conrelid
+       where c.relname = 'surveys' and con.conname = 'surveys_run_mode_check'`)
+    const allowedByDb = [...(row?.[0] ?? '').matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]!).sort()
+    expect(allowedByDb, 'the CHECK was not found').not.toHaveLength(0)
+
+    const enumSrc = src.match(/runMode: z\.enum\(\[([^\]]*)\]\)/)?.[1] ?? ''
+    const allowedByZod = [...enumSrc.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]!).sort()
+
+    expect(allowedByZod, 'the Zod enum must be exactly what the CHECK allows').toEqual(allowedByDb)
   })
 })
 

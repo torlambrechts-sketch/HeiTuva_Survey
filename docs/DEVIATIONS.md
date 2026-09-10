@@ -4206,3 +4206,47 @@ apparatus is frozen.
 set is enumerated and asserted in `tests/db/no-writer-columns.test.ts`, and it
 now holds exactly one — `tasks.due_at`, which should be checked against this
 question rather than assumed to be the harmless kind.
+
+### D140 — a test that pins the current state turns finishing the work into breaking the suite
+
+**2026-09-10, found by CI run 97 when the quiz card was unlocked.** 977 of 978
+tests passed. The one failure was `tests/db/live.test.ts:18`, V2-9's «THE COLUMN
+HAS A WRITER — asserted, because it nearly did not»:
+
+```ts
+expect(src, 'behind a Zod enum that excludes quiz')
+  .toMatch(/z\.enum\(\['standard', 'live'\]\)/)
+```
+
+**The test was right about its rule and wrong about how it wrote it.** The rule
+is «`run_mode` has a writer and the writer validates» — that is what V2-9 was
+protecting, and it is a good test. «Excludes quiz» is not that rule. It is a
+fact about an unfinished feature, frozen into an assertion.
+
+**So finishing quiz broke the suite.** Not because anything regressed — the
+database CHECK had allowed `'quiz'` since `M:0085`, the guards were in place, 26
+quiz tests were green — but because a test had recorded the temporary state as
+though it were the invariant.
+
+**This is the enumeration-mistaken-for-a-property shape wearing a test's
+clothes, and it is the nastiest member of that family so far.** The others cost
+a missed case. This one costs something worse: **it makes completing the work
+look like a defect**, and the cheap way out is to edit the expectation until the
+suite is green again — which is exactly the move that would have taught nobody
+anything, and which a phase under time pressure will take.
+
+The shape has a tell: **an assertion that names a thing it expects to be
+ABSENT.** «Excludes quiz», «has no X yet», «is not built» — every one of those is
+a sentence about today rather than about the rule, and every one has to be
+revisited by whoever adds the thing.
+
+**Restated as the property, derived at run time:** the server boundary's Zod
+enum is exactly the set `surveys_run_mode_check` allows, read from
+`pg_constraint`. A fourth mode needs no edit here, and drift fails in BOTH
+directions — too permissive lets a value reach a raised exception surfaced as
+«failed», too narrow makes a legal state unreachable, which is precisely what
+happened to quiz for a whole phase (`docs/review/05-quiz.md`).
+
+Verified against the real inputs before trusting it, since no database runs in
+the environment that wrote it: the CHECK text from prod and the actual source
+both extract to `["live","quiz","standard"]`.
