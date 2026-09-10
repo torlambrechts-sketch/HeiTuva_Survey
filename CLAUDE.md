@@ -497,6 +497,14 @@ the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
 
+**The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
+two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
+5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
+them and `CENSUS_WRITE=1` could not run. **The census asserts a FLOOR (`got < want`), so an
+understated entry is not a failure — it is a silently weakened guard for that one file**, which
+is why it was corrected by hand rather than left for the next full run to notice. The next
+`CENSUS_WRITE=1` on a machine with a database should confirm 7 and nothing else moved.
+
 **V2-10 took the census 798 → 820 across 53 files** (`tests/db/quiz.test.ts` 18,
 `tests/unit/quiz-tiles.test.ts` 4)
 and 5a3 **64 of 89 → 65 of 90**: `quiz_leaderboard` is a new SECURITY DEFINER
