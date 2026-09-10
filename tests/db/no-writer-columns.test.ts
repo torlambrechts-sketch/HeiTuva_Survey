@@ -43,7 +43,6 @@ const NO_WRITER_SET: [table: string, column: string][] = [
   ['groups', 'lead_member_id'],
   ['report_shares', 'expires_at'],
   ['live_sessions', 'created_by'],
-  ['live_sessions', 'step'],
   ['tasks', 'due_at'],
   ['organizations', 'timezone'],
 ]
@@ -107,14 +106,20 @@ describe('every column the audit found without a writer answers the question', (
     expect(commentOf('organizations', 'timezone')).toContain('saveCompany')
   })
 
-  it('two are written by the demo seed and by nothing else', () => {
+  it('one is written by the demo seed and by nothing else', () => {
     const seedOnly = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'seed-only')
       .map(([t, c]) => `${t}.${c}`)
       .sort()
     // CLAUDE.md's sentence, word for word: «A COLUMN WHOSE ONLY WRITER IS THE
-    // SEED IS EXACTLY THE FINDING». These two are recorded as that rather than
-    // filed with the columns nothing writes at all.
-    expect(seedOnly).toEqual(['live_sessions.step', 'tasks.due_at'])
+    // SEED IS EXACTLY THE FINDING». Recorded as that rather than filed with the
+    // columns nothing writes at all.
+    //
+    // `live_sessions.step` was the second, and left this set by being DROPPED
+    // (M:0098, D136/D139) rather than by gaining a writer: the state its seeded
+    // value described — a position between questions — is one the product
+    // cannot be in. A column can leave the no-writer set in two ways, and this
+    // is the first time it happened by deletion.
+    expect(seedOnly).toEqual(['tasks.due_at'])
   })
 
   it('the remaining six are written by nothing at all', () => {

@@ -206,7 +206,6 @@ async function main() {
     round_id: aboveRound.id,
     code: 'DEMO01',
     status: 'closed',
-    step: 'Spørsmål 2 av 2',
     revealed: true,
     closed_at: new Date().toISOString(),
     expires_at: new Date(Date.now() - 3600_000).toISOString(),

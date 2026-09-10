@@ -2,63 +2,62 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /*
-  `live_sessions.step` — WHY THE WRITER WAS NOT BUILT, pinned so the reason
-  expires loudly instead of quietly.
+  `live_sessions.step` IS GONE (`M:0098`, DEVIATIONS D136/D139), and these
+  assertions keep it gone for the right reason.
 
-  The column is `text`, nullable, rendered by the live stage as the small
-  uppercase label above the question (`LiveStage.tsx:209`, bundle V2:1841
-  `{{ liveStage.step }}`). The demo seed sets it to **«Spørsmål 2 av 2»**.
+  It labelled a position between questions — the seed said «Spørsmål 2 av 2» —
+  that the product has no way to be in: the stage renders `barsQuestion`, which
+  `page.tsx` computes as `firstScale?.text ?? null`, and no control anywhere
+  moves between questions. Q61 refuses storing what can be derived; this was
+  worse, storing something that does not exist. A derived value duplicated can
+  at least disagree about something real.
 
-  THAT VALUE DESCRIBES A PRODUCT THAT DOES NOT EXIST. The stage shows
-  `barsQuestion`, and `page.tsx` computes it as `firstScale?.text ?? null` — the
-  FIRST scale question, chosen on the server. There is no presenter control that
-  moves between questions: the bundle's only stage buttons are reveal and
-  back-to-build, and the code has no advance. A live session can never be on
-  question 2 of 2, so nothing can honestly write that string.
-
-  So «build the writer» and «no new screen beyond what the bundle draws» are in
-  conflict here, and the conflict is the finding: **the writer cannot exist
-  until the navigation it would record exists**, and that navigation is a
-  feature nobody has drawn or decided. Inventing it would be exactly the
-  restyling CLAUDE.md forbids, and writing a plausible label from the server on
-  every render would be fabricating data in the UI.
-
-  Recorded as DEVIATIONS D136. These assertions hold the premise: the day
-  someone adds presenter navigation, the first test fails and points here, which
-  is the moment the writer becomes buildable and `step` becomes honest.
+  **The column returns WITH a writer if presenter navigation is ever built**, in
+  the same migration, which is what the standing question asks and what this
+  column never had. So the last test here is the trigger: it fails the day
+  navigation arrives, and that failure is the reminder to bring `step` back
+  properly rather than a defect.
 */
 const PAGE = 'app/(app)/undersokelser/[id]/live/page.tsx'
 const STAGE = 'app/(app)/undersokelser/[id]/live/LiveStage.tsx'
 const ACTIONS = 'app/(app)/undersokelser/[id]/live/actions.ts'
+const SEED = 'scripts/seed-demo.ts'
 const page = readFileSync(PAGE, 'utf8')
 const stage = readFileSync(STAGE, 'utf8')
 const actions = readFileSync(ACTIONS, 'utf8')
+const seed = readFileSync(SEED, 'utf8')
 
-describe('live_sessions.step — the premise of not building its writer', () => {
-  it('the stage shows the FIRST scale question, server-chosen, with no navigation', () => {
-    expect(page).toMatch(/barsQuestion=\{firstScale\?\.text \?\? null\}/)
+describe('live_sessions.step is dropped and stays dropped', () => {
+  it('the page no longer selects it', () => {
+    expect(page).not.toMatch(/select\([^)]*\bstep\b/)
   })
 
-  it('no presenter control changes which question is shown', () => {
-    // If this fails, navigation arrived — and `step` can now be written from it.
-    expect(stage).not.toMatch(/onAdvance|nextQuestion|setQuestionIndex|questionIndex/)
+  it('the stage neither types nor renders it', () => {
+    expect(stage).not.toMatch(/session\?\.step|step:\s*string/)
   })
 
-  it('no server action writes step, and none pretends to', () => {
+  it('no live action writes it', () => {
     expect(actions).not.toMatch(/\bstep\b\s*:/)
   })
 
-  it('step is still rendered, so the column is read and not dead', () => {
-    // The gap is «no writer», not «unused»: the label renders whenever set,
-    // which is why a seeded value looks like a working feature in a demo.
-    expect(stage).toMatch(/session\?\.step/)
+  it('THE SEED NO LONGER REACHES A STATE THE CODE CANNOT CREATE', () => {
+    // D139's shape. A seeded value is indistinguishable from a working one on
+    // screen, so a demo carrying «Spørsmål 2 av 2» showed a reviewer presenter
+    // navigation that does not exist — worse than a seed that misses a state,
+    // because a missing state looks like a gap and a fabricated one looks like
+    // a feature.
+    expect(seed).not.toMatch(/step:\s*'Spørsmål/)
   })
 
-  it('the demo seed sets a value the product cannot reach', () => {
-    const seed = readFileSync('scripts/seed-demo.ts', 'utf8')
-    expect(seed).toMatch(/step:\s*'Spørsmål 2 av 2'/)
-    // D102's shape, inverted: usually the seed reaches only states the code can
-    // create. Here it reaches one the code CANNOT — a demo that shows a
-    // reviewer a navigation feature that does not exist.
+  it('the stage still shows the first scale question, server-chosen', () => {
+    // The premise the drop rests on. If this changes, re-read D136 before
+    // assuming the label can come back.
+    expect(page).toMatch(/barsQuestion=\{firstScale\?\.text \?\? null\}/)
+  })
+
+  it('THE TRIGGER — no presenter navigation exists yet', () => {
+    // Fails the day someone adds it. That is not a defect: it is the moment
+    // `step` becomes buildable, and it comes back WITH its writer.
+    expect(stage).not.toMatch(/onAdvance|nextQuestion|setQuestionIndex|questionIndex/)
   })
 })

@@ -3982,7 +3982,25 @@ seeded value is indistinguishable from a working one on screen — which is the
 whole reason «a column whose only writer is the seed is exactly the finding» is
 a rule.
 
-**Two ways out, both decisions rather than work:**
+**RESOLVED 2026-09-10 — Tor's decision: DROP THE COLUMN** (`M:0098`). Option 2
+below, with the reasoning sharpened: Q61 says do not store what can be derived,
+and *this is worse than the case Q61 refuses — it stored something that does not
+exist.* A derived value kept in two places can at least disagree about something
+real. Presenter navigation is a feature to be decided on its own terms, not a
+thing a waiting column argues for; **if it is ever built, `step` returns WITH its
+writer in the same migration**, which is what the standing question asks and what
+this column never had. The instruction that produced this entry — «build the
+writer, no new screen beyond what the bundle draws» — was self-contradictory, and
+Tor named it so: handing back the conflict was the answer to a question posed
+wrongly.
+
+The drop was verified against the catalogue before it ran, not asserted: 0
+policies, 0 constraints, 0 views, 0 rows with a value. The function sweep
+returned ONE match, `public.close_live_session`, and reading it showed the phrase
+«one step down» in a comment. **The count said one dependency and the line said
+none** — a match is not a finding until it is read.
+
+**The two ways out as they stood, kept for the record:**
 1. **Build presenter navigation** as its own scoped piece, and `step` becomes
    its record — the writer follows for free.
 2. **Derive and drop.** `step` is a pure function of (question shown, question
@@ -4057,8 +4075,71 @@ site-key-only means a solved widget rejected. Loud is the point — the failure
 mode it replaces was silent on a live origin.
 
 Pinned by `tests/unit/turnstile-state.test.ts` (11), which failed on its
-assertions before the fix — `expected true to be false` on both partial cases —
-and `tests/unit/marketing-guard.test.ts` (5), which asserts the property over
+assertions before the fix — `expected true to be false` on both partial cases.
+
+**Their FIRST run failed on something else, and that mattered.** All eleven went
+red on `import 'server-only'`, which throws outside a Server Component — a suite
+red for a reason that has nothing to do with the behaviour it claims to pin, and
+one that reads identically in CI to a suite that is doing its job. The harness
+was fixed (`vi.mock('server-only')`) and the tests re-run to red **before the
+implementation was touched**, so that «proven failing first» meant proven on the
+assertion. Nobody invoked the rule; it is the same rule as *a negative from a
+probe written from memory is not evidence of absence* — a red that does not come
+from the claim is not a proven negative, in either direction. Written down
+because the tempting move at that moment is to fix the code and watch the suite
+go green, which would have proved the import was fixed and nothing else.
+
+Also pinned by `tests/unit/marketing-guard.test.ts` (5), which asserts the property over
 the file rather than over today's two actions: **every exported server action in
 `app/(marketing)/actions.ts` calls `guard()` before it parses or touches an
 RPC**, with the action list derived from the source.
+
+### D139 — a seed that reaches a state the CODE CANNOT CREATE
+
+**A new shape, 2026-09-10 (Tor), not an instance of D102.** Named while dropping
+`live_sessions.step` (D136), and worth separating because the two point in
+opposite directions and only one of them lies.
+
+**D102's standing limitation:** *the demo seed reaches only states the current
+code creates.* Its cost is coverage — a screen whose empty state, warning state
+or multi-round trend nobody can photograph, because the seed cannot get there.
+The symptom is a **gap**, and a gap looks like a gap.
+
+**This is that sentence inverted:** the seed reaching a state the code CANNOT
+create. `scripts/seed-demo.ts` set `live_sessions.step` to «Spørsmål 2 av 2»
+while the live stage renders `firstScale?.text` — the first scale question,
+chosen on the server — with no control anywhere that moves between questions. No
+session could ever hold that value.
+
+**The inverted case is worse, and the reason is what makes it its own entry.** A
+seeded value is indistinguishable from a written one on screen. A missing state
+shows a reviewer a gap and invites the question «why is this empty?»; a
+fabricated one shows them a **working feature** and invites no question at all.
+So:
+
+- **D102 costs coverage. D139 costs truth.** One hides something real, the other
+  displays something false.
+- **D102 is discovered by trying to demonstrate a state. D139 survives every
+  demonstration**, because demonstrating it is exactly what it is good at. It
+  fails only against the schema and the code, never against the screen.
+- It is the «never fabricate data in the UI» rule arriving through the seed
+  rather than through a component. The rule says a fake value is worse than a
+  gap *because it is indistinguishable from a real one in review, and survives
+  into screenshots and demos as though it were true* — which is a description of
+  this, written before anyone had found it here.
+
+**The check that catches it is not a gate.** No gate can: the row is valid, the
+column is real, RLS is satisfied, the render is correct. It is caught by asking
+of a seeded value the same question the standing rule asks of a column — **can
+the product actually produce this?** — and the answer is a code path, not a
+constraint.
+
+Fixed by dropping the column and the seed line together (`M:0098`), and pinned
+by `tests/unit/live-step.test.ts`, whose fourth assertion is that the seed no
+longer carries it and whose last is the trigger for bringing `step` back with a
+writer if presenter navigation is ever built.
+
+**Where to look for more of it:** any column whose only writer is the seed. That
+set is enumerated and asserted in `tests/db/no-writer-columns.test.ts`, and it
+now holds exactly one — `tasks.due_at`, which should be checked against this
+question rather than assumed to be the harmless kind.
