@@ -317,7 +317,16 @@ distinguishable from the eight that earned the standard marker.
 
 `task_step_index`, `below_threshold`, `guard_live_is_anonymous`, `live_word_floor`,
 `guard_run_mode_anonymous`, `guard_quiz_policy`. WARN on `get_advisors(type: security)`, new since
-the last reading. One migration adding `set search_path` to each. **Not a phase.**
+the last reading. **CLOSED 2026-09-10 by `M:0096`**, which pins `search_path = ''` on all six
+by `alter function` rather than retyping bodies, after checking body by body that every object
+reference in them is schema-qualified. Applied to prod and verified by re-reading the catalogue:
+`app` 0 unpinned of 62, `public` 0 of 36.
+
+**And closed so it cannot recur silently:** `tests/db/catalogue-invariants.test.ts` gained a
+third catalogue-derived sweep asserting that NO function in `app` or `public` has a null
+`proconfig`. Five phases of green gates said nothing about these six because nothing enumerated
+`proconfig`; the next one now fails a test in the commit that adds it. Scoped to the six it would
+have had the same blind spot as the thing it was written about — D115's argument.
 
 ### 5.3 Two advisor categories are unclassified
 
@@ -328,7 +337,19 @@ token-validated (`submit_response`, `get_survey_for_token`, `compose_report`,
 `report_for_share_token`, `get_peer_results`, `redeem_live_voucher`, `request_demo`). **None of
 that is written down against these advisors**, which is how a category stays unclassified forever:
 it is nobody's, and each reading of it starts again. A one-time pass marking each by-design or not,
-with the reason, done alongside § 5.2.
+with the reason, done alongside § 5.2. **DONE 2026-09-10** — the classification is in
+`docs/OPERATIONS.md`, derived from `pg_proc` and `has_function_privilege` rather than asserted:
+29 of 36 carry an authorisation predicate or validate a token; five `mail_*` are service-role only
+with EXECUTE revoked from both roles; `claim_membership` cannot check membership by definition.
+
+**The pass found one thing.** `request_demo` is anon-callable by design and its abuse control is
+Turnstile — whose keys are **not configured in production** (PART 3 item 3). That is the known
+launch item, but nobody had connected it to an anon-writable RPC standing unprotected on a live
+origin, which is a reason to move it up the list.
+
+It also found, in itself, a ninth instance of the enumeration shape: the first classification
+predicate listed four authorisation helpers by name, missed `app.can_view_survey`, and reported
+`get_trends` as an unguarded cross-org read. False. Re-derived as `app\.(is_|has_|can_)`.
 
 ### 5.4 `pg_net` in `public`
 

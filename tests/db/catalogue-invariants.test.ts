@@ -114,3 +114,55 @@ describe('(D116) every seeded pattern crosses the Postgres → JavaScript dialec
     expect(re.test('vurdering'), 'no false hit on an ordinary word').toBe(false)
   })
 })
+
+describe('(M:0096) every function in `app` and `public` pins its search_path', () => {
+  /*
+    THE THIRD SWEEP IN THIS FILE, AND IT EXISTS FOR THE SAME REASON AS THE FIRST
+    TWO: something real was found by a tool outside CI, and the fix is worthless
+    unless the NEXT instance fails a test rather than waiting for the next person
+    to read an advisor.
+
+    Six functions had a mutable `search_path` — `task_step_index`,
+    `below_threshold`, `guard_live_is_anonymous`, `live_word_floor`,
+    `guard_run_mode_anonymous`, `guard_quiz_policy` — arriving across V2-4, V2-9
+    and V2-10. Every one of those phases was green. Nothing in the gate set
+    enumerates `proconfig`, so «green» was silent on it, which is the shape
+    CLAUDE.md keeps recording: the check became a different check.
+
+    CATALOGUE-DERIVED, NOT A LIST. Scoped to the six already known it would have
+    the same blind spot as the thing it is written about (D115's argument, which
+    that file's first sweep makes in full). It asks pg_proc which functions have
+    no setting at all, so the answer is currently zero AND there is no allowlist
+    to rot.
+
+    `''` vs `public` is deliberately NOT asserted. Both are pinned, both are
+    decisions, and 57 and 35 functions respectively use them; forcing one would
+    be this test inventing a policy rather than checking one. What is not a
+    decision is having none.
+  */
+  it('no function is left with a mutable search_path', () => {
+    const rows = psql(
+      `select n.nspname || '.' || p.proname
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('app','public') and p.prokind = 'f' and p.proconfig is null
+        order by 1`,
+    )
+    expect(
+      rows.map((r) => r[0]),
+      'a function with no search_path setting resolves names from the CALLER’s path — ' +
+        'and three of the six that prompted this sweep are trigger functions, which run ' +
+        'on whoever writes the row. Add `set search_path = \'\'` (or `= public`) in the ' +
+        'migration that creates it.',
+    ).toEqual([])
+  })
+
+  it('and the sweep is actually reading a populated catalogue', () => {
+    // The other half of every sweep in this file: zero findings is only
+    // meaningful if the enumeration found something to look at.
+    const pinned = Number(
+      psql(`select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname in ('app','public') and p.prokind = 'f' and p.proconfig is not null`)[0]![0],
+    )
+    expect(pinned, 'functions WITH a pinned search_path').toBeGreaterThan(80)
+  })
+})

@@ -1299,3 +1299,63 @@ system found it.** An apply is not evidence.
   that. Logged rather than tuned.
 - **`personvern@heituva.no`** in `legal.privacy6P` / `privacy8P` — held until the
   replacement mailbox is confirmed to RECEIVE.
+
+## 2026-09-10 — the two advisor categories, classified once
+
+`get_advisors(type: security)` reports `anon_security_definer_function_executable` (7) and
+`authenticated_security_definer_function_executable` (31). **Neither is a defect list.** Both
+are the advisor observing this product's central architecture: CLAUDE.md invariant 1 says
+clients never select from `responses`/`answers` and every result read goes through a
+SECURITY DEFINER RPC, so a long list of callable definer functions is what compliance with
+that invariant LOOKS like from outside.
+
+Which is exactly why it needed classifying once and writing down. **A category that is
+mostly by-design and nobody's to own is a category that stays unread**, and the one real
+finding inside it stays unread with it.
+
+**Derived, not asserted.** Every public SECURITY DEFINER function was asked whether its body
+carries an authorisation predicate or validates a token, and what `anon`/`authenticated` may
+actually execute:
+
+```sql
+select p.proname,
+       (p.prosrc ~ 'app\.(is_|has_|can_)') as authz_predicate,
+       (p.prosrc ~ 'p_token|token_hash')   as token_validated,
+       has_function_privilege('anon', p.oid, 'EXECUTE')          as anon_can_call,
+       has_function_privilege('authenticated', p.oid, 'EXECUTE') as auth_can_call
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prosecdef order by 1;
+```
+
+**29 of 36 carry an authorisation predicate or validate a token.** The seven that carry
+neither, each classified:
+
+| Function | anon | auth | Classification |
+|---|---|---|---|
+| `mail_outbox_read` / `_delete` / `_archive` / `_depth` | ✗ | ✗ | **By design.** Service-role only; EXECUTE is revoked from both roles, so they appear in neither advisor category. `mail_worker_secret` is 5a3-CHECKED |
+| `mail_worker_secret` | ✗ | ✗ | **By design**, as above |
+| `claim_membership` | ✗ | ✓ | **By design, and it CANNOT check membership** — it is how a signed-in user claims an invited membership, so it necessarily runs before one exists. The check it does carry is on the invitation |
+| `request_demo` | **✓** | ✓ | **By design that it is public** — the splash form — **but see below** |
+
+**`request_demo` IS THE ONE THING THIS PASS FOUND.** It is anon-callable by design, writes
+`demo_requests`, and carries no authorisation predicate and no token, which is correct for a
+public form. Its abuse control is Cloudflare Turnstile — **and the Turnstile keys are not
+configured in production** (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`; launch
+readiness item 3, still open). The code is written and reads them; until they are set, the
+form's only protection is absent. **Not a code defect and not a new item** — it is the
+already-known launch item, but nobody had connected it to the fact that it leaves an
+anon-writable RPC unprotected on a live origin, and that connection is the reason to raise
+its priority above «a click Tor owes us».
+
+### A note on the probe, because it was wrong first
+
+The first pass matched `is_org_member|has_role|can_edit_survey|auth\.uid` and reported
+`get_trends` as having no membership check — a cross-org aggregate leak, if true. It was
+false: `get_trends` calls **`app.can_view_survey`**, which that alternation does not contain.
+**My classification predicate was itself an enumeration** — the four helpers I could think
+of, standing in for «an authorisation helper» — which is the shape this repository has now
+recorded eight times, committed here inside the pass written to close a security category.
+Re-derived as `app\.(is_|has_|can_)`, a property rather than a list.
+
+Same lesson as the migration probe two hours earlier that returned three false zeroes from
+guessed object names: **a negative from a predicate you wrote from memory is not evidence.**
