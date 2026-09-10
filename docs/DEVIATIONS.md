@@ -3683,6 +3683,23 @@ looked total while being partial is worse than one that states its scope.
 
 ### D131 — the gates that cannot see what they are trusted for
 
+> **THE PAIR, ADDED 2026-09-10 (Tor).** S2 found **thirteen gates that never ran because
+> nobody had scheduled them.** On 2026-09-10 runs 87, 88 and 89 each reached the browser job
+> and were killed mid-flight by my own next push — **three runs that never finished because
+> there was always one more commit.** Same outcome, opposite cause: in both cases a gate's
+> verdict did not exist while the work it covered was treated as verified.
+>
+> **S2's lesson arriving from the other side.** Scheduling a gate makes it *able* to run;
+> nothing makes it *finish*. Run 90 was the first since 86 to reach the end, and by then I had
+> been three pushes away from reporting green on `verify:responsive` — the gate that found four
+> blockers within one run of first being scheduled, and therefore the last one anyone should
+> assume about. It ran `12:47:31 → 12:50:52`, and `verify:visual` after it.
+>
+> The operational form: **a gate that is always about to run is not a gate that ran.** When a
+> run is being waited on, hold the commits; a push is a cancellation. And read the run, not the
+> workflow file — «I pushed and CI is green» is two claims, and the second one needs the job's
+> conclusion.
+
 **S4, 2026-09-09.** The audit's § 4.5, written down here because a limitation nobody records is
 indistinguishable from a limitation nobody has. These are not defects: every one is a gate that
 works, is green, and is green about something narrower than its name suggests. **Two of the seven
