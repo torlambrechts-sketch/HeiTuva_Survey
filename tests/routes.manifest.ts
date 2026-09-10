@@ -75,7 +75,7 @@ export type RouteSpec = {
  * three labels are plain buttons that open the sheet. One helper so a state's
  * setup does not have to know which viewport it is running at.
  */
-async function openBuilderPane(page: Page, tab: 'Legg til' | 'Innstillinger' | 'Vis') {
+async function openBuilderPane(page: Page, tab: 'Generelt' | 'Legg til' | 'Innstillinger' | 'Vis') {
   const opener = page.getByRole('button', { name: tab, exact: true })
   if (await opener.count()) await opener.first().click()
   else await page.getByRole('tab', { name: tab, exact: true }).click()
@@ -703,9 +703,12 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          // The mode chips sit at the top of the right pane, so below xl the
-          // sheet has to be open before "Avansert" exists.
-          await openBuilderPane(page, 'Legg til')
+          // B2 moved «Byggemodus» into the GENERELT tab, where V2:580-587 draws
+          // it; it used to float above the tab rail and was reachable from any
+          // of them. Below xl the sheet still has to be open before «Avansert»
+          // exists — that half is unchanged — but the pane it lives in is not
+          // «Legg til» any more.
+          await openBuilderPane(page, 'Generelt')
           await page.getByRole('button', { name: 'Avansert', exact: true }).first().click()
         },
       },

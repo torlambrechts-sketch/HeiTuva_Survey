@@ -11,11 +11,14 @@ opened; what changed is that nobody was in the loop between them, not that the p
 
 | | census | plan said | 5a3 |
 |---|---|---|---|
-| before B0 | 978 / 69 files | — | 65 of 90 |
+| before B0 | 978 / 69 files | — | 65 of 90 *(carried; see below)* |
 | B0 | **983 / 70** | 980 / 69 | unchanged |
 | B1 | **994 / 71** | 991 / 70 | unchanged |
 | B2 | **1003 / 72** | 998 / 70 | unchanged |
 | B3 | **1021 / 73** | 1014 / 71 | unchanged |
+
+**CI run 106 measured the census at exactly `1021 passed across 73 files`** — the manifest and the
+suite agree, which after four hand-edited entries is worth saying rather than assuming.
 
 Re-derive with
 `node -e 'const c=require("./tests/expected-counts.json");console.log(Object.keys(c).length,Object.values(c).reduce((a,b)=>a+b))'`.
@@ -28,10 +31,23 @@ phase got its own file: `builder-disclosure`, `quiz-preview`, `builder-tabs`, `b
 extra tests are the fix passes' own — B1's placement corrections and B3's state-append pair were
 not in the plan because the plan had not yet found the defects they cover.
 
-**5a3 is NOT a measured number in this document.** It is a structural claim: the gate enumerates
-RLS tables and SECURITY DEFINER functions in `public`, and **no phase added a migration** —
-`git diff --stat 0273d75..11ca4ba -- supabase/migrations/` is empty. Its inputs cannot have
-moved. CI measures it for real; see § 6.
+**5a3 — MEASURED, and the carried number was already stale before B0 opened.** I wrote «65 of 90,
+unchanged by construction» in all four commit messages. The structural half is right: no phase
+added a migration (`git diff --stat 0273d75..11ca4ba -- supabase/migrations/` is empty), so the
+gate's inputs could not move. **The number was wrong.** CI run 106 enumerates
+**56 RLS tables + 36 SECURITY DEFINER functions = 92**, of which **67** report `ok` or `NO DATA`:
+
+```
+5a3 = 67 of 92          # not 65 of 90
+```
+
+Re-derived from the run's own log the way CLAUDE.md says to — `grep -cE '^  (ok|NO DATA)'` over
+the policy gate's output, against the two `enumerated` headers. **65 of 90 was last true at V2-10.
+The mail tranche and the S-block added `M:0095`–`M:0098` between then and now, and nobody
+re-derived it** — so four of my own commit messages carry a number I inherited and did not
+measure, which is the third instance of that pattern this project has recorded and the first
+where I am the one who carried it. The gate itself reports «every protected surface is both
+protected and guarded by a test».
 
 ---
 

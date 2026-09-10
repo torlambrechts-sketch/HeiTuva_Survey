@@ -312,6 +312,14 @@ async function main() {
 
     // logic_rules — the follow-up-on-low switch on a scale question.
     {
+      // B2 MOVED «Byggemodus» INSIDE THE «Generelt» TAB, where V2:580-587 draws
+      // it — it used to float above the tab rail and was reachable from every
+      // tab. This probe clicked «Avansert» from whatever tab it happened to be
+      // on, which was the old layout's affordance, and CI run 106 timed out
+      // waiting for a button that is now one tab away. The probe encoded the
+      // layout rather than the journey; an editor who wants the advanced fields
+      // now goes to Generelt first, and so does this.
+      await page.getByRole('tab', { name: 'Generelt', exact: true }).click()
       await page.getByRole('button', { name: 'Avansert', exact: true }).click()
       const followUp = page
         .getByRole('button', { name: 'Oppfølging ved lav score', exact: true })
