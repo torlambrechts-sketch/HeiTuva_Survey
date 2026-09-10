@@ -63,6 +63,8 @@ export function PreviewPane({
   questions,
   surveyId,
   canTest,
+  quizMode,
+  timeBonus,
 }: {
   title: string
   questions: DraftQuestion[]
@@ -74,6 +76,10 @@ export function PreviewPane({
    * database refuses — the same rule the Oppgaver advance button follows.
    */
   canTest: boolean
+  /** B1 — `surveys.run_mode = 'quiz'` (V2:899, V2:6506). */
+  quizMode: boolean
+  /** B1 — the persisted quiz setting, for the timer line (V2:6524). */
+  timeBonus: boolean
 }) {
   const t = useTranslations('builder')
   const tr = useTranslations('respondent')
@@ -106,6 +112,28 @@ export function PreviewPane({
           style={{ background: 'rgba(255,255,255,.25)' }}
         />
         <div className="min-h-[420px] rounded-[22px] bg-bg px-4 py-[18px]">
+          {quizMode ? (
+            /* V2:900-905. The bundle's `timer` reads «20 sek · tidsbonus» when
+               the bonus is on. THERE IS NO CONFIGURED TIME LIMIT ANYWHERE IN THE
+               SCHEMA — `M:0085` adds none and nothing else carries seconds — so
+               «20 sek» would be an invented number in a preview an editor reads
+               to learn what respondents get. The bonus scales points by how fast
+               a correct answer arrives; it does not impose a deadline. So the
+               true half of the sentence is rendered and the invented half is
+               not. `quizPreviewScore`'s «0 poeng» and «1 av {count}» are both
+               real starting state. */
+            <div
+              className="mb-3 flex items-center justify-between gap-2.5 rounded-[11px] px-3 py-[9px]"
+              style={{ background: 'var(--ac)' }}
+            >
+              <span className="whitespace-nowrap text-[11.5px] font-bold">
+                {t('quizPreviewScore', { count: questions.length })}
+              </span>
+              <span className="whitespace-nowrap text-[11.5px] font-bold">
+                {timeBonus ? t('quizPreviewBonus') : t('quizPreviewNoLimit')}
+              </span>
+            </div>
+          ) : null}
           <div className="font-display text-[19px] font-bold leading-tight">{title}</div>
           <div className="mt-[2px] text-[13px] text-mut">
             {t('previewMeta', {
@@ -115,6 +143,32 @@ export function PreviewPane({
           </div>
           {questions.map((q, i) => {
             const chips = previewChips(q, t('previewAnswer'), t('previewYes'), t('previewNo'))
+            /* B1 — the answer key, marked (V2:6506-6516).
+               `survey_questions_answer_index_typed` (M:0085:64) allows a key only
+               on these three types, so the same three decide whether the preview
+               marks anything. Kept identical to the constraint rather than
+               re-listed, because a fourth quizzable type would then be one edit
+               in one place. */
+            const keyable =
+              quizMode && (q.type === 'choice' || q.type === 'yesno' || q.type === 'dropdown')
+            /* THE BUNDLE DEFAULTS A MISSING KEY TO OPTION ONE AND WE MUST NOT.
+               V2:6507 renders «Riktig svar: første alternativ» when `answerIndex`
+               is undefined. `answer_index`'s own column comment already refused
+               that at the schema level — «a default of 0 would silently mark the
+               first option correct on every question ever written — a fabricated
+               answer key, which is worse than an absent one». Rendering the
+               bundle's default here would reintroduce in the UI exactly what the
+               migration kept out of the table, on the screen an editor trusts to
+               tell them whether they have set a key. `quizNoKey` («Ingen fasit
+               valgt») is the honest state and already exists. */
+            const hasKey = keyable && q.answerIndex !== null
+            const quizLine = !quizMode
+              ? null
+              : !keyable
+                ? t('quizNotScoring')
+                : hasKey
+                  ? t('quizKeyLine', { n: (q.answerIndex ?? 0) + 1, points: q.points })
+                  : t('quizNoKey')
             return (
               <div key={q.id} className="mt-[17px]">
                 <div className="text-[13.5px] font-medium">
@@ -123,15 +177,35 @@ export function PreviewPane({
                 </div>
                 {q.help ? <div className="mt-[3px] text-[13px] text-mut">{q.help}</div> : null}
                 <div className="mt-[9px] flex flex-wrap gap-[7px]">
-                  {chips.map((label, ci) => (
-                    <span
-                      key={`${label}-${ci}`}
-                      className="rounded-[9px] border border-line px-3 py-[7px] text-[13px] text-mut"
-                      style={{ background: 'var(--sf)' }}
-                    >
-                      {label}
-                    </span>
-                  ))}
+                  {chips.map((label, ci) => {
+                    const correct = hasKey && ci === q.answerIndex
+                    return (
+                      <span
+                        key={`${label}-${ci}`}
+                        className="inline-flex items-center gap-1.5 rounded-[9px] border px-3 py-[7px] text-[13px]"
+                        style={
+                          correct
+                            ? /* V2:6511-6516, as drawn. Q109 measured rather than
+                                 assumed: #2F5D2A on #E4F2E0 is 6.65:1, above AA's
+                                 4.5 and within a hair of the app's own --mut on
+                                 --sf at 6.93, so the bundle's pair ships unchanged
+                                 and is NOT promoted to a token — one departure is
+                                 not a reason for four. */
+                              { background: '#E4F2E0', borderColor: '#2F5D2A', color: '#2F5D2A' }
+                            : { background: 'var(--sf)', borderColor: 'var(--line)', color: 'var(--mut)' }
+                        }
+                      >
+                        {label}
+                        {correct ? (
+                          /* The second channel. Colour alone would put the whole
+                             mark on one perceptual axis; the tiles solved the same
+                             problem with a shape (D125) and this is its text
+                             equivalent, which is also what the bundle writes. */
+                          <span className="text-[10.5px] font-bold">{t('quizCorrectMark')}</span>
+                        ) : null}
+                      </span>
+                    )
+                  })}
                 </div>
                 {q.type === 'scale' || q.type === 'slider' ? (
                   // The same per-type default the respondent surface applies
@@ -141,6 +215,9 @@ export function PreviewPane({
                     <span>{q.config.low_label || tr('scaleLowDefault')}</span>
                     <span>{q.config.high_label || tr('scaleHighDefault')}</span>
                   </div>
+                ) : null}
+                {quizLine ? (
+                  <div className="mt-[7px] text-[11px] text-mut">{quizLine}</div>
                 ) : null}
               </div>
             )

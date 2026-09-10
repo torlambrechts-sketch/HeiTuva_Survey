@@ -288,6 +288,15 @@ export function Builder({
       {tab === 'add' ? (
         <div className="rounded-2xl border border-line bg-sf p-5">
           <p className="text-[13px] leading-normal text-mut">{t('insertNote')}</p>
+          {runMode === 'quiz' ? (
+            /* V2:646-648. Says what quiz mode changes about the types below,
+               where the editor is choosing one — the four-option limit is
+               `QUIZ_TILES.length` in QuestionInput, so this sentence and the
+               tiles cannot drift apart without the test noticing. */
+            <p className="mt-2.5 rounded-[11px] bg-sbg px-[13px] py-[11px] text-[12.5px] leading-[1.5]">
+              {t('quizAddNote')}
+            </p>
+          ) : null}
           <Link
             href="/bibliotek?fane=bank"
             className="touch-44 mt-3 block w-full cursor-pointer rounded-[10px] border-none bg-ac3 py-[11px] text-center text-[13px] font-semibold text-ink no-underline"
@@ -455,6 +464,11 @@ export function Builder({
              round exists to test against. A draft has none, and `mint_test_token`
              would answer `no_round`. */
           canTest={locked}
+          /* Gated on the SAME `runMode` prop QuizPanel is, so the two appear and
+             disappear together. Reading a second source here would let the
+             preview claim quiz while the settings pane says standard. */
+          quizMode={runMode === 'quiz'}
+          timeBonus={quizTimeBonus}
         />
       ) : null}
     </div>

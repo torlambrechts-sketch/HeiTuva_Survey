@@ -358,6 +358,13 @@
     "quizPoints": "Points",
     "quizNoKey": "No answer key chosen",
     "quizNotKeyable": "This question type cannot have an answer key",
+    "quizAddNote": "Quiz mode: multiple choice with up to four options is drawn as large coloured tiles with shapes. More than four falls back to an ordinary list.",
+    "quizPreviewScore": "0 points · question 1 of {count}",
+    "quizPreviewBonus": "Time bonus",
+    "quizPreviewNoLimit": "No time limit",
+    "quizKeyLine": "Correct answer: option {n} · {points} points",
+    "quizNotScoring": "Not scored in a quiz",
+    "quizCorrectMark": "✓ correct",
     "yes": "Yes",
     "no": "No"
   },

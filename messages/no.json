@@ -358,6 +358,13 @@
     "quizPoints": "Poeng",
     "quizNoKey": "Ingen fasit valgt",
     "quizNotKeyable": "Denne spørsmålstypen kan ikke ha fasit",
+    "quizAddNote": "Quizmodus: flervalg med inntil fire alternativer vises som store fargefelt med figurer. Flere enn fire blir en vanlig liste.",
+    "quizPreviewScore": "0 poeng · spørsmål 1 av {count}",
+    "quizPreviewBonus": "Tidsbonus",
+    "quizPreviewNoLimit": "Ingen tidsgrense",
+    "quizKeyLine": "Riktig svar: alternativ {n} · {points} poeng",
+    "quizNotScoring": "Ikke poenggivende i quiz",
+    "quizCorrectMark": "✓ riktig",
     "yes": "Ja",
     "no": "Nei"
   },

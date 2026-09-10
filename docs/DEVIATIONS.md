@@ -4375,3 +4375,71 @@ are.**
 Nothing automated consumes these images (VERIFY.md § Gate 3a has a human open them), so this is not
 a broken gate. Whether to seed `Math.random` in the capture harness, exclude the six screens, or
 accept and annotate is Q104; editing a bundle is not among the options.
+
+---
+
+## D144 — The preview does not default a missing answer key to option one
+
+**B1, 2026-09-10.** `V2:6507` renders «Riktig svar: første alternativ» when a question's
+`answerIndex` is undefined. We render `quizNoKey` — «Ingen fasit valgt» — instead.
+
+**The reason is already written in the schema, by the migration that added the column.**
+`survey_questions.answer_index` has no default, and `M:0085:55-61` says why in its column
+comment: «The bundle defaults it to 0 for display (V2:6507, «Riktig svar: første alternativ»);
+the COLUMN does not, because a default of 0 would silently mark the first option correct on
+every question ever written — a fabricated answer key, which is worse than an absent one.»
+
+Implementing the bundle's display default would have put back into the UI exactly what the
+migration kept out of the table — and on the worse surface. The table is read by RPCs; **the
+preview is read by the editor deciding whether they have set a key.** Telling them option one
+is correct when they have set nothing is the fabricated-data rule with a scoring consequence:
+`quiz_leaderboard` awards points against `answer_index`, and a `NULL` key awards none, so the
+preview would have promised a score the leaderboard would never pay.
+
+`tests/unit/quiz-preview.test.ts` asserts the property (nothing marks a chip correct when
+`answerIndex` is null) **and** reads the reason back out of the migration, so the two cannot
+drift apart.
+
+---
+
+## D145 — The quiz preview's timer line drops the bundle's «20 sek»
+
+**B1, 2026-09-10.** `V2:6524` renders `timer: on.timeBonus ? "20 sek · tidsbonus" : "Ingen
+tidsgrense"`. We render «Tidsbonus» / «Ingen tidsgrense».
+
+**There is no configured time limit anywhere in the schema.** `M:0085` adds none;
+`grep -n "time_limit\|seconds" ` over it returns nothing, and the test asserts that rather than
+trusting it. What `timeBonus` actually does is scale points by how fast a correct answer
+arrives (`quizTimeBonusDesc`: «Raskere riktig svar gir flere poeng») — a multiplier, not a
+deadline. Twenty seconds is the mock's illustration of a feature it had no database behind.
+
+The true half of the sentence ships and the invented half does not. Rendering «20 sek» would
+have told an editor their respondents get twenty seconds per question, which is a promise
+nothing in the product keeps and which they would then have repeated to their own people.
+
+---
+
+## D146 — Q109 measured: the bundle's correct-answer green ships unchanged, and is not tokenised
+
+**B1, 2026-09-10.** `V2:6511-6516` marks the correct chip `#E4F2E0` / border and text
+`#2F5D2A`. Neither is a theme token and CLAUDE.md's token list carries no success colour.
+
+**Measured rather than assumed**, which is what decided it:
+
+| pair | ratio |
+|---|---|
+| `#2F5D2A` on `#E4F2E0` — as drawn | **6.65 : 1** |
+| `#2F5D2A` on `--bg #FCF6E9` | 7.17 : 1 |
+| `#2F5D2A` on `--sf #FFFDF6` | 7.59 : 1 |
+| `--mut #5F5849` on `--sf` — the app's own existing baseline | 6.93 : 1 |
+
+6.65 clears WCAG AA (4.5) with room, and sits within a quarter-point of a contrast the product
+already ships everywhere. **So nothing changes**: the pair is used exactly as drawn, and it is
+NOT promoted to a `--ok` / `--okbg` token pair. Promoting it would be four departures from the
+bundle (two token definitions, two usages, plus a permanent addition to a token list the design
+does not have) to solve a consistency problem that the measurement says does not exist.
+
+The colour is not the only channel: «✓ riktig» is rendered beside it, which is D125's shape —
+the quiz tiles carry a shape as a second channel for the same reason. The contrast ratio is
+**recomputed inside the test** from whatever hexes the file carries, so editing either one
+fails rather than silently dropping below AA.
