@@ -26,33 +26,33 @@ describe('a credential in the path never reaches the wire', () => {
     ['l', 'a live voucher'],
   ] as const) {
     it(`/${prefix}/<token> — ${what}`, () => {
-      const out = beforeSend(ev(`https://heituva.no/${prefix}/abc123deadbeef`), hint)
-      expect(out!.request!.url).toBe(`https://heituva.no/${prefix}/[token]`)
+      const out = beforeSend(ev(`https://www.heituva.com/${prefix}/abc123deadbeef`), hint)
+      expect(out!.request!.url).toBe(`https://www.heituva.com/${prefix}/[token]`)
       expect(out!.request!.url).not.toContain('abc123deadbeef')
     })
   }
 
   it('keeps the route, because that is what makes the report useful', () => {
-    const out = beforeSend(ev('https://heituva.no/s/tok?lang=no#q3'), hint)
+    const out = beforeSend(ev('https://www.heituva.com/s/tok?lang=no#q3'), hint)
     // Query and fragment survive; only the authenticating segment goes.
-    expect(out!.request!.url).toBe('https://heituva.no/s/[token]?lang=no#q3')
+    expect(out!.request!.url).toBe('https://www.heituva.com/s/[token]?lang=no#q3')
   })
 
   it('scrubs a malformed or truncated token too', () => {
     // The segment is replaced whatever it looks like, so «not token-shaped» is
     // never the reason something survives.
-    expect(beforeSend(ev('https://heituva.no/s/x'), hint)!.request!.url)
-      .toBe('https://heituva.no/s/[token]')
+    expect(beforeSend(ev('https://www.heituva.com/s/x'), hint)!.request!.url)
+      .toBe('https://www.heituva.com/s/[token]')
   })
 
   it('leaves an ordinary app route alone', () => {
-    const url = 'https://heituva.no/undersokelser/42/resultater'
+    const url = 'https://www.heituva.com/undersokelser/42/resultater'
     expect(beforeSend(ev(url), hint)!.request!.url).toBe(url)
   })
 
   it('scrubs the referer as well, which is the second copy of the same URL', () => {
-    const out = beforeSend(ev('https://heituva.no/x', 'https://heituva.no/s/secrettoken'), hint)
-    expect(out!.request!.headers!.referer).toBe('https://heituva.no/s/[token]')
+    const out = beforeSend(ev('https://www.heituva.com/x', 'https://www.heituva.com/s/secrettoken'), hint)
+    expect(out!.request!.headers!.referer).toBe('https://www.heituva.com/s/[token]')
   })
 })
 

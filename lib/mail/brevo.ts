@@ -29,9 +29,17 @@ import type { MailMessage, MailProvider, MailResult } from './types'
 const ENDPOINT = 'https://api.brevo.com/v3/smtp/email'
 
 export function brevoProvider(): MailProvider {
-  const apiKey = readEnv('BREVO_API_KEY')
-  const from = readEnv('MAIL_FROM')
-  const fromName = readEnv('MAIL_FROM_NAME') ?? 'HeiTuva'
+  /*
+    TRIMMED, because a pasted secret carries whitespace far more often than
+    anyone expects — a trailing newline from a copy, a leading space from a
+    double-click selection. Brevo answers such a key with a bare 401, which is
+    indistinguishable from a key that was never valid, and an operator then goes
+    looking for the wrong problem. Trimming costs nothing and removes the
+    commonest cause of the least informative error.
+  */
+  const apiKey = readEnv('BREVO_API_KEY')?.trim()
+  const from = readEnv('MAIL_FROM')?.trim()
+  const fromName = readEnv('MAIL_FROM_NAME')?.trim() || 'HeiTuva'
 
   /**
    * Every variable that is missing, so one deploy fixes all of them.
@@ -105,9 +113,33 @@ export function brevoProvider(): MailProvider {
           What is left — a 400 naming an unusable address — is the only class
           that is genuinely about this message, and the only one archived.
         */
+        /*
+          THE STATUS ALONE IS NOT ACTIONABLE, which this cost a round trip to
+          learn. Prod returned `brevo 401` on both queued invitations and that
+          string cannot distinguish «the key is not a transactional API key»
+          from «the key was revoked» from «the key has a trailing newline» —
+          three different fixes behind one number. Brevo says which in the
+          response body (`{code, message}`), so the body is read and included.
+
+          The KEY is never included: only Brevo's own code and message, capped,
+          and the request body is never echoed because it carries a
+          respondent's invitation token.
+        */
+        const detail = await res
+          .json()
+          .then((j: unknown) => {
+            const o = (j ?? {}) as { code?: string; message?: string }
+            return [o.code, o.message].filter(Boolean).join(': ').slice(0, 200)
+          })
+          .catch(() => '')
+
         const retryable =
           res.status >= 500 || res.status === 429 || res.status === 401 || res.status === 403
-        return { ok: false, error: `brevo ${res.status}`, retryable }
+        return {
+          ok: false,
+          error: detail ? `brevo ${res.status} — ${detail}` : `brevo ${res.status}`,
+          retryable,
+        }
       } catch (e) {
         // Network failures are always worth another attempt. The thrown value is
         // not included: it can quote the request, and the request body carries a
@@ -119,5 +151,49 @@ export function brevoProvider(): MailProvider {
         }
       }
     },
+  }
+}
+
+/**
+ * Is the API key accepted, asked WITHOUT spending an invitation.
+ *
+ * `configured()` answers «is a key present», which is a different question from
+ * «is the key any good» — and prod proved the gap between them: all three
+ * secrets were set, the worker drained, and Brevo returned 401 twice. Finding
+ * that out by attempting a real send costs a `read_ct` on a real message, and
+ * `MAX_ATTEMPTS` is five, so five diagnostic attempts DEAD-LETTER the very
+ * invitations being debugged.
+ *
+ * `GET /v3/account` validates the credential and sends nothing. It is not part
+ * of the `MailProvider` interface deliberately: it is Brevo's endpoint, not a
+ * property every provider has, and widening the seam so one implementation can
+ * be diagnosed would oblige the other three to invent an answer.
+ */
+export async function brevoAccountProbe(): Promise<{
+  ok: boolean
+  status: number
+  detail: string
+}> {
+  const apiKey = readEnv('BREVO_API_KEY')?.trim()
+  if (!apiKey) return { ok: false, status: 0, detail: 'BREVO_API_KEY not set' }
+  try {
+    const res = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': apiKey, accept: 'application/json' },
+    })
+    const body = (await res.json().catch(() => ({}))) as {
+      code?: string
+      message?: string
+      email?: string
+    }
+    const detail = res.ok
+      ? `account ${body.email ?? 'ok'}`
+      : [body.code, body.message].filter(Boolean).join(': ').slice(0, 200)
+    return { ok: res.ok, status: res.status, detail }
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      detail: `request failed (${e instanceof Error ? e.name : 'unknown'})`,
+    }
   }
 }

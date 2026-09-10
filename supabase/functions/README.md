@@ -41,3 +41,33 @@ read the queue at all when the provider is unconfigured.
 | `NEXT_PUBLIC_APP_URL` | origin the `/s/<token>` link is built on |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by the platform.
+
+## What is deployed, and one known divergence
+
+**Deployed 2026-09-10, version 2** to `jmhhszsnjfqgclxzhciq`, `verify_jwt: false`
+(the function authenticates its own caller — see the header of `index.ts`).
+
+`get_edge_function` returns four files, not five: `types.ts` is imported with
+`import type`, which Deno erases, so the platform tree-shook it out of the
+bundle. Sending it is still correct — it is what the deploy type-checks against.
+
+**KNOWN DIVERGENCE, recorded rather than deployed over.** The deployed v2 has
+
+```ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function drain(
+  svc: any,
+```
+
+and this repository now has `type ServiceClient = any` with the pragma on the
+alias instead. The reason for the repo change: once the signature became
+multi-line, `eslint-disable-next-line` silently attached to the wrong line and
+the rule fired. **Types are erased by Deno, so the emitted JavaScript is
+identical** — this is a lint-pragma difference with no runtime effect, and a
+third production deploy to fix a comment is a change to production for nothing.
+The next deploy that carries a real code change reconciles it.
+
+Written down because an unrecorded difference between a repository and a running
+system is how the two stop being the same thing, and this project has paid for
+that lesson twice: `overview_activity` hand-applied, and the two functions whose
+comment blocks were abridged on their way to the MCP payload.

@@ -141,7 +141,7 @@ describe('a provider that is configured', () => {
     const saved = VARS.map((v) => [v, process.env[v]] as const)
     process.env.AWS_ACCESS_KEY_ID = 'AKIAEXAMPLE'
     process.env.AWS_SECRET_ACCESS_KEY = 'secret'
-    process.env.MAIL_FROM = 'HeiTuva <ingen-svar@heituva.no>'
+    process.env.MAIL_FROM = 'HeiTuva <ingen-svar@heituva.com>'
     try {
       expect(sesProvider().configured()).toBeNull()
     } finally {

@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
+import { anonClient } from './clients'
 
 /**
  * `M:0095` — the consumer is scheduled, and `sent_at` says what it means.
@@ -147,5 +148,51 @@ describe('the queue can be inspected without being spent', () => {
     expect(
       one(`select has_function_privilege('service_role', 'public.mail_outbox_depth()', 'execute')::text`),
     ).toBe('true')
+  })
+})
+
+describe('the worker secret is readable by nothing but the service role', () => {
+  /*
+    THE MOST SENSITIVE FUNCTION IN THE SCHEMA, because its RETURN VALUE is a
+    credential rather than data about one. Everything else in `public` returns
+    rows a role is allowed to see; `mail_worker_secret` returns the thing that
+    authorises draining the queue.
+
+    Gate 5a3 caught this as «protected but UNGUARDED» — the revoke was in the
+    migration and nothing proved it. That is exactly the state the gate exists
+    to refuse: correct today, with nothing to stop it being wrong tomorrow.
+  */
+  it('is revoked from every client role in the catalogue', () => {
+    for (const role of ['anon', 'authenticated']) {
+      expect(
+        one(`select has_function_privilege('${role}', 'public.mail_worker_secret()', 'execute')::text`),
+        `${role} can read the worker secret`,
+      ).toBe('false')
+    }
+    expect(
+      one(`select has_function_privilege('service_role', 'public.mail_worker_secret()', 'execute')::text`),
+    ).toBe('true')
+  })
+
+  it('and refuses an anonymous caller through PostgREST, which is the real path', async () => {
+    // Stronger than the catalogue check above: `public` functions are exposed as
+    // RPCs, so this is the request an attacker would actually make. A grant can
+    // be correct in pg_proc and still reachable if something re-granted it.
+    const { data, error } = await anonClient().rpc('mail_worker_secret')
+    expect(error, 'anon reached the worker secret through the REST API').not.toBeNull()
+    expect(data ?? null).toBeNull()
+  })
+
+  it('is SECURITY DEFINER with a pinned search_path', () => {
+    // Definer because it reads `vault.decrypted_secrets`, which no client role
+    // can see; the pinned search_path is what stops a caller-controlled schema
+    // shadowing `vault` and being handed the read instead.
+    const row = psql(`
+      select p.prosecdef::text, coalesce(array_to_string(p.proconfig, ','), '')
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'mail_worker_secret'`)[0]
+    const [definer, config] = row as string[]
+    expect(definer).toBe('true')
+    expect(config).toContain('search_path=')
   })
 })

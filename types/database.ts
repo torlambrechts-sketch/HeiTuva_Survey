@@ -867,10 +867,10 @@ export type Database = {
           },
           {
             foreignKeyName: "live_sessions_round_id_fkey"
-            columns: ["round_id"]
+            columns: ["round_id", "survey_id"]
             isOneToOne: false
             referencedRelation: "survey_rounds"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "survey_id"]
           },
           {
             foreignKeyName: "live_sessions_survey_tenancy"
@@ -1016,10 +1016,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "org_members_group_id_fkey"
-            columns: ["group_id"]
+            columns: ["group_id", "org_id"]
             isOneToOne: false
             referencedRelation: "groups"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "org_members_org_id_fkey"
@@ -1630,10 +1630,10 @@ export type Database = {
           },
           {
             foreignKeyName: "result_snapshots_round_id_fkey"
-            columns: ["round_id"]
+            columns: ["round_id", "survey_id"]
             isOneToOne: false
             referencedRelation: "survey_rounds"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "survey_id"]
           },
           {
             foreignKeyName: "result_snapshots_survey_id_fkey"
@@ -2763,6 +2763,7 @@ export type Database = {
       }
       mail_outbox_archive: { Args: { p_msg_id: number }; Returns: boolean }
       mail_outbox_delete: { Args: { p_msg_id: number }; Returns: boolean }
+      mail_outbox_depth: { Args: never; Returns: Json }
       mail_outbox_read: {
         Args: { p_batch?: number; p_visibility?: number }
         Returns: {
@@ -2771,6 +2772,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      mail_worker_secret: { Args: never; Returns: string }
       mint_test_token: { Args: { p_survey: string }; Returns: Json }
       overview_activity: { Args: { p_org: string }; Returns: Json }
       publish_duty: {

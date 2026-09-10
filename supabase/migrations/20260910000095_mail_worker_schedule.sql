@@ -33,24 +33,55 @@ comment on column public.survey_invitations.sent_at is
   'DEVIATIONS D133). Read by app.enqueue_reminders(), which is why a survey '
   'whose worker never ran also never reminded anyone.';
 
--- ═══ 2. THE SCHEDULE ══════════════════════════════════════════════════════
+-- ═══ 2. THE SCHEDULE, AND WHAT AUTHORISES IT ═════════════════════════════
 --
 -- pg_cron cannot call an Edge Function directly, so it calls this, and this
 -- makes one HTTP request through pg_net.
 --
--- THE URL AND THE KEY COME FROM VAULT, NOT FROM THIS FILE. A service-role key
--- in a migration is a secret in git and in every clone of it; Vault keeps it in
--- the database, encrypted, and out of the schema dump. The operator creates the
--- two secrets once (see the comment on the function), and until they exist this
--- function does nothing but say so.
+-- THE CREDENTIAL IS A DEDICATED SECRET, NOT THE SERVICE-ROLE KEY. The obvious
+-- design is to have the function require a service_role JWT and store that key
+-- here for cron to present. It is simple and it is wrong: a service-role key's
+-- leak is total database compromise, and it would be spent on authorising «run
+-- the mail worker». Least privilege says this credential should authorise
+-- exactly that.
 --
--- «Does nothing but say so» is deliberate and is NOT a catch-all: the ONE
--- condition it handles is «the secrets have not been created yet», it is named
--- in the warning, and every other failure — a bad URL, a pg_net error, a
--- function that 500s — is left to raise or to show up in net._http_response
--- where an operator can see it. A `when others` here would make a broken worker
--- and an unconfigured one look identical, which is the shape S1 spent its whole
--- tranche removing one level up.
+-- So the secret is GENERATED INSIDE POSTGRES and read from Vault by both ends —
+-- by this function to send it, and by the Edge Function to compare it. It is
+-- never in git, never in an environment variable, never in a chat message, and
+-- no human or agent has seen its value. Losing it costs a queue drain.
+--
+-- SETUP, once per project (neither value is a secret this file could carry):
+--   select vault.create_secret(
+--     'https://<ref>.supabase.co/functions/v1/mail-worker', 'mail_worker_url');
+--   select vault.create_secret(
+--     encode(extensions.gen_random_bytes(32), 'hex'), 'mail_worker_secret');
+create or replace function public.mail_worker_secret()
+returns text
+language sql
+security definer
+set search_path = ''
+stable
+as $fn$
+  select decrypted_secret from vault.decrypted_secrets where name = 'mail_worker_secret';
+$fn$;
+
+comment on function public.mail_worker_secret() is
+  'The mail worker''s own credential, for the Edge Function to compare against '
+  'the x-worker-secret header it was called with. service_role only — this is '
+  'the one function in the schema whose return value IS a secret, which is why '
+  'it is granted to nothing else. It authorises a queue drain and nothing more: '
+  'deliberately NOT the service-role key, whose leak would be the whole database.';
+
+revoke all on function public.mail_worker_secret() from public, anon, authenticated;
+grant execute on function public.mail_worker_secret() to service_role;
+
+-- «Does nothing but say so» when the secrets are absent is deliberate and is
+-- NOT a catch-all: the ONE condition it handles is «the secrets have not been
+-- created yet», it is named in the warning, and every other failure — a bad
+-- URL, a pg_net error, a function that 503s — is left to raise or to show up in
+-- net._http_response where an operator can see it. A `when others` here would
+-- make a broken worker and an unconfigured one look identical, which is the
+-- shape S1 spent its whole tranche removing one level up.
 create or replace function app.run_mail_worker()
 returns void
 language plpgsql
@@ -59,16 +90,16 @@ set search_path = ''
 as $fn$
 declare
   v_url text;
-  v_key text;
+  v_secret text;
 begin
   select decrypted_secret into v_url from vault.decrypted_secrets where name = 'mail_worker_url';
-  select decrypted_secret into v_key from vault.decrypted_secrets where name = 'mail_worker_key';
+  select decrypted_secret into v_secret from vault.decrypted_secrets where name = 'mail_worker_secret';
 
-  if v_url is null or v_key is null then
+  if v_url is null or v_secret is null then
     raise warning 'mail worker not invoked: vault secret % is missing',
-      case when v_url is null and v_key is null then 'mail_worker_url and mail_worker_key'
+      case when v_url is null and v_secret is null then 'mail_worker_url and mail_worker_secret'
            when v_url is null then 'mail_worker_url'
-           else 'mail_worker_key' end;
+           else 'mail_worker_secret' end;
     return;
   end if;
 
@@ -76,21 +107,18 @@ begin
     url := v_url,
     headers := jsonb_build_object(
       'content-type', 'application/json',
-      -- The function checks the ROLE in this token, not just that it is signed:
-      -- the anon key is also a valid signed JWT and it is public.
-      'authorization', 'Bearer ' || v_key),
+      -- Not an Authorization bearer: the function's own check is what
+      -- authenticates, and it compares this in constant time.
+      'x-worker-secret', v_secret),
     body := '{}'::jsonb,
     timeout_milliseconds := 20000);
 end
 $fn$;
 
 comment on function app.run_mail_worker() is
-  'Invokes the mail-worker Edge Function through pg_net, once per cron tick. '
-  'SETUP, once per project, and NOT in any migration because both values are '
-  'secrets: '
-  'select vault.create_secret(''https://<ref>.supabase.co/functions/v1/mail-worker'', ''mail_worker_url''); '
-  'select vault.create_secret(''<service-role key>'', ''mail_worker_key''); '
-  'Until both exist this raises a warning and returns, which is a named '
+  'Invokes the mail-worker Edge Function through pg_net, once per cron tick, '
+  'presenting the dedicated worker secret from Vault. Until mail_worker_url and '
+  'mail_worker_secret exist this raises a warning and returns, which is a named '
   'condition rather than a swallow: any OTHER failure is left visible.';
 
 revoke all on function app.run_mail_worker() from public, anon, authenticated;

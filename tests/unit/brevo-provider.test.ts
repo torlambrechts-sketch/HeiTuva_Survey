@@ -143,7 +143,7 @@ describe('the invitation gives the respondent somewhere to go', () => {
       surveyTitle: 'Arbeidsmiljø',
       name: 'Kari',
       lang: c.lang,
-      url: 'https://heituva.com/s/abc',
+      url: 'https://www.heituva.com/s/abc',
       anonymous: c.anonymous,
     }).text
 
@@ -177,7 +177,7 @@ describe('the invitation gives the respondent somewhere to go', () => {
 
     it(`${c.lang}/${c.anonymous ? 'anonymous' : 'named'} points at the survey page instead`, () => {
       const text = build(c)
-      expect(text).toContain('https://heituva.com/s/abc')
+      expect(text).toContain('https://www.heituva.com/s/abc')
       expect(
         c.lang === 'no'
           ? /siden der du svarer/.test(text)

@@ -1051,3 +1051,91 @@ is the owner's to enable. **No new advisor was introduced by any of the six.**
 `apply_migration` stamps its own version timestamp, so prod's ledger rows for these six do not
 carry the repository's filenames. That drift already existed (the 2026-09-09 prod-only repair
 row) and is why the fingerprint, not the ledger, is the evidence.
+
+## 2026-09-10 — the mail worker on prod, and the ninth check used outside Postgres for the first time
+
+`M:0095` applied (as `mail_worker_schedule`), the `mail-worker` Edge Function deployed at
+version 2, and the two Vault rows created. What was **not** achieved: delivery. The reason is
+named in § below.
+
+### THE NINTH CHECK, MOVED FROM SCHEMA TO CODE
+
+The eight-hash fingerprint compares the CATALOGUE; the ninth check compares raw
+`md5(prosrc)` per function, and it exists because the eight hashes cannot see a
+comment. **Both are about Postgres. An Edge Function is neither** — it is a file
+uploaded through an API — and until this run there was no equivalent for it.
+
+`mcp__Supabase__get_edge_function` returns the deployed file contents, so there
+is one: **fetch the deployed source and compare it against what you meant to
+send.** That is the same discipline in a different substrate, and it is now part
+of the procedure rather than a thing someone might think of.
+
+**Use it whenever a function is deployed by pasting content into a tool call**,
+which is the whole risk: the CLI bundles from the repository and cannot mistype,
+while an MCP payload is transcribed. This run supplied the proof that the risk is
+real, twice over:
+
+| What | Result |
+|---|---|
+| `M:0095`'s three function bodies, first apply | `mail_worker_secret` MATCH, `run_mail_worker` MATCH, **`mail_outbox_depth` DIFFERED** — repo 619 bytes, prod 304 |
+| Cause | I dropped two inline `--` comments from the body while retyping for the payload. The two I pasted whole matched. |
+| Fix | Re-applied the exact body; all three then byte-identical to the repository |
+| The Edge Function, deployed v2 | Fetched back and read: entrypoint, provider, copy and env all as intended |
+
+**This is the SECOND time in two sessions that comments were abridged on the way
+to an MCP payload** — 2026-09-09 caught `app.redact_for_role` and
+`app.guard_survey_policy` the same way. Two instances in two sessions is not a
+coincidence, it is a property of the medium: **any hand-transcription between the
+file and the wire is where local and prod stop being the same thing**, and
+comments are the half no behavioural test can see. If a payload is too large, the
+answer is more calls, not shorter comments.
+
+### One divergence deliberately NOT closed
+
+The deployed function has `// eslint-disable-next-line` above `svc: any`; the
+repository now has `type ServiceClient = any` with the pragma on the alias,
+because a multi-line signature made the old pragma attach to the wrong line and
+the rule fired. **Types are erased by Deno — the emitted JavaScript is
+identical.** A third production deploy to change a lint comment is a change to
+production with no behavioural difference, which is risk without fidelity. It is
+recorded in `supabase/functions/README.md` and reconciles on the next deploy that
+carries real code. Same judgement as the applied migrations whose comments name
+D125/D126: the divergence is known and written down rather than papered over.
+
+### What is on prod now, and the one thing that is not
+
+| | State |
+|---|---|
+| `M:0095` | applied; `mail_outbox_depth`, `mail_worker_secret`, `app.run_mail_worker` present, all three byte-identical to the repo |
+| `mail-worker` function | version 2, ACTIVE, `verify_jwt: false` (it authenticates its own caller) |
+| Vault | `mail_worker_url`, `mail_worker_secret` (32 random bytes generated in-database; no human or agent has seen its value) |
+| cron `mail-worker-minutely` | active, firing every minute |
+| Auth, end to end | **works** — 0 responses with status 403 |
+| Brevo secrets | **readable from the function's own environment** — `configured()` returns null, so `BREVO_API_KEY` and `MAIL_FROM` are present |
+| The queue | **still 2 queued, 0 archived, `max_read_ct` 0 — never even read** |
+| `sent_at` | still NULL on both invitations |
+
+**The one failing precondition: `NEXT_PUBLIC_APP_URL` is not set as an Edge
+Function secret.** The worker refuses to drain, by design, because the invitation
+body contains `<origin>/s/<token>` and nothing else identifies the survey — an
+origin of `''` would send a real invitation whose only link is relative, dead in
+every mail client, and would delete it from the queue and write `sent_at` while
+doing so. A message spent on nothing.
+
+That guard was added in this same run, minutes before it fired. Before it, this
+deployment would have sent both invitations with a dead link.
+
+**It is not the missing bounce webhook.** The bounce path is blocked on the
+provider (D133) and touches nothing in the send path.
+
+### Advisors after the DDL
+
+Re-read. Everything flagged is pre-existing and either by design — RLS enabled
+with no policy on `responses`/`answers` IS security invariant 1, and the
+SECURITY DEFINER lints are the architecture — or already recorded as the owner's
+(leaked-password protection). **One is new and mine:** `extension_in_public`,
+because `create extension if not exists pg_net` named no schema and it landed in
+`public` rather than `extensions`. Recorded, not fixed: pg_net's functions
+resolve as `net.http_post`, the live cron job depends on them, and moving an
+extension's schema while a scheduled job calls into it is not a change to make
+casually for a lint. Fix it in a migration that can be tested first.
