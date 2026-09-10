@@ -179,9 +179,14 @@ jobs:
 
       # tests/visual/browsers.setup.ts refuses to start when a browser a project
       # needs is missing, so a missing dependency never arrives disguised as six
-      # failing screenshots.
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      # failing screenshots. IT CAUGHT THIS STEP: I wrote «chromium» here, and
+      # the visual suite's `mobile` project is devices['iPhone 13'], which is
+      # WEBKIT. Both projects' browsers, named because both are needed — the
+      # step is not «install the browser», it is «install the browsers the
+      # projects use», and writing the one I had in mind is the same
+      # enumeration-for-a-property that this session hit twice already.
+      - name: Install the browsers the visual projects need
+        run: npx playwright install --with-deps chromium webkit
 
       # Every gate below calls ensureServer, which refuses a build wired to the
       # production project and refuses a build older than the source. Building
