@@ -337,6 +337,30 @@ row wraps», with the instruction to count rather than trust the sentence.
 frozen and CLAUDE.md names *manifests* explicitly among the things not to add mid-phase. Logged as
 a limit; the tab is photographed only incidentally, by the `avansert` state that now opens it.
 
+### Run 114 — GREEN, and read rather than trusted
+
+`b21377c`. All three jobs. **`verify:responsive` and `verify:visual` both ran and both passed** —
+the first time either has this session.
+
+| measured on the green run | |
+|---|---|
+| census | **1023 passed across 73 files** |
+| 5a3 | **67 of 92** — 56 RLS tables + 36 SECURITY DEFINER, 67 `ok`/`NO DATA` |
+| `bygg` @320px | `scrollWidth=320 controls=25 small=0 overlaps=0` — was 329 |
+| `bygg/vis` @320px | `scrollWidth=320 controls=0` |
+| `bibliotek-bank` @390px | `scrollWidth=390 controls=38 small=0 overlaps=0` |
+| responsive verdict | **0 finding(s), 0 blocker(s)** |
+
+**So the two things I said I could not conclude are now measured.** The two-column type palette
+and the picker's thirteen-chip row hold at 390px and at 320px, with no overflow, no control under
+44px and no overlapping hit areas. That is not the same as «they look right» — `verify:responsive`
+measures geometry, not judgement — but it is no longer *unverified*, and § 8's first paragraph
+should be read with that correction.
+
+**Five runs to get here: 106, 108, 110, 112, 114.** Three of the four reds were mine (a probe
+encoding the old layout, a closure crossing the RSC boundary, a rail I mis-identified); the fourth
+was the same rail fix landing on the wrong element.
+
 ---
 
 ## 7. The walkthrough — what to click, and what each screen should show
@@ -452,20 +476,21 @@ pre-arranged.
 
 ## 8. What I would not conclude
 
-**That any of this looks right.** Every visual half of all four phases is **UNVERIFIED**, and the
-reason has two independent halves: Docker is unavailable here, so there is no local stack and no
+**That any of this looks right.** *(Corrected after run 114: the geometry is now measured — see
+§ 6b. What follows still holds for everything geometry does not cover.)* No screen was looked at
+from **here**, and the reason has two independent halves: Docker is unavailable here, so there is no local stack and no
 capture; and Chromium reaches local files but production resets its connection
 (`net::ERR_CONNECTION_RESET` where `curl` gets 200) — and an authenticated Builder screen would
 need a session this environment does not have anyway. **Everything above is source against bundle.
 A property that matches in a class list can still render wrong**, and three of the four phases
 moved geometry.
 
-**The two-column type palette and the overlay's thirteen-chip row at 390px are the specific
-worries.** The palette halves the available width for a 12.5px label; the chip row is now built
-from eleven real categories rather than the seed's three. Both were reasoned against RESPONSIVE.md
-and neither was seen. CI's `verify:responsive` is the gate that would catch them, and if it is
-green that is real evidence — but a green responsive gate is not the same as the layout being
-*good*, only that it does not overflow or lose a hit area.
+**The two-column type palette and the overlay's thirteen-chip row were the specific worries, and
+run 114 answers the measurable half.** `bygg` and `bibliotek-bank` are clean at 390px and 320px:
+no overflow, nothing under 44px, no overlapping hit areas. **A green responsive gate is not the
+same as the layout being good** — it cannot tell you whether two columns of 12.5px labels are
+comfortable to read, or whether thirteen chips over three rows is a sensible thing to hand
+someone. That judgement is still yours, and it is what the walkthrough is for.
 
 **That the census numbers mean the suite is stronger by 43 tests.** They mean 43 assertions exist
 and pass. Most of them read source rather than behaviour, which is the house style here and is the
