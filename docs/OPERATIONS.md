@@ -1176,3 +1176,107 @@ That is the general argument for a read-only diagnostic beside any queue whose
 retry budget is finite: **the thing you are debugging must not be the thing you
 spend to debug it.** Pausing cron when `read_ct` began climbing is the same
 principle applied to time rather than to attempts.
+
+## 2026-09-10, later — EMAIL IS LIVE IN PRODUCTION
+
+Two real invitations delivered to a real inbox from the cron-scheduled run, and
+`sent_at` written on both rows. The full sequence, with the numbers, because
+«email works» is the kind of claim this project requires evidence for.
+
+| | before (11:28:38Z) | after (11:29:40Z) |
+|---|---|---|
+| `mail_outbox_depth()` | `queued 2, archived 0, invisible 0, max_read_ct 2` | `queued 0, archived 0, invisible 0, max_read_ct 0` |
+| `15c1b8a2…` (anonymous) | `sent_at NULL` | `sent_at 2026-09-10 11:29:01.27+00` |
+| `bf43e859…` (named) | `sent_at NULL` | `sent_at 2026-09-10 11:29:01.46+00` |
+| cron `mail-worker-minutely` | `active false` | `active true` |
+
+The before-row was read in the same statement that unpaused the job, so there is
+no window between the reading and the change. `cron.job_run_details` shows the
+run starting `11:29:00.057933+00`, status `succeeded`; the worker returned
+`{"ok":true,"sent":2,"left":0,"archived":0}`. **`archived: 0` is the good number
+and not a missing one** — the success path calls `mail_outbox_delete`, and
+`archive` is the dead-letter path, so zero means nothing was destroyed. Confirmed
+from the inbox by Tor, which is the check that is not in the system.
+
+### The last blocker was an IP allowlist, and the 401 carried it
+
+After the API key was moved to `BREVO_API_KEY`, the probe still returned 401 —
+with a completely different body:
+
+```
+unauthorized: We have detected you are using an unrecognised IP address
+2a05:d014:61b:2708:3bd0:e8ce:5e7b:4dd1. If you performed this action make
+sure to add the new IP address in this link: https://a…
+```
+
+Brevo's account had IP restriction enabled on API usage. **`brevo 401` has now
+meant three different things in this one effort** — wrong key type (the SMTP
+password), key not found, and caller not allowlisted — none of them about the
+message. DECISIONS Q6b held through all three: `retryable`, `left: 2`, nothing
+archived.
+
+**Allowlisting was ruled out by measurement, not by argument.** Four probes one
+minute apart reported four distinct egress addresses across three distinct /64
+subnets — `…:2708:3bd0:e8ce:5e7b:4dd1`, `…:270a:3901:6ddc:ac2a:7f3f`,
+`…:2709:92de:14fd:4f73:bc67`, `…:270a:2346:f742:91cc:97d2` — from four
+consecutive calls to one function. Edge Functions egress from a shared AWS pool
+with no stable address, so an allowlist entry fixes the instance that just failed
+and breaks on the next cold start; the addresses are also IPv6, which the
+allowlist may not accept at all. Tor turned the restriction off, and the next
+probe returned `{"ok":true,"status":200,"detail":"account …"}`.
+
+Worth keeping as a procedure: **four cheap probes turned «which of my guesses is
+right» into «this option cannot work», and a table of four addresses is an
+argument nobody has to take on trust.**
+
+### The probe's final tally
+
+Twelve diagnostic rounds across the whole credential hunt, and the queue ended
+them at `max_read_ct` 2 of 5 — unchanged from where it started. Run through the
+worker instead, those twelve would have dead-lettered both invitations twice
+over, and the wreckage would have read as a DELIVERY failure rather than a
+credential one. `?probe=1` costs nothing and answers the only question that
+mattered.
+
+### What the comparison found that the deploy log did not
+
+`get_edge_function` was read after the send, as the ninth check applied to a
+function. Three things came back that reading the log would not have given:
+
+1. **The platform reports version 11; `supabase/functions/README.md` records
+   six.** Both are right — Supabase redeploys a function when the project's
+   secrets change, and this hunt involved several saves. The log's numbers are
+   deploys, not platform versions, and that is now written down before someone
+   reads the gap as a missing entry.
+2. **`env-check` is deleted**, confirmed by `list_edge_functions` returning
+   `mail-worker` alone — by listing, not by the report that it had been done.
+3. **`scripts/edge-bundle.ts` would have broken production on its first use.**
+   `lib/mail/brevo.ts` is written `from './env'`; Deno needs `./env.ts`. The
+   running function has the extension only because it was typed in by hand during
+   transcription, so the generator written to guarantee fidelity would have
+   regressed the one thing hand-transcription got right — and `./env` is a value
+   import, so the failure is module resolution on the first request, not a failed
+   type-check. Its assertion covered the entry point's imports and was silent
+   about the imports inside the files it copies. Now stated as the property (no
+   relative specifier in the bundle may lack an explicit extension), asserted
+   over the whole bundle, and proven to fire before being trusted.
+
+The third is the one to remember: **the tool built to prevent transcription error
+contained the same class of error, and only a comparison against the running
+system found it.** An apply is not evidence.
+
+### Still open after this
+
+- **`bounced_at` has no writer** (D133) — no Transactional → Webhooks on this
+  account. Unchanged.
+- **The provider's `messageId` is discarded** (D134, found in this send) — so
+  nothing joins a row to Brevo's own delivery view, which was the implicit
+  compensating control for D133. The two should be revisited together.
+- **`pg_net` is installed into `public`** — a new advisor, mine. Not moved while
+  `app.run_mail_worker()` depends on `net.http_post`.
+- **A minutely cron now runs in production**, ~1440 invocations a day, most
+  finding an empty queue and returning `sent: 0`. Within limits, but it also
+  writes a row to `net._http_response` each time; pg_net's own retention governs
+  that. Logged rather than tuned.
+- **`personvern@heituva.no`** in `legal.privacy6P` / `privacy8P` — held until the
+  replacement mailbox is confirmed to RECEIVE.
