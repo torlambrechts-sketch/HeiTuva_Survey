@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { brevoProvider } from '@/lib/mail/brevo'
 import { sesProvider } from '@/lib/mail/ses'
 import { smtpProvider } from '@/lib/mail/smtp'
 import { captureProvider } from '@/lib/sms/capture'
@@ -34,6 +35,11 @@ import { linkMobilityProvider } from '@/lib/sms/link-mobility'
  * seams can return, and the assertion is the property, not the instances.
  */
 const PROVIDERS = [
+  // Added when Brevo superseded SES. THE SWEEP IS THE REASON THIS WAS ONE LINE:
+  // the header above predicted that «the fourth provider nobody has written yet
+  // is exactly the one that would reintroduce this», and the fifth arrived two
+  // days later. Adding the row is the whole cost of keeping the property true.
+  { name: 'brevo', make: () => brevoProvider() },
   { name: 'ses', make: () => sesProvider() },
   { name: 'smtp', make: () => smtpProvider() },
   { name: 'link-mobility', make: () => linkMobilityProvider() },
@@ -42,6 +48,8 @@ const PROVIDERS = [
 
 /** The environment every provider reads, cleared so each is unconfigured. */
 const VARS = [
+  'BREVO_API_KEY',
+  'MAIL_FROM_NAME',
   'AWS_ACCESS_KEY_ID',
   'AWS_SECRET_ACCESS_KEY',
   'MAIL_FROM',
@@ -112,6 +120,20 @@ describe('a provider that is configured', () => {
       expect(smtpProvider().configured()).toBeNull()
     } finally {
       if (saved !== undefined) process.env.SMTP_HOST = saved
+    }
+  })
+
+  it('brevo with both variables reports no gap', () => {
+    const saved = VARS.map((v) => [v, process.env[v]] as const)
+    process.env.BREVO_API_KEY = 'xkeysib-example'
+    process.env.MAIL_FROM = 'undersokelse@heituva.com'
+    try {
+      expect(brevoProvider().configured()).toBeNull()
+    } finally {
+      for (const [v, val] of saved) {
+        if (val === undefined) delete process.env[v]
+        else process.env[v] = val
+      }
     }
   })
 

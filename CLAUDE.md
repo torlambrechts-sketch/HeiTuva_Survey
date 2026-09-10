@@ -34,7 +34,13 @@ Two consequences, both cheap:
 - Supabase: Postgres + Auth + RLS + Storage + Edge Functions + pg_cron + pgmq — project region **eu-central-1**
 - GitHub + Vercel Git integration; Supabase branch per PR
 - i18n: next-intl, messages loaded from `ui_messages` table (seeded from `/messages/*.json`), tag-based revalidation
-- Email: provider adapter in `lib/mail/` — Amazon SES eu-north-1 (see DECISIONS Q6)
+- Email: provider adapter in `lib/mail/` — **Brevo transactional** (DECISIONS Q6a, which
+  supersedes Q6's Amazon SES). SES stays behind the seam: `MAIL_PROVIDER=ses`. The production
+  consumer is the Edge Function `supabase/functions/mail-worker`, on a pg_cron job (`M:0095`).
+  **`survey_invitations.sent_at` means ACCEPTED BY THE PROVIDER, not delivered** — this account
+  has no transactional webhooks, so there is no delivered event and `bounced_at` has no writer
+  at all (D133). Q6 chose Stockholm to keep the EU/EØS promise; whether Brevo keeps it is an
+  open check, not a settled fact.
 
 ## Design fidelity — pixel-perfect, non-negotiable
 - **Three handoff bundles, each governing a different question (DECISIONS Q18, extended

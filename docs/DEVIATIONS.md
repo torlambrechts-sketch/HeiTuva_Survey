@@ -3781,3 +3781,44 @@ migration to production for a paragraph of reasoning is a schema change to say s
 document says better. `B2-03`'s separate finding — that `submit_response` has no replay bar on a
 share-link token, so the caller who READS this is the caller who SETS its k — remains open and is
 listed as such in the S1–S4 report.
+
+## D133 — the bounce path is blocked on the provider, not on us
+
+**2026-09-10, with the Brevo sending path.** `survey_invitations.bounced_at` still has no
+writer, and this entry is the reason it is shipping that way rather than the reason it was
+forgotten.
+
+**What is missing is a webhook that this account does not offer.** The Brevo account has no
+Transactional → Webhooks section available, so there is no delivered event and no bounce
+event to subscribe to. Nothing can be built against it: this is not a screen that is missing,
+and it is not work anyone here can do. D130 recorded the column as having no writer and named
+the missing piece as «the provider callback»; that diagnosis was right and the callback is now
+known to be unavailable rather than merely unbuilt.
+
+**What `sent_at` therefore means, which is weaker than its name.** The worker writes it from
+its own successful API call, so it records that **Brevo accepted the message** — the request
+was well-formed and queued at the provider. It does **not** record that the recipient's server
+took it. A message can be accepted and bounce afterwards, and nothing in this system will hear
+about it. The column's own comment says this in the database (`M:0095`), because that is where
+the next reader of the column will be, and the gap between «accepted» and «delivered» is
+exactly the kind a later reader closes by guessing the stronger reading.
+
+**THE COST, STATED PLAINLY, BECAUSE IT IS NOT ZERO.**
+
+- `bounced_at` stays unwritable.
+- An invalid address keeps counting toward `surveys.target` and toward Resultater's
+  «av {invited} inviterte». The denominator silently includes people who were never reached.
+- Q61's «Adressen svarer ikke» can never fire on a real organisation. The status exists, is
+  derived, is rendered — and is unreachable outside the demo seed.
+
+**WHERE THAT IS ACCEPTABLE AND WHERE IT STOPS BEING ACCEPTABLE.** It is acceptable for a demo
+and for a pilot with known addresses, where the sender knows every recipient and a silent
+failure is recoverable by asking them. **It is not acceptable for a customer uploading 200
+recipients from an HR system, where a handful are always wrong** — there, a response rate is
+quietly computed against a denominator nobody can audit, and the one status that would have
+explained it never appears.
+
+**That sentence is the trigger.** The first customer import of an address list nobody has
+checked by hand is the event that makes this a defect rather than a limitation. Revisiting it
+then means either a provider whose account exposes transactional webhooks, or an inbound route
+of our own — not a change to this schema, which is already correct and merely unwritten.
