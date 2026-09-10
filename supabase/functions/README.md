@@ -99,3 +99,34 @@ sent from the generated bundle in full, and the rule from OPERATIONS.md stands
 unchanged: **if a payload is too large, the answer is more calls, not shorter
 comments.** I took the shortcut anyway under time pressure to unblock a send,
 which is exactly when it gets taken.
+
+## env-check — a one-off diagnostic, to be DELETED
+
+Deployed 2026-09-10 to answer one question: three probes in a row returned a
+byte-identical key fingerprint, so the value had never changed and the question
+stopped being «is this key right» and became «is the save reaching this project
+at all».
+
+**It found what no guessed list would have.** The new Brevo API key had been
+saved under the variable name `heituva-mail-worker` — the label given to the key
+inside Brevo, pasted into the secret's NAME field — while `BREVO_API_KEY` still
+held the SMTP password. A second stray, `eituva-mail-worker`, held 1532
+characters, apparently a whole block of dialog text. Testing three candidate
+spellings I had thought of would have missed both; `Deno.env.toObject()` was
+asked what is actually there.
+
+**Why it is a separate function.** The question is about the DEPLOYMENT, not the
+sender, and Supabase secrets are project-wide, so any function in the project
+sees the same values. Redeploying the production worker to ask an environment
+question would have put the one working thing at risk of a transcription error
+for no benefit.
+
+**It returns no values** — names, lengths, whether Brevo's `xkeysib-` prefix is
+present, four trailing characters, and the project ref. It is behind the mail
+worker's own credential.
+
+**DELETE IT once a send is proven.** A standing, authenticated endpoint that
+enumerates environment metadata is small surface but it is surface, and the
+normal `?probe=1` on the worker answers «is the key good» without it. The source
+stays in the repository so it can be redeployed in one call if this ever
+recurs — which is the right trade: cheap to bring back, nothing left running.
