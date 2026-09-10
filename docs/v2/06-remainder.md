@@ -300,11 +300,18 @@ oversight in the phases.** But CLAUDE.md requires one per phase, and the section
 that nothing else does is **decision conformance** — which caught two half-built decisions the
 first time it ran.
 
-**Being closed by ONE report covering the four**, not four retrospective ones. Four reconstructions
+**CLOSED 2026-09-10 by ONE report covering the four** — `docs/v2/reports/V2-5-to-V2-8.md` —
+not four retrospective ones. Four reconstructions
 would read like evidence and be recollection. The single report separates what is still derivable
 now — the diff, the migrations, the tests, the census delta, the gate output — from what is lost,
 which is the contemporaneous verification pass and fix pass, and says which is which. **A gap
 honestly marked is worth more than a plausible reconstruction.**
+
+Outcome: **decision conformance was fully recoverable and all seven decisions conform** (Q72, Q74,
+Q75, Q76, Q77, Q98, Q99, re-derived against the tree). What is lost is the verification pass and
+the fix pass *as acts* — which findings were deferred under the two-pass rule, and to where. The
+report is marked **CLOSED RETROSPECTIVELY** rather than READY FOR REVIEW, so it stays
+distinguishable from the eight that earned the standard marker.
 
 ### 5.2 Six `app` functions have a mutable `search_path`
 
