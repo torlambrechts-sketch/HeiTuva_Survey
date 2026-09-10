@@ -3822,3 +3822,45 @@ explained it never appears.
 checked by hand is the event that makes this a defect rather than a limitation. Revisiting it
 then means either a provider whose account exposes transactional webhooks, or an inbound route
 of our own — not a change to this schema, which is already correct and merely unwritten.
+
+## D134 — the provider's `messageId` is discarded, so nothing joins a row to Brevo's log
+
+**Found 2026-09-10, in the first proven production send.** `lib/mail/brevo.ts`
+reads Brevo's response and returns `{ ok: true, id: json.messageId ?? … }`. The
+worker's success path uses `result.ok` and nothing else: it writes `sent_at`,
+deletes the queue message and logs `sent ${job.kind} -> ${job.email}`. **`result.id`
+is not stored and not logged.** It exists for the width of one `if`.
+
+**Why this is more than tidiness.** D133 records that this Brevo account has no
+Transactional → Webhooks section, so `bounced_at` has no writer and there is no
+delivered event. The compensating control that made D133 acceptable for a pilot
+was implicit and is worth stating: *when a participant says they got nothing, go
+look the message up in Brevo's own delivery view.* That control needs a join key,
+and the join key is exactly what is being thrown away. What is left is matching on
+recipient address plus a timestamp — which is workable for two invitations to one
+address, and stops being workable at the 200-recipient upload D133 already names as
+its trigger, where several people share a send-second and one address may appear
+twice across rounds.
+
+So the two limitations compound rather than sit side by side: **no bounce event, and
+no handle with which to go and ask.**
+
+**Measured, not inferred.** Both invitations
+(`15c1b8a2…`, `bf43e859…`) have `sent_at` written from the cron run at
+11:29:01Z; the worker returned `{"ok":true,"sent":2,"left":0,"archived":0}`; and
+there is no column anywhere in `survey_invitations` holding a provider id —
+`sent_at` is the whole of the record. Asked the question CLAUDE.md requires of a
+column, in reverse: nothing writes a provider id because no such column exists,
+and the value that would fill it is produced and dropped on every send.
+
+**The fix, and its two halves.** The cheap half is one line — log `result.id`
+beside the address, so the Edge Function log carries the handle even before any
+schema does. The real half is a column (`survey_invitations.provider_message_id`,
+nullable, written by the worker in the same migration that adds it, per the
+standing «who writes this column?» rule) so the handle survives log retention.
+Neither is built here: the verification apparatus and the phase are closed, and
+this is logged for the next phase rather than added mid-flight.
+
+**Not a blocker for the demo or a known-address pilot** — the same boundary D133
+draws, for the same reason, which is why they should be revisited together and not
+separately.
