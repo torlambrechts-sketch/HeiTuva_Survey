@@ -463,7 +463,7 @@
     "smsPreview": "Hei! {org} spør: «{title}» — 2 minutter, {anon}. {link}",
     "smsAnonymous": "anonymt",
     "smsNamed": "med navn",
-    "smsLinkPlaceholder": "heituva.no/s/…",
+    "smsLinkPlaceholder": "www.heituva.com/s/…",
     "smsNote": "Mottakere med mobilnummer får lenken på SMS. Har de også e-post, sendes e-posten.",
     "recipientPlaceholder": "navn@bedrift.no eller mobilnummer — trykk Enter",
     "errSmsNotEnabled": "SMS er ikke slått på for virksomheten. Velg en annen kanal, eller kontakt oss.",

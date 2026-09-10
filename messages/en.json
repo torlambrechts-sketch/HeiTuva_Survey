@@ -463,7 +463,7 @@
     "smsPreview": "Hi! {org} asks: “{title}” — 2 minutes, {anon}. {link}",
     "smsAnonymous": "anonymous",
     "smsNamed": "with your name",
-    "smsLinkPlaceholder": "heituva.no/s/…",
+    "smsLinkPlaceholder": "www.heituva.com/s/…",
     "smsNote": "Recipients with a mobile number get the link by SMS. If they also have an email, the email is sent.",
     "recipientPlaceholder": "name@company.com or mobile number — press Enter",
     "errSmsNotEnabled": "SMS is not enabled for your organisation. Choose another channel, or contact us.",

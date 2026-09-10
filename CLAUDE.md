@@ -36,7 +36,10 @@ Two consequences, both cheap:
 - i18n: next-intl, messages loaded from `ui_messages` table (seeded from `/messages/*.json`), tag-based revalidation
 - Email: provider adapter in `lib/mail/` — **Brevo transactional** (DECISIONS Q6a, which
   supersedes Q6's Amazon SES). SES stays behind the seam: `MAIL_PROVIDER=ses`. The production
-  consumer is the Edge Function `supabase/functions/mail-worker`, on a pg_cron job (`M:0095`).
+  consumer is the Edge Function `supabase/functions/mail-worker`, on a pg_cron job (`M:0095`),
+  **live in production since 2026-09-10** — proven by two real invitations delivered from the
+  cron-scheduled run, not by a local send. Deploying it needs `npm run edge:bundle`, whose
+  output is compared against `get_edge_function` afterwards: an apply is not evidence.
   **`survey_invitations.sent_at` means ACCEPTED BY THE PROVIDER, not delivered** — this account
   has no transactional webhooks, so there is no delivered event and `bounced_at` has no writer
   at all (D133). Q6 chose Stockholm to keep the EU/EØS promise; whether Brevo keeps it is an
@@ -78,6 +81,27 @@ Two consequences, both cheap:
      the database; «Kjønnsdelt rapport» promised a field that exists nowhere in the schema,
      on a public page. **Nothing mechanical protects prose** — the gates protect schema and
      data — so this step is the protection, and it has to run again for every handoff.
+
+     **A HOST OR A URL IS A CLAIM, NOT A SPECIFICATION.** The sweep covers these too, and
+     they are the easiest kind to implement by accident: a claim about who can see what
+     reads as a promise and invites checking, while `heituva.no/s/…` reads as a fact and
+     invites copying. It is neither — it is the mock's guess at a domain that did not exist
+     when the bundle was drawn. **Check every host, URL and contact address against the
+     PRODUCTION origin, and against whether the mailbox is actually staffed.**
+
+     Measured 2026-09-10: `heituva.no` appears **28 times** in this repository — 8 inside
+     the three bundles, 5 quoted in DEVIATIONS, 9 in `.next/` build output derived from the
+     shipped strings, and **6 that reached shipped copy** in `messages/{no,en}.json`. The
+     production origin is `https://www.heituva.com`; `heituva.no` is not HeiTuva's domain and
+     never was. Two of the six were `send.smsLinkPlaceholder`, fixed in the file AND in
+     prod's `ui_messages` — **which is two edits, not one: the JSON is the seed, the table is
+     what the product serves, and changing the file changes nothing a user sees.** The other
+     four are `personvern@heituva.no` in `legal.privacy6P` and `legal.privacy8P`, and they
+     are the sharpest case in the category: **inventing a contact address in a privacy notice
+     is the same error as inventing an origin, with a worse consequence — a data subject who
+     cannot reach the controller.** They stay untouched until the replacement mailbox is
+     confirmed to RECEIVE, not merely to exist, because a `.com` that bounces is worse than a
+     `.no` that is at least someone's inbox.
   A baseline reported but never committed is the shape this project has hit six times —
   green for something that structurally could not be seen: `ui_messages` cross-tenant behind
   a green 5a3; V1-6's screen whose visual gate had only ever photographed the old state;
