@@ -143,7 +143,16 @@ export function CompanyForm({ company }: { company: Company }) {
               pulse went out at 09:00 Oslo. */}
           <label className="block">
             <span className={label}>{t('fTimezone')}</span>
-            <select name="timezone" defaultValue={company.timezone} className={field}>
+            {/* `touch-44-field` as well as the shared `field` class: a <select>
+                renders a little shorter than an <input> at the same padding, so
+                the inputs above clear 44px and this did not — CI measured 300x44
+                at 390px. The helper only applies below md, so the desktop
+                control is untouched. */}
+            <select
+              name="timezone"
+              defaultValue={company.timezone}
+              className={`${field} touch-44-field`}
+            >
               {zonesFor(company.timezone).map((z) => (
                 <option key={z} value={z}>
                   {z.replace('_', ' ')}

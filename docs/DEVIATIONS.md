@@ -4250,3 +4250,55 @@ happened to quiz for a whole phase (`docs/review/05-quiz.md`).
 Verified against the real inputs before trusting it, since no database runs in
 the environment that wrote it: the CHECK text from prod and the actual source
 both extract to `["live","quiz","standard"]`.
+
+### D141 — a spacing constant derived from one pair, applied to a different pair
+
+**2026-09-10, from CI run 98's `verify:responsive`.** Two findings at 390px, both
+mine, and the second is the one worth keeping:
+
+```
+[defect]  admin-firma — touch area 300x44 (<44) on <select>: Europe/Oslo…
+[blocker] dashboard/tilpass-oppsett — hit areas overlap by 169px²:
+          "Ledergruppa" / "Start på nytt"
+```
+
+**The defect** is a `<select>` that inherited the shared `field` class. The
+`<input>`s above it clear 44px at the same padding; a `<select>` renders a little
+shorter and did not. Fixed with `touch-44-field`, which is the helper written for
+exactly this and applies only below `md`.
+
+**The blocker is the interesting one, and it is a THIRD kind of
+enumeration-mistaken-for-a-property — in a NUMBER.**
+
+`docs/RESPONSIVE.md` says «with 44px hit areas need 14px between painted edges
+(7px overflow each side)». That is arithmetic, and it is correct **for the pair
+it was measured on**: two chips of about 30px, each overflowing ~7px. The
+`CustomizeCard` reset control already carried a comment recording that exact
+derivation — «the chip row above ends 7px into this control's hit area at 12px»
+— and the fix had been to raise 12px to 14px.
+
+But the pair here is not chip-to-chip. The chip above is ~33px and overflows
+~5px; **this control is a bare text link with `p-0` at 12.5px — about 15px
+painted, so its 44px area overflows ~14px.** Five plus fourteen is nineteen.
+Fourteen was never going to be enough, and the only reason it held until now is
+that the chip rail happened to wrap so «Ledergruppa» did not sit directly above
+it.
+
+**«14px between painted edges» reads like a property and is an instance.** The
+property is *the gap must exceed the sum of the two controls' overflows*, and
+those overflows depend on how tall each painted control is — which the sentence
+does not say. It is the RESPONSIVE.md worked-example failure (D129) a second
+time, in the same document, in a number rather than in a clause.
+
+Raised to 24px — the design's step above 19 — and derived in the comment rather
+than tuned, so the next reader can check the arithmetic instead of trusting a
+constant.
+
+**And a note on how it was found.** No capture can be taken in this environment,
+so this was diagnosed by downloading CI's `captures.zip` artifact and opening
+`dashboard.tilpass-oppsett.mobile.png`. The chip rail is visibly seven chips
+wrapping to four lines with «Ledergruppa» alone on the last, directly above the
+link. **Reasoning from the source would not have found it** — the wrap is a
+function of six shipped preset names, one seeded layout title and a 390px
+viewport. Worth recording as a route: when the gate cannot run here, its
+artifact can still be read here.

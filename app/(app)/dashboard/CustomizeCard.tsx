@@ -374,9 +374,25 @@ export function CustomizeCard({
                   router.refresh()
                 })
               }
-              // 14px below md for the same reason the gaps are: the chip row
-              // above ends 7px into this control's hit area at 12px.
-              className="touch-44 mt-3 max-md:mt-[14px] cursor-pointer border-none bg-transparent p-0 text-[12.5px] text-mut underline"
+              /*
+                24px below md, raised from 14px 2026-09-10 after CI measured a
+                169px² overlap between «Ledergruppa» and this control at 390px.
+
+                THE 14px CAME FROM THE WRONG PAIR. RESPONSIVE.md's «44px hit
+                areas need 14px between painted edges» assumes BOTH controls are
+                around 30px tall, so each overflows ~7px. That holds chip-to-chip
+                and it is where the number was measured. It does not hold here:
+                the chip above is ~33px and overflows ~5px, but THIS control is a
+                bare text link with `p-0` at 12.5px — about 15px painted, so its
+                44px area overflows ~14px. Five plus fourteen is nineteen, and
+                fourteen was never going to be enough.
+
+                So the number is not tuned again; it is derived from what the two
+                controls actually are. 24px is the design's step above 20px, per
+                RESPONSIVE.md: «use the design's existing spacing step at or
+                above that, never a smaller one».
+              */
+              className="touch-44 mt-3 max-md:mt-6 cursor-pointer border-none bg-transparent p-0 text-[12.5px] text-mut underline"
             >
               {labels.startOver}
             </button>
