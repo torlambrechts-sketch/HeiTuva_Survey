@@ -38,6 +38,8 @@ export function RunModePanel({
   runMode,
   anonymity,
   strings: s,
+  advanced,
+  onAdvancedChange,
 }: {
   surveyId: string
   runMode: string
@@ -54,7 +56,19 @@ export function RunModePanel({
     quizDesc: string
     namedSurvey: string
     failed: string
+    /* B2 — «Byggemodus» moves inside this card, where V2:580-587 draws it:
+       one card, Kjøremodus above a rule, Byggemodus below it. It used to sit
+       above the tab rail, reachable from every tab, which is not where the
+       bundle puts it. */
+    buildMode: string
+    buildModeDescSimple: string
+    buildModeDescAdvanced: string
+    simple: string
+    advanced: string
   }
+  /** The Enkel/Avansert switch, lifted so the card owns the whole section. */
+  advanced: boolean
+  onAdvancedChange: (next: boolean) => void
 }) {
   const [mode, setMode] = useState<Mode>(runMode === 'live' ? 'live' : 'standard')
   const [note, setNote] = useState<string | null>(null)
@@ -125,6 +139,35 @@ export function RunModePanel({
       {anonymity !== 'anonymous' && mode !== 'live' ? (
         <p className="mt-2.5 text-[12px] leading-[1.45] text-mut">{s.namedSurvey}</p>
       ) : null}
+
+      {/* V2:580-587 — the rule, then Byggemodus. The description is the mode's
+          own, not a fixed sentence: the bundle swaps it (V2:6111-6113) so the
+          text always describes what the CURRENT setting gives you. */}
+      <div className="mt-[18px] border-t border-line pt-4">
+        <div className="text-[11px] uppercase tracking-[.1em] text-mut">{s.buildMode}</div>
+        <p className="mt-1 text-[12.5px] leading-[1.5] text-mut">
+          {advanced ? s.buildModeDescAdvanced : s.buildModeDescSimple}
+        </p>
+        <div
+          className="mt-2.5 flex gap-[3px] rounded-xl p-1"
+          style={{ background: 'var(--sf2)' }}
+          role="group"
+          aria-label={s.buildMode}
+        >
+          {([false, true] as const).map((m) => (
+            <button
+              key={String(m)}
+              type="button"
+              aria-pressed={advanced === m}
+              onClick={() => onAdvancedChange(m)}
+              className="touch-44 flex-1 cursor-pointer rounded-[9px] border-none px-3 py-[9px] text-[12.5px] font-semibold text-ink"
+              style={{ background: advanced === m ? 'var(--ac)' : 'transparent' }}
+            >
+              {m ? s.advanced : s.simple}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -33,9 +33,15 @@ import {
 } from './types'
 import { saveDraft, saveQuestionToBank, saveSurveyAsTemplate } from './actions'
 
-const TABS = ['add', 'settings', 'preview'] as const
+/* V2:6472 — four, in this order: Generelt · Legg til · Innstillinger · Vis.
+   The app carried three and stacked RunModePanel, QuizPanel, PolicyPanel and
+   EngagementPanel under `settings`, so «Innstillinger» meant four panels where
+   the bundle means two. `general` is where a survey's MODE is decided; the rest
+   of the pane is about the questions. */
+const TABS = ['general', 'add', 'settings', 'preview'] as const
 type Tab = (typeof TABS)[number]
 const TAB_KEY: Record<Tab, string> = {
+  general: 'tabGeneral',
   add: 'tabAdd',
   settings: 'tabSettings',
   preview: 'tabPreview',
@@ -239,29 +245,6 @@ export function Builder({
 
   const rightPane = (
     <div className="flex flex-col gap-[14px]">
-      <div className="flex items-center justify-between gap-[10px]">
-        <span className="text-[12.5px] text-mut">{t('mode')}</span>
-        <div
-          className="flex gap-[3px] rounded-full p-1"
-          style={{ background: 'var(--sf2)' }}
-          role="group"
-          aria-label={t('mode')}
-        >
-          {([false, true] as const).map((mode) => (
-            <button
-              key={String(mode)}
-              type="button"
-              aria-pressed={advanced === mode}
-              onClick={() => setAdvanced(mode)}
-              className="touch-44 cursor-pointer rounded-full border-none px-4 py-[7px] text-[12.5px] font-semibold text-ink"
-              style={{ background: advanced === mode ? 'var(--ac)' : 'transparent' }}
-            >
-              {mode ? t('advanced') : t('simple')}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div
         className="flex gap-[3px] rounded-[13px] p-1"
         style={{ background: 'var(--sf2)' }}
@@ -307,30 +290,36 @@ export function Builder({
             const items = ADD_PANEL_TYPES.filter((type) => specOf(type).group === group)
             if (!items.length) return null
             return (
-              <div key={group} className="mt-[18px]">
+              /* V2:694-702 REDREW THIS PANEL, and the app was byte-faithful to
+                 the bundle before it: L:513-525 is `flex-col gap-7`, a 26px
+                 radius-8 tint, a 13.5px/600 label and a VISIBLE 11.5px
+                 description — every property the app carried. v2 makes it two
+                 columns, a 20px radius-6 tint, a 12.5px/600 label at
+                 line-height 1.25, and moves the description to `title`.
+                 So the description is not something we added and are removing;
+                 it is one property of a panel the third handoff redrew, and
+                 Q52 hands a v2 phase the whole redraw rather than the parts of
+                 it that are convenient. */
+              <div key={group} className="mt-[14px]">
                 <div className="text-[11px] uppercase tracking-[.1em] text-mut">
                   {t(GROUP_KEY[group])}
                 </div>
-                <div className="mt-[9px] flex flex-col gap-[7px]">
+                <div className="mt-2 grid grid-cols-2 gap-[7px]">
                   {items.map((type, i) => (
                     <button
                       key={type}
                       type="button"
                       disabled={disabled}
                       onClick={() => addQuestion(type)}
-                      className="touch-44 flex cursor-pointer items-center gap-[11px] rounded-[11px] border border-line bg-bg px-[13px] py-[11px] text-left text-ink disabled:opacity-50"
+                      title={t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
+                      className="touch-44 flex min-w-0 cursor-pointer items-center gap-[9px] rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-left text-ink disabled:opacity-50"
                     >
                       <span
-                        className="block h-[26px] w-[26px] flex-none rounded-lg"
+                        className="block h-5 w-5 flex-none rounded-md"
                         style={{ background: tintFor(i) }}
                       />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13.5px] font-semibold">
-                          {t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type])}
-                        </span>
-                        <span className="mt-px block text-[11.5px] leading-snug text-mut">
-                          {t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
-                        </span>
+                      <span className="min-w-0 flex-1 text-[12.5px] font-semibold leading-[1.25]">
+                        {t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type])}
                       </span>
                     </button>
                   ))}
@@ -341,14 +330,17 @@ export function Builder({
         </div>
       ) : null}
 
-      {/* V2-9 — «Kjøremodus» sits at the TOP of the Innstillinger pane
-          (V2:565), above the policy: it decides what the rest of the pane is
-          about. */}
-      {tab === 'settings' ? (
+      {/* «Kjøremodus» opens the GENERELT pane (V2:564-577) — B2 moved it there
+          from Innstillinger, which is what the bundle has always drawn. It
+          decides what the rest of the pane is about, so it comes first and
+          Byggemodus follows it inside the same card. */}
+      {tab === 'general' ? (
         <RunModePanel
           surveyId={surveyId}
           runMode={runMode}
           anonymity={policy.anonymity}
+          advanced={advanced}
+          onAdvancedChange={setAdvanced}
           strings={{
             title: t('runModeTitle'),
             desc: t('runModeDesc'),
@@ -360,6 +352,11 @@ export function Builder({
             quizDesc: t('runModeQuizDesc'),
             quizGuard: t('quizGuard'),
             namedSurvey: t('runModeNamedSurvey'),
+            buildMode: t('buildMode'),
+            buildModeDescSimple: t('buildModeDescSimple'),
+            buildModeDescAdvanced: t('buildModeDescAdvanced'),
+            simple: t('simple'),
+            advanced: t('advanced'),
             failed: t('policyError_failed'),
           }}
         />
@@ -368,7 +365,7 @@ export function Builder({
       {/* V2-10 — «Quizmodus» (V2:6148) sits directly under «Kjøremodus» and
           only in quiz mode: it is settings FOR the mode, so showing it in
           standard mode would offer a control that governs nothing. */}
-      {tab === 'settings' && runMode === 'quiz' ? (
+      {tab === 'general' && runMode === 'quiz' ? (
         <QuizPanel
           surveyId={surveyId}
           timeBonus={quizTimeBonus}
