@@ -51,26 +51,23 @@ read the queue at all when the provider is unconfigured.
 `import type`, which Deno erases, so the platform tree-shook it out of the
 bundle. Sending it is still correct — it is what the deploy type-checks against.
 
-**KNOWN DIVERGENCE, recorded rather than deployed over.** The deployed v2 has
+**THE PRAGMA DIVERGENCE THIS SECTION USED TO RECORD IS GONE, and the way it went
+is the point.** It said the deployed function had the `eslint-disable-next-line`
+attached to a multi-line `async function drain(svc: any,` while the repository had
+`type ServiceClient = any`. Measured against `get_edge_function` on 2026-09-10,
+the running function carries the repository's form — some deploy between v2 and
+now picked it up, and nobody updated this paragraph. **A recorded divergence that
+nobody re-derives is the same failure as an unrecorded one**, just slower: it
+described the running system wrongly for four versions, in the file whose whole
+job is to describe the running system.
 
-```ts
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function drain(
-  svc: any,
-```
-
-and this repository now has `type ServiceClient = any` with the pragma on the
-alias instead. The reason for the repo change: once the signature became
-multi-line, `eslint-disable-next-line` silently attached to the wrong line and
-the rule fired. **Types are erased by Deno, so the emitted JavaScript is
-identical** — this is a lint-pragma difference with no runtime effect, and a
-third production deploy to fix a comment is a change to production for nothing.
-The next deploy that carries a real code change reconciles it.
-
-Written down because an unrecorded difference between a repository and a running
-system is how the two stop being the same thing, and this project has paid for
-that lesson twice: `overview_activity` hand-applied, and the two functions whose
-comment blocks were abridged on their way to the MCP payload.
+**What IS still divergent, measured rather than assumed:** the deployed
+`index.ts` and `brevo.ts` carry SHORTENED versions of several comment blocks —
+the Q6b classification reasoning most visibly — and the probe's error cap is
+still `slice(0, 200)` where the repository is now 400. `copy.ts` and `env.ts`
+read as identical, compared by reading rather than by hash, which is a weaker
+claim and is stated as one. Nothing executable differs; the abridgement is
+recorded in the deploy log below.
 
 ## Deploy log, and a drift I introduced myself
 
@@ -130,3 +127,37 @@ enumerates environment metadata is small surface but it is surface, and the
 normal `?probe=1` on the worker answers «is the key good» without it. The source
 stays in the repository so it can be redeployed in one call if this ever
 recurs — which is the right trade: cheap to bring back, nothing left running.
+
+## What the running function actually is, compared on 2026-09-10
+
+Not «what I deployed» — what `get_edge_function` returns. Three things the
+comparison said that reading the deploy log would not have:
+
+**1. The platform reports version 11; this log records six.** Both are right.
+Supabase bumps an Edge Function's version whenever the project's secrets change,
+because the function is redeployed to pick them up, and this key hunt involved
+several secret saves. So the numbers in the table below are MY deploys and are
+not the platform's version numbers — worth knowing before someone reads a gap
+between them as a missing entry.
+
+**2. `env-check` is deleted.** `list_edge_functions` returns `mail-worker`
+alone. Confirmed by listing rather than by the report that it had been done.
+
+**3. THE GENERATOR WOULD HAVE BROKEN PRODUCTION, and the comparison is what
+found it.** `lib/mail/brevo.ts` is written `from './env'` and `from './types'` —
+extension-less, which the app's tsconfig resolves and Deno does not. The
+deployed copy has `./env.ts` because I typed the extension in by hand while
+transcribing a payload. `scripts/edge-bundle.ts` copied the shared modules
+verbatim, so the first deploy from it would have shipped `from './env'` — a
+VALUE import, so a module-resolution error on the worker's first request, not a
+failed type-check.
+
+The generator was written to guarantee fidelity and would have regressed the one
+thing hand-transcription got right. Its assertion covered the entry point's
+three imports and was silent about the imports inside the files it copies:
+CLAUDE.md's enumeration shape, committed by the tool built to prevent
+transcription error. It now rewrites extension-less relative specifiers and then
+asserts that none survives, over the whole bundle — stated as the property, so a
+fourth shared module is carried without editing the script. The assertion was
+proven to fire before being trusted, on a synthetic `./packs.json` import: exit
+1, naming the file and the specifier.

@@ -25,6 +25,30 @@
   after deploying — the same discipline as the ninth check on a migration, where
   an apply is not evidence and a comparison is.
 
+  ── THE SECOND REWRITE, AND WHY IT IS A PROPERTY AND NOT A LIST ────────────
+
+  Deno resolves relative specifiers literally: `./env` is not a module, `./env.ts`
+  is. The app's own tsconfig resolves both, so `lib/mail/brevo.ts` is written
+  `from './env'` and `from './types'` and is correct under Node, under Vitest and
+  under Gate 1. Copied into the bundle unchanged it is a worker that throws a
+  module-resolution error on its first request — `./env` is a VALUE import, so
+  this is a runtime failure and not merely a failed type-check.
+
+  The first version of this script asserted about the entry point's three imports
+  and said nothing about the imports INSIDE the files it copies. That is the
+  enumeration shape CLAUDE.md names, committed by the very tool written to
+  guarantee fidelity: the list was right about its members and silent about the
+  member that had not arrived. The production function had `./env.ts` only because
+  I typed the extension in by hand, so the generator would have REGRESSED what
+  hand-transcription happened to get right.
+
+  So the rule below is stated as the property — **no relative specifier anywhere
+  in the bundle may lack an explicit extension** — enforced over every file after
+  every rewrite, rather than as a pair of names. A fourth shared module, or a new
+  import inside an existing one, is carried by it without this script changing.
+
+  ── types.ts ───────────────────────────────────────────────────────────────
+
   Note that `types.ts` is NOT imported by the entry point. It reaches the bundle
   as a transitive dependency of `brevo.ts`, written `import type { … } from
   './types'` — extension-less, which the Edge Runtime could not resolve if it
@@ -90,6 +114,36 @@ mkdirSync(OUT, { recursive: true })
 const files: { name: string; content: string }[] = [{ name: 'index.ts', content: index }]
 for (const name of [...REWRITTEN, ...TYPE_ONLY]) {
   files.push({ name: `${name}.ts`, content: readFileSync(`lib/mail/${name}.ts`, 'utf8') })
+}
+
+/*
+  Give every extension-less relative specifier its `.ts`, then ASSERT that none
+  survives. The rewrite is the convenience; the assertion is the guarantee, and
+  it runs over the finished bundle so it also covers index.ts and anything a
+  future edit adds. `.ts` is the only extension in play here — a `.json` or a
+  directory import would be caught by the assertion rather than silently
+  mangled, which is the right way round.
+*/
+for (const f of files) {
+  f.content = f.content.replace(
+    /(\bfrom\s+')(\.\.?\/[^']*?)(')/g,
+    (whole, pre: string, spec: string, post: string) =>
+      /\.[a-z0-9]+$/i.test(spec) ? whole : `${pre}${spec}.ts${post}`,
+  )
+}
+
+const unresolvable = files.flatMap((f) =>
+  [...f.content.matchAll(/\bfrom\s+'(\.\.?\/[^']*)'/g)]
+    .filter((m) => !m[1]!.endsWith('.ts'))
+    .map((m) => `${f.name}: ${m[1]}`),
+)
+if (unresolvable.length) {
+  console.error(
+    `edge-bundle: relative specifiers the Edge Runtime cannot resolve:\n  ` +
+      unresolvable.join('\n  ') +
+      `\nDeno resolves relative paths literally and needs the extension.`,
+  )
+  process.exit(1)
 }
 
 for (const f of files) writeFileSync(join(OUT, f.name), f.content)
