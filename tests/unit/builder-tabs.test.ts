@@ -68,7 +68,19 @@ describe('the right pane has the bundle’s four tabs', () => {
        plus 24px of padding — three fitted, four do not. RESPONSIVE.md § Tab
        rails says wrap, keep the chips' dimensions, hide nothing, left-align, and
        give the rows a gap that clears 44px hit areas on adjacent chips. */
+    // THE PROPERTY IS «every rail that renders this tab set», NOT «the rail I
+    // found». There are two — `rightPane`'s role=tablist, which lives inside
+    // the sheet, and the `xl:hidden` row pinned under the header, which is the
+    // one on screen at 320px. Run 110 was diagnosed as the first and fixed
+    // there; run 112 returned byte-identical because that rail was not visible.
+    // Counting them is what this asserts, so a third rail fails here.
+    const rails = builder.match(/\{TABS\.map\(\(k\) => \(/g) ?? []
+    expect(rails.length).toBe(2)
+    for (const m of builder.matchAll(/className="([^"]*)"\s*\n?\s*(?:style|role)?[^>]*>\s*\{TABS\.map/g)) {
+      expect(m[1], `a TABS rail that cannot wrap: ${m[1]}`).toContain('flex-wrap')
+    }
     expect(builder).toContain('flex flex-wrap gap-x-[3px] gap-y-1.5')
+    expect(builder).toContain('mb-3 flex flex-wrap gap-2 xl:hidden')
     expect(builder).toContain('md:flex-nowrap')
     // Nothing hidden and no new control: still one button per tab.
     expect(builder).not.toMatch(/overflow-x-auto|snap-x/)

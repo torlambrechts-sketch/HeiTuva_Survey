@@ -529,8 +529,19 @@ export function Builder({
 
       {/* Below xl the right pane becomes a sheet behind a button row pinned
           under the header; the question list is the base layer (RESPONSIVE.md,
-          three-pane Builder). */}
-      <div className="mb-3 flex gap-2 xl:hidden">
+          three-pane Builder).
+
+          THIS IS THE RAIL THAT OVERFLOWED, and finding it took two CI rounds
+          because THERE ARE TWO. `rightPane` has its own `role="tablist"` and it
+          is the one a reader finds first; it renders inside the SHEET, so it is
+          on screen only when the sheet is open. This row renders on every
+          `bygg` state at 320px, which is why all six reported an identical
+          scrollWidth 329 — and why wrapping the other rail changed the number
+          by nothing at all.
+
+          Both wrap now. The property is «every rail that renders this tab set»,
+          not «the rail I found». */}
+      <div className="mb-3 flex flex-wrap gap-2 xl:hidden">
         {TABS.map((k) => (
           <button
             key={k}
