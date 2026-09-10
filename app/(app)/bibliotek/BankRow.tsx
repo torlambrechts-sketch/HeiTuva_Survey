@@ -16,7 +16,6 @@ import { useBankNote } from './BankNote'
 export function BankRow({
   questionId,
   targetSurveyId,
-  targetSurveyTitle,
   text,
   meta,
   badge,
@@ -26,21 +25,25 @@ export function BankRow({
 }: {
   questionId: string
   targetSurveyId: string | null
-  /** Names the draft in the confirmation, as V2:4431 does. */
-  targetSurveyTitle: string | null
   text: string
   meta: string
   badge: string
   isOwn: boolean
   /** Set for a reader — see UsePackButton. */
   disabledReason?: string
-  labels: {
-    add: string
-    addedInto: (title: string) => string
-    remove: string
-    noDraft: string
-    failed: string
-  }
+  /**
+   * Every one of these is a STRING, and that is load-bearing rather than tidy.
+   *
+   * `addedInto` was `(title: string) => string`, built in `bibliotek/page.tsx`
+   * — a SERVER component. A function cannot cross into a client component;
+   * Next throws «An error occurred in the Server Components render» and the
+   * whole bank tab 500s. CI run 108 caught it on `bibliotek-bank`, desktop and
+   * mobile, after every Builder capture passed.
+   *
+   * The draft's title is known where the labels are built, so the finished
+   * sentence crosses the boundary and no closure does.
+   */
+  labels: { add: string; addedInto: string; remove: string; noDraft: string; failed: string }
 }) {
   const [pending, startTransition] = useTransition()
   const [state, setState] = useState<'idle' | 'failed'>('idle')
@@ -96,7 +99,7 @@ export function BankRow({
               const res = await addBankQuestion(questionId, targetSurveyId)
               if (res.ok) {
                 setState('idle')
-                announce(labels.addedInto(targetSurveyTitle ?? ''))
+                announce(labels.addedInto)
               } else setState('failed')
             })
           }

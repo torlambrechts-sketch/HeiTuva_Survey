@@ -36,6 +36,7 @@ const picker = decomment(readFileSync(PICKER, 'utf8'))
 const builder = decomment(readFileSync(BUILDER, 'utf8'))
 const page = decomment(readFileSync(PAGE, 'utf8'))
 const row = decomment(readFileSync(ROW, 'utf8'))
+const libPage = decomment(readFileSync('app/(app)/bibliotek/page.tsx', 'utf8'))
 const note = decomment(readFileSync(NOTE, 'utf8'))
 const actions = decomment(readFileSync(ACTIONS, 'utf8'))
 const seed = readFileSync(SEED, 'utf8')
@@ -133,7 +134,19 @@ describe('the bank confirmation', () => {
   it('names the draft', () => {
     expect(no.library!.bankAddedInto).toContain('{title}')
     expect(en.library!.bankAddedInto).toContain('{title}')
-    expect(row).toContain('announce(labels.addedInto(')
+    expect(row).toContain('announce(labels.addedInto)')
+  })
+
+  it('hands BankRow only strings, because a closure cannot cross into a client component', () => {
+    /* `addedInto` was `(title: string) => string`, built in bibliotek/page.tsx —
+       a SERVER component. Next throws «An error occurred in the Server
+       Components render» and the whole bank tab 500s. CI run 108 caught it on
+       `bibliotek-bank`, desktop and mobile, AFTER every Builder capture passed.
+       Asserted as the property — no arrow in the labels object — rather than as
+       the one key that was wrong. */
+    const labels = libPage.match(/labels=\{\{([\s\S]*?)\}\}/)![1]!
+    expect(labels).not.toMatch(/=>/)
+    expect(row).toContain('addedInto: string')
   })
 
   it('no longer makes a question addable exactly once', () => {

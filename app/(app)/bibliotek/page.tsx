@@ -595,7 +595,6 @@ async function BankTab({
             key={r.id}
             questionId={r.id}
             targetSurveyId={draft?.id ?? null}
-            targetSurveyTitle={draft?.title ?? null}
             text={r.text}
             badge={r.isOwn ? t('badgeOwn') : t('badgeValidated')}
             isOwn={r.isOwn}
@@ -609,7 +608,7 @@ async function BankTab({
             ].join(' · ')}
             labels={{
               add: t('bankAdd'),
-              addedInto: (title: string) => t('bankAddedInto', { title }),
+              addedInto: t('bankAddedInto', { title: draft?.title ?? '' }),
               remove: t('bankRemove'),
               noDraft: t('bankNoDraft'),
               failed: t('failed'),
