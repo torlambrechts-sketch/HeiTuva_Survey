@@ -4074,6 +4074,28 @@ partial directions are loud: secret-only means no widget and no token,
 site-key-only means a solved widget rejected. Loud is the point — the failure
 mode it replaces was silent on a live origin.
 
+**AND THE TEMPTATION IS THE HALF WORTH WRITING DOWN, because the defect alone
+does not warn anyone.** Once the fix was in, the obvious next sentence was
+«Turnstile is enforcing now» — supported by the only evidence obtainable from
+this environment: `data-sitekey` present in the served HTML, proving
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` reached the running function.
+
+**That is this exact finding, committed a second time.** «The key reached the
+function» and «the control enforces» are different claims, and the first is
+one operand of the AND that the second needs. Presence is *precisely* what a
+half-configuration also satisfies — a site key alone renders the widget and
+proves nothing about the secret — so accepting it as proof would confirm the
+state the entry exists to catch.
+
+What makes it dangerous rather than merely wrong: **presence was the only half
+measurable from here.** The proxy closes the browser's tunnel to the origin, so
+the behavioural half — submit without a token, watch it refused, watch
+`demo_requests` not grow — needed a human. When one half of a proof is cheap and
+the other is blocked, the cheap half acquires a gravity it has not earned, and
+the report writes itself. The rule that survives: **when you cannot measure the
+thing, say which half you measured and which you did not — never promote the
+half you have.**
+
 Pinned by `tests/unit/turnstile-state.test.ts` (11), which failed on its
 assertions before the fix — `expected true to be false` on both partial cases.
 
@@ -4156,12 +4178,29 @@ all», which is noise rather than a check. The number can only be verified in
 CI, so lowering a floor is a change whose correctness is not observable at the
 moment it is written.
 
-Second, and this belongs beside **D131**: `verify:hermetic` runs the suite
-twice, before and after deliberate pollution, and inherits its exit code. A
-census failure therefore surfaced as **«NOT HERMETIC»** — a verdict about
-something that run never tested, printed in place of the real cause, on a run
-where the suite was green both times. The gate works; its VERDICT is narrower
-than the word it prints. Logged, not fixed: the apparatus is frozen.
+Second, and this belongs beside **D131** as its most dangerous member:
+`verify:hermetic` runs the suite twice, before and after deliberate pollution,
+and inherits its exit code. A census failure therefore surfaced as **«NOT
+HERMETIC»** — a verdict about something that run never tested, on a run where
+the suite was green both times.
+
+**D131's family is gates that are GREEN about something narrower than their
+name. This one was RED about the wrong thing, and that is worse.** A gate green
+about the wrong thing costs you a finding you never learn about — bad, but
+passive, and it waits patiently to be discovered. A gate red about the wrong
+thing **spends** your attention and aims it: «NOT HERMETIC» names a specific,
+plausible, expensive failure — test pollution, ordering, shared state — and
+sends the diagnosis in that direction from the first second. The cost is not a
+missed finding but time spent looking where nothing is wrong, and the wrongness
+is invisible precisely because the verdict is confident and the failure is real.
+It was cheap here only because the census printed its own cause two lines above,
+and reading the whole log rather than the verdict is what caught it.
+
+The gate works; its VERDICT is narrower than the word it prints. Confirmed by
+the fix: `verify:hermetic` passed on the next run with no change to anything
+hermeticity-related, which is what settles that it was never a hermeticity
+problem — the suite's exit code wearing that name. Logged, not fixed: the
+apparatus is frozen.
 
 **Where to look for more of it:** any column whose only writer is the seed. That
 set is enumerated and asserted in `tests/db/no-writer-columns.test.ts`, and it
