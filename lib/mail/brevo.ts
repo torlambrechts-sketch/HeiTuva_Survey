@@ -97,32 +97,54 @@ export function brevoProvider(): MailProvider {
         }
 
         /*
-          WHICH FAILURES ARE THE MESSAGE'S FAULT, AND WHICH ARE OURS.
+          ══ THE FIRST QUESTION IS NOT «WILL A RETRY HELP» ══════════════════
 
-          `retryable: false` means «archive this invitation permanently», so the
-          question is not «will a retry work» but «is this message the problem».
+          It is: IS THIS FAILURE ABOUT THIS MESSAGE, OR ABOUT THE DEPLOYMENT?
 
-          401 and 403 ARE RETRYABLE HERE, and that is the whole S1 lesson
-          arriving in a new construct. A rejected or revoked API key is a
-          DEPLOYMENT GAP wearing a per-message status code: classify it as
-          permanent and a rotated key silently dead-letters every invitation in
-          the queue, which is exactly the failure `configured()` was added to
-          prevent — except `configured()` cannot see it, because the variable IS
-          set, it is merely wrong. 429 and 5xx are the ordinary backoff cases.
+          `retryable: false` does not mean «retrying is pointless». It means
+          «archive this invitation permanently» — the worker acts on it by
+          destroying a real message. So the classification is a statement about
+          WHOSE FAULT the failure is, and the retry question is downstream of it
+          and misleading on its own.
 
-          What is left — a 400 naming an unusable address — is the only class
-          that is genuinely about this message, and the only one archived.
-        */
-        /*
-          THE STATUS ALONE IS NOT ACTIONABLE, which this cost a round trip to
-          learn. Prod returned `brevo 401` on both queued invitations and that
-          string cannot distinguish «the key is not a transactional API key»
-          from «the key was revoked» from «the key has a trailing newline» —
-          three different fixes behind one number. Brevo says which in the
-          response body (`{code, message}`), so the body is read and included.
+          A rejected API key is the case that proves the difference. Retrying it
+          will not help, which makes «permanent» the obvious reading and the
+          obvious reading catastrophic: the fault is in the DEPLOYMENT, the
+          message is blameless, and archiving it destroys someone's invitation
+          for a reason that has nothing to do with them. Fix the key and the
+          same message would have sent perfectly.
 
-          The KEY is never included: only Brevo's own code and message, capped,
-          and the request body is never echoed because it carries a
+          THE SHAPE TO WATCH FOR IS A PER-MESSAGE STATUS CODE CARRYING A
+          DEPLOYMENT FAULT. HTTP gives one number per request, so a provider
+          reports «your credential is wrong» through the same channel it uses
+          for «that address does not exist». The transport flattens two
+          different kinds of fault into one integer, and reading it as a
+          property of the message is how a whole queue gets dead-lettered by a
+          rotated key.
+
+          `configured()` cannot catch this: the variable IS set, it is merely
+          wrong — which is why the check that runs before the queue is read is
+          necessary and not sufficient.
+
+          So, by fault rather than by hope:
+
+            401, 403  — OURS. The credential is rejected. Retryable, and the
+                        message waits for a deploy that fixes it.
+            429, 5xx  — OURS or the provider's, never the message's. Retryable.
+            400       — THE MESSAGE'S. Brevo names an address it cannot use, and
+                        no deploy changes that. The only class archived.
+
+          This is not hypothetical: prod returned 401 on both queued invitations
+          on the first run that got past the origin check, and `left: 2` rather
+          than `archived: 2` is the whole of the difference. DECISIONS Q6b.
+
+          ── AND THE STATUS ALONE IS NOT ACTIONABLE ─────────────────────────
+
+          `brevo 401` cannot distinguish «not a transactional API key» from
+          «revoked» from «trailing newline on the paste» — three different fixes
+          behind one number. Brevo says which in the response body
+          (`{code, message}`), so the body is read and included. The KEY is
+          never included, and the request body is never echoed: it carries a
           respondent's invitation token.
         */
         const detail = await res
