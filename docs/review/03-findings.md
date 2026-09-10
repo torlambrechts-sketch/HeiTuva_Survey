@@ -1,4 +1,4 @@
-# 05 — What would have to change
+# 03 — What would have to change
 
 ## The headline
 
@@ -14,6 +14,27 @@ frister».
 
 **That is a SEED and COPY problem, not a product problem** — which is the best
 kind of finding this review could have produced. Nothing here asks for a feature.
+
+### And it is neither a design fault nor a product decision
+
+**It is an intent nobody revisited, accumulated across eleven phases in which
+every individual choice was right for its phase.** No phase chose to make the
+product read as a compliance tool. V1 built the statutory wedge because that was
+the wedge. `use_cases` got a sort order because a registry needs one, and `hr`
+went first because it had the most packs. The wizard needed an initial value and
+took `useCases[0]`. Oversikt got a compliance panel because the duty engine
+shipped. Each of those is correct in isolation and none of them is reversible by
+finding the phase that got it wrong, because no phase did.
+
+**That is exactly what makes the fix small.** A drift with no author has no
+architecture behind it to unpick — it is a sort number, a default, eleven
+seeded categories and one panel. The drawing already holds the intent
+(§ 1.5); nothing needs designing, only revisiting.
+
+**And nobody decided the wizard opens on arbeidsmiljø — a sort number decided
+it.** `useState(useCases[0]?.key ?? '')` is not a chosen default. It is the
+first row of a registry sorted `hr = 10`, and the decision was made by not
+making one.
 
 Prioritised. Each item: what a non-statutory buyer meets · what it costs · the
 class of change.
@@ -33,7 +54,7 @@ and is not drawn.
 
 ### 2 — Oversikt leads with «Lovpålagte frister» · **COPY / LAYOUT** · not cheap
 
-The three MISPLACED strings in `03-wedge.md`, all in one panel, on the first
+The three MISPLACED strings in `04-wedge.md`, all in one panel, on the first
 screen after login, rendering «0 av 0 plikter» or «Ingen plikter krever handling
 i år» for a customer who has none.
 
@@ -57,7 +78,7 @@ One of the three named first-customer profiles sorts sixth. **Fix:** `sort_order
 **Cost is modest** — a chip further right — but it compounds with 1, since the
 same order sets the wizard's default.
 
-### 5 — Quiz was unreachable and said so · **DONE** · see `04-quiz.md`
+### 5 — Quiz was unreachable and said so · **DONE** · see `05-quiz.md`
 
 Fixed in this pass, because it was a sentence telling customers something untrue
 about the product.

@@ -82,6 +82,30 @@ Two consequences, both cheap:
      on a public page. **Nothing mechanical protects prose** — the gates protect schema and
      data — so this step is the protection, and it has to run again for every handoff.
 
+     **A LINE THAT DESCRIBES TWO SYSTEMS WITHOUT SAYING WHICH ONE IT MEANS
+     MANUFACTURES A DEFECT THAT DOES NOT EXIST.** The claim-set sweep compares
+     the bundle against the running product, so its notes are always about two
+     things at once — and a note that does not name which half it is describing
+     is read as being about ours.
+
+     `docs/v2/06-remainder.md` carried: «quizPreview's chips render a pass mark
+     and an attempt count, which Q84 did not build, so they are not rendered at
+     all.» One sentence, two subjects, no boundary. The BUNDLE renders them
+     — `(st.quizPass || 70) + " % for å bestå"`, unconditionally. Our
+     `QuizPanel` renders neither, deliberately, with its reasoning written beside
+     it. **V2-10 was right all along**, and the line was read as an outstanding
+     defect for long enough to reach a review instruction as one — «fix
+     quizPreview's chips» — where the honest answer was that there was nothing to
+     fix.
+
+     The cost is not the wasted look. It is that a manufactured defect is
+     indistinguishable from a real one until someone reads the source, and the
+     reading that clears it is exactly the reading a busy phase skips. **Name the
+     system in the sentence:** «the bundle draws X; we render Y» is two clauses
+     and cannot be misread. This is the same discipline as «a count is not a
+     finding until the lines are read», one step earlier — before the count is
+     written down.
+
      **A HOST OR A URL IS A CLAIM, NOT A SPECIFICATION.** The sweep covers these too, and
      they are the easiest kind to implement by accident: a claim about who can see what
      reads as a promise and invites checking, while `heituva.no/s/…` reads as a fact and

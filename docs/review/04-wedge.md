@@ -1,4 +1,4 @@
-# 03 — Where the statutory wedge helps, and where it costs
+# 04 — Where the statutory wedge helps, and where it costs
 
 **The wedge is the position.** No competitor has it, a Norwegian buyer
 recognising their own legal vocabulary is an advantage, and a review that

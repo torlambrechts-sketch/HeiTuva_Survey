@@ -10,7 +10,7 @@ what was measured and I would not say it.
 and puts the law in a trailing clause in its own HR entry. Whatever produced the
 in-app imbalance, it was not the design intent.
 
-**That the fixes in `05-findings.md` are ordered by value.** They are ordered by
+**That the fixes in `03-findings.md` are ordered by value.** They are ordered by
 confidence. Item 2 — Oversikt — is probably the most valuable and is the one I
 could least measure, because it is a question about a rendered empty state.
 **Ranking it below item 1 reflects what I know, not what matters.**

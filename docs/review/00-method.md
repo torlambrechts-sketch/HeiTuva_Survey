@@ -9,6 +9,13 @@ D110 governs this document as it governs the others, and D135 adds the reason:
 a claim about a system you are not looking at while you read needs the command
 that looks.
 
+## The files
+
+The instruction named one path, `docs/review/03-findings.md`, and that is where
+the findings are. The rest are numbered by reading order rather than by section
+number, so the wedge (instruction § 3) is `04-wedge.md` and quiz (§ 4) is
+`05-quiz.md`. Said here so nobody hunts for a `03-wedge`.
+
 ## What was read first, as instructed
 
 - **The expansion catalogue is NOT in the repository.** Confirmed:

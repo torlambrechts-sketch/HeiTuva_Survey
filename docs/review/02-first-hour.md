@@ -37,7 +37,7 @@ it assumes the customer wants to run a survey, which is right.
 they were not asked.
 
 **Bibliotek** leads with the HR chip and carries the two statutory notes, both
-of which are well-written and conditional (§ 03).
+of which are well-written and conditional (`04-wedge.md`).
 
 **The four duty cards on Rapporter** — not examined here. Their content is
 correct by construction (`duty_definitions`, 4 rows) and what a membership
@@ -48,4 +48,4 @@ organisation makes of them is precisely a looking-at-a-screen question.
 
 A machine with Docker: `supabase start && npm run seed:demo && npm run
 verify:reference`, then open the captures. The seed now contains a quiz
-(§ 04), so that run also photographs a surface no run has ever photographed.
+(`05-quiz.md`), so that run also photographs a surface no run has ever photographed.
