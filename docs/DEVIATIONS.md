@@ -4483,3 +4483,32 @@ Not fixed in B3 because every honest fix crosses the line this run was told to s
 
 Adjacent and unmeasured: nothing checks the error on that update, so if it ever starts failing
 loudly, nothing will say so.
+
+---
+
+## D148 — 5a3's carried number was stale before this run, and I carried it four more times
+
+**Measured from CI run 106, 2026-09-10.**
+
+CLAUDE.md and `docs/review/04-builder-plan.md` carry **65 of 90**, last true at V2-10. Run 106's
+`verify:policy` enumerates **56 RLS tables + 36 SECURITY DEFINER functions = 92**, of which **67**
+report `ok` or `NO DATA`:
+
+```
+npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'      # 67
+npm run verify:policy 2>&1 | grep -E 'enumerated'            # 56 + 36 = 92
+```
+
+**5a3 is 67 of 92.** `M:0095`–`M:0098` landed between V2-10 and B0 and nobody re-derived it.
+
+**The part worth recording is not the drift; it is that I repeated it four times in one sitting.**
+Each of B0–B3's commit messages says «5a3 unchanged by construction: no RLS table, no SECURITY
+DEFINER function». *That claim is true* — no phase added a migration, so the gate's inputs could
+not move — and it was attached to a number I had not measured. **A structural claim about a
+DELTA does not license the BASE it is added to.** «Unchanged from X» is two assertions, and I
+verified one of them four times while the other quietly stayed wrong.
+
+This is the third time this project has recorded a carried number surviving unmeasured — «61 of
+83» ran for four phases, «14 heituva.no occurrences» was wrong on the number and the place — and
+the first where the carrier is the same session that wrote the rule about it. The command is
+above, beside the number, which is the only thing that has ever fixed this.

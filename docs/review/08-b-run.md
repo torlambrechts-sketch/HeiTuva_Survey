@@ -249,6 +249,48 @@ remote project. The only production reads this run made were catalogue queries.
 
 ---
 
+## 6b. CI — read, not assumed
+
+**Run 106 (`11ca4ba`) was RED**, and the failure was mine.
+
+`verify:roundtrip` timed out at `roundtrip.ts:315` waiting for a button named «Avansert».
+**That is B2.** «Byggemodus» used to float above the tab rail, reachable from every tab; V2:580-587
+draws it inside the Generelt card and B2 moved it there. The probe clicked it from whatever tab it
+happened to be on — **an affordance of the old layout, not a step in the journey** — so it now
+opens Generelt first, as an editor does.
+
+**The important part is what I did next.** Roundtrip is the *first* browser gate, so CI never
+reached anything after it, and a one-line fix would have gone red again at the next gate. Grepping
+every probe that touches the moved control or the tab set found four more sites in
+`tests/routes.manifest.ts`. Two needed the change (`:78`'s union, and `:708`'s `avansert` state,
+whose comment «the mode chips sit at the top of the right pane» was false the moment B2 landed);
+**three did not, and that was checked rather than assumed** — `:729` waits for EngagementPanel,
+`:745` and `:758` drive PolicyPanel, all still under Innstillinger, and `:1144` is Rapporter's own
+button.
+
+**What run 106 did establish before it stopped — most of it:**
+
+| | |
+|---|---|
+| types, lint, build | green |
+| `db reset` · `seed-i18n` · `seed-help` · `seed:demo` | **all green against a real database** — so B1's three new help corrections match exactly once, and B3's `question_bank` seed applies |
+| Gate 2 `verify:copy` | CLEAN, 19 allowlisted |
+| Gates 3 + 4 | green — **census measured at exactly `1021 passed across 73 files`** |
+| Gate 5a3 `verify:policy` | green — «every protected surface is both protected and guarded by a test» |
+| Gate 5b `verify:attack` | all probes as expected |
+| Gate 5f `verify:load` | 300 respondents, 0 errors, 0 linked to a person |
+| Gate 1 `db lint` | no schema errors |
+| **`verify:responsive`, `verify:visual`** | **never ran** — roundtrip fails ahead of them |
+
+So the two things I most wanted checked — **the two-column type palette and the overlay's
+thirteen-chip row at 390px** — are still unverified, and that is what the re-run is for.
+
+**Not done, deliberately:** no capture state was added for the new Generelt tab. The apparatus is
+frozen and CLAUDE.md names *manifests* explicitly among the things not to add mid-phase. Logged as
+a limit; the tab is photographed only incidentally, by the `avansert` state that now opens it.
+
+---
+
 ## 7. The walkthrough — what to click, and what each screen should show
 
 **Where.** Not `www.heituva.com`. That serves `main`, and none of B0–B3 is merged. Vercel has a
