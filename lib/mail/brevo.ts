@@ -181,10 +181,24 @@ export function brevoProvider(): MailProvider {
  *
  * `configured()` answers «is a key present», which is a different question from
  * «is the key any good» — and prod proved the gap between them: all three
- * secrets were set, the worker drained, and Brevo returned 401 twice. Finding
- * that out by attempting a real send costs a `read_ct` on a real message, and
- * `MAX_ATTEMPTS` is five, so five diagnostic attempts DEAD-LETTER the very
- * invitations being debugged.
+ * secrets were set, the worker drained, and Brevo returned 401 twice.
+ *
+ * ── WHY THIS EXISTS RATHER THAN «JUST RUN THE WORKER AND SEE» ─────────────
+ *
+ * Diagnosing a credential by attempting real sends costs a `read_ct` per
+ * diagnosis, and `MAX_ATTEMPTS` is five. SEVEN ROUNDS WERE NEEDED to establish
+ * what was wrong on 2026-09-10 — that the key was rejected, that a warm
+ * instance was not holding a stale value, that the value present was not an API
+ * key at all, and finally that it had never changed. Through this endpoint they
+ * cost nothing: the queue ended where it started, at two messages with
+ * `read_ct` 2.
+ *
+ * Through the worker they would have cost five attempts and DESTROYED THE TWO
+ * INVITATIONS BEING DIAGNOSED — and the wreckage would have lied about itself.
+ * An archived queue reads as a DELIVERY failure: messages tried, messages
+ * dead-lettered, addresses presumably bad. The actual fault was a CREDENTIAL,
+ * one field in one dashboard, and the evidence that would have said so is the
+ * evidence the diagnosis consumed.
  *
  * `GET /v3/account` validates the credential and sends nothing. It is not part
  * of the `MailProvider` interface deliberately: it is Brevo's endpoint, not a

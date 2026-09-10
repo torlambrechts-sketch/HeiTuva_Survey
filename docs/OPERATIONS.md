@@ -1139,3 +1139,40 @@ because `create extension if not exists pg_net` named no schema and it landed in
 resolve as `net.http_post`, the live cron job depends on them, and moving an
 extension's schema while a scheduled job calls into it is not a change to make
 casually for a lint. Fix it in a migration that can be tested first.
+
+### The credential hunt, and what the probe was worth
+
+Seven diagnostic rounds were needed to find out why nothing sent. In order,
+each killing one hypothesis by measurement rather than argument:
+
+| # | Established |
+|---|---|
+| 1 | The origin was missing — `NEXT_PUBLIC_APP_URL` not set. Fixed. |
+| 2 | Past the origin check, Brevo refused both messages: `brevo 401`. |
+| 3 | Brevo's own words: `unauthorized: Key not found`. Not permissions, not sender validation. |
+| 4 | A fresh deploy (v5, guaranteed cold start) still failed — **a warm instance holding a stale secret is ruled out.** |
+| 5 | The fingerprint: `len=90 xkeysib=false` — **the value present is not an API key at all.** |
+| 6 | Fingerprint identical on the next run — **the value had never changed; the save was not landing.** |
+| 7 | Cause: Brevo's API-keys page read «You do not have any API keys», so there was no new value to paste. |
+
+**THOSE SEVEN ROUNDS COST THE TWO QUEUED INVITATIONS NOTHING.** The queue ended
+where it started: 2 queued, 0 archived, `read_ct` 2. `?probe=1` validates the
+credential against the provider's account endpoint and touches neither the queue
+nor an invitation.
+
+**Diagnosed the obvious way — run the worker and see — the same seven rounds
+would have spent five attempts and DESTROYED THE MESSAGES BEING DIAGNOSED**,
+because `MAX_ATTEMPTS` is five and every real send attempt increments
+`read_ct`.
+
+And the wreckage would have lied about itself. **An archived queue reads as a
+DELIVERY failure**: messages tried, messages dead-lettered, addresses
+presumably bad. The actual fault was a CREDENTIAL — one field in one dashboard —
+and the evidence that would have said so is precisely the evidence the diagnosis
+would have consumed. The investigation would have destroyed its own subject and
+then pointed at the wrong suspect.
+
+That is the general argument for a read-only diagnostic beside any queue whose
+retry budget is finite: **the thing you are debugging must not be the thing you
+spend to debug it.** Pausing cron when `read_ct` began climbing is the same
+principle applied to time rather than to attempts.
