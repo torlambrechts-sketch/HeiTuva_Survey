@@ -121,6 +121,39 @@ async function main() {
     source: 'manuell',
   })
 
+  // B3: THE QUESTION BANK, which the demo seed carried none of.
+  //
+  // The picker overlay's entire content is bank rows, so on a bare reset it
+  // would open empty — a screen that renders, reports built, and shows nothing.
+  // That is the shape CLAUDE.md names six times, and the overlay is exactly the
+  // kind of surface it happens to: nothing about an empty modal looks broken.
+  //
+  // Both KINDS are seeded, because the row renders differently for each and the
+  // difference is a policy fact rather than a style: `bank_sel` is
+  // `org_id is null or app.is_org_member(org_id)`, so a NULL org_id is the
+  // shared standard bank (badge «benchmark», not deletable) and an org_id is
+  // this organisation's own (badge = author, deletable). One of each means the
+  // delete affordance has a subject and the badge has both states.
+  //
+  // Categories are spread, because `pickCats`/`bankCats` are BUILT from the
+  // distinct categories present (V2:6204, V2:6343) — with one category the chip
+  // row is a single chip and proves nothing about filtering.
+  await svc.from('question_bank').insert([
+    { org_id: null, text: 'Jeg har det jeg trenger for å gjøre jobben min godt',
+      type: 'scale', category: 'Arbeidsmiljø', used_count: 4 },
+    { org_id: null, text: 'Hvor sannsynlig er det at du vil anbefale oss som arbeidsgiver?',
+      type: 'enps', category: 'Engasjement', used_count: 9 },
+    { org_id: null, text: 'Har du opplevd eller sett trakassering de siste tolv månedene?',
+      type: 'yesno', category: 'Lovpålagt', used_count: 2 },
+    { org_id: org.id, text: 'Hva bør vi slutte å gjøre?',
+      type: 'text', category: 'Egne', used_count: 1,
+      author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
+    { org_id: org.id, text: 'Hvilken samling vil du ha mer av?',
+      type: 'choice', category: 'Egne', used_count: 0,
+      config: { options: ['Fagdag', 'Workshop', 'Allmøte'] },
+      author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
+  ])
+
   // V2-6: one support message, for the same reason the objection above exists —
   // `verify:policy` reports a table PROTECTED BUT UNPROVEN when it is empty,
   // because an empty table is never asked to refuse anything. With this row

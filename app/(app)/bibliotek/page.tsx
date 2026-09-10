@@ -18,6 +18,7 @@ import { TemplateCard, type TemplatePack } from './TemplateCard'
 import { UsePackButton } from './UsePackButton'
 import { BankRow } from './BankRow'
 import { BankSearch } from './BankSearch'
+import { BankNotePill, BankNoteProvider } from './BankNote'
 import { UseCaseCard } from './UseCaseCard'
 
 type Search = { fane?: string; visning?: string; kategori?: string; sok?: string }
@@ -551,6 +552,7 @@ async function BankTab({
     .filter((r) => (query ? r.text.toLowerCase().includes(query.toLowerCase()) : true))
 
   return (
+    <BankNoteProvider>
     <section className="mt-[22px] rounded-[18px] border border-line bg-sf p-[22px]">
       {readOnlyNote ? (
         <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
@@ -566,6 +568,9 @@ async function BankTab({
           })}
           {draft ? ` · ${t('bankTarget', { draft: draft.title })}` : ''}
         </span>
+        {/* V2:2960-2962 — the confirmation is a pill in this row, not a state on
+            a button twenty rows down. */}
+        <BankNotePill />
       </div>
 
       {!draft ? (
@@ -590,6 +595,7 @@ async function BankTab({
             key={r.id}
             questionId={r.id}
             targetSurveyId={draft?.id ?? null}
+            targetSurveyTitle={draft?.title ?? null}
             text={r.text}
             badge={r.isOwn ? t('badgeOwn') : t('badgeValidated')}
             isOwn={r.isOwn}
@@ -603,7 +609,7 @@ async function BankTab({
             ].join(' · ')}
             labels={{
               add: t('bankAdd'),
-              added: t('bankAdded'),
+              addedInto: (title: string) => t('bankAddedInto', { title }),
               remove: t('bankRemove'),
               noDraft: t('bankNoDraft'),
               failed: t('failed'),
@@ -612,5 +618,6 @@ async function BankTab({
         ))
       )}
     </section>
+    </BankNoteProvider>
   )
 }

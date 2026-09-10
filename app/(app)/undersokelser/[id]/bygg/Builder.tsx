@@ -21,6 +21,7 @@ import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
 import { QuizPanel } from './QuizPanel'
+import { BankPicker, type BankRow } from './BankPicker'
 import {
   ADD_DESC_KEY,
   ADD_LABEL_KEY,
@@ -30,6 +31,7 @@ import {
   TYPE_OPTION_KEY,
   type BuilderDraft,
   type DraftQuestion,
+  type QuestionConfig,
 } from './types'
 import { saveDraft, saveQuestionToBank, saveSurveyAsTemplate } from './actions'
 
@@ -67,6 +69,7 @@ export function Builder({
   locked,
   policy,
   runMode,
+  bank,
   quizTimeBonus,
   quizTeamBoard,
 }: {
@@ -79,6 +82,8 @@ export function Builder({
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
   /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
   runMode: string
+  /** B3 — the rows the picker overlay offers, read on the server. */
+  bank: BankRow[]
   /** V2-10, Q84 — the two quiz toggles the narrowing kept. */
   quizTimeBonus: boolean
   quizTeamBoard: boolean
@@ -280,12 +285,38 @@ export function Builder({
               {t('quizAddNote')}
             </p>
           ) : null}
-          <Link
-            href="/bibliotek?fane=bank"
-            className="touch-44 mt-3 block w-full cursor-pointer rounded-[10px] border-none bg-ac3 py-[11px] text-center text-[13px] font-semibold text-ink no-underline"
-          >
-            {t('fromBank')}
-          </Link>
+          {/* V2:648-693. This was a <Link> to /bibliotek — the bundle's own label
+              and colour on a control that left the Builder. The overlay is what
+              the bundle draws, and it keeps the survey it was opened from. */}
+          <BankPicker
+            surveyId={surveyId}
+            surveyTitle={draft.title}
+            rows={bank}
+            canEdit={!disabled}
+            onAdded={(q) =>
+              setDraft((d) => ({
+                ...d,
+                questions: [
+                  ...d.questions,
+                  {
+                    id: q.id,
+                    type: q.type as QuestionType,
+                    text: q.text,
+                    help: '',
+                    required: false,
+                    commentMode: 'arv',
+                    followUpOnLow: false,
+                    /* A bank question carries no key — the bank has no notion of
+                       one — so this is null for the reason `answer_index`'s
+                       column comment gives, not as a placeholder. */
+                    answerIndex: null,
+                    points: 100,
+                    config: (q.config ?? {}) as QuestionConfig,
+                  },
+                ],
+              }))
+            }
+          />
           {TYPE_GROUP_ORDER.map((group) => {
             const items = ADD_PANEL_TYPES.filter((type) => specOf(type).group === group)
             if (!items.length) return null

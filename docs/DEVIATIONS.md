@@ -4443,3 +4443,43 @@ The colour is not the only channel: «✓ riktig» is rendered beside it, which 
 the quiz tiles carry a shape as a second channel for the same reason. The contrast ratio is
 **recomputed inside the test** from whatever hexes the file carries, so editing either one
 fails rather than silently dropping below AA.
+
+---
+
+## D147 — `question_bank.used_count` has a writer that RLS silently refuses on standard questions
+
+**Found in B3's database step, 2026-09-10. Not fixed here: the fix is a migration, and a
+migration reaches production.**
+
+`addBankQuestion` bumps the counter after inserting:
+
+```ts
+await supabase.from('question_bank').update({ used_count: (q.used_count ?? 0) + 1 }).eq('id', questionId)
+```
+
+`bank_cud_upd`'s USING clause, read off the production catalogue, is
+`(org_id IS NOT NULL) AND app.has_role(org_id, ARRAY['administrator','redaktor'])`. **A standard
+bank question has `org_id IS NULL`**, so the predicate is false, the UPDATE matches zero rows,
+and PostgREST returns no error. The call site does not check one either. So the bump is a
+**silent no-op for every standard question**, and `used_count` on the shared bank is permanently
+whatever the seed set.
+
+The Library renders it: `bankUsed` — «brukt i {count}» — on every row. So the number an
+organisation reads next to a validated question is not a count of anything.
+
+**This is the «who writes this column?» question one step further on, and the step is the
+interesting part.** The three instances CLAUDE.md records are columns with no writer. This one
+HAS a writer, in the obvious place, doing the obvious thing — and a policy silently declines it.
+A grep for the column name finds the writer and stops; only reading the policy beside it shows
+that the writer never lands. **«Who writes this column» is not answered by finding a writer; it
+is answered by finding a writer the database lets through.**
+
+Not fixed in B3 because every honest fix crosses the line this run was told to stop at: a
+`security definer` bump, or a policy change, is a migration. Options for whoever takes it —
+(a) a `security definer` function that increments and is granted narrowly, (b) widen
+`bank_cud_upd` to allow `used_count` alone on `org_id is null` rows, (c) derive the count from
+`survey_questions` instead of storing it, which removes the column and the question with it.
+(c) is the one that matches «derive, do not duplicate» (Q61).
+
+Adjacent and unmeasured: nothing checks the error on that update, so if it ever starts failing
+loudly, nothing will say so.

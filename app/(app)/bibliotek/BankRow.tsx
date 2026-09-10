@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { addBankQuestion, deleteBankQuestion } from './actions'
+import { useBankNote } from './BankNote'
 
 /**
  * A question-bank row — L:1665-1679.
@@ -15,6 +16,7 @@ import { addBankQuestion, deleteBankQuestion } from './actions'
 export function BankRow({
   questionId,
   targetSurveyId,
+  targetSurveyTitle,
   text,
   meta,
   badge,
@@ -24,16 +26,25 @@ export function BankRow({
 }: {
   questionId: string
   targetSurveyId: string | null
+  /** Names the draft in the confirmation, as V2:4431 does. */
+  targetSurveyTitle: string | null
   text: string
   meta: string
   badge: string
   isOwn: boolean
   /** Set for a reader — see UsePackButton. */
   disabledReason?: string
-  labels: { add: string; added: string; remove: string; noDraft: string; failed: string }
+  labels: {
+    add: string
+    addedInto: (title: string) => string
+    remove: string
+    noDraft: string
+    failed: string
+  }
 }) {
   const [pending, startTransition] = useTransition()
-  const [state, setState] = useState<'idle' | 'added' | 'failed'>('idle')
+  const [state, setState] = useState<'idle' | 'failed'>('idle')
+  const { announce } = useBankNote()
 
   return (
     <div className="flex flex-col gap-3 border-b border-line py-3.5 md:flex-row md:items-center md:gap-3.5">
@@ -72,18 +83,26 @@ export function BankRow({
           type="button"
           // Disabled rather than hidden: rule 4 forbids removing a feature on
           // mobile, and the reason it cannot run is explained above the list.
-          disabled={pending || !targetSurveyId || state === 'added' || Boolean(disabledReason)}
+          /* `state === 'added'` used to be in here, which made a question
+             addable exactly once. Nothing in the schema asks for that —
+             `survey_questions` takes as many copies as an editor wants, and the
+             same scale question about two teams is ordinary. The confirmation
+             is the pill now, not the button. */
+          disabled={pending || !targetSurveyId || Boolean(disabledReason)}
           title={disabledReason ?? (targetSurveyId ? undefined : labels.noDraft)}
           onClick={() =>
             startTransition(async () => {
               if (!targetSurveyId) return
               const res = await addBankQuestion(questionId, targetSurveyId)
-              setState(res.ok ? 'added' : 'failed')
+              if (res.ok) {
+                setState('idle')
+                announce(labels.addedInto(targetSurveyTitle ?? ''))
+              } else setState('failed')
             })
           }
           className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-sbg px-4 py-[9px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {state === 'added' ? labels.added : labels.add}
+          {labels.add}
         </button>
       </div>
 
