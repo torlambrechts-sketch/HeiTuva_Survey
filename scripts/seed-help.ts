@@ -120,6 +120,63 @@ const CORRECTIONS: { from: string; to: string; why: string }[] = [
     to: 'Verneombud (signatar)',
     why: 'D106: the mock row asserted a fourth role in one word',
   },
+  // ── THE CORRECTED BUNDLE'S OWN THREE (2026-09-10) ────────────────────────
+  //
+  // The revised `HeiTuva.dc.html` changed nine lines, six of them in this
+  // article, to catch the bundle up with Q17/Q91 — the threshold is chosen by
+  // the organisation, not fixed at five. Three of the six still need a
+  // correction, and the first two are the interesting kind: **the bundle traded
+  // one false sentence for another, and kept the first.**
+  {
+    from:
+      'Terskelen bestemmer hvor mange svar som må inn før tall vises. Dere velger den selv; ' +
+      'vi anbefaler fem, åtte for sensitive temaer. Lovpålagte kartlegginger har låst ' +
+      'minimum. Fem er standard. For sensitive temaer bør dere bruke åtte.',
+    to:
+      'Terskelen bestemmer hvor mange svar som må inn før tall vises. Dere velger den selv; ' +
+      'vi anbefaler fem, åtte for sensitive temaer. Lovpålagte kartlegginger har låst minimum.',
+    why:
+      'THE BUNDLE PREPENDED THE TRUE SENTENCES AND KEPT THE OLD ONES. Its last two — ' +
+      '«Fem er standard. For sensitive temaer bør dere bruke åtte.» — are the text the ' +
+      'revision was written to replace, and they now sit after the sentence that replaces ' +
+      'them. «Fem er standard» asserts a FIXED number about a variable threshold, which is ' +
+      'the class Q55 forbids: `organizations.default_k_threshold` defaults to 5 but is ' +
+      'settable 3-10 (M:0034), so five is standard only for an organisation that has not ' +
+      'changed it. Dropping the two duplicates leaves the revision saying what it meant',
+  },
+  {
+    from:
+      'Terskelen settes for hele virksomheten. Bare lovpålagte kartlegginger har et minimum ' +
+      'som ikke kan senkes.',
+    to:
+      'Terskelen settes for hele virksomheten, og verdien er et gulv: heller ikke en ' +
+      'administrator kan sette en enkelt undersøkelse under den, med mindre virksomheten ' +
+      'har slått på «Tillat at redaktører senker terskelen». Lovpålagte maler har i tillegg ' +
+      'sitt eget minimum.',
+    why:
+      'FALSE AGAINST THE RUNNING PRODUCT, and the sentence it replaced was true. Q90, ' +
+      "M:0054 `app.guard_survey_policy`: when `k_threshold` moves on a person survey and " +
+      'the new value is below `organizations.default_k_threshold`, the trigger raises ' +
+      '`below_org_floor` — and its own comment says the flag is the organisation\'s ' +
+      'exception «so this binds an administrator too: a setting any single person can ' +
+      'undercut is not a setting». So a statutory pack is NOT the only minimum that cannot ' +
+      'be lowered; the organisation\'s own default is one, and it is the one most readers ' +
+      'of this article will hit first',
+  },
+  {
+    from: 'Sensitive temaer (anbefalt 8)',
+    to: 'Sensitive temaer (låses av malen)',
+    why:
+      'D114 again — a mock row is a claim about a control. This one sits in a mock of ' +
+      '`Administrasjon · Personvern` between two real toggles, and that screen has THREE ' +
+      'rows: the threshold, IP logging, EU-only (`PrivacyPanel.tsx:11-12,76`). There is no ' +
+      'sensitive-topics setting anywhere in the schema. Eight is real but it arrives from ' +
+      'the statutory harassment template, which LOCKS it (`surveys.trakasseringAnonNote`: ' +
+      '«malen låser terskelen til åtte») — and the real panel already says so in the one ' +
+      'control\'s description («lovpålagte maler har egen terskel»), not as a second row. ' +
+      '«(anbefalt 8)» reads as advice an administrator may take here; «(låses av malen)» ' +
+      'says where the number actually comes from',
+  },
   {
     from: 'Du kan lime inn en liste, laste opp fil eller synkronisere med katalogen. Ved synk holdes gruppene oppdatert automatisk.',
     to:

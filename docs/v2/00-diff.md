@@ -169,8 +169,98 @@ checklist now carries it as **step 7: the security-copy sweep runs ONCE PER BUND
 once.**
 
 Where a claim is false, the correction is a decision like any other and outranks the bundle's
-wording (the Q55 precedent above). `tests/db/help.test.ts` pins the six corrected sentences
-so a re-seed from a newer bundle cannot put one back.
+wording (the Q55 precedent above). `tests/db/help.test.ts` pins the **nine** corrected
+sentences so a re-seed from a newer bundle cannot put one back.
+
+### THE BUNDLE CAUGHT UP WITH Q17/Q91 — and the app was already there
+
+**Added 2026-09-10 (Tor supplied a revised `HeiTuva.dc.html`; measured before installing.)**
+
+`md5 206dc2bc…` → `md5 3f8de86d…`, 609647 → 609814 bytes, **6727 lines both**, nine lines
+changed and nine added, at **1711, 2790, 4224, 4226, 4230, 4660, 4666, 5095, 5131**. The
+count and the line numbers were verified here before the file was installed, not taken on
+trust:
+
+```
+diff -u design-reference-v2/heituva-survey-app-design/project/HeiTuva.dc.html <new> \
+  | grep -c '^-[^-]'     # 9
+```
+
+All nine drop a **fixed five** in favour of the organisation's own threshold — «Grupper med
+færre enn fem svar» → «Grupper under virksomhetens terskel», «Ledelse har færre enn fem svar»
+→ «Ledelse ligger under terskelen», and so on. **This is the bundle catching up with Q17 and
+Q91, which the application shipped two phases ago (D105).**
+
+**Which is the finding: on the four surfaces the app actually renders, the app was already
+right, and prod agrees with the repository.** Not one of the nine required an edit to
+`messages/*.json` or to `ui_messages`:
+
+| Bundle line | App key | State |
+|---|---|---|
+| 1711 | `reports.groupThreshold` | already **verbatim** the corrected sentence |
+| 2790 | `admin.anonExplainer` | already `{k}`-parameterised, and says «aldri lavere enn to» besides |
+| 4660 | `dashboard.heatNote` / `heatNoteGeneric` | `{kWord}`/`{k}`; the generic form is verbatim |
+| 4666 | `reports.noteTeams` | `{kWord}` (`ReportEditor.tsx:139` feeds it the heatmap too) |
+| 5095, 5131 | — | **no counterpart**: the app's index card renders the article's `lead` (`HelpScreen.tsx:217`), so the bundle's separate blurb has no place to be wrong |
+| 4224, 4226, 4230 | `help_article_translations` | **the only gap**, in both languages |
+
+Verified against prod, not only against the file:
+`select … from public.ui_messages where (namespace,key) in (…)` returned the same five
+strings the repository carries, in `no` and `en`.
+
+**The three help-article lines are seeded FROM the bundle (`scripts/seed-help.ts`), so they
+were carrying the old text on prod — and two of the three revisions cannot be seeded as
+drawn.** The revision prepended its true sentences and **kept the false ones it was written
+to replace**:
+
+- **4224** now reads «… Dere velger den selv; vi anbefaler fem, åtte for sensitive temaer.
+  Lovpålagte kartlegginger har låst minimum. **Fem er standard. For sensitive temaer bør dere
+  bruke åtte.**» The last two sentences are the old text, and «Fem er standard» is exactly the
+  fixed-number claim Q55 forbids — `organizations.default_k_threshold` defaults to 5 but is
+  settable 3–10 (`M:0034`).
+- **4226** traded a true sentence for a false one. «Bare lovpålagte kartlegginger har et
+  minimum som ikke kan senkes» is **false**: `app.guard_survey_policy` (`M:0054:87-104`)
+  raises `below_org_floor` when a person survey's `k_threshold` goes under
+  `organizations.default_k_threshold`, and its own comment says the exception flag is the
+  organisation's, «so this binds an administrator too». The sentence it replaced — «kan ikke
+  senkes under minimum» — was true.
+- **4230**'s mock still draws a **«Sensitive temaer» row** in `Administrasjon · Personvern`.
+  That screen has three rows (`PrivacyPanel.tsx:11-12,76`) and no sensitive-topics setting
+  exists in the schema. Eight is real, but it arrives from the harassment template locking it
+  (`surveys.trakasseringAnonNote`), which the real panel already says inside the one control's
+  description.
+
+So three corrections were added to `CORRECTIONS`, each with its measurement, and all
+**thirteen** still match exactly once against the revised bundle. The English mirror in
+`scripts/help-en.ts` was updated in the same commit, and prod's
+`help_article_translations` was updated in both languages by a targeted `update` — not a
+re-seed, because `delete from public.help_articles` is a bulk delete on the remote project.
+
+**What the revision did NOT touch, and it is the half B.27 is about.** All nine lines are
+prose. The three places the bundle hard-codes the constant in *logic* are unchanged and still
+resolve at the same line numbers — `hasThresholdWarn` **V2:4988** `g.count < 5`,
+`mgGroups.small` **V2:5048**, `mgSegments.small` **V2:5052** — so B.27 stands as written. Our
+side already parameterised all three (Q95, V2-3a), so this changes nothing to build; it
+means the bundle is now internally inconsistent, saying «under terskelen» in its copy and
+`< 5` in its code, and a later reader should take the copy.
+
+**The rendered baseline: two screens moved, six churn.** `verify:reference` re-rendered v2
+and eight PNGs changed. Rendering the *identical* bundle a second time and comparing
+byte-for-byte, **six of the eight differ from themselves**: `live`, `live-revealed`, `send`,
+`rapport-editor`, `rapport-editor-filter`, `rapport-editor-del`. The prototype calls
+`new Date` in eleven places, so those screens carry a wall-clock value. Only
+**`admin-personvern.png` and `hjelp.png`** changed because of the nine lines. Nothing
+automated consumes these images — VERIFY.md § Gate 3a has a human open them and compare
+property by property — so this is not a broken gate, but it does mean **«the baseline
+changed» is not evidence that the bundle changed**, and a real one-screen diff can hide in
+the noise. Logged, not fixed: the apparatus is frozen, and the fix would be an edit to a
+bundle.
+
+**A gate limit, logged rather than built** (the apparatus is frozen): `verify:copy`
+(`scripts/verify/threshold-copy.ts`) reads `messages/no.json` and `messages/en.json` only.
+Help-article prose is **shipped copy that the gate cannot see** — which is why «Fem er
+standard» sat in production since V2-6 without tripping anything. The next phase decides
+whether that gate's inputs should include `help_article_translations`.
 
 ### AWAITING A DRAWING — one control, and what the next bundle is compared against
 

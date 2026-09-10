@@ -175,6 +175,23 @@ describe('(V2-6) the twelve, in two languages, with the corrections applied', ()
       ['varsles eieren i Teams', 'Q71: Teams is not built — third appearance of the claim'],
       ['Verneombud har egen rolle', 'D106: verneombud is a duty_signers row, not an access level'],
       ['CSV og Excel', 'Q62: the importer refuses .xlsx'],
+      // ── The corrected bundle's own three (2026-09-10) ──────────────────
+      // The revision that caught the bundle up with Q17/Q91 changed six lines
+      // in the threshold article, and left two false sentences behind: it
+      // PREPENDED the true text without removing what it replaced. Pinned in
+      // the same place as the other six, because the failure mode is identical
+      // — a re-seed from a newer bundle putting one back.
+      ['Fem er standard', 'Q55: a FIXED number for a threshold that is settable 3-10 (M:0034)'],
+      [
+        'Bare lovpålagte kartlegginger',
+        "Q90/M:0054: the ORGANISATION's default is also a minimum that cannot be lowered — " +
+          'app.guard_survey_policy raises below_org_floor, and binds an administrator too',
+      ],
+      [
+        'Sensitive temaer (anbefalt 8)',
+        'D114: a mock row naming a control that exists nowhere — Personvern has three rows, ' +
+          'and 8 comes from the statutory template locking it, not from a setting',
+      ],
     ]
     for (const [phrase, why] of banned) {
       const hits = psql(
