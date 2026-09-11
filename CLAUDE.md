@@ -717,6 +717,15 @@ at **71 of 100**: no new table, no new definer function. Green on its first run,
 a seed cannot reach — the module set is a COOKIE — captured as manifest states and measured clean at
 390px.
 
+**W3 took the census to 1186 across 82 files and 5a3 to 71 of 101** — the denominator rose by
+exactly `M:0104`'s `workspace_use_case_lifts` and the checked number held, confirmed on three
+consecutive runs. The phase's finding is the one the cross-workspace capture was asked for:
+`verify:responsive` blocked at 320px **only in the `cx` workspace**, because the layout-note chip
+carried the bundle's `flex-none` and `whitespace-nowrap` and its width was therefore set by a
+REGISTRY VALUE — «Kundeopplevelse» is three characters longer than «Arbeidsmiljø», ~18px at 11.5px
+semibold, and the measured overflow was 18px exactly. Row 10 one level out: the constant is a
+layout rule and the varying thing is a WORD.
+
 **The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
 two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
 5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
