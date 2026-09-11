@@ -24,6 +24,29 @@ export function MobileNav({
   langSlot,
 }: {
   items: NavItem[]
+  /**
+   * THE SLIDE-OVER KEEPS «Ny undersøkelse» THOUGH W1 REMOVED IT FROM THE
+   * HEADER, AND THAT IS DELIBERATE. Written here rather than only in a report,
+   * because the inconsistency is the kind someone tidies away on sight.
+   *
+   * Three things hold it up:
+   *  1. NO BUNDLE DRAWS THIS SURFACE AT ALL. The slide-over is
+   *     docs/RESPONSIVE.md's answer for widths below 1280px, where CLAUDE.md
+   *     says there is no design to match. v4 restructuring the HEADER
+   *     therefore does not restructure this by implication — a bundle can only
+   *     govern what it draws.
+   *  2. RESPONSIVE.md's own sentence listing what this carries («the nav, the
+   *     CTA and the language switcher») is an ENUMERATION OF WHAT THE HEADER
+   *     HAD THE DAY IT WAS WRITTEN, not a rule about slide-overs. That is the
+   *     shape CLAUDE.md's table records at row 5, where a specification's
+   *     worked example became false the moment a phase moved the example.
+   *  3. Nothing is broken either way: `/undersokelser/ny` is reachable at every
+   *     width from Oversikt (V4:268) and Undersøkelser (V4:1082), both built.
+   *
+   * So this stays until someone decides what the slide-over should carry now
+   * that the header carries less — which is a RESPONSIVE.md question, and one
+   * a UI phase does not get to settle on its own.
+   */
   newSurveyHref: string
   newSurveyLabel: string
   openLabel: string

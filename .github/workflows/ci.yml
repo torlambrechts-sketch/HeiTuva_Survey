@@ -77,7 +77,21 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # PINNED, not `latest`. Two reasons, and the second is the one that
+          # matters. (1) `latest` is an unauthenticated GitHub API call on every
+          # run: on 2026-09-11 it answered «rate limit exceeded» and the browser
+          # job died before a single gate ran — eleven gates reported `skipped`,
+          # which reads in the UI exactly like eleven gates that ran and failed.
+          # (2) An unpinned CLI means TWO RUNS OF THE SAME COMMIT CAN USE
+          # DIFFERENT VERSIONS, so a gate can change its answer with nothing in
+          # the diff. That is the same family as a reference baseline re-rendered
+          # under a newer Chromium, which is why those sets are frozen by name.
+          #
+          # 2.117.0 is what this repository's own tooling resolves (`npx supabase
+          # --version`), so local and CI now run ONE version rather than two that
+          # drift apart. Bump it deliberately, in its own commit, with the gates
+          # as the proof — never by deleting this pin.
+          version: 2.117.0
 
       - name: Start local Supabase
         run: supabase start -x ${{ env.SUPABASE_SERVICES }}
@@ -163,7 +177,21 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # PINNED, not `latest`. Two reasons, and the second is the one that
+          # matters. (1) `latest` is an unauthenticated GitHub API call on every
+          # run: on 2026-09-11 it answered «rate limit exceeded» and the browser
+          # job died before a single gate ran — eleven gates reported `skipped`,
+          # which reads in the UI exactly like eleven gates that ran and failed.
+          # (2) An unpinned CLI means TWO RUNS OF THE SAME COMMIT CAN USE
+          # DIFFERENT VERSIONS, so a gate can change its answer with nothing in
+          # the diff. That is the same family as a reference baseline re-rendered
+          # under a newer Chromium, which is why those sets are frozen by name.
+          #
+          # 2.117.0 is what this repository's own tooling resolves (`npx supabase
+          # --version`), so local and CI now run ONE version rather than two that
+          # drift apart. Bump it deliberately, in its own commit, with the gates
+          # as the proof — never by deleting this pin.
+          version: 2.117.0
 
       - name: Start local Supabase
         # verify:send drives the mail worker and reads back what arrived, and
