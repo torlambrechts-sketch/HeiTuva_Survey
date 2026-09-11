@@ -196,6 +196,17 @@ treatment, not a zero.
 - **`cad82fcd` and `6b3a6e4b`.** Still unverified; they never reached the session. If one of them
   carries something `__3_` dropped, it is a Q52 question before it is a planning one.
 
+## Logged during W1, for W2
+
+- **CI resolves `supabase/setup-cli` at `version: latest`** (`.github/workflows/ci.yml:80`, `:166`).
+  It rate-limited on 2026-09-11 and cost a whole browser job — eleven gates `skipped`, nothing run.
+  Beyond the flakiness, the CLI version is not pinned, so two runs of the same commit can use
+  different versions. Logged rather than fixed: the apparatus is frozen mid-phase.
+- **MobileNav's CTA.** W1 removed «Ny undersøkelse» from the header per v4; the slide-over still
+  has it. That surface is RESPONSIVE.md's and no bundle draws it, so nothing is broken — but the
+  spec sentence listing the slide-over's contents is an enumeration of what the header carried when
+  it was written.
+
 ## One thing outside the plan that is now overdue
 
 **Production is four migrations behind** — `M:0099`–`M:0102`, the whole C-tranche. It is on `main`
