@@ -4900,3 +4900,60 @@ and the run prints that it skipped it.
 screens are added and not removed. That held v2 → v3 and was verified rather than assumed — the
 sorted `sc-if` key-set comparison in `docs/v3/00-diff.md`, `comm -23` empty. A handoff that drops a
 screen needs an `until`, and the check that would catch it is that same comparison.
+
+---
+
+## D158 — Four negative tests passed against a database with none of the feature
+
+**Found in C1, by the step that exists to find it, on the first occasion in this project where
+that step caught something instead of confirming something.**
+
+### What happened
+
+C1's plan says *«negative tests first, proven failing»*. Docker is unavailable in this session, so
+the proof is a CI run carrying the tests and no migration: **run 124 — 21 failed, 1046 passed.**
+
+Twenty-seven tests were in the file. **Six passed.** Two of them legitimately: tests 3 and 4 sweep
+the catalogue for a reader that must never appear, so «nothing reads a table that does not exist» is
+the correct answer and they are forward guards by design — they will start doing work the day a
+later phase writes an aggregate over `survey_comments`, which is the whole mechanism (D115).
+
+**The other four were claims wearing a check's clothes**, and every one of them would have kept
+passing if the feature had shipped and then been deleted:
+
+| | how it passed on nothing |
+|---|---|
+| 10 — «the thread payload carries no answer, score or aggregate» | `read.data` was `null`; `JSON.stringify(null)` is `"null"`, which contains none of the forbidden keys. The `pg_proc` lookup that followed then asserted `not.toMatch` **over an empty string**. |
+| 13 — «no column merely NAMED like a link to the vault» | looped over `information_schema.columns` for a table that did not exist. **The body ran zero times.** |
+| 18 — «an outsider reads nothing at all» | PostgREST errored, `data` was `null`, and `expect([]).toEqual([])` was satisfied by the absence of everything. |
+| 26 — «a comment is never a precondition of submitting, at any mode» | set `feedback_mode` on a table with no such column, never checked the update succeeded, and read `.error` off a `null` payload. |
+
+### Why this is worth an entry rather than a fix in silence
+
+**Number 18 is the sharpest, because the project already owns the distinction it failed to make.**
+Gate 5a3 separates PROTECTED from PROVEN precisely so that «an empty table passes a cross-org read
+check trivially» is reported rather than counted as protection — *«the fixture, not the policy,
+would be doing the work»*. I wrote a test that did exactly what 5a3 refuses to do, in the phase
+whose subject is the policy.
+
+And it is the same family as **«green for something that structurally could not be seen»**, one
+level down. The six instances CLAUDE.md lists are all about a CHECK that could not observe the
+thing. These four are about an ASSERTION that could not fail. A gate that cannot see and a test
+that cannot fail produce the identical artefact — a green line — and neither is distinguishable
+from the real thing by reading it.
+
+### The transferable part
+
+**A negative test is not proven by being written; it is proven by being run before the thing it
+guards exists.** That is one CI run per database phase and it is cheap. What it buys is the
+difference between twenty-seven checks and twenty-three.
+
+**The mechanical form of the defect is always the same: an assertion over an EMPTY result.** Zero
+rows, a null payload, an empty string, a loop with no iterations. So the fix is also uniform —
+assert non-vacuity FIRST, in the same test, and say what the count must exceed. All four now do.
+
+**What this does NOT establish.** The remaining twenty-three failed for the right reasons on run
+124, which proves they can fail — not that they fail for the RIGHT reason in every future state.
+A test that fails because the table is absent could still be vacuous against a table that is
+present and empty. Tests 18 and 10 now guard that second case explicitly; the others were not
+audited for it, and that is a limit rather than a claim.

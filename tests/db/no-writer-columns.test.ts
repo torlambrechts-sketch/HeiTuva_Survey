@@ -49,7 +49,9 @@ const NO_WRITER_SET: [table: string, column: string][] = [
   // later — which is the whole point of the standing question. Each names the
   // phase that gives it a writer, and THAT PHASE REMOVES IT FROM THIS LIST.
   // A column here is not a defect; a column here that nobody notices is.
-  ['surveys', 'feedback_mode'],            // C2 — the Builder control
+  // `surveys.feedback_mode` was here for exactly one phase. C2 gave it
+  // `setFeedbackMode`, so it LEFT this list in the commit that wrote the action
+  // — which is what «giving a column a writer is a visible act» means.
   ['survey_comments', 'handled_at'],       // C4 — «Marker som behandlet»
   ['survey_comments', 'handled_by'],       // C4 — the same action
   ['survey_comment_replies', 'author_member_id'], // C5 — the reply action
@@ -140,6 +142,6 @@ describe('every column the audit found without a writer answers the question', (
     // UP only when a migration creates a column ahead of its action — which is
     // a thing this project does deliberately, database before UI, and which is
     // exactly why they are declared here in the same commit.
-    expect(nothing).toHaveLength(10)
+    expect(nothing).toHaveLength(9)
   })
 })

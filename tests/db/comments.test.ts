@@ -10,7 +10,8 @@ import {
   serviceClient,
   type Client,
 } from './clients'
-import { createOrg, createRound, createShareLink, createSurvey, dropOrg } from './factories'
+import { createRound, createShareLink, createSurvey } from './factories'
+import { ORG_OTHER, ORG_PRIMARY } from './personas'
 
 /**
  * C1 — `survey_comments`, the token read capability, and `surveys.feedback_mode`.
@@ -48,13 +49,43 @@ function psql(query: string): string[][] {
 function one(query: string): string {
   return psql(query)[0]?.[0] ?? ''
 }
+/**
+ * A MULTI-LINE value, whole.
+ *
+ * `one()` splits psql's output on newlines and returns the first cell of the
+ * first line — which is correct for a count and silently wrong for
+ * `pg_get_functiondef`, whose value IS newlines. Test 14 caught it by asserting
+ * something POSITIVE about a function body; every `not.toMatch` in this file was
+ * passing against a 37-character fragment of a signature, which is D158's shape
+ * again — an assertion over a result too small to contain a counterexample.
+ *
+ * A negative assertion cannot detect this. That is the transferable half.
+ */
+function whole(query: string): string {
+  return execFileSync('psql', [DB_URL, '-tA', '-c', query], { encoding: 'utf8' })
+}
 
 /** The migration this phase adds. Named once: test 21 reads it, because the
  *  property it checks is invisible at runtime on a freshly reset database. */
 const MIGRATION = 'supabase/migrations/20260911000099_survey_comments.sql'
 
-const ORG = `Kommentar AS ${randomUUID().slice(0, 8)}`
-const ORG_B = `Kommentar B ${randomUUID().slice(0, 8)}`
+/**
+ * THE FIXTURE LIVES IN THE SEEDED ORG, AND THAT IS A CORRECTION.
+ *
+ * The first version created a fresh organisation with fresh members and then
+ * asserted RLS with `adminClient()` / `leserClient()` — the PERSONA clients,
+ * who are members of Nordisk Studio and of nothing else. The administrator
+ * correctly saw zero rows, and the test read that as a policy failure.
+ *
+ * It is standing question 2b, verbatim: «Which ROWS can my roles reach — not
+ * just which roles read?» A test whose personas cannot reach its fixture is
+ * measuring the fixture.
+ *
+ * So the surveys are created INSIDE `ORG_PRIMARY`, where the personas are, and
+ * the cross-org half uses `ORG_OTHER` and `outsiderClient()`, which is the pair
+ * the rest of tests/db already uses for exactly this.
+ */
+const TAG = randomUUID().slice(0, 8)
 
 type Fixture = {
   orgId: string
@@ -71,12 +102,11 @@ let fxB: { tokens: string[] }
 const svc: Client = serviceClient()
 
 beforeAll(async () => {
-  const org = await createOrg(ORG, [
-    { email: `admin-${randomUUID().slice(0, 6)}@kommentar.test`, role: 'administrator' },
-    { email: `red-${randomUUID().slice(0, 6)}@kommentar.test`, role: 'redaktor' },
-    { email: `les-${randomUUID().slice(0, 6)}@kommentar.test`, role: 'leser' },
-  ])
-  const survey = await createSurvey(org.id, 'Ukespuls med kommentar', [
+  const { data: orgs } = await svc.from('organizations').select('id, name')
+  const orgId = orgs!.find((o) => o.name === ORG_PRIMARY)!.id
+  const otherOrgId = orgs!.find((o) => o.name === ORG_OTHER)!.id
+  const org = { id: orgId }
+  const survey = await createSurvey(org.id, `Ukespuls med kommentar ${TAG}`, [
     { type: 'scale', text: 'Hvordan har uken vært?' },
   ])
   const round = await createRound(survey, 3)
@@ -87,10 +117,7 @@ beforeAll(async () => {
   const closed = await createRound(survey, 1, { roundNo: 2 })
   await svc.from('survey_rounds').update({ status: 'closed' }).eq('id', closed.id)
 
-  const orgB = await createOrg(ORG_B, [
-    { email: `admin-${randomUUID().slice(0, 6)}@kommentarb.test`, role: 'administrator' },
-  ])
-  const surveyB = await createSurvey(orgB.id, 'Annen undersøkelse', [
+  const surveyB = await createSurvey(otherOrgId, `Annen undersøkelse ${TAG}`, [
     { type: 'scale', text: 'Hvordan går det?' },
   ])
   const roundB = await createRound(surveyB, 1)
@@ -108,8 +135,10 @@ beforeAll(async () => {
 }, 120_000)
 
 afterAll(async () => {
-  await dropOrg(ORG, svc)
-  await dropOrg(ORG_B, svc)
+  // The seeded orgs are NOT dropped — they are the demo data every other gate
+  // reads. Only this file's own surveys go, and the comments cascade with their
+  // rounds.
+  await svc.from('surveys').delete().like('title', `%${TAG}`)
 })
 
 /** Submit through the ONE write path, with comments. */
@@ -172,7 +201,7 @@ describe('C1 — survey_comments exists, outside the answers vault', () => {
 
   it('4. the aggregate RPCs do not name it — asserted separately, by name, because these are the ones that matter', () => {
     for (const fn of ['aggregate_results', 'get_quotes']) {
-      const src = one(
+      const src = whole(
         `select coalesce(pg_get_functiondef(p.oid),'') from pg_proc p
            join pg_namespace n on n.oid = p.pronamespace
           where n.nspname = 'public' and p.proname = '${fn}'`,
@@ -248,7 +277,7 @@ describe('C1 — Q111: the token capability, five properties', () => {
       expect(payload, `the thread payload carries ${forbidden}`).not.toContain(forbidden)
     }
     // And the function itself must not name the vault — over a body that exists.
-    const src = one(`select pg_get_functiondef(p.oid) from pg_proc p
+    const src = whole(`select pg_get_functiondef(p.oid) from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace
       where n.nspname='public' and p.proname='get_comment_thread'`)
     expect(src.length, 'get_comment_thread does not exist').toBeGreaterThan(0)
@@ -302,7 +331,7 @@ describe('C1 — Q113: enforced by two absences rather than by a check', () => {
   })
 
   it('14. submit_response takes NO per-comment anonymity input', () => {
-    const src = one(`select pg_get_functiondef(p.oid) from pg_proc p
+    const src = whole(`select pg_get_functiondef(p.oid) from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace
       where n.nspname='public' and p.proname='submit_response'`)
     expect(src.length, 'submit_response not found').toBeGreaterThan(0)
@@ -322,7 +351,7 @@ describe('C1 — Q113: enforced by two absences rather than by a check', () => {
     // The positive half of Q113, and the one that would still be broken if the
     // comment had its own input. A survey that is optional on BOTH axes: the
     // single choice must move both, in the same direction, from one call.
-    const s2 = await createSurvey(fx.orgId, 'Begge valgfrie', [
+    const s2 = await createSurvey(fx.orgId, `Begge valgfrie ${TAG}`, [
       { type: 'scale', text: 'Hvordan går det?' },
     ], { anonymity: 'optional' })
     await svc.from('surveys').update({ feedback_mode: 'optional' }).eq('id', s2.id)
@@ -348,7 +377,7 @@ describe('C1 — Q113: enforced by two absences rather than by a check', () => {
   })
 
   it('16. feedback_mode=off is enforced at the WRITE, not only in the UI', async () => {
-    const s3 = await createSurvey(fx.orgId, 'Ingen kommentarer', [
+    const s3 = await createSurvey(fx.orgId, `Ingen kommentarer ${TAG}`, [
       { type: 'scale', text: 'Hvordan går det?' },
     ])
     await svc.from('surveys').update({ feedback_mode: 'off' }).eq('id', s3.id)
@@ -375,8 +404,8 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
       .from('survey_comments')
       .select('id, body')
       .eq('round_id', fx.roundId)
-    expect(error).toBeNull()
-    expect((data ?? []).length).toBeGreaterThan(0)
+    expect(error, error?.message).toBeNull()
+    expect((data ?? []).length, 'the owning org’s administrator reads none of it').toBeGreaterThan(0)
   })
 
   it('18. an outsider reads nothing at all — and there was something to refuse', async () => {
@@ -398,9 +427,17 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
     // that already exist, not a new grant. CLAUDE.md invariant 4 says a leser
     // gets no named free text, anywhere. Both hold: the thread is documentation
     // a verneombud may read, and a named comment is named free text.
+    // NON-VACUITY FIRST, and this one needs BOTH halves: a test that loops over
+    // what the leser can see passes when the leser sees nothing, and it also
+    // passes when no named comment exists to be refused. The demo seed carries
+    // one of each in this org for exactly that reason.
+    const named = Number(one(`select count(*) from public.survey_comments where not is_anonymous`))
+    expect(named, 'no NAMED comment exists, so nothing was refused').toBeGreaterThan(0)
+
     const leser = await leserClient()
     const { data, error } = await leser.from('survey_comments').select('id, is_anonymous')
-    expect(error).toBeNull()
+    expect(error, error?.message).toBeNull()
+    expect((data ?? []).length, 'the leser saw nothing at all — the loop below is empty').toBeGreaterThan(0)
     for (const row of data ?? []) {
       expect(row.is_anonymous, 'a leser reached a NAMED comment — invariant 4').toBe(true)
     }
@@ -440,14 +477,27 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
   })
 
   it('22. nobody may UPDATE a comment’s body — a message is not editable by its recipient', async () => {
+    // ASSERTED ON THE ROW, NOT ON AN ERROR. There is no UPDATE policy, so the
+    // statement matches nothing and PostgREST returns NO error — the first
+    // version of this test read that silence as success and would have passed
+    // with an update policy that simply failed to match. V1-1's exact trap, and
+    // standing question 1: «what ELSE could refuse this before the check I am
+    // testing gets a chance?» Here the answer is "nothing refused it; nothing
+    // happened", and only the stored value can tell them apart.
     const admin = await adminClient()
-    const { data: row } = await admin.from('survey_comments').select('id').limit(1).single()
-    const { error } = await admin
+    const { data: rows } = await admin
       .from('survey_comments')
-      .update({ body: 'noe helt annet' })
-      .eq('id', row!.id)
-      .select('id')
-    expect(error, 'an administrator rewrote a respondent’s words').not.toBeNull()
+      .select('id, body')
+      .eq('round_id', fx.roundId)
+      .limit(1)
+    const row = (rows ?? [])[0]
+    expect(row, 'no comment to attempt an edit on').toBeTruthy()
+    const before = row!.body
+
+    await admin.from('survey_comments').update({ body: 'noe helt annet' }).eq('id', row!.id)
+
+    const after = one(`select body from public.survey_comments where id = '${row!.id}'`)
+    expect(after, 'an administrator rewrote a respondent’s words').toBe(before)
   })
 })
 
@@ -542,7 +592,7 @@ describe('C1 — surveys.feedback_mode', () => {
     // C2 builds the writer. What C1 owes is that the answer is recorded beside
     // the column, so a reader in C2's absence knows the state is «nothing yet»
     // rather than guessing.
-    const c = one(`
+    const c = whole(`
       select col_description('public.surveys'::regclass, a.attnum)
         from pg_attribute a
        where a.attrelid = 'public.surveys'::regclass and a.attname = 'feedback_mode'`)
@@ -557,7 +607,7 @@ describe('C1 — a share link has no thread, and the product must not pretend ot
     // would have raised inside the transaction and lost the respondent's real
     // answers. The comment beside it claimed the opposite protection, which is
     // the failure mode worth a test: a defence that exists only in prose.
-    const s4 = await createSurvey(fx.orgId, 'Feil id', [{ type: 'scale', text: 'Vel?' }])
+    const s4 = await createSurvey(fx.orgId, `Feil id ${TAG}`, [{ type: 'scale', text: 'Vel?' }])
     const r4 = await createRound(s4, 1)
     const out = await anonClient().rpc('submit_response', {
       p_token: r4.tokens[0]!,
@@ -582,8 +632,11 @@ describe('C1 — a share link has no thread, and the product must not pretend ot
       comments: [{ question_id: null, text: 'fra en delt lenke' }],
     })
     expect(sub.error, sub.error?.message).toBeNull()
+    // `response_id` was in this query and is not in the table — the design
+    // changed under it (see the migration header) and the query did not. psql
+    // errored, which is the loud failure a schema-shaped assertion should have.
     const row = psql(`
-      select invitation_id is null, response_id is not null
+      select invitation_id is null, question_id is null
         from public.survey_comments where body = 'fra en delt lenke'`)
     expect(row.length, 'the share-link comment was not written').toBe(1)
     expect(row[0]![0], 'a share link produced an invitation from nowhere').toBe('t')

@@ -69,6 +69,8 @@ export function Builder({
   locked,
   policy,
   runMode,
+  feedbackMode,
+  linkOnly,
   packLocks,
   bank,
   quizTimeBonus,
@@ -83,6 +85,11 @@ export function Builder({
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
   /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
   runMode: string
+  /** `surveys.feedback_mode` (M:0099, C2's writer is `setFeedbackMode`). */
+  feedbackMode: string
+  /** True when every round of this survey went out by share link or QR alone,
+   *  so no submission carries an invitation and no comment can have a thread. */
+  linkOnly: boolean
   /** A statutory pack whose own policy is `locked`. NOT `policy.locked`, which
    *  means «already sent» — the two are different locks and only this one is
    *  the clause `app.guard_quiz_policy` refuses on. */
@@ -393,6 +400,8 @@ export function Builder({
           runMode={runMode}
           anonymity={policy.anonymity}
           packLocks={packLocks}
+          feedbackMode={feedbackMode}
+          linkOnly={linkOnly}
           advanced={advanced}
           onAdvancedChange={setAdvanced}
           strings={{
@@ -414,6 +423,18 @@ export function Builder({
             simple: t('simple'),
             advanced: t('advanced'),
             failed: t('policyError_failed'),
+            feedbackTitle: t('feedbackTitle'),
+            feedbackDesc: t('feedbackDesc'),
+            feedbackOff: t('feedbackOff'),
+            feedbackOffDesc: t('feedbackOffDesc'),
+            feedbackAnonymous: t('feedbackAnonymous'),
+            feedbackAnonymousDesc: t('feedbackAnonymousDesc'),
+            feedbackNamed: t('feedbackNamed'),
+            feedbackNamedDesc: t('feedbackNamedDesc'),
+            feedbackOptional: t('feedbackOptional'),
+            feedbackOptionalDesc: t('feedbackOptionalDesc'),
+            feedbackLinkOnly: t('feedbackLinkOnly'),
+            feedbackFailed: t('feedbackFailed'),
           }}
         />
       ) : null}

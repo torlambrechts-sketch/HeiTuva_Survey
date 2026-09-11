@@ -32,7 +32,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target, run_mode, quiz_time_bonus, quiz_team_board')
+    .select('id, title, audience_label, status, anonymity, org_id, engage, respondent_kind, k_threshold, policy_locked, template_pack_key, target, run_mode, quiz_time_bonus, quiz_team_board, feedback_mode')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -40,6 +40,32 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   // RLS already scopes this to the viewer's org; a miss is a 404 rather than a
   // forbidden page, so the response cannot confirm another org's survey exists.
   if (!survey) notFound()
+
+  /*
+    C2 — whether this survey can carry a THREAD at all.
+
+    `get_comment_thread` resolves a token to an invitation; a share link resolves
+    to none, because every holder of that link is the same principal. So a survey
+    that has only ever gone out by link or QR can collect comments and can never
+    deliver a reply, and the Builder says so beside the control rather than
+    letting a respondent discover it by waiting.
+
+    Measured as «this survey has at least one invitation», not as «a share link
+    exists»: a survey with both can reply to the invited half, so the presence of
+    a link is not the question. A survey with no rounds yet is NOT link-only —
+    nothing has been decided, and warning about a distribution nobody has chosen
+    would be the Builder telling the editor what it will refuse before they have
+    asked for anything (D153).
+  */
+  const { data: invitedRounds } = await supabase
+    .from('survey_rounds')
+    .select('id, survey_invitations(id)')
+    .eq('survey_id', id)
+    .limit(50)
+  const roundsWithInvitations = (invitedRounds ?? []).filter(
+    (r) => ((r.survey_invitations as unknown[]) ?? []).length > 0,
+  ).length
+  const linkOnly = (invitedRounds ?? []).length > 0 && roundsWithInvitations === 0
 
   const { data: rows, error: qError } = await supabase
     .from('survey_questions')
@@ -140,6 +166,8 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
       />
       <Builder
         runMode={survey.run_mode}
+        feedbackMode={survey.feedback_mode}
+        linkOnly={linkOnly}
         packLocks={packLocks}
         bank={bank}
         quizTimeBonus={survey.quiz_time_bonus}

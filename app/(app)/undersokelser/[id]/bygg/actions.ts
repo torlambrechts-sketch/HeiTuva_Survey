@@ -490,6 +490,49 @@ const RunModeInput = z.object({
  * changing how a survey collects answers behind someone's back is a worse
  * defect than the one this fixes. The screen says what it did.
  */
+/**
+ * C2 — the WRITER for `surveys.feedback_mode`.
+ *
+ * `M:0099` created the column and said in its own comment that nothing wrote it
+ * yet and that this action would. CLAUDE.md's standing question has fired four
+ * times, and in THREE of those the column existed and was read everywhere — so
+ * the phase that adds the column names the action, and the phase after it adds
+ * the action. This is that action, and `tests/db/no-writer-columns.test.ts`
+ * loses its `surveys.feedback_mode` row in the same commit.
+ *
+ * No guard to mirror here, deliberately. Q114 is taken as NO pack lock: the
+ * product's other locks govern what the employer may SEE, and this governs
+ * whether the employer may REPLY. A statutory survey may have a thread.
+ */
+const FeedbackModeInput = z.object({
+  surveyId: z.string().uuid(),
+  feedbackMode: z.enum(['off', 'anonymous', 'named', 'optional']),
+})
+
+export async function setFeedbackMode(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = FeedbackModeInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('surveys')
+    .update({ feedback_mode: parsed.data.feedbackMode })
+    .eq('id', parsed.data.surveyId)
+    .eq('org_id', viewer.orgId)
+  if (error) {
+    console.error(`setFeedbackMode failed: ${error.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath(`/undersokelser/${parsed.data.surveyId}/bygg`)
+  return { ok: true }
+}
+
 export async function setRunMode(
   input: unknown,
 ): Promise<(PolicyResult & { ok: true; switchedToNamed?: boolean }) | (PolicyResult & { ok: false })> {

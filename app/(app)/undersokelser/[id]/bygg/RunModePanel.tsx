@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { setRunMode } from './actions'
+import { setFeedbackMode, setRunMode } from './actions'
 
 /**
  * «Kjøremodus» — V2:566-575, in the Builder's Innstillinger pane.
@@ -32,12 +32,15 @@ import { setRunMode } from './actions'
  * and says WHY, which teaches the rule, where a disabled card teaches nothing.
  */
 type Mode = 'standard' | 'live' | 'quiz'
+type Feedback = 'off' | 'anonymous' | 'named' | 'optional'
 
 export function RunModePanel({
   surveyId,
   runMode,
   anonymity,
   packLocks,
+  feedbackMode,
+  linkOnly,
   strings: s,
   advanced,
   onAdvancedChange,
@@ -45,6 +48,15 @@ export function RunModePanel({
   surveyId: string
   runMode: string
   anonymity: string
+  /** C2 — `surveys.feedback_mode` (M:0099). Whether a respondent may comment,
+   *  and under what name. Independent of `anonymity`: one governs whether
+   *  ANSWERS are attributable, the other whether COMMENTS are. */
+  feedbackMode: string
+  /** Whether this round can reach anybody by name at all. A survey distributed
+   *  only by share link or QR has no invitation behind a submission, so a
+   *  comment written through it has no thread to read a reply back from —
+   *  stated on the screen rather than discovered by a respondent who waits. */
+  linkOnly: boolean
   /** A statutory pack whose policy is `locked` — the clause in
    *  `app.guard_quiz_policy` that is a real refusal rather than a consequence. */
   packLocks: boolean
@@ -74,6 +86,18 @@ export function RunModePanel({
     buildModeDescAdvanced: string
     simple: string
     advanced: string
+    feedbackTitle: string
+    feedbackDesc: string
+    feedbackOff: string
+    feedbackOffDesc: string
+    feedbackAnonymous: string
+    feedbackAnonymousDesc: string
+    feedbackNamed: string
+    feedbackNamedDesc: string
+    feedbackOptional: string
+    feedbackOptionalDesc: string
+    feedbackLinkOnly: string
+    feedbackFailed: string
   }
   /** The Enkel/Avansert switch, lifted so the card owns the whole section. */
   advanced: boolean
@@ -87,6 +111,30 @@ export function RunModePanel({
   const [anon, setAnon] = useState(anonymity)
   const [note, setNote] = useState<string | null>(null)
   const [pending, start] = useTransition()
+
+  const [feedback, setFeedback] = useState<Feedback>(
+    feedbackMode === 'off' || feedbackMode === 'named' || feedbackMode === 'optional'
+      ? feedbackMode
+      : 'anonymous',
+  )
+  const [feedbackNote, setFeedbackNote] = useState<string | null>(null)
+
+  function pickFeedback(next: Feedback) {
+    if (next === feedback) return
+    setFeedbackNote(null)
+    const previous = feedback
+    // Optimistic, then corrected on refusal. The four cards are a radio group and
+    // a radio that does not move under the pointer reads as broken; what must not
+    // happen is that it moves and STAYS moved after the server said no.
+    setFeedback(next)
+    start(async () => {
+      const r = await setFeedbackMode({ surveyId, feedbackMode: next })
+      if (!r.ok) {
+        setFeedback(previous)
+        setFeedbackNote(s.feedbackFailed)
+      }
+    })
+  }
 
   function pick(next: Mode) {
     if (next === mode) return
@@ -183,6 +231,80 @@ export function RunModePanel({
            two must not look the same. */
         <p className="mt-2.5 text-[12px] leading-[1.45] text-mut">{standing}</p>
       ) : null}
+
+      {/* V3:580-594 — «Kommentar og samtale per spørsmål», between Kjøremodus and
+          Byggemodus, in the same card and behind the same rule.
+
+          NOT a chip rail. `02-plan.md` predicted RESPONSIVE.md's «Tab rails and
+          chip groups» here; the bundle draws a COLUMN of full-width cards
+          (`flex-direction:column`), identical in shape to the Kjøremodus cards
+          directly above. There is nothing to wrap, so that section does not
+          apply — recorded rather than force-fitted, because quoting a rule that
+          does not govern the control is how RESPONSIVE.md's own worked example
+          went wrong (D129). */}
+      <div className="mt-[18px] border-t border-line pt-4">
+        <div className="text-[11px] uppercase tracking-[.1em] text-mut">{s.feedbackTitle}</div>
+        <p className="mt-1 text-[12.5px] leading-[1.5] text-mut">{s.feedbackDesc}</p>
+        <div className="mt-2.5 flex flex-col gap-[7px]" role="radiogroup" aria-label={s.feedbackTitle}>
+          {(
+            [
+              { key: 'off', label: s.feedbackOff, desc: s.feedbackOffDesc },
+              { key: 'anonymous', label: s.feedbackAnonymous, desc: s.feedbackAnonymousDesc },
+              { key: 'named', label: s.feedbackNamed, desc: s.feedbackNamedDesc },
+              { key: 'optional', label: s.feedbackOptional, desc: s.feedbackOptionalDesc },
+            ] as { key: Feedback; label: string; desc: string }[]
+          ).map((f) => {
+            const on = f.key === feedback
+            return (
+              <button
+                key={f.key}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                disabled={pending}
+                onClick={() => pickFeedback(f.key)}
+                className="flex min-w-0 items-center gap-2.5 rounded-[11px] border-[1.5px] px-[13px] py-2.5 text-left text-ink"
+                style={{
+                  borderColor: on ? 'var(--ink)' : 'var(--line)',
+                  background: on ? 'var(--sbg)' : 'var(--sf)',
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="flex h-3.5 w-3.5 flex-none items-center justify-center rounded-full border-[1.5px]"
+                  style={{ borderColor: on ? 'var(--ink)' : 'var(--line)' }}
+                >
+                  <span
+                    className="block h-[7px] w-[7px] rounded-full"
+                    style={{ background: on ? 'var(--ink)' : 'transparent' }}
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-semibold">{f.label}</span>
+                  <span className="mt-px block text-[11.5px] leading-[1.4] text-mut">{f.desc}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {/* A thread needs somebody to reply TO. A share link resolves to no
+            invitation, so `get_comment_thread` returns an empty thread by
+            design — every holder of that link is the same principal. Saying so
+            here is cheaper than a respondent waiting for an answer that has
+            nowhere to arrive. */}
+        {feedback !== 'off' && linkOnly ? (
+          <p className="mt-2.5 text-[12px] leading-[1.45] text-mut">{s.feedbackLinkOnly}</p>
+        ) : null}
+        {feedbackNote ? (
+          <p
+            role="status"
+            className="mt-[11px] inline-block rounded-full px-[13px] py-2 text-[11.5px] font-semibold"
+            style={{ background: 'var(--ac3)' }}
+          >
+            {feedbackNote}
+          </p>
+        ) : null}
+      </div>
 
       {/* V2:580-587 — the rule, then Byggemodus. The description is the mode's
           own, not a fixed sentence: the bundle swaps it (V2:6111-6113) so the
