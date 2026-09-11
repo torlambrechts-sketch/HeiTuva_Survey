@@ -2,9 +2,10 @@
 
 Numbered onward from **Q110**, the head of `docs/review/05-decisions.md`.
 
-Q111–Q113 are **taken**, because they are security core rather than taste. Q114 is **not taken**
-and is for Tor: it is drafted with both readings and no default, because defaulting it would
-decide something about statutory surveys by omission.
+Q111–Q114 are all **taken**. Q111–Q113 were taken here because they are security core rather
+than taste. **Q114 was brought to Tor undefaulted, with both readings, and he took it** —
+2026-09-11, second reading, with two conditions and one question sent onward rather than
+answered. It is recorded below as he decided it, not as it was drafted.
 
 ---
 
@@ -120,35 +121,82 @@ own thread».
 `response_id`. Written as a property over the schema, not as a check of the one writer we happen to
 have.
 
+### THE TENSION THIS EXPOSES, WHICH GOES IN THE MIGRATION (Tor, 2026-09-11)
+
+Rejecting «a named comment with no link to the response» because Q111's property 1 needs the link
+means **the thread IS the link**. Follow it one step:
+
+- **An anonymous RESPONSE cannot reference an invitation.** That is invariant 2, enforced by a
+  database CHECK, and it is the thing the product sells on.
+- **An anonymous COMMENT must.** `survey_comments.invitation_id` is not optional in `anonymous`
+  mode — without it there is no thread to read back, and Q111 property 1 fails.
+
+So an anonymous respondent who writes a comment has an `invitation_id` **on a row carrying her
+words**, which is strictly more than her answers have. Two rules that read like opposites sit side
+by side in one schema, and **anyone reading the second one cold sees an invariant breach and fixes
+it.**
+
+This goes in the migration, in writing, beside the column — what it is for, why it is not the same
+rule, and what it costs:
+
+> `invitation_id` scopes a THREAD, not an answer. The anonymity CHECK on `responses` forbids this
+> link because an answer must not be attributable; a comment must be, or the respondent cannot read
+> the reply to it (Q111 property 1). **The cost is real and is accepted deliberately: a comment is
+> attributable to its author by whoever holds the database, in a way an answer is not.** That is
+> why Q112's sentence on the respondent screen says the comment «leses som den står» rather than
+> reusing the anonymity banner. Do not "restore the invariant" here — removing this column does not
+> make comments safer, it makes the thread unreadable and the feature a suggestion box.
+
+**What anonymity still means for a comment**: no name is *rendered*, to any role, anywhere in the
+product; no join to the response exists (Q113); and the comment is outside the answers vault
+(Q112). What it does not mean is *unattributable at rest*. Those are different promises and the
+respondent is told the one that is true.
+
 ---
 
-## Q114 — DOES THE PACK POLICY LOCK `feedbackMode` ON STATUTORY PACKS? **NOT TAKEN. For Tor.**
+## Q114 — DOES THE PACK POLICY LOCK `feedbackMode` ON STATUTORY PACKS? **TAKEN: NO LOCK.**
+
+**Drafted here undefaulted with both readings and brought to Tor. He took it 2026-09-11: do not
+lock.** Recorded as decided, with the reasoning that decided it, because a decision that keeps only
+its conclusion loses the part that survives the next question.
 
 Q17's pack policy already locks **anonymity** and **threshold** on a statutory pack, and
-`app.guard_quiz_policy` refuses quiz there outright. `feedbackMode` is the same shape of question
-and it is not obvious, so it is not defaulted.
+`app.guard_quiz_policy` refuses quiz there outright. `feedbackMode` looked like the same shape of
+question. **It is not, and the deciding point is the asymmetry the LOCK reading names in its own
+favour.**
 
-**The reading that says LOCK IT (to `anonymous`, or to `off`):**
-A psykososial kartlegging is conducted under aml. § 4-3. A manager replying individually inside it
-is a channel from the employer to a named employee about what that employee said regarding their
-own working environment. Even with goodwill on both sides, the reply arrives with the employment
-relationship attached. The statutory survey is the one place where the product's other locks exist
-precisely because the stakes are not symmetrical, and this is the same asymmetry.
+**The reading that said LOCK IT:** a psykososial kartlegging is conducted under aml. § 4-3. A
+manager replying individually inside it is a channel from the employer to a named employee about
+what that employee said regarding their own working environment. Even with goodwill on both sides,
+the reply arrives with the employment relationship attached. The statutory survey is the one place
+where the product's other locks exist precisely because the stakes are not symmetrical.
 
-**The reading that says LEAVE IT OPEN:**
-Following up is what § 4-3 asks an employer to *do*. The duty engine's whole premise is that a
-finding becomes an action. A respondent who writes «jeg vet ikke hvem jeg skal varsle til» and gets
-an answer has been served by the law's intent, and a product that refuses to let the employer
-answer is enforcing a formality against the person it protects. The verneombud signs the report;
-the channel is not unsupervised.
+**The reading that decided it:** following up is what § 4-3 asks an employer to *do*. The duty
+engine's whole premise is that a finding becomes an action. A respondent who writes «jeg vet ikke
+hvem jeg skal varsle til» and gets an answer has been served by the law's intent.
 
-**What I would need in order to take it, and do not have:** whether a reply inside a statutory
-kartlegging is disclosable to the Arbeidstilsynet as part of the documentation, and whether a
-respondent can decline the thread without declining the survey. Both are questions about the law
-and the relationship, not about the schema.
+**And the asymmetry argument does not reach this case.** The product's existing locks protect the
+employer's **SIGHT** — what a manager may see, of whom, below which threshold. `feedbackMode`
+governs the employer's **REPLY**. Those are not the same power and the lock that is right for the
+first is not automatically right for the second. Refusing an employer the ability to answer
+«jeg vet ikke hvem jeg skal varsle til» enforces a formality **against the person the rule
+protects**.
 
-**Cost of deferring:** low, and asymmetric in the safe direction. `feedbackMode` defaults to
-`anonymous`; if the answer is «lock it», locking later changes one row's policy and one guard. If
-the answer is «leave it open», nothing is built that has to be unbuilt. **Building the lock first
-and relaxing it would be the expensive order**, so the plan assumes no lock and isolates the
-decision to one migration.
+### Two conditions, built with it — asserted, not assumed
+
+1. **A respondent can decline the thread without declining the survey.** On a statutory pack the
+   comment field is **never required**. This is a test, not a convention: the phase asserts that no
+   configuration of a statutory pack can make a comment a precondition of submitting.
+2. **A thread inside a statutory survey is visible to the verneombud on the same footing as the
+   rest of the documentation** — the supervision mechanism that already exists, not a new one. The
+   channel is supervised because the role that signs the report can read it.
+
+### The third question is not settled, and this line says so
+
+**Whether a reply inside a statutory kartlegging is disclosable to the Arbeidstilsynet as part of
+the employer's documentation is a question about the law, and it is not answered here.** It goes on
+the lawyer's list beside the four texts. Nothing in this phase depends on the answer — a reply is
+stored, readable by the roles named above, and retained like the rest of the round — but **nobody
+should read «no lock» as «disclosure is settled».** It is not, and the difference matters if the
+answer comes back as «yes, and the respondent must be told so up front», because that is a copy
+change on the respondent screen and it is cheap only while it is known to be open.

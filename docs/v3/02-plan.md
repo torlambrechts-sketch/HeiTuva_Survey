@@ -1,6 +1,13 @@
 # v3 — the plan: communication on every survey
 
-Derived from `00-diff.md` (measured) and `01-decisions.md` (Q111–Q113 taken, **Q114 open**).
+Derived from `00-diff.md` (measured) and `01-decisions.md` (**Q111–Q114 all taken** — Q114 taken
+by Tor 2026-09-11: no lock, with two conditions that are asserted).
+
+**Corrected 2026-09-11 by Tor, before any of it ran.** Three changes, and the first is a defect in
+this document rather than a refinement of it: the `feedback_mode` default was written as the
+BUNDLE's default, not as the decision taken. It is fixed in place below and the reasoning is in
+C1.
+
 Same constraints as B0–B3. **Database before UI, and here that is not a formality: the comment
 table and the token capability ARE the feature's security boundary.**
 
@@ -19,9 +26,13 @@ Six phases. Each closable in one verification pass and one fix pass.
 - The apparatus stays frozen. A check the gates cannot make is logged as a limit.
 - Docker is unavailable here, so **every visual half is UNVERIFIED** with the reason, and the
   database half is CI's.
-- **Q114 is not assumed in either direction.** No phase builds a `feedbackMode` pack lock, and no
-  phase makes one hard to add: C1 puts `feedback_mode` on `surveys` beside the columns the pack
-  policy already governs, so a lock is a guard and a policy key, not a migration of the model.
+- **Q114 is taken: NO pack lock on `feedback_mode`.** Two conditions ship with it and are
+  **asserted, not assumed**: a statutory pack can never make a comment a precondition of
+  submitting (C1, a test over the schema), and a thread inside a statutory survey is readable by
+  the verneombud on the same footing as the rest of the documentation (C1's RLS). `feedback_mode`
+  still lands on `surveys` beside the columns the pack policy governs, so if the Arbeidstilsynet
+  question comes back and a lock is wanted after all, it is a guard and a policy key — not a
+  migration of the model.
 
 ## Starting numbers
 
@@ -60,9 +71,26 @@ only what moved for a real reason.
 
 ---
 
-# C1 — The comment table and the token capability
+# C1 — The comment table, the token capability, and `surveys.feedback_mode`
 
-**Depends on:** Q111, Q112, Q113. **This is the database half and it is the whole security story.**
+**Depends on:** Q111, Q112, Q113, Q114. **This is the database half and it is the whole security
+story.**
+
+### `feedback_mode` lives here, not in C2, because its DEFAULT is a migration property
+
+The plan first said «the default is `anonymous` and every existing survey inherits it». **That is
+the bundle's default and it is wrong for this product.** Corrected by Tor before it was built:
+
+> **`off` for surveys that already exist. `anonymous` for new ones.**
+
+A survey already sent without a comment field **must not acquire one by migration.** Its
+respondents were invited to something else; the promise they were given mentioned no thread, and a
+backfill that switches the feature on for a round already in the field changes what those people
+agreed to, after they agreed to it. The column's `DEFAULT 'anonymous'` governs rows created from
+now on; the backfill writes `'off'` to every row that exists at migration time, and **a test
+asserts the backfill left existing rows off** rather than trusting the statement's shape.
+
+That is a property of the migration, so it belongs in the phase that writes the migration.
 
 ### Order inside the phase
 1. **Negative tests first, proven failing.** All five of Q111's, plus Q112's catalogue sweep and
@@ -81,6 +109,21 @@ whether a reply needs its own RLS).
 beside the column. `handled` and `tag` are the two most likely to arrive without a writer, because
 both are manager-facing and both are easy to read before anything sets them.
 
+### `surveys.feedback_mode`
+
+Four values (`off` / `anonymous` / `named` / `optional`), CHECK-constrained, **with a writer named
+in the migration** — the Builder control is C2's, and the migration says so in the column comment
+rather than leaving the question open (the standing question, four instances).
+
+**Q114's two conditions are asserted in this phase**, because both are properties of the schema and
+the RLS rather than of a screen:
+1. **No configuration of a statutory pack makes a comment a precondition of submitting.** Written
+   as a property: `submit_response` succeeds with no comment at every `feedback_mode`, statutory
+   pack or not. Not a check of the one caller we have.
+2. **A verneombud reads a thread inside a statutory survey on the same footing as the rest of the
+   documentation** — so the read policy is expressed against the role that already signs the
+   report, not a new grant.
+
 ### The two sweeps
 - **`k_for`, two-sided** — nothing calls the old constant; everything reading the vault calls it.
 - **No SECURITY DEFINER function reads `survey_comments`** — catalogue-derived over `pg_proc`, so
@@ -90,23 +133,26 @@ both are manager-facing and both are easy to read before anything sets them.
 No UI. No reply *sending*. No Oppgaver surface. No `feedbackMode` pack lock (Q114).
 
 ### Numbers
-Census **+~26** (five token tests, the catalogue sweep, the association test, RLS per role, the
-writer assertions). 5a3 **67 of 92 → 68 of 93 at least**: `survey_comments` is a new RLS table and
+Census **+~34** (five token tests, the catalogue sweep, the association test, RLS per role, the
+writer assertions, the backfill-left-existing-off assertion, and Q114's two conditions). 5a3 **67 of 92 → 68 of 93 at least**: `survey_comments` is a new RLS table and
 must be **CHECKED**, not allowlisted; the read RPC is a new SECURITY DEFINER function and is
 CHECKED too. **If either lands allowlisted, the phase has not closed.**
 
 ---
 
-# C2 — `feedback_mode` on the survey, and the builder control
+# C2 — The builder control for `feedback_mode`
 
-**Depends on:** C1. **Database first: the column, its CHECK, its writer.**
+**Depends on:** C1, which owns the column, its CHECK, its default and its backfill. **C2 is the
+writer** — the standing question's answer for that column, built in the phase after the one that
+names it.
 
 ### Scope
-`surveys.feedback_mode` with the four values; the Kjøremodus-adjacent control in the Builder
-(`feedbackModes`, four cards); the mode's effect on what the respondent surface will render.
+The Kjøremodus-adjacent control in the Builder (`feedbackModes`, four cards); the server action
+that writes the column; the mode's effect on what the respondent surface will render.
 
-**The default is `anonymous` and every existing survey inherits it** (`00-diff.md § 3`). The
-migration states that explicitly and the phase reports how many live surveys it turns on.
+**The default is not C2's** — see C1. What C2 owns is that an existing survey showing `off` shows
+it because that is its stored value, **not because the control has no reading for it**. The four
+cards render four real states.
 
 ### Fidelity
 Built to the bundle's four cards. **The `anonymous` description is corrected, not copied** — «neste
@@ -117,7 +163,8 @@ innlogging» is false against the product (Q111) and against the sweep's rule.
 section now carries after «three buttons» was wrong.
 
 ### Numbers
-Census +~10. 5a3 unchanged — a column and a CHECK are neither surface.
+Census +~8 (the writer assertion, the four-state render, the `off` case). 5a3 unchanged — a server
+action is not a catalogue surface.
 
 ---
 
@@ -193,7 +240,12 @@ function, it is CHECKED**.
 
 ## What this plan does not cover
 
-- **Q114.** No phase builds it, and C1's column placement keeps it to a guard plus a policy key.
+- **A `feedback_mode` pack lock.** Q114 is taken as NO lock, so there is nothing to build; C1's
+  column placement keeps a future lock to a guard plus a policy key if the Arbeidstilsynet question
+  comes back wanting one.
+- **Whether a reply inside a statutory kartlegging is disclosable to the Arbeidstilsynet.** On the
+  lawyer's list beside the four texts, explicitly open (Q114). Nothing here depends on the answer,
+  and nobody should read «no lock» as «disclosure is settled».
 - **Notifying the respondent that a reply exists.** Email would need `sent_at`'s meaning settled
   (D133/D134, still open) and would put a second credential in an inbox. Out of scope, stated.
 - **Anything about how long a comment is kept.** A message from an identified person is
