@@ -79,29 +79,40 @@ less than the page does.**
 **W1 measures the overflow first.** Naming the cause as a hypothesis rather than asserting it was
 the right order and the measurement is still owed.
 
-### Q124 — «Dashboard følger oppsettet «Arbeidsmiljø»» binds by TITLE — **ANSWERED: bind by id, measure first**
+### Q124 — «Dashboard følger oppsettet «Arbeidsmiljø»» — **ANSWERED, and it needed no database**
 
 `WORKSPACES[].layout` is a string — `"Arbeidsmiljø"`, `"Kundeopplevelse"`, `"Medlem og frivillig"`,
-and `null` for Tilpasset, which renders «Dashboard beholder ditt eget oppsett» instead
-(`V4:6063-6064`).
+and `null` for Tilpasset, which renders «Dashboard beholder ditt eget oppsett» (`V4:6063-6064`).
 
-**We render** `dashboard_layouts` with a nullable `user_id` where NULL is an organisation preset
-(`M:0046:36-42`) — so the shape exists. But the title is user-editable
-(`check (length(btrim(title)) between 1 and 80)`), which makes a title a poor key.
+**ANSWERED (Tor): bind by id, and measure whether the preset exists. Both halves are now measured,
+and my framing of the question was wrong in two ways.**
 
-**ANSWERED (Tor): bind by id, and measure whether the preset exists. A W-phase item, not a scoping
-one — it needs a database. DO NOT BUILD THE SENTENCE BEFORE THE ANSWER.**
+**First correction — it did not need a database.** I said it was a W-phase item because measuring it
+needed a running stack. It did not: `dashboard_presets` is a SHIPPED registry, seeded by
+`M:0047:161`, so the rows are readable in the migration. Measured there:
 
-**Two things, and the second is the one that bites:**
-1. Bind by **id**, not by title — a registry row mapping workspace → layout id, which is
-   data-not-code and the project's own convention.
-2. **Does an org preset with that name exist at all?** If the seed creates no layout called
-   «Arbeidsmiljø», the sentence promises a layout that is not there — which is the
-   *never fabricate data in the UI* rule, not a nicety. **Checked before the sentence ships, not
-   after.** I have not been able to run this check: it needs a database and the local stack is
-   down in this session.
+| bundle's `layout` | shipped row |
+|---|---|
+| «Arbeidsmiljø» | `('arbeidsmiljo', 'Arbeidsmiljø')` |
+| «Kundeopplevelse» | `('kundeopplevelse', 'Kundeopplevelse')` |
+| «Medlem og frivillig» | `('medlem', 'Medlem og frivillig')` |
+| `null` (Tilpasset) | — renders the other sentence |
 
----
+**All three exist.** The sentence does not promise a layout that is not there, so the
+never-fabricate rule is satisfied rather than at risk, and **the sentence is not blocked.**
+
+**Second correction — the title I worried about is on the wrong table.** I cited
+`dashboard_layouts`' editable-title CHECK. The preset the workspace points at is in
+`dashboard_presets`, the shipped registry that 5a3 allowlists because it carries no org id — so it
+is not customer-editable at all, and the rename I was guarding against cannot happen from the
+product.
+
+**So the binding is trivial and has an exact precedent one migration away**:
+`use_cases.preset_key text references public.dashboard_presets(key) on delete set null`
+(`M:0049:22`), added for the same reason — «a dangling one would give the card a button that loads
+nothing». The workspace registry takes the identical column. **Bind by `key`, render
+`dashboard_presets.title` from the joined row**, so the displayed word stays correct by
+construction rather than by being copied.
 
 ## W0 — the model, and nothing that renders
 
