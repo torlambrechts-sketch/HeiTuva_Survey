@@ -43,6 +43,8 @@ const isSentence = (v: string) => v.trim().length >= 28 && /\s/.test(v)
  * a pattern, and the list is auditable in a way a regex is not.
  */
 const RESTRICTIVE: Record<string, string> = {
+  feedbackLinkOnly:
+    'a link-or-QR survey has no thread — only when the survey has no invited round',
   readerNotice: 'a leser cannot edit — role reality, shown only to a leser',
   policyAnonNoteOrganisation: 'locked to named — only on an organisation survey',
   policyTwoText: 'the product arguing with threshold 2 — only at threshold 2',
@@ -59,6 +61,18 @@ const RESTRICTIVE: Record<string, string> = {
  * Of the restrictive ones, which reach a person who has asked for NOTHING —
  * a blank, anonymous, standard, unsent survey on the Generelt tab?
  */
+/*
+  C2 adds one, and it is classified RESTRICTIVE rather than left uncounted.
+
+  `feedbackLinkOnly` says a link-or-QR survey has no thread to reply in. That is
+  a limitation, so it belongs in the count — and the count is only worth
+  anything if my own additions face it. It is NOT pre-emptive: it renders only
+  when the survey actually has no invited round AND the mode is not `off`, which
+  is the same gating `runModeNamedSurvey` earned after D153.
+
+  The other five strings C2 adds — the section title, its description and the
+  four mode descriptions — are enabling: they say what each setting GIVES you.
+*/
 const PREEMPTIVE: string[] = []
 
 const sentences = rendered.filter((k) => isSentence(no[k]!))
