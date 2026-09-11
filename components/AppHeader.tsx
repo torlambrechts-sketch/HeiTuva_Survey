@@ -76,13 +76,26 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
 
       {/* V4:175 — `gap:6px`, `flex:none`. */}
       <div className="relative flex flex-none items-center gap-1.5">
-        <Link
-          href="/undersokelser/ny"
-          className="hidden cursor-pointer whitespace-nowrap rounded-[9px] border-none bg-ac px-[17px] py-[9px] text-[12.5px] font-semibold text-ink no-underline md:block"
-        >
-          {t('newSurvey')}
-        </Link>
+        {/* W1 — «Ny undersøkelse» IS NOT IN THIS HEADER ANY MORE, and it is the
+            third control v4 displaced rather than a feature dropped.
 
+            The FIRST bundle drew it here (D89 quotes `HeiTuva.dc.html:181-183`:
+            a round icon button «between «Ny undersøkelse» and the language
+            globe»), so it was fidelity when it was built. v4 clears the row of
+            all three: the width toggle and the language picker move into the
+            user menu (V4:196), and the CTA is drawn on the pages instead —
+            V4:268 on Oversikt and V4:1082 on Undersøkelser.
+
+            BOTH DESTINATIONS ARE ALREADY BUILT — `OverviewScreen.tsx:111` and
+            `undersokelser/page.tsx:186` — checked before removing this, because
+            a control removed from the one place it existed is a feature
+            deleted, and a control removed from the third place it exists is
+            fidelity.
+
+            It also happens to be what over-filled the row: `verify:visual`
+            photographed the nav wrapped to two lines at 1440px, with
+            «Bibliotek» alone on the second. The measurement I took before
+            building was on v4's OWN header, which never had this button. */}
         {/* V2:180 — the «?» that opens Hjelp og støtte. Added with the screen it
             points at: a header control reaching a route that does not exist is
             the same defect as a link to a page nobody drew. */}

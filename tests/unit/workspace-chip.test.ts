@@ -125,3 +125,49 @@ describe('W1 · nowrap is an xl rule, because v4 overflows at 320 without us', (
     expect(header).toMatch(/\bxl:flex-nowrap\b/)
   })
 })
+
+describe('W1 · the header carries only what v4 draws in it', () => {
+  /**
+   * v4 clears the header row of three controls: the width toggle and the
+   * language picker move into the user menu (V4:196), and «Ny undersøkelse» is
+   * drawn on the PAGES instead — V4:268 (Oversikt) and V4:1082 (Undersøkelser).
+   *
+   * THE PAIR OF ASSERTIONS IS THE POINT. Removing a control from the header is
+   * fidelity only if the places the bundle DOES draw it exist; otherwise it is
+   * a feature deleted. So the absence and the presence are asserted together,
+   * and the second is this test's non-vacuity guard.
+   */
+  const header = readFileSync('components/AppHeader.tsx', 'utf8')
+
+  it('no «Ny undersøkelse» CTA and no width toggle in the header row', () => {
+    const jsx = header.slice(header.indexOf('return ('))
+    expect(jsx.length).toBeGreaterThan(200)
+    // The MobileNav slide-over keeps its own copy — that surface is
+    // docs/RESPONSIVE.md's and no bundle draws it — so the assertion is about
+    // the header's own children, which is what `<Link href="/undersokelser/ny"`
+    // would be.
+    expect(jsx).not.toMatch(/<Link\s+href="\/undersokelser\/ny"/)
+
+    // NOT `not.toMatch(/<WideToggle/)`, which the first draft wrote and which
+    // contradicted the third test in this block: the toggle IS in this file,
+    // as `wideSlot={<WideToggle …>}`. The property is that every usage is
+    // inside a slot prop — i.e. it is handed to the user menu rather than
+    // rendered in the header row — so it is stated that way instead of as an
+    // absence the component cannot honour.
+    const uses = [...jsx.matchAll(/<WideToggle/g)]
+    expect(uses.length, 'the toggle is still rendered somewhere').toBe(1)
+    expect(jsx).toMatch(/wideSlot=\{<WideToggle/)
+  })
+
+  it('and both places the bundle DOES draw it are built', () => {
+    const oversikt = readFileSync('app/(app)/oversikt/OverviewScreen.tsx', 'utf8')
+    const surveys = readFileSync('app/(app)/undersokelser/page.tsx', 'utf8')
+    expect(oversikt).toMatch(/undersokelser\/ny/)
+    expect(surveys).toMatch(/undersokelser\/ny/)
+  })
+
+  it('the width toggle moved rather than vanished — the user menu has it', () => {
+    expect(header).toMatch(/wideSlot=\{<WideToggle/)
+    expect(header).toMatch(/langSlot=\{<LangPicker/)
+  })
+})
