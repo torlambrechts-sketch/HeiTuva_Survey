@@ -711,6 +711,12 @@ the header's contents asserted as *what v4 draws in it*). **5a3 is unmoved at 71
 no table and no SECURITY DEFINER function, which is the correct reading rather than a gap — a
 component is not a catalogue surface.
 
+**W2 took the census to 1167 across 82 files** (`tests/unit/workspace-modules.test.ts`, 21 — all
+sixteen row combinations of Oversikt's module grid, plus the cookie parser's refusals). 5a3 unmoved
+at **71 of 100**: no new table, no new definer function. Green on its first run, with the two states
+a seed cannot reach — the module set is a COOKIE — captured as manifest states and measured clean at
+390px.
+
 **The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
 two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
 5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
