@@ -45,6 +45,14 @@ const NO_WRITER_SET: [table: string, column: string][] = [
   ['live_sessions', 'created_by'],
   ['tasks', 'due_at'],
   ['organizations', 'timezone'],
+  // C1's four, added by the phase that created them rather than by an audit
+  // later — which is the whole point of the standing question. Each names the
+  // phase that gives it a writer, and THAT PHASE REMOVES IT FROM THIS LIST.
+  // A column here is not a defect; a column here that nobody notices is.
+  ['surveys', 'feedback_mode'],            // C2 — the Builder control
+  ['survey_comments', 'handled_at'],       // C4 — «Marker som behandlet»
+  ['survey_comments', 'handled_by'],       // C4 — the same action
+  ['survey_comment_replies', 'author_member_id'], // C5 — the reply action
 ]
 
 function commentOf(table: string, column: string): string | null {
@@ -127,6 +135,11 @@ describe('every column the audit found without a writer answers the question', (
     // Seven until 2026-09-10; organizations.timezone left this group when
     // M:0097 gave it saveCompany. The number moves DOWN as writers arrive, and
     // a phase that adds a writer without moving it fails here.
-    expect(nothing).toHaveLength(6)
+    // Six until 2026-09-11; C1 adds four columns that nothing writes YET, each
+    // carrying the phase that will. The number moves DOWN as writers arrive and
+    // UP only when a migration creates a column ahead of its action — which is
+    // a thing this project does deliberately, database before UI, and which is
+    // exactly why they are declared here in the same commit.
+    expect(nothing).toHaveLength(10)
   })
 })

@@ -7,7 +7,6 @@ import {
   anonClient,
   leserClient,
   outsiderClient,
-  redaktorClient,
   serviceClient,
   type Client,
 } from './clients'
@@ -234,14 +233,25 @@ describe('C1 — Q111: the token capability, five properties', () => {
 
   it('10. property 4 — the capability reads no results: the payload carries no answer, score or aggregate', async () => {
     const read = await readThread(fx.tokens[0]!)
+    // NON-VACUITY FIRST. The red run proved this test passed against a database
+    // with no such function at all: `read.data` was null, JSON.stringify(null)
+    // is "null", and "null" contains none of the forbidden strings. A test that
+    // passes when the thing it guards does not exist is a claim, not a check —
+    // it would keep passing if the RPC were dropped tomorrow.
+    expect(read.error, read.error?.message).toBeNull()
+    const d = read.data as { comments?: unknown[] }
+    expect(Array.isArray(d.comments), 'no thread came back to inspect').toBe(true)
+    expect((d.comments ?? []).length, 'an empty thread proves nothing here').toBeGreaterThan(0)
+
     const payload = JSON.stringify(read.data)
     for (const forbidden of ['"value"', '"answers"', '"score"', '"n"', '"average"']) {
       expect(payload, `the thread payload carries ${forbidden}`).not.toContain(forbidden)
     }
-    // And the function itself must not name the vault.
+    // And the function itself must not name the vault — over a body that exists.
     const src = one(`select pg_get_functiondef(p.oid) from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace
       where n.nspname='public' and p.proname='get_comment_thread'`)
+    expect(src.length, 'get_comment_thread does not exist').toBeGreaterThan(0)
     expect(src).not.toMatch(/\bfrom\s+public\.answers\b|\bjoin\s+public\.answers\b/)
   })
 
@@ -283,6 +293,9 @@ describe('C1 — Q113: enforced by two absences rather than by a check', () => {
     const cols = psql(`
       select column_name from information_schema.columns
        where table_schema='public' and table_name='survey_comments'`).map(([c]) => c!)
+    // Non-vacuity: the red run passed this on a table that did not exist, where
+    // the loop below ran zero times.
+    expect(cols.length, 'survey_comments has no columns — the table is missing').toBeGreaterThan(0)
     for (const c of cols) {
       expect(c, `${c} looks like a link to the answers vault`).not.toMatch(/^(response|answer)_id$/)
     }
@@ -366,10 +379,18 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
     expect((data ?? []).length).toBeGreaterThan(0)
   })
 
-  it('18. an outsider reads nothing at all', async () => {
+  it('18. an outsider reads nothing at all — and there was something to refuse', async () => {
+    // The red run passed this against a missing table: PostgREST errored, `data`
+    // was null, and `[] toEqual []` was satisfied by the absence of everything.
+    // 5a3 makes exactly this distinction between PROTECTED and PROVEN, and a
+    // test that does not make it is measuring the fixture, not the policy.
+    const total = Number(one(`select count(*) from public.survey_comments`))
+    expect(total, 'no comment exists, so nothing was refused').toBeGreaterThan(0)
+
     const outsider = await outsiderClient()
-    const { data } = await outsider.from('survey_comments').select('id').eq('round_id', fx.roundId)
-    expect(data ?? []).toEqual([])
+    const { data, error } = await outsider.from('survey_comments').select('id')
+    expect(error, error?.message).toBeNull()
+    expect((data ?? []).length, `outsider saw ${(data ?? []).length} of ${total}`).toBe(0)
   })
 
   it('19. Q114 condition 2 + invariant 4 — a leser reads ANONYMOUS comments and never a NAMED one', async () => {
@@ -385,7 +406,40 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
     }
   })
 
-  it('20. nobody may UPDATE a comment’s body — a message is not editable by its recipient', async () => {
+  it('20. a comment’s question belongs to the same survey as its round', () => {
+    // The A5-1 shape, for this table. `live-round-tenancy.test.ts` derives its
+    // sweep from tables carrying BOTH round_id and survey_id; survey_comments
+    // carries round_id and question_id, so it falls outside that anchor and is
+    // checked here instead rather than being assumed covered.
+    //
+    // The only writer is submit_response, which matches q.survey_id against the
+    // round's survey — but "the only writer does it right" is the assumption
+    // this project keeps finding wrong, so it is asserted over the ROWS.
+    const stray = one(`
+      select count(*)
+        from public.survey_comments c
+        join public.survey_rounds r on r.id = c.round_id
+        join public.survey_questions q on q.id = c.question_id
+       where q.survey_id <> r.survey_id`)
+    expect(stray, 'a comment points at a question from another survey').toBe('0')
+  })
+
+  it('21. survey_comment_replies is reachable only through the comment it answers', async () => {
+    // 5a3 requires every RLS table to be NAMED by a test, or it reports the
+    // surface protected but UNGUARDED — a real failure, not a warning. This is
+    // that test, and it checks the property rather than merely spelling the
+    // name: an outsider sees none of the replies the service role can see.
+    const total = Number(one(`select count(*) from public.survey_comment_replies`))
+    const outsider = await outsiderClient()
+    const { data } = await outsider.from('survey_comment_replies').select('id')
+    expect((data ?? []).length, `outsider saw ${(data ?? []).length} of ${total}`).toBe(0)
+
+    const anon = anonClient()
+    const { data: anonSaw } = await anon.from('survey_comment_replies').select('id')
+    expect((anonSaw ?? []).length, 'anon reads replies directly').toBe(0)
+  })
+
+  it('22. nobody may UPDATE a comment’s body — a message is not editable by its recipient', async () => {
     const admin = await adminClient()
     const { data: row } = await admin.from('survey_comments').select('id').limit(1).single()
     const { error } = await admin
@@ -398,7 +452,7 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
 })
 
 describe('C1 — surveys.feedback_mode', () => {
-  it('21. the column exists, is NOT NULL, and its CHECK names exactly the four modes', () => {
+  it('23. the column exists, is NOT NULL, and its CHECK names exactly the four modes', () => {
     expect(
       one(`select is_nullable from information_schema.columns
             where table_schema='public' and table_name='surveys' and column_name='feedback_mode'`),
@@ -411,7 +465,7 @@ describe('C1 — surveys.feedback_mode', () => {
     }
   })
 
-  it('22. THE BACKFILL — asserted over the migration, because a reset cannot observe it', () => {
+  it('24. THE BACKFILL — asserted over the migration, because a reset cannot observe it', () => {
     // Tor's correction: a survey already sent without a comment field must not
     // acquire one by migration. Its respondents were invited to something else.
     //
@@ -439,19 +493,25 @@ describe('C1 — surveys.feedback_mode', () => {
     expect(setDefault, 'the default is set before the backfill, or not at all').toBeGreaterThan(backfill)
   })
 
-  it('23. the DEFAULT for new rows is anonymous', () => {
+  it('25. the DEFAULT for new rows is anonymous', () => {
     expect(
       one(`select column_default from information_schema.columns
             where table_schema='public' and table_name='surveys' and column_name='feedback_mode'`),
     ).toMatch(/anonymous/)
   })
 
-  it('24. Q114 condition 1 — a comment is NEVER a precondition of submitting, at any mode', async () => {
+  it('26. Q114 condition 1 — a comment is NEVER a precondition of submitting, at any mode', async () => {
     // Written as a property over the modes, not as a check of the one caller we
     // have: every mode, statutory pack or not, accepts a submission with no
     // comments at all.
     for (const mode of ['off', 'anonymous', 'named', 'optional']) {
-      await svc.from('surveys').update({ feedback_mode: mode }).eq('id', fx.surveyId)
+      const { error: setErr } = await svc
+        .from('surveys')
+        .update({ feedback_mode: mode })
+        .eq('id', fx.surveyId)
+      // Non-vacuity: the red run passed this loop on a schema with no such
+      // column, because nothing checked that setting the mode had worked.
+      expect(setErr, `could not set feedback_mode=${mode}: ${setErr?.message}`).toBeNull()
       const token = fx.tokens[2]!
       const probe = await anonClient().rpc('submit_response', {
         p_token: token,
@@ -460,6 +520,8 @@ describe('C1 — surveys.feedback_mode', () => {
         p_anon_choice: null,
         p_comments: null,
       } as never)
+      expect(probe.error, `${mode}: ${probe.error?.message}`).toBeNull()
+      expect(probe.data, `${mode} returned no payload at all`).not.toBeNull()
       // Only the first iteration can succeed — after that the invitation is
       // spent. What must NEVER appear is a refusal that blames the comment.
       const err = (probe.data as { error?: string } | null)?.error ?? null
@@ -471,7 +533,7 @@ describe('C1 — surveys.feedback_mode', () => {
     await svc.from('surveys').update({ feedback_mode: 'anonymous' }).eq('id', fx.surveyId)
   })
 
-  it('25. the column says WHO WRITES IT, in its own comment', () => {
+  it('27. the column says WHO WRITES IT, in its own comment', () => {
     // CLAUDE.md's standing question, answered in the migration that adds the
     // column rather than in an audit four phases later. Four instances so far,
     // and in three of them the column was READ everywhere — which is why the
@@ -490,7 +552,32 @@ describe('C1 — surveys.feedback_mode', () => {
 })
 
 describe('C1 — a share link has no thread, and the product must not pretend otherwise', () => {
-  it('26. a share-link submission can carry a comment, and that comment has no invitation', async () => {
+  it('28. a malformed question_id is treated as absent, never as fatal', async () => {
+    // The draft cast the client's string straight to uuid, so 'not-a-uuid'
+    // would have raised inside the transaction and lost the respondent's real
+    // answers. The comment beside it claimed the opposite protection, which is
+    // the failure mode worth a test: a defence that exists only in prose.
+    const s4 = await createSurvey(fx.orgId, 'Feil id', [{ type: 'scale', text: 'Vel?' }])
+    const r4 = await createRound(s4, 1)
+    const out = await anonClient().rpc('submit_response', {
+      p_token: r4.tokens[0]!,
+      p_lang: 'no',
+      p_answers: { [s4.questions[0]!.id]: { value: 5 } },
+      p_anon_choice: null,
+      p_comments: [{ question_id: 'ikke-en-uuid', text: 'lagres uten spørsmål' }],
+    } as never)
+    expect(out.error, out.error?.message).toBeNull()
+    expect((out.data as { ok?: boolean }).ok, 'the submission was lost over a stray field').toBe(true)
+    expect(
+      one(`select coalesce(question_id::text,'null') from public.survey_comments
+            where body = 'lagres uten spørsmål'`),
+      'a malformed id was stored rather than dropped',
+    ).toBe('null')
+    // And the answer it came with survived.
+    expect(one(`select count(*) from public.responses where round_id = '${r4.id}'`)).toBe('1')
+  })
+
+  it('29. a share-link submission can carry a comment, and that comment has no invitation', async () => {
     const sub = await submit(fx.shareToken, {
       comments: [{ question_id: null, text: 'fra en delt lenke' }],
     })
@@ -502,7 +589,7 @@ describe('C1 — a share link has no thread, and the product must not pretend ot
     expect(row[0]![0], 'a share link produced an invitation from nowhere').toBe('t')
   })
 
-  it('27. and the token that wrote it reads NOTHING back — there is no thread to read', async () => {
+  it('30. and the token that wrote it reads NOTHING back — there is no thread to read', async () => {
     const read = await readThread(fx.shareToken)
     expect(read.error).toBeNull()
     const d = read.data as { comments?: unknown[]; thread?: boolean }

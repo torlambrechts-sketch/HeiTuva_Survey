@@ -16,7 +16,7 @@ import {
   inviteTo,
   submitResponses,
 } from '../tests/db/factories'
-import { personaClient, serviceClient } from '../tests/db/clients'
+import { anonClient, personaClient, serviceClient } from '../tests/db/clients'
 import {
   DEMO_SHARE_TOKEN,
   GROUP_PRIMARY,
@@ -27,6 +27,20 @@ import {
 } from '../tests/db/personas'
 
 if (!process.argv.includes('--local')) config({ path: '.env.local' })
+
+/**
+ * A submission through the respondent path, as a respondent makes it — the anon
+ * key, not the service role. `submitResponses` covers the ordinary case; this
+ * exists for the ones that carry a payload it does not model, and it throws on
+ * the refusals that would otherwise leave the seed quietly short of a row.
+ */
+async function anonRpc(fn: 'submit_response', args: Record<string, unknown>) {
+  const { data, error } = await anonClient().rpc(fn, args as never)
+  if (error) throw new Error(`seed ${fn}: ${error.message}`)
+  const payload = (data ?? {}) as { ok?: boolean; error?: string }
+  if (payload.error) throw new Error(`seed ${fn} refused: ${payload.error}`)
+  return payload
+}
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
 if (!url.includes('127.0.0.1') && !url.includes('localhost') && !process.env.ALLOW_REMOTE_SEED) {
@@ -597,6 +611,86 @@ async function main() {
       .from('survey_editors')
       .insert({ survey_id: above.id, member_id: leserMember.memberId })
     if (editorError) throw new Error(`seed survey_editors: ${editorError.message}`)
+  }
+
+  /*
+    C1 — COMMENTS, seeded through the ONE write path.
+
+    Two things depend on this existing after a bare reset, and both are the
+    shape this project has hit six times — green for something that
+    structurally could not be seen:
+
+      `verify:policy` reports a table PROTECTED BUT UNPROVEN when it is empty,
+      because an empty table is never asked to refuse anything. `survey_comments`
+      and `survey_comment_replies` are new RLS tables and both must be PROVEN,
+      not merely protected.
+
+      C4's whole surface is comments. On a reset without these it opens empty,
+      and every capture of it would photograph the empty state while reporting
+      the screen as built.
+
+    Written through `submit_response` with `p_comments`, never inserted
+    directly: a direct insert would bypass the mode enforcement and the
+    anonymity derivation, so a seed built that way would pass against a write
+    path that is actually broken. Two of the eight `aboveRound` tokens are
+    unused by the submissions above, which is where these come from.
+  */
+  await svc.from('surveys').update({ feedback_mode: 'anonymous' }).eq('id', above.id)
+  const commentTokens = aboveRound.tokens.slice(6)
+  const seededComment = await anonRpc('submit_response', {
+    p_token: commentTokens[0]!,
+    p_lang: 'no',
+    p_answers: { [above.questions[0]!.id]: { value: 2 } },
+    p_anon_choice: null,
+    p_comments: [
+      {
+        question_id: above.questions[0]!.id,
+        text: 'Det er ikke mengden, det er at prioriteringene endres midt i uken.',
+      },
+      {
+        question_id: null,
+        text: 'Fint at den tar under to minutter. Skulle gjerne sett resultatet for hele avdelingen.',
+      },
+    ],
+  })
+  if ((seededComment as { comments?: number }).comments !== 2) {
+    throw new Error(
+      `seed comments: expected 2 written, got ${(seededComment as { comments?: number }).comments}`,
+    )
+  }
+
+  // A NAMED comment as well, on a survey whose feedback mode is «Med navn».
+  // Without one, the leser policy's named-comment half is never exercised by a
+  // capture or by 5a3 — the anonymous rows alone cannot show a refusal.
+  const namedSurvey = await createSurvey(org.id, 'Åpen tilbakemelding', [
+    { type: 'scale', text: 'Hvordan fungerer rutinene?' },
+  ], { audience: GROUP_PRIMARY })
+  await svc.from('surveys').update({ feedback_mode: 'named' }).eq('id', namedSurvey.id)
+  const namedRound = await createRound(namedSurvey, 1, { groupId: org.groupId })
+  await anonRpc('submit_response', {
+    p_token: namedRound.tokens[0]!,
+    p_lang: 'no',
+    p_answers: { [namedSurvey.questions[0]!.id]: { value: 3 } },
+    p_anon_choice: null,
+    p_comments: [{ question_id: null, text: 'Jeg vet ikke hvem jeg skal gå til når noe er galt.' }],
+  })
+
+  // And one reply, so survey_comment_replies is PROVEN too and C5's screen has
+  // a thread to render rather than a first message with nothing after it.
+  const { data: firstComment } = await asAdmin
+    .from('survey_comments')
+    .select('id')
+    .eq('round_id', aboveRound.id)
+    .limit(1)
+    .single()
+  if (firstComment) {
+    const adminMember = org.members.find((m) => m.role === 'administrator')
+    const { error: replyError } = await asAdmin.from('survey_comment_replies').insert({
+      comment_id: firstComment.id,
+      body: 'Takk for at du sier det. Vi fryser prioriteringene fra mandag til torsdag fra neste uke.',
+      author_member_id: adminMember?.memberId ?? null,
+    })
+    if (replyError) throw new Error(`seed survey_comment_replies: ${replyError.message}`)
   }
 
   // dsr_requests has no producer yet, so this is a direct row — and it is made

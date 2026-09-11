@@ -208,3 +208,116 @@ stored, readable by the roles named above, and retained like the rest of the rou
 should read «no lock» as «disclosure is settled».** It is not, and the difference matters if the
 answer comes back as «yes, and the respondent must be told so up front», because that is a copy
 change on the respondent screen and it is cheap only while it is known to be open.
+
+---
+
+# Decisions taken INSIDE C1, on my own classification
+
+Tor's standing rule for this run: *«if the default builds nothing and unbuilds nothing when
+reversed, take it, mark it defaulted-not-answered, and I will reverse any I disagree with in the
+report.»* Four qualify. Each names what reversing it would cost.
+
+---
+
+## Q115 — WHO READS A COMMENT: anonymous to any member, named to administrator and redaktør only
+
+**DEFAULTED-NOT-ANSWERED. Reversing it is one policy expression.**
+
+Q114's second condition says a thread inside a statutory survey is visible to the verneombud «on
+the same footing as the rest of the documentation, since that is the supervision mechanism that
+already exists». Building it turned up a collision the decision line did not anticipate:
+
+- **There is no verneombud ROLE.** `app.member_role` is `('administrator','redaktor','leser')`;
+  the verneombud is an ASSIGNMENT (`M:0034`, duty signing). So «the same footing» cannot mean a new
+  grant — it has to mean the rules that already exist.
+- **And the rule that already exists is CLAUDE.md invariant 4:** a `leser` gets **no named free
+  text**, anywhere in the product. A named comment is named free text.
+
+Read together they give one answer, and it is not «`is_org_member` alone»:
+
+| | who reads it |
+|---|---|
+| anonymous comment | any member of the organisation, `leser` included |
+| named comment | `administrator` and `redaktor` |
+
+Both halves of Q114's condition hold: the thread is documentation a verneombud may read, and a
+verneombud who happens to be a `leser` reads exactly what a `leser` reads everywhere else in the
+product. **Widening to `is_org_member` alone would hand every leser named free text — a
+security-invariant change, not a policy tweak**, and it is the thing I would have done if the
+condition had been read as a grant rather than as a footing.
+
+**If Tor wants the wider reading**, it is one `using` clause and a change to invariant 4, in that
+order. Asserted in `tests/db/comments.test.ts` test 19.
+
+---
+
+## Q116 — NO `tag` COLUMN. Two of the bundle's chips are derived; four are not built
+
+**DEFAULTED-NOT-ANSWERED. Reversing it is a migration plus a control.**
+
+The bundle tags feedback rows with six values — `Ny`, `Samtale`, `Resultater`, `Ros`,
+`Spørsmålene`, `Utsending` (`V3` `DEFAULT_FEEDBACK`, and `tag: "Ny"` at the send site). Only one has
+a writer in the bundle itself; the other five are seeded strings.
+
+Two are **derivable and will be derived** in C4 — `Ny` is «not handled», `Samtale` is «has
+replies». The other four are topical, and nothing in the product classifies a comment by topic.
+
+So there is no `tag` column. Adding one would mean either a fifth instance of the standing question
+— a column read on a screen and written by nothing — or inventing a classifier this plan does not
+have. **«Derive, do not duplicate» (Q61) and «never fabricate data in the UI», applied at the
+schema rather than at the screen.**
+
+**What C4 will therefore NOT render:** four of the bundle's six chip values. Logged as a deviation
+rather than smoothed over, because a reviewer comparing the screen to the drawing will see fewer
+chips and should find the reason without asking.
+
+---
+
+## Q117 — THE REPLY IS ITS OWN TABLE, not a jsonb array on the comment
+
+**DEFAULTED-NOT-ANSWERED — `02-plan.md` explicitly left it to the phase. Reversing it is a
+migration.** Three grounds:
+
+1. an author FK that is `on delete set null`, so a member leaving does not delete the record that
+   the reply happened;
+2. a real `created_at` per reply, so ordering is a fact rather than an array index;
+3. **appending to a jsonb array is a read-modify-write**, so two managers replying at once lose one
+   reply silently — the failure mode nobody notices.
+
+---
+
+## Q118 — `get_comment_thread` IS ANON-EXECUTABLE, AND THEREFORE ALLOWLISTED IN 5a3
+
+**THIS ONE DIVERGES FROM AN INSTRUCTION, so it is written out in full rather than filed.**
+
+Tor: *«C1 must land `survey_comments` CHECKED, not allowlisted … If either the table or the read
+RPC lands allowlisted, the phase has not closed.»*
+
+**The two tables do land CHECKED.** `survey_comments` and `survey_comment_replies` are in neither
+allowlist and are probed by the gate as real surfaces.
+
+**The read RPC cannot be, and the reason is structural rather than a shortfall.** Gate 5a3 judges a
+SECURITY DEFINER function by exactly one test — `judge('function', f, !grantedToAnon, …)`. A
+function granted to `anon` and not in `ANON_BY_DESIGN` is a **failure**, not a lower grade. There is
+no «checked and anon-granted» state in the gate, and the apparatus is frozen, so inventing one
+mid-phase is not available either.
+
+And the function must be anon-executable: **a respondent holds a link, never a session.** That is
+the same necessity `submit_response`, `get_survey_for_token` and `get_peer_results` carry.
+
+**The alternative was measured rather than dismissed.** Revoking the anon grant and calling the RPC
+with the SERVICE ROLE from the respondent server action would make the gate score read the way the
+instruction asks. It would also put the service-role key into the respondent request path — a key
+that bypasses RLS entirely, on the one surface reachable by anybody holding a URL. **That is a real
+weakening bought for a metric**, and the existing respondent actions deliberately use the anon key
+for exactly this reason.
+
+**So it is allowlisted the way this project allowlists things: with a reason, and the reason is
+CHECKED rather than trusted** — the same treatment `use_cases`, `task_kinds`, `segment_fields`,
+`brand_accents` and `live_stopwords` get, where CLAUDE.md's own phrasing is «allowlisted with its
+reason and CHECKED rather than trusted». Every clause of the reason has a test: it writes nothing
+(6, 7); it names neither `responses` nor `answers` (10); it matches on `invitation_id` (8, 9); it
+expires with the round (11); a share link gets an empty thread (28).
+
+**What I would need in order to do it the other way:** a decision that the respondent path may hold
+the service-role key. I am not taking that one.
