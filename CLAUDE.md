@@ -694,6 +694,17 @@ the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
 
+**W0 took the census to 1130 across 80 files and 5a3 to 71 of 100** (run 144, `0092a33`,
+re-derived from the gate's own output rather than carried: 61 RLS tables — 40 checked, 21
+allowlisted — plus 39 SECURITY DEFINER functions — 31 checked, 8 allowlisted — with ZERO unproven).
+**The denominator rose 97 → 100 and the checked number held at 71**, which is the correct outcome
+rather than a miss: `workspaces`, `workspace_modules` and `workspace_module_links` are shipped
+registries carrying no org id, so all three are allowlisted with `use_cases`' reason — and CHECKED
+against it, not trusted. `tests/db/workspaces.test.ts` (27) asserts each has no column matching
+org/survey/count/threshold/total, that RLS is on, that a SEEDED read succeeds for outsider and
+anon, and that no policy permits anything but SELECT. Tor's rule from Q118 is the one that
+applies: **new surfaces must not vanish from the count; the number is not required to rise.**
+
 **The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
 two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
 5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
