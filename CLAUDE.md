@@ -78,7 +78,23 @@ Two consequences, both cheap:
   precisely the failure the per-screen declarations exist to prevent: a screen captured
   from a page its own bundle never drew, and then compared against as though it had.
   `splash` and `bruksomrader` are both optional now, and a screen living in a file its
-  bundle lacks is SKIPPED rather than rendered from the app page. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
+  bundle lacks is SKIPPED rather than rendered from the app page.
+
+  **AND THE COMPANION RULE, WHICH V4 EARNED TWICE IN ONE FILE: DIFFING KEYS TELLS YOU WHAT A
+  HANDOFF ADDED; ONLY READING THE MARKUP TELLS YOU WHAT IT CHANGED AWAY.** The project's habit
+  is to compare bundles by their `sc-if` key sets, and that habit is right about arrivals and
+  blind to reversals. v4 supplied two instances, both properties changed away, both invisible
+  to any count, both found by reading lines:
+  - the header's `border-radius`, which an intermediate handoff made `999px` and v4 reverted to
+    the theme's 16px — so two files 7172 lines long differ by one property and no identifier;
+  - the nav label, `v3:4965` «Oppgaver og tilbakemeldinger» → `v4:5095` «Oppgaver», reverting
+    copy C4 had shipped hours earlier (**Q123: NOT adopted** — it is a layout decision wearing a
+    naming decision's clothes, and «Oppgaver» is untrue of half that screen's content).
+
+  A count is monotone when identifiers only arrive, which is the usual case, and monotonicity
+  reads as reassurance. It is not: **it rules out removal and says nothing about substitution.**
+  So a bundle diff reports key-set changes AND walks the changed lines, and the walk is where the
+  reversals are. **Match the visual output exactly. Do not restyle, do not substitute components, do not "improve" spacing, colors, or copy.** Recreate the rendering in React/Tailwind; never copy the prototype's internal structure (`sc-if`/`sc-for`, inline styles).
 - **ADDING A BUNDLE — the checklist, because two of these were missed in one phase.** A
   handoff is not installed until every one of these is done. The failure they prevent is the
   same each time: a baseline that renders, is reported captured, and is structurally invisible

@@ -11,10 +11,11 @@ decides who may see what is the phase that must be built and tested before anyth
 
 ## The three open questions, raised before any of it is built
 
-These are stop-and-asks under CLAUDE.md's rule: taking the default on each would build something
-that might want unbuilding.
+**All three are now ANSWERED (Tor, 2026-09-11) and promoted to `DECISIONS.md`.** They are kept here
+with their full reasoning because a plan that records only the answer loses why the alternatives were
+rejected, and the rejected alternative is what a later phase reaches for.
 
-### Q122 — where does the workspace selection LIVE?
+### Q122 — where does the workspace selection LIVE? — **ANSWERED: cookie + column**
 
 **The bundle does both.** `ORG_WORKSPACE = "hr"` is an organisation default (`V4:4441`); every read
 site is `st.workspace || ORG_WORKSPACE`; and the setter writes
@@ -35,12 +36,17 @@ which modules it renders. A `localStorage` value is not available at server rend
   honestly and paints right the first time. **Costs:** it is not in the bundle, so it is an invention
   in the mechanism (not in the UI), and it needs a `DEVIATIONS.md` line.
 
-**My recommendation is (c)**, with (a) for the ORG DEFAULT only — `organizations.workspace` decides
-what a new person sees, a cookie remembers what this person chose on this device, and the copy stays
-true. But it is a stop-and-ask because (b) is what the bundle literally does and (a) is what a
-«preference» usually means here.
+**ANSWERED (Tor): (c) for the per-device choice, (a) for the ORG DEFAULT.** A cookie remembers what
+this person chose on this device; `organizations.workspace` decides what a new person sees. A
+`DEVIATIONS.md` line records the cookie, **because the mechanism is not in the bundle and that must
+be visible.**
 
-### Q123 — v4 reverts C4's nav label, four hours after C4 shipped it
+Tor's reasoning narrows it further than «recommendation»: **«Oversikt is a server component, so
+`localStorage` cannot reach the render that needs it: that is not a preference between mechanisms,
+it is one of them not working.»** And (c) is the only option of the three **where the copy does not
+also have to change** — «på denne enheten» stays true of a cookie and becomes false of a column.
+
+### Q123 — v4 reverts C4's nav label — **ANSWERED: DO NOT REVERT**
 
 **Measured, not inferred:**
 
@@ -63,13 +69,17 @@ plus logo, help button and the Arbeidsflate chip, where v3's nav was `flex-wrap:
 consequence of the header restructure and should be adopted with it — but I have not measured the
 overflow, and I am not going to assert a cause I have not.
 
-**What makes it a stop-and-ask rather than a fidelity item**: adopting it changes shipped copy, and
-it leaves the nav item («Oppgaver») disagreeing with the page's own title
-(`messages/no.json:1838`, «Oppgaver og tilbakemeldinger»). Either both change — which renames the
-screen C4 just built and named — or they diverge on purpose, which is defensible (a nav label is
-short by nature) but is a decision, not a default.
+**ANSWERED (Tor): keep «Oppgaver og tilbakemeldinger».** And the hypothesis being *probably right*
+is what settles it against the revert, not for it: **«it is a LAYOUT decision wearing a NAMING
+decision's clothes.»** The surface is what C4 built — tasks and feedback in one list with a filter —
+so «Oppgaver» is untrue of half the content, and reverting **solves a space problem by promising
+less than the page does.**
 
-### Q124 — «Dashboard følger oppsettet «Arbeidsmiljø»» binds to a layout by TITLE
+**If space is the problem, solve the space** — a shorter word, a smaller size, `flex-wrap` restored.
+**W1 measures the overflow first.** Naming the cause as a hypothesis rather than asserting it was
+the right order and the measurement is still owed.
+
+### Q124 — «Dashboard følger oppsettet «Arbeidsmiljø»» binds by TITLE — **ANSWERED: bind by id, measure first**
 
 `WORKSPACES[].layout` is a string — `"Arbeidsmiljø"`, `"Kundeopplevelse"`, `"Medlem og frivillig"`,
 and `null` for Tilpasset, which renders «Dashboard beholder ditt eget oppsett» instead
@@ -79,7 +89,10 @@ and `null` for Tilpasset, which renders «Dashboard beholder ditt eget oppsett»
 (`M:0046:36-42`) — so the shape exists. But the title is user-editable
 (`check (length(btrim(title)) between 1 and 80)`), which makes a title a poor key.
 
-**Two things to settle, and the second is the one that bites:**
+**ANSWERED (Tor): bind by id, and measure whether the preset exists. A W-phase item, not a scoping
+one — it needs a database. DO NOT BUILD THE SENTENCE BEFORE THE ANSWER.**
+
+**Two things, and the second is the one that bites:**
 1. Bind by **id**, not by title — a registry row mapping workspace → layout id, which is
    data-not-code and the project's own convention.
 2. **Does an org preset with that name exist at all?** If the seed creates no layout called
