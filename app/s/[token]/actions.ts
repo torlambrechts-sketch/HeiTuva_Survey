@@ -27,6 +27,29 @@ const SubmitInput = z.object({
   anonChoice: z.boolean().nullable().optional(),
   /** Q76 — a preview. Validated like every other boundary value (invariant 6). */
   dryRun: z.boolean().optional(),
+  /**
+   * C3 — the comments, carried in the SAME call as the answers so the database
+   * writes them in one transaction (Q112/Q113).
+   *
+   * NOTE WHAT IS NOT HERE: a per-comment anonymity flag. `submit_response`
+   * derives `is_anonymous` from the submission's own mode and `p_anon_choice`,
+   * so there is exactly one choice and nothing can disagree with it. A field
+   * here would be a control over something the database does not read, which is
+   * worse than no control at all.
+   *
+   * Bounded at both ends. 4000 matches the CHECK on `survey_comments.body`, so
+   * an over-long comment is refused HERE with a named error rather than aborting a real
+   * submission at the constraint.
+   */
+  comments: z
+    .array(
+      z.object({
+        questionId: z.string().uuid().nullable(),
+        text: z.string().trim().min(1).max(4000),
+      }),
+    )
+    .max(50)
+    .optional(),
 })
 
 export type SubmitResult =
@@ -56,6 +79,10 @@ export async function submitResponse(input: unknown): Promise<SubmitResult> {
     // respondent would meet. Default false: an omitted flag is a real
     // submission, which is the safe direction for a boolean nobody set.
     p_dry_run: parsed.data.dryRun ?? false,
+    p_comments: (parsed.data.comments ?? []).map((c) => ({
+      question_id: c.questionId,
+      text: c.text,
+    })) as never,
   })
 
   if (error) {

@@ -44,6 +44,7 @@ export function TestRunner({
     respondentKind: 'person' | 'organisation'
     engage: Record<string, unknown>
     questions: RespondentQuestion[]
+    feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
     locale: Locale
     offeredLocales: Locale[]
   } | null>(null)
@@ -98,6 +99,11 @@ export function TestRunner({
       offeredLocales={survey.offeredLocales}
       orgName={survey.orgName}
       title={survey.title}
+      /* The preview renders the SAME component, so it renders the comment
+         control too — and `submit_response`'s dry run returns before the write,
+         so a previewed comment is stored exactly as a previewed answer is:
+         not at all. */
+      feedbackMode={survey.feedback_mode ?? 'off'}
       anonymity={survey.anonymity}
       quizMode={survey.run_mode === 'quiz'}
       kThreshold={survey.kThreshold}

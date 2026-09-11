@@ -4957,3 +4957,49 @@ assert non-vacuity FIRST, in the same test, and say what the count must exceed. 
 A test that fails because the table is absent could still be vacuous against a table that is
 present and empty. Tests 18 and 10 now guard that second case explicitly; the others were not
 audited for it, and that is a limit rather than a claim.
+
+---
+
+## D159 — The end-of-survey comment box moves from the thank-you screen to the last question
+
+**C3. A placement deviation forced by CLAUDE.md invariant 2, not chosen for taste.**
+
+### What the bundle draws
+
+`V3:3670-3700` puts «Hva synes du om undersøkelsen?» **inside the `thanked` state** — the
+thank-you screen, after the submission. `onFbSend` appends to a local array, which in a prototype
+with no database behind it is free.
+
+### Why we cannot
+
+By the time that screen renders, `submit_response` has run: `responded_at` is set and a second call
+comes back `already_responded`. **That refusal is Q111 property 2 and it stays exactly as it is** —
+it is the property a regression would silently undo, and the whole token capability was scoped so
+as not to touch it.
+
+So sending a comment from the thank-you screen needs a SECOND write path, and invariant 2 says
+there is one: *«The only write path is `rpc.submit_response` (token-validated, single
+transaction)»*. A new RPC that writes comments after `responded_at` is a decision about the
+respondent's post-submission write surface, which is larger than a placement question and is not
+C3's to take.
+
+### What we do instead
+
+The box sits at the end of the LAST STEP, above the submit button, and its text rides along in
+`p_comments` with `question_id = null`. The thank-you screen then renders the bundle's `fbSent`
+confirmation — **only when a survey-level comment actually went with the submission**, because a
+confirmation of something that did not happen is a fabricated value and survives into screenshots
+as though it were true.
+
+### The part that is not a loss
+
+A respondent who closes the tab on the thank-you page now loses nothing. Under the bundle's
+placement, a comment typed there and abandoned is a message the respondent believes she sent. The
+deviation is a fidelity cost and a correctness gain, and it is worth stating which is which rather
+than only the first.
+
+### If this should be reversed
+
+It needs a decision, not a patch: a post-submission comment-write capability on the invitation
+token, scoped the way Q111 scoped the read. `get_comment_thread` is the shape it would follow.
+Nothing in C1–C5 depends on the answer.

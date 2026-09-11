@@ -34,6 +34,8 @@ type TokenSurvey = {
   org_default_lang: string | null
   invitation_lang: string | null
   anonymity: 'anonymous' | 'named' | 'optional'
+  /** C3 — carried by `get_survey_for_token` since M:0100. */
+  feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
   /** V2-10: `standard` | `live` | `quiz`. Chrome only — a quiz draws tiles. */
   run_mode?: string
   k_threshold?: number
@@ -129,6 +131,10 @@ export default async function RespondentPage({
         orgName={survey.org_name ?? ''}
         title={survey.title}
         anonymity={survey.anonymity}
+        /* A payload from a database that has not run M:0100 yet would omit it.
+           `off` is the safe reading of a missing value: it renders no control,
+           which is the state every existing survey was backfilled to anyway. */
+        feedbackMode={survey.feedback_mode ?? 'off'}
         quizMode={survey.run_mode === 'quiz'}
         kThreshold={typeof survey.k_threshold === 'number' ? survey.k_threshold : 5}
         respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}

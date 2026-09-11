@@ -4,6 +4,15 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Locale } from '@/lib/i18n/locales'
 import { anonymityPromise } from '@/lib/respondent/anonymity-promise'
+import { QuestionComment } from './QuestionComment'
+
+/**
+ * The key a SURVEY-LEVEL comment is held under before it is sent — the
+ * end-of-survey box, which belongs to no question. Not a uuid, so it can never
+ * collide with a real question id, and mapped to `null` on the way out because
+ * that is what `survey_comments.question_id` means.
+ */
+const SURVEY_LEVEL = 'survey'
 import {
   isAnswered,
   isLowScore,
@@ -35,6 +44,7 @@ export function Respondent({
   orgName,
   title,
   anonymity,
+  feedbackMode,
   kThreshold,
   respondentKind,
   engage,
@@ -49,6 +59,8 @@ export function Respondent({
   orgName: string
   title: string
   anonymity: 'anonymous' | 'named' | 'optional'
+  /** C2/C3 — `surveys.feedback_mode`. `off` renders no comment control at all. */
+  feedbackMode: 'off' | 'anonymous' | 'named' | 'optional'
   /** V2-10: draw `choice` as quiz tiles. Chrome only — the value is the same index. */
   quizMode: boolean
   kThreshold: number
@@ -154,8 +166,12 @@ export function Respondent({
         token,
         lang: locale,
         answers: payload,
-        anonChoice: anonymity === 'optional' ? anonChoice : null,
+        anonChoice: choiceGoverns ? anonChoice : null,
         dryRun: testMode,
+        comments: Object.entries(comments).map(([questionId, c]) => ({
+          questionId: questionId === SURVEY_LEVEL ? null : questionId,
+          text: c.text,
+        })),
       })
       if (result.ok) setDone(true)
       else if (result.error === 'already') setDone(true)
@@ -171,6 +187,28 @@ export function Respondent({
     setMissing(false)
     setStep((s) => Math.min(total - 1, s + 1))
   }
+
+  /*
+    C3 — the comments, held until the submission carries them.
+
+    They are NOT sent as they are written. A comment saved on question 2 by
+    somebody who then closes the tab is a message nobody agreed to send; and
+    more importantly, `submit_response` writes the comments in the SAME
+    transaction as the response, which is the property Q113 rests on. A
+    per-keystroke save would be a second write path, and invariant 2 says there
+    is one.
+  */
+  const [comments, setComments] = useState<Record<string, { text: string; anon: boolean }>>({})
+
+  /*
+    ONE CHOICE (Q113). Where either the survey's anonymity OR its feedback mode
+    is `optional`, `anonChoice` decides — the same variable, read twice, because
+    `submit_response` derives both from one `p_anon_choice`. There is no second
+    toggle to keep in step, because there is no second value.
+  */
+  const commentAnon =
+    feedbackMode === 'named' ? false : feedbackMode === 'optional' ? anonChoice : true
+  const choiceGoverns = anonymity === 'optional' || feedbackMode === 'optional'
 
   const secondsLeft = Math.max(0, PROMISED_SECONDS - elapsed)
   // The promise is generated from the survey's settings (Q17), never fixed
@@ -190,6 +228,11 @@ export function Respondent({
         thankYou={e.thank_you}
         token={token}
         respondentKind={respondentKind}
+        /* True only when a survey-level comment actually went with the
+           submission. The bundle's `fbSent` state is a confirmation, and a
+           confirmation of something that did not happen is a fabricated value
+           (CLAUDE.md, never fabricate data in the UI). */
+        commentSent={Boolean(comments[SURVEY_LEVEL])}
         testMode={testMode}
         onExitTest={onExitTest}
         onRestart={() => {
@@ -280,7 +323,10 @@ export function Respondent({
         </span>
       </div>
 
-      {anonymity === 'optional' ? (
+      {/* The chips appear where a choice EXISTS — which is now either axis.
+          Q113: there is one choice and it governs everything in the submission,
+          so there is one control for it rather than two that could disagree. */}
+      {choiceGoverns ? (
         <div className="mt-3 flex gap-2">
           {[
             { on: true, label: t('stayAnonymous') },
@@ -380,6 +426,37 @@ export function Respondent({
               </div>
             ) : null}
 
+            {/* The vault field's own line, so the two boxes on this card are
+                not mistaken for each other (see QuestionComment's header). Only
+                where both are actually on screen. */}
+            {showComment && feedbackMode !== 'off' ? (
+              <p className="mt-1.5 text-[12px] leading-[1.4] text-mut">{t('commentVaultNote')}</p>
+            ) : null}
+
+            {feedbackMode !== 'off' ? (
+              <QuestionComment
+                saved={comments[q.id] ?? null}
+                anonymous={commentAnon}
+                chooseNote={feedbackMode === 'optional' ? t('fbChooseNote') : null}
+                onSave={(text) =>
+                  setComments((c) => ({ ...c, [q.id]: { text, anon: commentAnon } }))
+                }
+                strings={{
+                  promise: t('qcPromise'),
+                  openLabel: t('qcOpenLabel'),
+                  hint: t('qcHint'),
+                  replyAnonymous: t('qcReplyAnonymous'),
+                  replyNamed: t('qcReplyNamed'),
+                  placeholder: t('qcPlaceholder'),
+                  save: t('qcSave'),
+                  cancel: t('qcCancel'),
+                  edit: t('qcEdit'),
+                  savedAnon: t('qcSavedAnon'),
+                  savedNamed: t('qcSavedNamed'),
+                }}
+              />
+            ) : null}
+
             {missing && q.required && !isAnswered(entry?.value) ? (
               <p role="alert" className="mt-3.5 inline-block rounded-full bg-ac3 px-3.5 py-2 text-[13px]">
                 {t('required')}
@@ -388,6 +465,47 @@ export function Respondent({
           </section>
         )
       })}
+
+      {/*
+        C3 — «Hva synes du om undersøkelsen?» (V3:3675-3700).
+
+        THE BUNDLE PUTS THIS ON THE THANK-YOU SCREEN. WE CANNOT, AND THE REASON
+        IS INVARIANT 2 RATHER THAN TASTE. By the time the thank-you screen is on
+        screen, `submit_response` has run and `responded_at` is set; a second
+        call is refused with `already_responded`, which is Q111 property 2 and
+        stays exactly as it is. Sending the comment would need a SECOND write
+        path, and CLAUDE.md says there is one.
+
+        So the box sits at the end of the last step, and rides along in the same
+        transaction as the answers. A respondent who closes the tab on the
+        thank-you page now loses nothing, which the bundle's placement cannot
+        say. Logged as a deviation (D159).
+      */}
+      {isLast && feedbackMode !== 'off' ? (
+        <div className="mt-4 rounded-2xl border border-line bg-sf px-6 py-5">
+          <h2 className="text-[15px] font-semibold leading-[1.35]">{t('fbTitle')}</h2>
+          <p className="mt-1.5 text-[13px] leading-[1.5] text-mut">{t('fbHint')}</p>
+          <textarea
+            rows={3}
+            value={comments[SURVEY_LEVEL]?.text ?? ''}
+            placeholder={t('fbPlaceholder')}
+            aria-label={t('fbTitle')}
+            onChange={(ev) => {
+              const text = ev.target.value
+              setComments((c) => {
+                const next = { ...c }
+                if (text.trim()) next[SURVEY_LEVEL] = { text, anon: commentAnon }
+                else delete next[SURVEY_LEVEL]
+                return next
+              })
+            }}
+            className="mt-2.5 w-full resize-y rounded-[10px] border border-line bg-bg px-3.5 py-3 text-[14px] leading-relaxed text-ink outline-none"
+          />
+          <p className="mt-2 text-[12px] leading-[1.4] text-mut">
+            {feedbackMode === 'optional' ? t('fbChooseNote') : commentAnon ? t('fbAnonNote') : t('fbNamedNote')}
+          </p>
+        </div>
+      ) : null}
 
       {failed ? (
         <p role="alert" className="mt-3 rounded-[11px] bg-ac3 px-3.5 py-3 text-[13px]">
@@ -440,10 +558,12 @@ function ThankYou({
   thankYou,
   token,
   respondentKind,
+  commentSent = false,
 }: {
   thankYou?: string
   token: string
   respondentKind: 'person' | 'organisation'
+  commentSent?: boolean
   testMode?: boolean
   onExitTest?: () => void
   onRestart?: () => void
@@ -454,6 +574,16 @@ function ThankYou({
       <div className="rounded-2xl border border-line bg-sf px-8 py-[50px] text-center">
         <div className="font-display text-[40px] font-medium leading-none">{t('thanks')}</div>
         <p className="mt-2 text-sm text-mut">{thankYou?.trim() || t('thanksSub')}</p>
+        {/* V3:3693-3697's `fbSent` state — rendered only when there was
+            something to confirm. */}
+        {commentSent ? (
+          <p
+            className="mx-auto mt-4 inline-block rounded-[11px] px-3.5 py-2.5 text-[12.5px] leading-[1.45]"
+            style={{ background: 'var(--ac2)' }}
+          >
+            {t('fbThanks')}
+          </p>
+        ) : null}
         {testMode ? (
           // V2:3558. The sentence is the whole point of the state: the editor
           // has just been through the real flow and needs to know that nothing
