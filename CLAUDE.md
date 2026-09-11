@@ -330,7 +330,7 @@ Eight different constructs, one shape:
 | `supabase start -x …storage-api…` in CI (S2) | what the *old* job, which ran only `tests/invariants`, needed | «the services the gates in THIS job touch» |
 | `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
 | **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
-| **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | «no unauthenticated role may execute this» (`from public, anon`) |
+| **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | **«A GRANT IS A FACT ABOUT THE CATALOGUE AND MUST BE READ BACK FROM THE CATALOGUE.»** `from public, anon` is the fix; `has_function_privilege('anon', …)` is the rule. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -365,9 +365,19 @@ tranche that reproduced it cites this very table twice in its own commit message
 
 So **knowing a shape by name, having the instance written down, and quoting the table in the same
 work is not protection.** What caught it was a test asserting `has_function_privilege('anon', …)`
-— a measurement, on the object, after the fact. The transferable rule is not «remember row 3»: it is
-that **a grant is a fact about the catalogue and must be read back from the catalogue**, the same
-way an applied migration is (`get_edge_function` against the repository, the ninth check).
+— a measurement, on the object, after the fact.
+
+**THAT IS WHY THE RIGHT-HAND COLUMN OF ROW 9 IS THE LESSON AND NOT THE PATCH** (Tor, 2026-09-11):
+*«The lesson you drew is the right one and it should be the row's text: a grant is a fact about the
+catalogue and must be read back from the catalogue. That is the only form of the rule that does not
+depend on remembering.»*
+
+`from public, anon` is a spelling, and a spelling is something you have to recall at the moment you
+write it — which is precisely what failed here, twice, with the reason already written down in two
+places. **A measurement does not depend on recall.** It is the same discipline as
+`get_edge_function` against the repository (the ninth check) and as «an apply is not evidence, a
+comparison is»: the object is asked what it actually is, after the fact, by something that runs
+whether or not anybody remembered.
 
 Neither function was exploitable as written — both resolve authority from `app.has_role` and an anon
 caller has no `auth.uid()` — and «it refuses anyway» is precisely the argument that keeps a wrong

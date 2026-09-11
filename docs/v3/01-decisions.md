@@ -221,7 +221,15 @@ report.»* Four qualify. Each names what reversing it would cost.
 
 ## Q115 — WHO READS A COMMENT: anonymous to any member, named to administrator and redaktør only
 
-**DEFAULTED-NOT-ANSWERED. Reversing it is one policy expression.**
+**CONFIRMED (Tor, 2026-09-11).** It was brought as defaulted-not-answered; it is now taken.
+
+> «Same footing as the rest of the documentation» can only mean the rules that already exist, and
+> invariant 4 gives a leser no named free text anywhere. **Widening to `is_org_member` alone would
+> be an amendment to the invariant and must be taken as one if it is ever wanted.**
+
+So this is no longer «reversing it is one policy expression». Reversing it is an edit to CLAUDE.md's
+standing invariant 4, made deliberately, and the `using` clause follows from that rather than
+standing in for it.
 
 Q114's second condition says a thread inside a statutory survey is visible to the verneombud «on
 the same footing as the rest of the documentation, since that is the supervision mechanism that
@@ -321,3 +329,25 @@ expires with the round (11); a share link gets an empty thread (28).
 
 **What I would need in order to do it the other way:** a decision that the respondent path may hold
 the service-role key. I am not taking that one.
+
+---
+
+### THE CONDITION IS CORRECTED, AND THE CORRECTION IS TOR'S (2026-09-11)
+
+He accepted the divergence and restated his own condition, which is the part worth carrying:
+
+> «I wrote «not allowlisted» without knowing the only route there is calling the RPC with the
+> service-role key from the respondent server action — putting an RLS-bypassing key on the one
+> surface anyone with a URL can reach, to satisfy a counter. My condition was right in spirit and
+> wrong in form: **the point was that new surfaces must not vanish from the count, not that the
+> number must rise.**»
+
+**That restatement is the durable form, and a later phase should be held to it rather than to the
+original.** The requirement is that every new RLS table and every new SECURITY DEFINER function
+APPEARS in Gate 5a3's enumeration — CHECKED, or allowlisted with a reason that is itself tested —
+and is never invisible to it. Whether the CHECKED count rises is a consequence of what a phase
+happened to build; a phase adding one anon-necessary RPC and no table is complete with the number
+unmoved.
+
+**Setting the number as the condition is what would have bought the service-role key**, and that is
+the general lesson: a target expressed as a counter can be satisfied by making the product worse.
