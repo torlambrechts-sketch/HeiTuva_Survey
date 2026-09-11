@@ -12,11 +12,20 @@ export function UserMenu({
   initials,
   role,
   labels,
+  langSlot,
+  wideSlot,
 }: {
   name: string
   initials: string
   role: string
   labels: Labels
+  /* W1 · V4:192-205 — the language picker and the width toggle MOVE OUT of the
+     header row and into this dropdown, on one line under the name. The header
+     went `flex-wrap:nowrap` and gained the Arbeidsflate chip; two controls had
+     to leave, and v4 chose these two. Passed as slots rather than rebuilt here
+     so each keeps its own component and its own tests. */
+  langSlot: React.ReactNode
+  wideSlot: React.ReactNode
 }) {
   const t = useTranslations('common')
   const tRole = useTranslations('role')
@@ -80,6 +89,18 @@ export function UserMenu({
           <div className="px-3 pb-3 pt-2.5">
             <div className="text-[14px] font-semibold">{name}</div>
             <div className="mt-0.5 text-[12.5px] text-mut">{tRole(role)}</div>
+          </div>
+
+          {/* V4:196 — `justify-between`, `gap:10px`, `padding:8px 12px 10px`.
+              Two controls that used to sit in the header, now one row here.
+              `flex-wrap` and a `gap-y` are ours: below 1280px no bundle draws
+              this menu, and two 32px controls side by side in a 242px panel is
+              the narrow-row case docs/RESPONSIVE.md decides by whether they
+              fit — they do at 242px, so the row stays a row and the wrap is
+              the safety net rather than the layout. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-3 px-3 pb-2.5 pt-2">
+            {langSlot}
+            {wideSlot}
           </div>
 
           <Link href="/profil" className={item} role="menuitem" onClick={() => setOpen(false)}>

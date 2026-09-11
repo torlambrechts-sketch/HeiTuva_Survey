@@ -35,7 +35,9 @@
     "wide": "Full width",
     "narrow": "Narrow view",
     "tasks": "Tasks and feedback",
-    "helpAndSupport": "Help and support"
+    "helpAndSupport": "Help and support",
+    "workspace": "Workspace",
+    "workspaceTitle": "Workspace — chooses which modules Oversikt shows and sorts templates"
   },
   "dash": {
     "overline": "Overview",

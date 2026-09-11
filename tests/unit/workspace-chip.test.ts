@@ -1,0 +1,127 @@
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+import no from '../../messages/no.json'
+import en from '../../messages/en.json'
+
+/**
+ * W1 — the three things this phase owes, written as tests over the shipped
+ * strings and the source, so a later phase that undoes one fails here.
+ */
+
+describe('W1 · Q119 — the tooltip promises two clauses, not three', () => {
+  /**
+   * The bundle writes «Arbeidsflate — velger hvilke moduler Oversikt viser,
+   * sorterer maler og setter standardvalg for nye undersøkelser».
+   *
+   * The third clause is not built. Q17 makes a statutory pack's policy a LOCK
+   * and a workspace a PREFERENCE, and a preference cannot override a lock — so
+   * the clause was never true, and the fix is to drop it rather than to
+   * sequence two writers of the same columns.
+   */
+  it.each([
+    ['no', no.nav.workspaceTitle],
+    ['en', en.nav.workspaceTitle],
+  ])('%s: says nothing about defaults for new surveys', (_lang, title) => {
+    expect(title.length).toBeGreaterThan(0)
+    expect(title).not.toMatch(/standardvalg|standard valg|default/i)
+    expect(title).not.toMatch(/nye undersøkelser|new surveys/i)
+  })
+
+  it('no: names the two things it DOES do', () => {
+    expect(no.nav.workspaceTitle).toMatch(/moduler/i)
+    expect(no.nav.workspaceTitle).toMatch(/maler/i)
+  })
+
+  it('NOTHING in the shipped copy promises the third clause', () => {
+    const all = JSON.stringify({ no, en })
+    expect(all.length).toBeGreaterThan(1000)
+    const offenders = Object.entries(no.nav).filter(([, v]) =>
+      typeof v === 'string' ? /standardvalg for nye/i.test(v) : false,
+    )
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('W1 · Q123 — the nav label is not reverted', () => {
+  /**
+   * v4:5095 shortens it to «Oppgaver». NOT adopted (Q123): the surface is
+   * tasks AND feedback in one list, so «Oppgaver» is untrue of half its
+   * content, and shortening it solves a space problem by promising less than
+   * the page does. If space is the problem, W1 solves the space.
+   */
+  it('no: stays «Oppgaver og tilbakemeldinger»', () => {
+    expect(no.nav.tasks).toBe('Oppgaver og tilbakemeldinger')
+  })
+
+  it('the nav item and the page title agree', () => {
+    expect(no.nav.tasks).toBe(no.tasks.title)
+  })
+})
+
+describe('W1 · the chip takes the utility named for its case', () => {
+  /**
+   * C4's FeedbackList select measured 189×36 because it was given `touch-44`,
+   * whose hit area is an `::after` — and a <select> is a REPLACED element, on
+   * which ::after renders nothing at all. The utility for this exact case sits
+   * immediately below it in globals.css.
+   *
+   * A spelling you must recall at the moment of writing is what that form of
+   * rule cannot protect; this is the measurement that does not depend on
+   * recall.
+   */
+  const src = readFileSync('components/WorkspaceChip.tsx', 'utf8')
+
+  /**
+   * ASSERTED OVER EVERY className IN THE FILE rather than over a slice around
+   * the <select>. The first draft did `src.slice(indexOf('<select'), …)` and
+   * caught the JSDoc above the element, which mentions both `<select>` and
+   * `touch-44` in prose — so it measured a comment. That is the same defect
+   * W0's write test had one commit earlier: a slice keyed on a string that
+   * occurs more than once.
+   *
+   * The property does not need to find the element: NO class list in this
+   * component may use the bare utility, whichever element grows one next.
+   */
+  it('no className here uses bare touch-44 — the replaced-element case takes -field', () => {
+    const classLists = [...src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)].map(
+      (m) => m[1] ?? m[2] ?? '',
+    )
+    // NON-VACUITY: a regex that matched nothing would pass this trivially.
+    expect(classLists.length, 'the component has class lists').toBeGreaterThan(2)
+    // TOKENS, NOT WORD BOUNDARIES. The first attempt used /\btouch-44\b/ and
+    // matched INSIDE `touch-44-field`, because `-` is a non-word character and
+    // `\b` sits happily between `44` and `-`. That is the third outing for the
+    // `\b` family in this repository — D113 and D116 are the Norwegian ones —
+    // and the lesson generalises past alphabets: a CSS class is a TOKEN in a
+    // space-separated list, so the test should compare tokens.
+    const tokens = classLists.flatMap((c) => c.split(/\s+/).filter(Boolean))
+    expect(tokens, 'the chip has a hit area').toContain('touch-44-field')
+    expect(
+      tokens.filter((tk) => tk === 'touch-44'),
+      'a <select> is a replaced element and renders no ::after',
+    ).toEqual([])
+  })
+
+  it('both utilities exist, so the choice was between them', () => {
+    const css = readFileSync('app/globals.css', 'utf8')
+    expect(css).toMatch(/\.touch-44\b/)
+    expect(css).toMatch(/\.touch-44-field\b/)
+  })
+})
+
+describe('W1 · nowrap is an xl rule, because v4 overflows at 320 without us', () => {
+  /**
+   * MEASURED on v4's own header before anything was built on it: at 320px with
+   * the SHORT label the bundle already overflows — 63px of header overflow,
+   * 26px of page overflow. So `nowrap` is a property of the ≥1280px design,
+   * which is the only width v4 governs, and below it RESPONSIVE.md decides.
+   */
+  const src = readFileSync('components/AppHeader.tsx', 'utf8')
+
+  it('the header wraps by default and only refuses to wrap at xl', () => {
+    const header = src.slice(src.indexOf('<header'), src.indexOf('>', src.indexOf('<header')))
+    expect(header.length).toBeGreaterThan(50)
+    expect(header).toMatch(/\bflex-wrap\b/)
+    expect(header).toMatch(/\bxl:flex-nowrap\b/)
+  })
+})

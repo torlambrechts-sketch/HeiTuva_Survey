@@ -35,7 +35,9 @@
     "wide": "Full bredde",
     "narrow": "Smal visning",
     "tasks": "Oppgaver og tilbakemeldinger",
-    "helpAndSupport": "Hjelp og støtte"
+    "helpAndSupport": "Hjelp og støtte",
+    "workspace": "Arbeidsflate",
+    "workspaceTitle": "Arbeidsflate — velger hvilke moduler Oversikt viser og sorterer maler"
   },
   "dash": {
     "overline": "Oversikt",
