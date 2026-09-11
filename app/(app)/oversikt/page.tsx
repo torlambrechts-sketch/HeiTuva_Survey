@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server'
+import { readWorkspace } from '@/lib/workspace/current'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { OverviewScreen, type ActionItem, type Activity, type ComplianceChip } from './OverviewScreen'
@@ -220,6 +221,7 @@ export default async function OverviewPage() {
 
   return (
     <OverviewScreen
+      workspace={await readWorkspace(viewer.orgId)}
       orgName={viewer.orgName}
       firstName={(viewer.displayName || viewer.email).split(' ')[0] ?? ''}
       canEdit={viewer.role !== 'leser'}

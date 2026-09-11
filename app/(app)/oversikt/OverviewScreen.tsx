@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { ComplianceCard } from './ComplianceCard'
+import { WorkspaceEmpty, WorkspaceStrip } from '@/components/WorkspaceStrip'
+import { computeShow } from '@/lib/workspace/modules'
+import type { WorkspaceState } from '@/lib/workspace/current'
 
 export type ActionItem = {
   key: string
@@ -64,6 +67,7 @@ export async function OverviewScreen({
   activity,
   loop,
   showOnboard,
+  workspace,
 }: {
   orgName: string
   firstName: string
@@ -75,9 +79,19 @@ export async function OverviewScreen({
   complianceUrgent: number
   activity: Activity
   loop: { id: string; text: string; when: string | null; done: boolean }[]
+  /* W2 · Q122. Null only if the registry has not been seeded — the strip is
+     then absent rather than faked, and every module renders, which is the
+     pre-W2 behaviour. Never fabricate: a strip naming a workspace that does
+     not exist is indistinguishable from a real one. */
+  workspace: WorkspaceState | null
   showOnboard: boolean
 }) {
   const t = await getTranslations('dash')
+
+  /* A null workspace means the registry is unseeded: show everything, which is
+     exactly what this screen did before W2. Written once as `computeShow` over
+     every key rather than as a second branch beside each card. */
+  const show = workspace?.show ?? computeShow(['action', 'duties', 'loop', 'activity', 'nps', 'quiz'])
   const nav = await getTranslations('nav')
 
   const hour = new Date().getHours()
@@ -125,8 +139,46 @@ export async function OverviewScreen({
 
       {/* HeiTuva.dc.html:258 — 26px under the greeting, where "Krever
           handling" used to sit. */}
-      <div className="mt-[26px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
-        {/* Sløyfen lukket */}
+      {/* V4:272-286 — the workspace strip. Absent, not faked, when the registry
+          has not been seeded: `workspace` is null and every module renders,
+          which is the pre-W2 behaviour rather than an invented default. */}
+      {workspace ? (
+        <WorkspaceStrip
+          dot={workspace.current.dot}
+          tint={workspace.current.tint}
+          label={workspace.current.label}
+          hint={workspace.current.hint}
+          layoutNote={
+            workspace.presetTitle
+              ? t('wsLayoutFollows', { preset: workspace.presetTitle })
+              : t('wsLayoutOwn')
+          }
+          isCustom={workspace.current.key === 'custom'}
+          modules={workspace.allModules}
+          active={workspace.modules}
+        />
+      ) : null}
+
+      {workspace?.empty ? (
+        <WorkspaceEmpty title={t('wsEmptyTitle')} body={t('wsEmptyBody')} reset={t('wsReset')} />
+      ) : null}
+
+      {/* W2 · V4:6071-6074 — THE TEMPLATE IS COMPUTED, NOT FIXED. Switching a
+          module off does not hide a card in place: it changes this row's grid,
+          so the survivor grows from a column to the full width. That is a
+          layout change at every breakpoint, which is why `verify:responsive`
+          runs early on this phase rather than last.
+
+          Delivered as a CSS variable because Tailwind cannot take a runtime
+          value in a class, and applied at `xl` only — below it the row is one
+          column regardless, which is what it already was. */}
+      {show.rowA ? (
+      <div
+        className="mt-[26px] grid grid-cols-1 gap-[18px] xl:grid-cols-[var(--row-cols)]"
+        style={{ '--row-cols': show.rowACols } as React.CSSProperties}
+      >
+        {show.loop ? (
+        /* Sløyfen lukket */
         <div className={card}>
           <h2 className="font-display text-[23px] font-medium">{t('loopClosed')}</h2>
           <p className="mt-[3px] text-[13px] text-mut">{t('loopClosedSub')}</p>
@@ -163,8 +215,10 @@ export async function OverviewScreen({
             ) : null}
           </div>
         </div>
+        ) : null}
 
-        {/* Svaraktivitet */}
+        {show.activity ? (
+        /* Svaraktivitet */
         <div className={card}>
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-display text-[23px] font-medium">{t('responseActivity')}</h2>
@@ -231,14 +285,26 @@ export async function OverviewScreen({
             </span>
           </div>
         </div>
+        ) : null}
       </div>
+      ) : null}
 
 
       {/* The v1 bundle moves "Krever handling" out of the top slot and pairs
           it with the compliance card in a second grid below the two panels
-          (HeiTuva.dc.html:305). The chip row it replaces is gone. */}
-      <div className="mt-[18px] grid grid-cols-1 items-stretch gap-[18px] xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.9fr)]">
-        {/* Krever handling */}
+          (HeiTuva.dc.html:305). The chip row it replaces is gone.
+
+          W2: the pair's template is ASYMMETRIC when both are on — 1.6fr beside
+          a 280px floor, V4:6074 — because one is a list that wants width and
+          the other a card that needs a minimum. One survivor takes the full
+          width like row A. */}
+      {show.rowB ? (
+      <div
+        className="mt-[18px] grid grid-cols-1 items-stretch gap-[18px] xl:grid-cols-[var(--row-cols)]"
+        style={{ '--row-cols': show.rowBCols } as React.CSSProperties}
+      >
+        {show.action ? (
+        /* Krever handling */
         <div className="min-w-0 rounded-[18px] border border-line bg-sf px-[26px] py-6 shadow-[0_10px_28px_rgba(25,21,16,.06)]">
           <div className="flex flex-wrap items-baseline justify-between gap-[14px]">
             <h2 className="font-display text-[25px] font-medium">{t('requiresAction')}</h2>
@@ -292,8 +358,12 @@ export async function OverviewScreen({
             </div>
           ) : null}
         </div>
+        ) : null}
+        {show.duties ? (
         <ComplianceCard compliance={compliance} urgent={complianceUrgent} />
+        ) : null}
       </div>
+      ) : null}
 
       <span className="sr-only">{orgName}</span>
     </main>

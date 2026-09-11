@@ -91,7 +91,12 @@
     "dueInMonths": "Neste om {months} måneder",
     "dueInMonth": "Neste om 1 måned",
     "dueOverdue": "Over fristen",
-    "streakOne": "Organisasjonen har svart 1 uke på rad"
+    "streakOne": "Organisasjonen har svart 1 uke på rad",
+    "wsLayoutFollows": "Dashboard følger oppsettet «{preset}»",
+    "wsLayoutOwn": "Dashboard beholder ditt eget oppsett",
+    "wsEmptyTitle": "Ingen moduler er valgt",
+    "wsEmptyBody": "Slå på minst én modul i raden over, eller bytt til en ferdig arbeidsflate i toppmenyen.",
+    "wsReset": "Sett tilbake standard"
   },
   "wizard": {
     "overline": "Veiviser",

@@ -62,9 +62,27 @@ async function main() {
     { groupName: GROUP_PRIMARY },
   )
 
+  // W2 · Q122 — THE ORG DEFAULT IS SEEDED, and the two organisations get
+  // DIFFERENT ones on purpose.
+  //
+  // Oversikt under a non-default workspace is a state no fixture reached
+  // before this line, and it is the surface where the failure mode is a blank
+  // screen: `wsShow` gates four cards, so a wrong resolution renders nothing
+  // and looks like a page that failed to load rather than a page obeying a
+  // setting. A seed that only ever carries the DB default ('hr') can never
+  // photograph that.
+  //
+  // Nordisk Studio keeps 'hr' — it is the statutory-compliance demo and its
+  // modules are the four that exist. The other organisation takes 'cx', whose
+  // set is `nps, activity, action`: TWO of those have no card yet, so it also
+  // seeds the case where a workspace legitimately shows less than it names.
+  await serviceClient().from('organizations').update({ workspace: 'hr' }).eq('id', org.id)
+
   const other = await createOrg(ORG_OTHER, [
     { email: PERSONAS.outsider.email, role: 'administrator', name: PERSONAS.outsider.name },
   ])
+
+  await serviceClient().from('organizations').update({ workspace: 'cx' }).eq('id', other.id)
 
   // One survey above the k threshold and one below, so screens can be captured
   // in both their real-data and insufficient-data states.

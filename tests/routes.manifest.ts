@@ -212,6 +212,54 @@ export const ROUTES: RouteSpec[] = [
           await page.getByRole('menu').waitFor({ state: 'visible' })
         },
       },
+      /*
+       * W2 · Q122 — THE TWO STATES NO FIXTURE REACHES, and they are the ones
+       * where the failure mode is a blank screen.
+       *
+       * The Tilpasset module set lives in a COOKIE, not in a table, so the
+       * demo seed cannot put the product into either state — a seed reaches
+       * only what the database can hold. The harness can, because a cookie is
+       * exactly what a browser context carries, and that is why these are
+       * states here rather than rows in seed-demo.
+       *
+       * Both are captured at every project width, not desktop-only: switching
+       * a module off changes its row's grid template rather than hiding a card
+       * in place, so the layout differs at each breakpoint (V4:6071-6074).
+       */
+      {
+        // A personal set that is NOT any workspace's own: one card from each
+        // row, which is the case where BOTH templates fall back to their
+        // single-column form and both rows still render.
+        name: 'arbeidsflate-tilpasset',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.workspace', value: 'custom', url: page.url() },
+            {
+              name: 'heituva.customMods',
+              value: JSON.stringify(['activity', 'action']),
+              url: page.url(),
+            },
+          ])
+          await page.reload({ waitUntil: 'networkidle' })
+          await page.getByText('Tilpasset').first().waitFor()
+        },
+      },
+      {
+        // Every module off. `[]` rather than a missing cookie: an ABSENT
+        // cookie means «nothing chosen» and falls back to the workspace's own
+        // set, while an EMPTY one means «chose nothing» and is the state that
+        // renders «Ingen moduler er valgt». Collapsing the two would make this
+        // state unreachable, which is why `parseModuleCookie` keeps them apart.
+        name: 'arbeidsflate-tom',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.workspace', value: 'custom', url: page.url() },
+            { name: 'heituva.customMods', value: '[]', url: page.url() },
+          ])
+          await page.reload({ waitUntil: 'networkidle' })
+          await page.getByText('Ingen moduler er valgt').waitFor()
+        },
+      },
       // V2-4 · Q68 (DEFAULTED). The «Legg til tiltak» INPUT is gone — creating a
       // task happens in one place now, Oppgaver, where the lifecycle and the
       // close guard are. The card keeps its drawing and its button links there

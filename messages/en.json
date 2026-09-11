@@ -91,7 +91,12 @@
     "dueInMonths": "Next in {months} months",
     "dueInMonth": "Next in 1 month",
     "dueOverdue": "Overdue",
-    "streakOne": "The organisation has answered 1 week running"
+    "streakOne": "The organisation has answered 1 week running",
+    "wsLayoutFollows": "The dashboard follows the «{preset}» layout",
+    "wsLayoutOwn": "The dashboard keeps your own layout",
+    "wsEmptyTitle": "No modules selected",
+    "wsEmptyBody": "Switch on at least one module in the row above, or pick a ready-made workspace in the top menu.",
+    "wsReset": "Restore the default"
   },
   "wizard": {
     "overline": "Wizard",
