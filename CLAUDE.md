@@ -34,7 +34,16 @@ Two consequences, both cheap:
 - Supabase: Postgres + Auth + RLS + Storage + Edge Functions + pg_cron + pgmq — project region **eu-central-1**
 - GitHub + Vercel Git integration; Supabase branch per PR
 - i18n: next-intl, messages loaded from `ui_messages` table (seeded from `/messages/*.json`), tag-based revalidation
-- Email: provider adapter in `lib/mail/` — Amazon SES eu-north-1 (see DECISIONS Q6)
+- Email: provider adapter in `lib/mail/` — **Brevo transactional** (DECISIONS Q6a, which
+  supersedes Q6's Amazon SES). SES stays behind the seam: `MAIL_PROVIDER=ses`. The production
+  consumer is the Edge Function `supabase/functions/mail-worker`, on a pg_cron job (`M:0095`),
+  **live in production since 2026-09-10** — proven by two real invitations delivered from the
+  cron-scheduled run, not by a local send. Deploying it needs `npm run edge:bundle`, whose
+  output is compared against `get_edge_function` afterwards: an apply is not evidence.
+  **`survey_invitations.sent_at` means ACCEPTED BY THE PROVIDER, not delivered** — this account
+  has no transactional webhooks, so there is no delivered event and `bounced_at` has no writer
+  at all (D133). Q6 chose Stockholm to keep the EU/EØS promise; whether Brevo keeps it is an
+  open check, not a settled fact.
 
 ## Design fidelity — pixel-perfect, non-negotiable
 - **Three handoff bundles, each governing a different question (DECISIONS Q18, extended
@@ -72,6 +81,60 @@ Two consequences, both cheap:
      the database; «Kjønnsdelt rapport» promised a field that exists nowhere in the schema,
      on a public page. **Nothing mechanical protects prose** — the gates protect schema and
      data — so this step is the protection, and it has to run again for every handoff.
+
+     **A LINE THAT DESCRIBES TWO SYSTEMS WITHOUT SAYING WHICH ONE IT MEANS
+     MANUFACTURES A DEFECT THAT DOES NOT EXIST.** The claim-set sweep compares
+     the bundle against the running product, so its notes are always about two
+     things at once — and a note that does not name which half it is describing
+     is read as being about ours.
+
+     `docs/v2/06-remainder.md` carried: «quizPreview's chips render a pass mark
+     and an attempt count, which Q84 did not build, so they are not rendered at
+     all.» One sentence, two subjects, no boundary. The BUNDLE renders them
+     — `(st.quizPass || 70) + " % for å bestå"`, unconditionally. Our
+     `QuizPanel` renders neither, deliberately, with its reasoning written beside
+     it. **V2-10 was right all along**, and the line was read as an outstanding
+     defect for long enough to reach a review instruction as one — «fix
+     quizPreview's chips» — where the honest answer was that there was nothing to
+     fix.
+
+     The cost is not the wasted look. It is that a manufactured defect is
+     indistinguishable from a real one until someone reads the source, and the
+     reading that clears it is exactly the reading a busy phase skips. **Name the
+     system in the sentence:** «the bundle draws X; we render Y» is two clauses
+     and cannot be misread. This is the same discipline as «a count is not a
+     finding until the lines are read», one step earlier — before the count is
+     written down.
+
+     **A HOST OR A URL IS A CLAIM, NOT A SPECIFICATION.** The sweep covers these too, and
+     they are the easiest kind to implement by accident: a claim about who can see what
+     reads as a promise and invites checking, while `heituva.no/s/…` reads as a fact and
+     invites copying. It is neither — it is the mock's guess at a domain that did not exist
+     when the bundle was drawn. **Check every host, URL and contact address against the
+     PRODUCTION origin, and against whether the mailbox is actually staffed.**
+
+     **The first count of this was FOURTEEN, attributed to the bundles, and it was wrong on both
+     the number and the place.** Recorded rather than replaced, because that is what this file
+     says to do with a number nobody re-derived.
+
+     Measured 2026-09-10 —
+     `grep -ro 'heituva\.no' . | grep -v node_modules | grep -v '^./artifacts/' | wc -l` —
+     `heituva.no` appears **28 times** in this repository — 8 inside
+     the three bundles, 5 quoted in DEVIATIONS, 9 in `.next/` build output derived from the
+     shipped strings, and **6 that reached shipped copy** in `messages/{no,en}.json`. The
+     production origin is `https://www.heituva.com`; `heituva.no` is not HeiTuva's domain and
+     never was. **The useful split is 6 reached shipped copy and 22 did not** — a bundle
+     occurrence is inert, a `messages/*.json` occurrence is a sentence a customer reads.
+     Two of the six were `send.smsLinkPlaceholder`, fixed in the file AND in
+     prod's `ui_messages` — **which is two edits, not one: the JSON is the seed, the table is
+     what the product serves, and changing the file changes nothing a user sees — the file alone
+     is a correction nobody receives.** The other
+     four are `personvern@heituva.no` in `legal.privacy6P` and `legal.privacy8P`, and they
+     are the sharpest case in the category: **inventing a contact address in a privacy notice
+     is the same error as inventing an origin, with a worse consequence — a data subject who
+     cannot reach the controller.** They stay untouched until the replacement mailbox is
+     confirmed to RECEIVE, not merely to exist, because a `.com` that bounces is worse than a
+     `.no` that is at least someone's inbox.
   A baseline reported but never committed is the shape this project has hit six times —
   green for something that structurally could not be seen: `ui_messages` cross-tenant behind
   a green 5a3; V1-6's screen whose visual gate had only ever photographed the old state;
@@ -230,7 +293,17 @@ correct about its members and always silent about the member that has not arrive
 specification, two in a CI workflow. Neither of those is a database construct, which is the
 evidence that this section is not a note about Postgres.
 
-Seven instances, seven different constructs, one shape:
+**Extended 2026-09-10, after the mail tranche. Eight instances** — measured, not carried:
+`awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row.
+Tor called the new one the tenth and the ninth correction; the table held seven when I counted it,
+so this is the EIGHTH and the number is written as what re-derives. Said rather than quietly
+matched, because this file already records a carried number that was wrong for four phases
+(«61 of 83»), and the rule out of that — a divergence note carries the command that re-derives it —
+is the one being added beside D110 in the same breath. **If the two missing instances are real they
+are somewhere this table is not, and the command above will keep saying eight until they are in
+it.**
+
+Eight instances, eight different constructs, one shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -241,6 +314,7 @@ Seven instances, seven different constructs, one shape:
 | **RESPONSIVE.md's narrow-row clause** (S3/S2, D129) | «email + role select + status», the controls the row had when the clause was written | «the controls in this row, however many there turn out to be» |
 | `supabase start -x …storage-api…` in CI (S2) | what the *old* job, which ran only `tests/invariants`, needed | «the services the gates in THIS job touch» |
 | `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
+| **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -265,6 +339,35 @@ moves the example.
 The sixth and seventh are the same shape in CI, in one tranche, both mine: three instances in a
 single piece of work, which is the strongest evidence this section has that the shape is not
 about databases.
+
+**THE EIGHTH IS THE YEAR'S IRONY, AND THE ENUMERATION WAS WRITTEN BY ME, IN THE COMMIT THAT SAID
+THE SCRIPT EXISTED TO PREVENT TRANSCRIPTION ERROR.** `scripts/edge-bundle.ts` assembles the
+`mail-worker` payload because there is no `SUPABASE_ACCESS_TOKEN` here and the deploy goes through
+MCP by hand — the step that had already shipped v6 with comment blocks shortened. So the script
+prints per-file md5s, and its commit message says so.
+
+It asserted that each of the entry point's three imports was present before rewriting it, and said
+**nothing about the imports inside the files it copies**. `lib/mail/brevo.ts` is written
+`from './env'` — extension-less, which the app's tsconfig resolves and Deno does not. The running
+function has `./env.ts` **only because I typed the extension in by hand while transcribing an
+earlier payload.** So *the tool built to guarantee fidelity would have regressed the one thing
+hand-transcription got right*, and because `./env` is a VALUE import the failure would have been
+module resolution on the worker's first request — not a caught type error, not a failed deploy
+check, but production returning 500 on the first cron tick after the deploy.
+
+Three things make it the sharpest entry in this table:
+- **The enumeration and the guarantee were in the same file, written in the same sitting.** Knowing
+  the shape by name and having just written it down twice did not prevent committing it.
+- **It was found by a comparison, not by a gate.** `get_edge_function` against the repository —
+  the ninth check, aimed at a function instead of a migration. Nothing in CI knows Deno's
+  resolution rules; `tsc` resolves `./env` happily, which is exactly why the repo file is written
+  that way and is correct there.
+- **The fix was the property, then the proof, in that order.** Rewrite every extension-less
+  relative specifier, then assert over the FINISHED bundle that none survives — so index.ts and any
+  future edit are covered, and a fourth shared module needs no edit here. Then prove the assertion
+  fires before trusting it: a synthetic `./packs.json` gives exit 1 naming file and specifier.
+  «Prefer the fix that is robust against the construct nobody has thought of» applied to a
+  transcription tool.
 
 **Two consequences, and the second is the one that pays.**
 - A test, an allowlist reason or a guard should be stated as the property, and where it cannot
@@ -417,6 +520,14 @@ session; `live_stopwords` is allowlisted with `use_cases`' reason and checked
 the same way; `close_live_session` and `live_cloud` are CHECKED, and
 `redeem_live_voucher` is allowlisted with its reason beside `submit_response`.
 **The checked number has now moved up five phases running.**
+
+**The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
+two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
+5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
+them and `CENSUS_WRITE=1` could not run. **The census asserts a FLOOR (`got < want`), so an
+understated entry is not a failure — it is a silently weakened guard for that one file**, which
+is why it was corrected by hand rather than left for the next full run to notice. The next
+`CENSUS_WRITE=1` on a machine with a database should confirm 7 and nothing else moved.
 
 **V2-10 took the census 798 → 820 across 53 files** (`tests/db/quiz.test.ts` 18,
 `tests/unit/quiz-tiles.test.ts` 4)

@@ -124,12 +124,17 @@ export const HELP_EN: Record<string, EnArticle> = {
   'sett-terskelen-for-virksomheten': {
     title: 'Set the threshold for your organisation',
     lead:
-      'The threshold decides how many answers must arrive before figures are shown. Five is the ' +
-      'default. For sensitive topics you should use eight.',
+      'The threshold decides how many answers must arrive before figures are shown. You choose ' +
+      'it yourselves; we recommend five, eight for sensitive topics. Statutory surveys have a ' +
+      'locked minimum.',
     steps: [
       {
         head: 'Open Administration → Privacy',
-        body: 'The threshold is set for the whole organisation, and cannot be lowered below the minimum.',
+        body:
+          'The threshold is set for the whole organisation, and the value you set is a floor: ' +
+          'not even an administrator can put a single survey below it, unless the organisation ' +
+          'has turned on «Allow editors to lower the threshold». Statutory templates carry ' +
+          'their own minimum on top of that.',
       },
       {
         head: 'Look at your group sizes',
@@ -143,8 +148,8 @@ export const HELP_EN: Record<string, EnArticle> = {
     mockTitle: 'Administration · Privacy',
     mockScreen: 'Admin',
     mock: [
-      { label: 'Minimum threshold', meta: '5 answers' },
-      { label: 'Sensitive topics', meta: '8 answers' },
+      { label: 'Threshold (5 recommended)', meta: '5 answers' },
+      { label: 'Sensitive topics (locked by the template)', meta: '8 answers' },
       { label: 'Store IP address', meta: 'off' },
       { label: 'Data in the EU/EEA', meta: 'on' },
     ],

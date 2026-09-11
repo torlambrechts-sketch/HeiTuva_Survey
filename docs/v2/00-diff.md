@@ -169,8 +169,153 @@ checklist now carries it as **step 7: the security-copy sweep runs ONCE PER BUND
 once.**
 
 Where a claim is false, the correction is a decision like any other and outranks the bundle's
-wording (the Q55 precedent above). `tests/db/help.test.ts` pins the six corrected sentences
-so a re-seed from a newer bundle cannot put one back.
+wording (the Q55 precedent above). `tests/db/help.test.ts` pins the **nine** corrected
+sentences so a re-seed from a newer bundle cannot put one back.
+
+### A BUNDLE CITATION CARRIES A BUNDLE PREFIX — `L:` / `V1:` / `V2:`
+
+**Added 2026-09-10 (B0).** `HeiTuva.dc.html` exists three times with three different line
+numberings, so `(HeiTuva.dc.html:387)` is not a citation — it is a line number with no
+coordinate system. The convention, matching what V2-10 already writes:
+
+| Prefix | Bundle |
+|---|---|
+| `L:` | `design-reference/` — the first handoff, Phase 1–7 as built |
+| `V1:` | `design-reference-v1/` — the second handoff |
+| `V2:` | `design-reference-v2/` — the third, and the one § 0.3's table hands to a v2 phase |
+
+**Twenty-eight citations under `bygg/` and `bibliotek/` were backfilled in B0, and the result
+is the reason this row exists: they are MIXED, not all v1.** Twenty-four resolve in the legacy
+bundle and four in v1 — `QuestionCard.tsx`'s `flex:1 1 220px` (`V1:387`), `PolicyPanel`'s panel
+(`V1:577-635`), and Bruksområder in `bibliotek/page.tsx` and `UseCaseCard` (`V1:1873-1893`,
+`V1:1877-1891`). **None resolves in v2.** Each was placed by locating a distinctive marker from
+the cited region in all three bundles — `Videre til utsending` is `L:486 · V1:529 · V2:549`,
+`{{ builderQs }}` is `L:340 · V1:383 · V2:410` — rather than by assuming a handoff.
+
+That mattered: the first pass of the fidelity measurement sampled ONE citation, found it in v1,
+and wrote «all of them are v1's numbers» into a commit. A blanket `V1:` backfill would have
+replaced twenty-four unlabelled citations with twenty-four **falsely labelled** ones, which is
+strictly worse than leaving them bare. **An enumeration mistaken for a property, in the method
+used to fix an enumeration mistaken for a property.**
+
+**113 further citations exist outside `bygg/` and `bibliotek/`** and are unprefixed (`grep -rn "HeiTuva\\.dc\\.html:[0-9]" app/ | wc -l`).
+They are out of B0's scope by construction and are prefixed by the phase that next reads each
+file, not in one sweep.
+
+### THE BUNDLE CAUGHT UP WITH Q17/Q91 — and the app was already there
+
+**Added 2026-09-10 (Tor supplied a revised `HeiTuva.dc.html`; measured before installing.)**
+
+`md5 206dc2bc…` → `md5 3f8de86d…`, 609647 → 609814 bytes, **6727 lines both**, nine lines
+changed and nine added, at **1711, 2790, 4224, 4226, 4230, 4660, 4666, 5095, 5131**. The
+count and the line numbers were verified here before the file was installed, not taken on
+trust:
+
+```
+diff -u design-reference-v2/heituva-survey-app-design/project/HeiTuva.dc.html <new> \
+  | grep -c '^-[^-]'     # 9
+```
+
+All nine drop a **fixed five** in favour of the organisation's own threshold — «Grupper med
+færre enn fem svar» → «Grupper under virksomhetens terskel», «Ledelse har færre enn fem svar»
+→ «Ledelse ligger under terskelen», and so on. **This is the bundle catching up with Q17 and
+Q91, which the application shipped two phases ago (D105).**
+
+**Which is the finding: on the four surfaces the app actually renders, the app was already
+right, and prod agrees with the repository.** Not one of the nine required an edit to
+`messages/*.json` or to `ui_messages`:
+
+| Bundle line | App key | State |
+|---|---|---|
+| 1711 | `reports.groupThreshold` | already **verbatim** the corrected sentence |
+| 2790 | `admin.anonExplainer` | already `{k}`-parameterised, and says «aldri lavere enn to» besides |
+| 4660 | `dashboard.heatNote` / `heatNoteGeneric` | `{kWord}`/`{k}`; the generic form is verbatim |
+| 4666 | `reports.noteTeams` | `{kWord}` (`ReportEditor.tsx:139` feeds it the heatmap too) |
+| 5095, 5131 | — | **no counterpart**: the app's index card renders the article's `lead` (`HelpScreen.tsx:217`), so the bundle's separate blurb has no place to be wrong |
+| 4224, 4226, 4230 | `help_article_translations` | **the only gap**, in both languages |
+
+Verified against prod, not only against the file:
+`select … from public.ui_messages where (namespace,key) in (…)` returned the same five
+strings the repository carries, in `no` and `en`.
+
+**The three help-article lines are seeded FROM the bundle (`scripts/seed-help.ts`), so they
+were carrying the old text on prod — and two of the three revisions cannot be seeded as
+drawn.** The revision prepended its true sentences and **kept the false ones it was written
+to replace**:
+
+- **4224** now reads «… Dere velger den selv; vi anbefaler fem, åtte for sensitive temaer.
+  Lovpålagte kartlegginger har låst minimum. **Fem er standard. For sensitive temaer bør dere
+  bruke åtte.**» The last two sentences are the old text, and «Fem er standard» is exactly the
+  fixed-number claim Q55 forbids — `organizations.default_k_threshold` defaults to 5 but is
+  settable 3–10 (`M:0034`).
+- **4226** traded a true sentence for a false one. «Bare lovpålagte kartlegginger har et
+  minimum som ikke kan senkes» is **false**: `app.guard_survey_policy` (`M:0054:87-104`)
+  raises `below_org_floor` when a person survey's `k_threshold` goes under
+  `organizations.default_k_threshold`, and its own comment says the exception flag is the
+  organisation's, «so this binds an administrator too». The sentence it replaced — «kan ikke
+  senkes under minimum» — was true.
+- **4230**'s mock still draws a **«Sensitive temaer» row** in `Administrasjon · Personvern`.
+  That screen has three rows (`PrivacyPanel.tsx:11-12,76`) and no sensitive-topics setting
+  exists in the schema. Eight is real, but it arrives from the harassment template locking it
+  (`surveys.trakasseringAnonNote`), which the real panel already says inside the one control's
+  description.
+
+So three corrections were added to `CORRECTIONS`, each with its measurement, and all
+**thirteen** still match exactly once against the revised bundle. The English mirror in
+`scripts/help-en.ts` was updated in the same commit, and prod's
+`help_article_translations` was updated in both languages by a targeted `update` — not a
+re-seed, because `delete from public.help_articles` is a bulk delete on the remote project.
+
+**What the revision did NOT touch, and it is the half B.27 is about.** All nine lines are
+prose. The three places the bundle hard-codes the constant in *logic* are unchanged and still
+resolve at the same line numbers — `hasThresholdWarn` **V2:4988** `g.count < 5`,
+`mgGroups.small` **V2:5048**, `mgSegments.small` **V2:5052** — so B.27 stands as written. Our
+side already parameterised all three (Q95, V2-3a), so this changes nothing to build; it
+means the bundle is now internally inconsistent, saying «under terskelen» in its copy and
+`< 5` in its code, and a later reader should take the copy.
+
+**The rendered baseline — CORRECTED, and the correction is the point.** The first pass of this
+said «two screens moved, six churn», attributed the churn to `new Date`, and dropped six PNGs.
+Both halves were wrong, because **the comparison that produced them was not the comparison it
+claimed to be**: a `git restore` ran between the two renders, so the second side of the diff was
+git HEAD — an OLD-bundle render — not a second new render. Re-measured with three clean renders
+and HEAD~1 held separately:
+
+| Screen | render↔render (same bundle) | HEAD~1 → new bundle |
+|---|---|---|
+| `admin-personvern` | **0 px** | 25163 px · rows 1291-1409 — line 2790 |
+| `hjelp` | **0 px** | canvas **1970 → 1930** — line 5095's shorter blurb |
+| `rapport-editor` | 27865 px · rows 1538-1669 | 37192 px · rows **590**-1775 — lines 4660/4666 |
+| `rapport-editor-filter` | 3801 px | 16396 px · rows 590-1775 |
+| `rapport-editor-del` | 71699 px | 12044 px · rows 590-1775 |
+| `live`, `live-revealed`, `send` | 551 / 726 / 1262 px | 663 / 630 / 1205 px — **same rows, same magnitude** |
+
+So **five screens moved for the nine lines, not two.** The three `rapport-editor` baselines carry
+lines 4660 and 4666 and are committed, noise included — a baseline still showing «Ledelse har
+færre enn fem svar» would be a false statement, which is worse than a jittery true one. `live`,
+`live-revealed` and `send` show no revision effect at all (their diff against HEAD~1 is
+indistinguishable from their diff against themselves), so they stay as committed.
+
+**And the cause is `Math.random()`, not the clock.** Cropping the differing rows and reading
+them: `send` differs at `…/s/q2rrzlu` versus `…/s/qpagbqf`, and `live` at
+`heituva.no/qwala` — both `uid()`, **V2:4133**, `"q" + Math.random().toString(36).slice(2,8)`.
+**One call site, not eleven.** The eleven `new Date` sites (V2:4533, 5289, 5376, 5395, 5527,
+5531, 5541, 5542, 5547, 5550, 6014) are mostly seeded constants (`new Date(2026, 8, 7 + …)`) or
+`getFullYear()`, and the render-to-render diff for `rapport-editor` **starts at row 1538, below
+the «generert 10. september 2026» line at row ~600** — the date line is byte-identical between
+renders, which rules the clock out directly. `rapport-editor`'s remaining jitter is in the team
+bars (values and colours change between renders); it is downstream of `uid()` on the evidence
+available, but that link is **not established** and is written here as unestablished.
+
+**A visual baseline with non-deterministic content is not a baseline.** Whether to freeze
+`uid()` at capture time or exclude those screens is a decision — `docs/review/05-decisions.md`,
+Q104.
+
+**A gate limit, logged rather than built** (the apparatus is frozen): `verify:copy`
+(`scripts/verify/threshold-copy.ts`) reads `messages/no.json` and `messages/en.json` only.
+Help-article prose is **shipped copy that the gate cannot see** — which is why «Fem er
+standard» sat in production since V2-6 without tripping anything. The next phase decides
+whether that gate's inputs should include `help_article_translations`.
 
 ### AWAITING A DRAWING — one control, and what the next bundle is compared against
 

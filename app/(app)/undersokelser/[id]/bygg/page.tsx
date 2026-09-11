@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 /** Canonical UUID shape; anything else cannot name a survey. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -12,7 +13,7 @@ import { Builder } from './Builder'
 import type { BuilderDraft, DraftQuestion, QuestionConfig } from './types'
 
 /**
- * The Builder route (HeiTuva.dc.html:322-690).
+ * The Builder route (L:322-690).
  *
  * Everything that decides how a question renders comes from the registry in
  * lib/questions, and the quality rules come from the `quality_rules` table, so
@@ -26,6 +27,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   // here rather than that the address is wrong.
   if (!UUID.test(id)) notFound()
   const viewer = await requireViewer()
+  const tQ = await getTranslations('qtype')
   const supabase = await createClient()
 
   const { data: survey, error } = await supabase
@@ -58,6 +60,33 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     points: q.points,
     config: (q.config ?? {}) as QuestionConfig,
   }))
+
+  /* B3 — the bank the picker overlay offers (V2:650-693).
+     Read here rather than in the client so the overlay holds no query and no
+     service key: `bank_sel` is `org_id is null or app.is_org_member(org_id)`,
+     so this returns the shared standard bank plus THIS org's own and nothing
+     else, without the page filtering by org itself. Ordered exactly as the
+     Library orders it, because the category chips are derived from the order
+     each category first appears in. */
+  const { data: bankRows, error: bankError } = await supabase
+    .from('question_bank')
+    .select('id, org_id, text, type, category, sort_order, created_at')
+    .order('sort_order')
+    .order('created_at', { ascending: false })
+  if (bankError) throw new Error(`builder question_bank read failed: ${bankError.message}`)
+  const bankUnordered = (bankRows ?? []).map((q) => ({
+    id: q.id,
+    text: q.text,
+    // The bundle shows `TYPE_LABEL[b.type]` (V2:6212), not the enum value. The
+    // label is resolved here so the overlay carries no registry and no
+    // translator of its own.
+    typeLabel: tQ(q.type as 'scale'),
+    category: q.category,
+    isOwn: q.org_id === survey.org_id,
+  }))
+  // Own questions first, then the standard bank in its stored order — the same
+  // split the Library makes, so the two surfaces cannot disagree about order.
+  const bank = [...bankUnordered.filter((r) => r.isOwn), ...bankUnordered.filter((r) => !r.isOwn)]
 
   const { data: ruleRows, error: ruleError } = await supabase
     .from('quality_rules')
@@ -111,6 +140,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
       />
       <Builder
         runMode={survey.run_mode}
+        bank={bank}
         quizTimeBonus={survey.quiz_time_bonus}
         quizTeamBoard={survey.quiz_team_board}
         surveyId={survey.id}

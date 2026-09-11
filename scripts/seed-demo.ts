@@ -121,6 +121,39 @@ async function main() {
     source: 'manuell',
   })
 
+  // B3: THE QUESTION BANK, which the demo seed carried none of.
+  //
+  // The picker overlay's entire content is bank rows, so on a bare reset it
+  // would open empty — a screen that renders, reports built, and shows nothing.
+  // That is the shape CLAUDE.md names six times, and the overlay is exactly the
+  // kind of surface it happens to: nothing about an empty modal looks broken.
+  //
+  // Both KINDS are seeded, because the row renders differently for each and the
+  // difference is a policy fact rather than a style: `bank_sel` is
+  // `org_id is null or app.is_org_member(org_id)`, so a NULL org_id is the
+  // shared standard bank (badge «benchmark», not deletable) and an org_id is
+  // this organisation's own (badge = author, deletable). One of each means the
+  // delete affordance has a subject and the badge has both states.
+  //
+  // Categories are spread, because `pickCats`/`bankCats` are BUILT from the
+  // distinct categories present (V2:6204, V2:6343) — with one category the chip
+  // row is a single chip and proves nothing about filtering.
+  await svc.from('question_bank').insert([
+    { org_id: null, text: 'Jeg har det jeg trenger for å gjøre jobben min godt',
+      type: 'scale', category: 'Arbeidsmiljø', used_count: 4 },
+    { org_id: null, text: 'Hvor sannsynlig er det at du vil anbefale oss som arbeidsgiver?',
+      type: 'enps', category: 'Engasjement', used_count: 9 },
+    { org_id: null, text: 'Har du opplevd eller sett trakassering de siste tolv månedene?',
+      type: 'yesno', category: 'Lovpålagt', used_count: 2 },
+    { org_id: org.id, text: 'Hva bør vi slutte å gjøre?',
+      type: 'text', category: 'Egne', used_count: 1,
+      author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
+    { org_id: org.id, text: 'Hvilken samling vil du ha mer av?',
+      type: 'choice', category: 'Egne', used_count: 0,
+      config: { options: ['Fagdag', 'Workshop', 'Allmøte'] },
+      author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
+  ])
+
   // V2-6: one support message, for the same reason the objection above exists —
   // `verify:policy` reports a table PROTECTED BUT UNPROVEN when it is empty,
   // because an empty table is never asked to refuse anything. With this row
@@ -189,6 +222,65 @@ async function main() {
   // a state no reset reaches and therefore not a state at all.
   await svc.from('surveys').update({ run_mode: 'live' }).eq('id', above.id)
 
+  /*
+    THE QUIZ, seeded 2026-09-10 — the first state in this file that the product
+    could not reach until the same commit.
+
+    V2-10 built quiz end to end (`M:0085`–`M:0088`, the answer key, the k-gated
+    `quiz_leaderboard`, tiles on `/s/[token]`, the Lagtavle on Resultater) and
+    the run-mode card stayed locked behind «Quiz er ikke bygget ennå». So no
+    seed could honestly carry a quiz: setting `run_mode` in SQL would have been
+    a fixture reaching a state no customer could — DEVIATIONS D139, deliberately.
+    The card is unlocked now, so this is a state a customer reaches, which is
+    the whole difference.
+
+    NAMED and non-statutory, because `app.guard_quiz_policy` refuses both — a
+    quiz awards points to a person, and a duty under the law has no correct
+    answers. The seed does not work around either guard; it satisfies them.
+
+    SIX answer, one over k, so the Lagtavle returns real rows instead of its
+    gated shape. That is what moves `quiz_leaderboard` from CHECKED to PROVEN in
+    `verify:policy`: a k-gated RPC with no data is never asked to refuse.
+  */
+  const quiz = await createSurvey(
+    org.id,
+    'Personvern for nyansatte',
+    [
+      {
+        type: 'choice',
+        text: 'Hvor lenge kan vi lagre svar fra en undersøkelse?',
+        config: { options: ['Så lenge vi vil', 'Så lenge formålet varer', 'For alltid'] },
+      },
+      {
+        type: 'choice',
+        text: 'Hva gjør du hvis en kollega ber om innsyn i egne data?',
+        config: { options: ['Sier nei', 'Sender saken til personvernombudet', 'Ignorerer den'] },
+      },
+    ],
+    { anonymity: 'named', audience: 'Nyansatte', langs: ['no'] },
+  )
+
+  // The fasit. `points` defaults to 100; `answer_index` is what makes a question
+  // scorable and is CHECK-constrained to types that can carry one.
+  for (const [i, q] of quiz.questions.entries()) {
+    await svc.from('survey_questions').update({ answer_index: 1 }).eq('id', q.id)
+    void i
+  }
+
+  await svc.from('surveys').update({ run_mode: 'quiz' }).eq('id', quiz.id)
+
+  const quizRound = await createRound(quiz, 8, { groupId: org.groupId })
+  await submitResponses(
+    quizRound.tokens,
+    (i) => ({
+      // Four of six get the first right, five of six the second: a leaderboard
+      // where every team scores identically shows nothing about the feature.
+      [quiz.questions[0]!.id]: { value: i < 4 ? 1 : 0 },
+      [quiz.questions[1]!.id]: { value: i < 5 ? 1 : 2 },
+    }),
+    6, // > k = 5, so the Lagtavle is not gated
+  )
+
   // V2-9: one live session on the round above, for the reason the objection and
   // the support message above exist — `verify:policy` reports a table PROTECTED
   // BUT UNPROVEN when it is empty, because an empty table is never asked to
@@ -206,7 +298,6 @@ async function main() {
     round_id: aboveRound.id,
     code: 'DEMO01',
     status: 'closed',
-    step: 'Spørsmål 2 av 2',
     revealed: true,
     closed_at: new Date().toISOString(),
     expires_at: new Date(Date.now() - 3600_000).toISOString(),

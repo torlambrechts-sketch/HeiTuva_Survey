@@ -64,7 +64,7 @@ export const isNewQuestion = (id: string) => id.startsWith(NEW_ID_PREFIX)
 export const LONG_SURVEY_THRESHOLD = 8
 
 /**
- * Input types a `field` question can collect (HeiTuva.dc.html:2702 seeds
+ * Input types a `field` question can collect (L:2702 seeds
  * name/email/date). Kept here rather than in the component so the editor and
  * Phase 3's respondent renderer read the same list.
  */
@@ -107,7 +107,7 @@ export const TYPE_OPTION_KEY: Record<QuestionType, string> = {
  * The design's palette row reads "Skala" while the per-question select reads
  * "Skala · tall" — the palette adds one scale question and the card then picks
  * a style, so naming a style in the palette would promise a choice the row does
- * not make (HeiTuva.dc.html:3969 vs TYPE_LABEL). Every other type reads the
+ * not make (L:3969 vs TYPE_LABEL). Every other type reads the
  * same in both places.
  */
 export const ADD_LABEL_KEY: Partial<Record<QuestionType, string>> = { scale: 'addScale' }
@@ -121,7 +121,7 @@ export const GROUP_KEY = {
 
 /**
  * Message key for the Add panel's one-line description per type
- * (HeiTuva.dc.html:3969-3972). Keys, not strings: the panel is user-facing copy
+ * (L:3969-3972). Keys, not strings: the panel is user-facing copy
  * and `no` is only the source language.
  */
 export const ADD_DESC_KEY: Partial<Record<QuestionType, string>> = {

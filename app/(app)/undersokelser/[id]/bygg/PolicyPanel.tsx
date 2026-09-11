@@ -8,7 +8,7 @@ import type { QualityRule } from '@/lib/questions/quality'
 import { thresholdTier } from '@/lib/questions/threshold-tier'
 
 /**
- * "Hvem svarer og hva vises" — HeiTuva.dc.html:577-635, the v1 bundle's new
+ * "Hvem svarer og hva vises" — V1:577-635, the v1 bundle's new
  * first card of the Builder's Innstillinger tab.
  *
  * This is Q17 §1 and §2 on screen: who answers, whether they are named, and the

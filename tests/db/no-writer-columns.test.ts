@@ -43,7 +43,6 @@ const NO_WRITER_SET: [table: string, column: string][] = [
   ['groups', 'lead_member_id'],
   ['report_shares', 'expires_at'],
   ['live_sessions', 'created_by'],
-  ['live_sessions', 'step'],
   ['tasks', 'due_at'],
   ['organizations', 'timezone'],
 ]
@@ -93,26 +92,41 @@ describe('every column the audit found without a writer answers the question', (
     return 'product'
   }
 
-  it('exactly one has a product writer, and it names the action', () => {
+  it('the columns with a product writer each name their action', () => {
     const product = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'product')
     // If a later phase gives a second column a writer, this list moves with it —
     // deliberately, so that giving a column a writer is a visible act.
-    expect(product.map(([t, c]) => `${t}.${c}`)).toEqual(['org_members.group_id'])
+    expect(product.map(([t, c]) => `${t}.${c}`).sort()).toEqual([
+      'org_members.group_id',
+      // Q50, given a writer 2026-09-10 by M:0097 — the fifth instance of the
+      // standing question and the fourth where the column existed and was read.
+      'organizations.timezone',
+    ])
     expect(commentOf('org_members', 'group_id')).toContain('setMemberGroup')
+    expect(commentOf('organizations', 'timezone')).toContain('saveCompany')
   })
 
-  it('two are written by the demo seed and by nothing else', () => {
+  it('one is written by the demo seed and by nothing else', () => {
     const seedOnly = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'seed-only')
       .map(([t, c]) => `${t}.${c}`)
       .sort()
     // CLAUDE.md's sentence, word for word: «A COLUMN WHOSE ONLY WRITER IS THE
-    // SEED IS EXACTLY THE FINDING». These two are recorded as that rather than
-    // filed with the columns nothing writes at all.
-    expect(seedOnly).toEqual(['live_sessions.step', 'tasks.due_at'])
+    // SEED IS EXACTLY THE FINDING». Recorded as that rather than filed with the
+    // columns nothing writes at all.
+    //
+    // `live_sessions.step` was the second, and left this set by being DROPPED
+    // (M:0098, D136/D139) rather than by gaining a writer: the state its seeded
+    // value described — a position between questions — is one the product
+    // cannot be in. A column can leave the no-writer set in two ways, and this
+    // is the first time it happened by deletion.
+    expect(seedOnly).toEqual(['tasks.due_at'])
   })
 
-  it('the remaining seven are written by nothing at all', () => {
+  it('the remaining six are written by nothing at all', () => {
     const nothing = NO_WRITER_SET.filter(([t, c]) => answerOf(t, c) === 'nothing')
-    expect(nothing).toHaveLength(7)
+    // Seven until 2026-09-10; organizations.timezone left this group when
+    // M:0097 gave it saveCompany. The number moves DOWN as writers arrive, and
+    // a phase that adds a writer without moving it fails here.
+    expect(nothing).toHaveLength(6)
   })
 })

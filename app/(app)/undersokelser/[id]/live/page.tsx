@@ -55,7 +55,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
 
   const { data: session } = await supabase
     .from('live_sessions')
-    .select('id, code, status, step, revealed, expires_at')
+    .select('id, code, status, revealed, expires_at')
     .eq('survey_id', id)
     .order('opened_at', { ascending: false })
     .limit(1)
@@ -163,7 +163,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         isLiveMode={survey.run_mode === 'live'}
         session={
           session && open
-            ? { id: session.id, code: session.code, revealed: session.revealed, step: session.step }
+            ? { id: session.id, code: session.code, revealed: session.revealed }
             : null
         }
         qrSvg={qrSvg}

@@ -18,12 +18,13 @@ import { TemplateCard, type TemplatePack } from './TemplateCard'
 import { UsePackButton } from './UsePackButton'
 import { BankRow } from './BankRow'
 import { BankSearch } from './BankSearch'
+import { BankNotePill, BankNoteProvider } from './BankNote'
 import { UseCaseCard } from './UseCaseCard'
 
 type Search = { fane?: string; visning?: string; kategori?: string; sok?: string }
 
 /**
- * Bibliotek — built against HeiTuva.dc.html:1557-1683.
+ * Bibliotek — built against L:1557-1683.
  *
  * Tabs, view and category live in the URL rather than component state: the
  * prototype keeps them local, which no link can express and a reload discards.
@@ -400,7 +401,7 @@ async function TemplatesTab({
 }
 
 /**
- * «Bruksområder» — HeiTuva.dc.html:1873-1893. DECISIONS Q24.
+ * «Bruksområder» — V1:1873-1893. DECISIONS Q24.
  *
  * Six cards from the registry. Everything a card SAYS about the customer is
  * counted here rather than stored: how many templates the use case has, how
@@ -511,7 +512,7 @@ async function BankTab({
       .select('id, org_id, text, type, category, used_count, sort_order, created_at, org_members(name)')
       // The design renders the bank in its own array order and derives the
       // category chips from where each category first appears in it
-      // (HeiTuva.dc.html:3832-3834), so the order is stored (migration 0006)
+      // (L:3832-3834), so the order is stored (migration 0006)
       // rather than alphabetical. Org questions all sit at the default and
       // sort newest first, above the standard ones — `myBank` concatenated
       // ahead of `BANK` in the design.
@@ -551,6 +552,7 @@ async function BankTab({
     .filter((r) => (query ? r.text.toLowerCase().includes(query.toLowerCase()) : true))
 
   return (
+    <BankNoteProvider>
     <section className="mt-[22px] rounded-[18px] border border-line bg-sf p-[22px]">
       {readOnlyNote ? (
         <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
@@ -566,6 +568,9 @@ async function BankTab({
           })}
           {draft ? ` · ${t('bankTarget', { draft: draft.title })}` : ''}
         </span>
+        {/* V2:2960-2962 — the confirmation is a pill in this row, not a state on
+            a button twenty rows down. */}
+        <BankNotePill />
       </div>
 
       {!draft ? (
@@ -603,7 +608,7 @@ async function BankTab({
             ].join(' · ')}
             labels={{
               add: t('bankAdd'),
-              added: t('bankAdded'),
+              addedInto: t('bankAddedInto', { title: draft?.title ?? '' }),
               remove: t('bankRemove'),
               noDraft: t('bankNoDraft'),
               failed: t('failed'),
@@ -612,5 +617,6 @@ async function BankTab({
         ))
       )}
     </section>
+    </BankNoteProvider>
   )
 }

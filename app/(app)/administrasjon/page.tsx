@@ -12,7 +12,7 @@ export default async function CompanyTab() {
   const supabase = await createClient()
   const { data: org } = await supabase
     .from('organizations')
-    .select('name, orgnr, address, contact_name, contact_email, dpo')
+    .select('name, orgnr, address, contact_name, contact_email, dpo, timezone')
     .eq('id', viewer.orgId)
     .single()
 
@@ -26,6 +26,9 @@ export default async function CompanyTab() {
           contact_name: org?.contact_name ?? '',
           contact_email: org?.contact_email ?? '',
           dpo: org?.dpo ?? '',
+          // Q50: the DB default is the fallback, never an empty string —
+          // the column is NOT NULL and the select must not offer a blank.
+          timezone: org?.timezone ?? 'Europe/Oslo',
         }}
       />
 

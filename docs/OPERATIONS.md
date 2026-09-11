@@ -40,6 +40,25 @@ two secrets are typed once and never committed.
 >    you did not know you had made or had failed to make.
 > 3. Only a matching fingerprint is evidence that the apply landed.
 >
+> **4. AND «HOW FAR BEHIND IS PROD» IS THE SAME QUESTION, WITH THE SAME ONLY ANSWER.**
+> `mcp__Supabase__apply_migration` stamps its OWN timestamp into
+> `supabase_migrations.schema_migrations`, not the repo filename's version, so a migration
+> applied through MCP is genuinely applied and its ledger row will never match its file.
+> **A version string is therefore not an identity, and the ledger cannot be diffed against
+> filenames** — not approximately, not as a lower bound. Measured 2026-09-10: 54 of prod's
+> 170 versions had no repo file and 7 repo files had no prod version, and those are ONE
+> artefact seen from two sides, not two findings. All seven were present on prod when
+> probed by object.
+>
+> This was not a hypothetical either. `docs/v2/06-remainder.md` carried «THIRTY MIGRATIONS
+> STAND UNAPPLIED» for a day, derived that way, describing a database that no longer
+> existed — under its own footnote saying to re-run the fingerprint rather than trust the
+> count. **A footnote is not a guard.** The guard is the command sitting where the number
+> is: fingerprint, or an existence probe written from what the migration CREATES, read out
+> of the file rather than guessed. A first probe guessed three object names and returned
+> three zeroes; **a negative from a probe written from memory is not evidence of absence.**
+> `06-remainder.md § 2.0` carries the worked query.
+>
 > **Normalise comments and whitespace before comparing function bodies**, or the signal
 > drowns: raw `md5(prosrc)` reported 29 of 74 functions as differing, of which exactly ONE
 > differed in substance. The other 28 were header comments stripped in transit.
@@ -1051,3 +1070,292 @@ is the owner's to enable. **No new advisor was introduced by any of the six.**
 `apply_migration` stamps its own version timestamp, so prod's ledger rows for these six do not
 carry the repository's filenames. That drift already existed (the 2026-09-09 prod-only repair
 row) and is why the fingerprint, not the ledger, is the evidence.
+
+## 2026-09-10 — the mail worker on prod, and the ninth check used outside Postgres for the first time
+
+`M:0095` applied (as `mail_worker_schedule`), the `mail-worker` Edge Function deployed at
+version 2, and the two Vault rows created. What was **not** achieved: delivery. The reason is
+named in § below.
+
+### THE NINTH CHECK, MOVED FROM SCHEMA TO CODE
+
+The eight-hash fingerprint compares the CATALOGUE; the ninth check compares raw
+`md5(prosrc)` per function, and it exists because the eight hashes cannot see a
+comment. **Both are about Postgres. An Edge Function is neither** — it is a file
+uploaded through an API — and until this run there was no equivalent for it.
+
+`mcp__Supabase__get_edge_function` returns the deployed file contents, so there
+is one: **fetch the deployed source and compare it against what you meant to
+send.** That is the same discipline in a different substrate, and it is now part
+of the procedure rather than a thing someone might think of.
+
+**Use it whenever a function is deployed by pasting content into a tool call**,
+which is the whole risk: the CLI bundles from the repository and cannot mistype,
+while an MCP payload is transcribed. This run supplied the proof that the risk is
+real, twice over:
+
+| What | Result |
+|---|---|
+| `M:0095`'s three function bodies, first apply | `mail_worker_secret` MATCH, `run_mail_worker` MATCH, **`mail_outbox_depth` DIFFERED** — repo 619 bytes, prod 304 |
+| Cause | I dropped two inline `--` comments from the body while retyping for the payload. The two I pasted whole matched. |
+| Fix | Re-applied the exact body; all three then byte-identical to the repository |
+| The Edge Function, deployed v2 | Fetched back and read: entrypoint, provider, copy and env all as intended |
+
+**This is the SECOND time in two sessions that comments were abridged on the way
+to an MCP payload** — 2026-09-09 caught `app.redact_for_role` and
+`app.guard_survey_policy` the same way. Two instances in two sessions is not a
+coincidence, it is a property of the medium: **any hand-transcription between the
+file and the wire is where local and prod stop being the same thing**, and
+comments are the half no behavioural test can see. If a payload is too large, the
+answer is more calls, not shorter comments.
+
+### One divergence deliberately NOT closed
+
+The deployed function has `// eslint-disable-next-line` above `svc: any`; the
+repository now has `type ServiceClient = any` with the pragma on the alias,
+because a multi-line signature made the old pragma attach to the wrong line and
+the rule fired. **Types are erased by Deno — the emitted JavaScript is
+identical.** A third production deploy to change a lint comment is a change to
+production with no behavioural difference, which is risk without fidelity. It is
+recorded in `supabase/functions/README.md` and reconciles on the next deploy that
+carries real code. Same judgement as the applied migrations whose comments name
+D125/D126: the divergence is known and written down rather than papered over.
+
+### What is on prod now, and the one thing that is not
+
+| | State |
+|---|---|
+| `M:0095` | applied; `mail_outbox_depth`, `mail_worker_secret`, `app.run_mail_worker` present, all three byte-identical to the repo |
+| `mail-worker` function | version 2, ACTIVE, `verify_jwt: false` (it authenticates its own caller) |
+| Vault | `mail_worker_url`, `mail_worker_secret` (32 random bytes generated in-database; no human or agent has seen its value) |
+| cron `mail-worker-minutely` | active, firing every minute |
+| Auth, end to end | **works** — 0 responses with status 403 |
+| Brevo secrets | **readable from the function's own environment** — `configured()` returns null, so `BREVO_API_KEY` and `MAIL_FROM` are present |
+| The queue | **still 2 queued, 0 archived, `max_read_ct` 0 — never even read** |
+| `sent_at` | still NULL on both invitations |
+
+**The one failing precondition: `NEXT_PUBLIC_APP_URL` is not set as an Edge
+Function secret.** The worker refuses to drain, by design, because the invitation
+body contains `<origin>/s/<token>` and nothing else identifies the survey — an
+origin of `''` would send a real invitation whose only link is relative, dead in
+every mail client, and would delete it from the queue and write `sent_at` while
+doing so. A message spent on nothing.
+
+That guard was added in this same run, minutes before it fired. Before it, this
+deployment would have sent both invitations with a dead link.
+
+**It is not the missing bounce webhook.** The bounce path is blocked on the
+provider (D133) and touches nothing in the send path.
+
+### Advisors after the DDL
+
+Re-read. Everything flagged is pre-existing and either by design — RLS enabled
+with no policy on `responses`/`answers` IS security invariant 1, and the
+SECURITY DEFINER lints are the architecture — or already recorded as the owner's
+(leaked-password protection). **One is new and mine:** `extension_in_public`,
+because `create extension if not exists pg_net` named no schema and it landed in
+`public` rather than `extensions`. Recorded, not fixed: pg_net's functions
+resolve as `net.http_post`, the live cron job depends on them, and moving an
+extension's schema while a scheduled job calls into it is not a change to make
+casually for a lint. Fix it in a migration that can be tested first.
+
+### The credential hunt, and what the probe was worth
+
+Seven diagnostic rounds were needed to find out why nothing sent. In order,
+each killing one hypothesis by measurement rather than argument:
+
+| # | Established |
+|---|---|
+| 1 | The origin was missing — `NEXT_PUBLIC_APP_URL` not set. Fixed. |
+| 2 | Past the origin check, Brevo refused both messages: `brevo 401`. |
+| 3 | Brevo's own words: `unauthorized: Key not found`. Not permissions, not sender validation. |
+| 4 | A fresh deploy (v5, guaranteed cold start) still failed — **a warm instance holding a stale secret is ruled out.** |
+| 5 | The fingerprint: `len=90 xkeysib=false` — **the value present is not an API key at all.** |
+| 6 | Fingerprint identical on the next run — **the value had never changed; the save was not landing.** |
+| 7 | Cause: Brevo's API-keys page read «You do not have any API keys», so there was no new value to paste. |
+
+**THOSE SEVEN ROUNDS COST THE TWO QUEUED INVITATIONS NOTHING.** The queue ended
+where it started: 2 queued, 0 archived, `read_ct` 2. `?probe=1` validates the
+credential against the provider's account endpoint and touches neither the queue
+nor an invitation.
+
+**Diagnosed the obvious way — run the worker and see — the same seven rounds
+would have spent five attempts and DESTROYED THE MESSAGES BEING DIAGNOSED**,
+because `MAX_ATTEMPTS` is five and every real send attempt increments
+`read_ct`.
+
+And the wreckage would have lied about itself. **An archived queue reads as a
+DELIVERY failure**: messages tried, messages dead-lettered, addresses
+presumably bad. The actual fault was a CREDENTIAL — one field in one dashboard —
+and the evidence that would have said so is precisely the evidence the diagnosis
+would have consumed. The investigation would have destroyed its own subject and
+then pointed at the wrong suspect.
+
+That is the general argument for a read-only diagnostic beside any queue whose
+retry budget is finite: **the thing you are debugging must not be the thing you
+spend to debug it.** Pausing cron when `read_ct` began climbing is the same
+principle applied to time rather than to attempts.
+
+## 2026-09-10, later — EMAIL IS LIVE IN PRODUCTION
+
+Two real invitations delivered to a real inbox from the cron-scheduled run, and
+`sent_at` written on both rows. The full sequence, with the numbers, because
+«email works» is the kind of claim this project requires evidence for.
+
+| | before (11:28:38Z) | after (11:29:40Z) |
+|---|---|---|
+| `mail_outbox_depth()` | `queued 2, archived 0, invisible 0, max_read_ct 2` | `queued 0, archived 0, invisible 0, max_read_ct 0` |
+| `15c1b8a2…` (anonymous) | `sent_at NULL` | `sent_at 2026-09-10 11:29:01.27+00` |
+| `bf43e859…` (named) | `sent_at NULL` | `sent_at 2026-09-10 11:29:01.46+00` |
+| cron `mail-worker-minutely` | `active false` | `active true` |
+
+The before-row was read in the same statement that unpaused the job, so there is
+no window between the reading and the change. `cron.job_run_details` shows the
+run starting `11:29:00.057933+00`, status `succeeded`; the worker returned
+`{"ok":true,"sent":2,"left":0,"archived":0}`. **`archived: 0` is the good number
+and not a missing one** — the success path calls `mail_outbox_delete`, and
+`archive` is the dead-letter path, so zero means nothing was destroyed. Confirmed
+from the inbox by Tor, which is the check that is not in the system.
+
+### The last blocker was an IP allowlist, and the 401 carried it
+
+After the API key was moved to `BREVO_API_KEY`, the probe still returned 401 —
+with a completely different body:
+
+```
+unauthorized: We have detected you are using an unrecognised IP address
+2a05:d014:61b:2708:3bd0:e8ce:5e7b:4dd1. If you performed this action make
+sure to add the new IP address in this link: https://a…
+```
+
+Brevo's account had IP restriction enabled on API usage. **`brevo 401` has now
+meant three different things in this one effort** — wrong key type (the SMTP
+password), key not found, and caller not allowlisted — none of them about the
+message. DECISIONS Q6b held through all three: `retryable`, `left: 2`, nothing
+archived.
+
+**Allowlisting was ruled out by measurement, not by argument.** Four probes one
+minute apart reported four distinct egress addresses across three distinct /64
+subnets — `…:2708:3bd0:e8ce:5e7b:4dd1`, `…:270a:3901:6ddc:ac2a:7f3f`,
+`…:2709:92de:14fd:4f73:bc67`, `…:270a:2346:f742:91cc:97d2` — from four
+consecutive calls to one function. Edge Functions egress from a shared AWS pool
+with no stable address, so an allowlist entry fixes the instance that just failed
+and breaks on the next cold start; the addresses are also IPv6, which the
+allowlist may not accept at all. Tor turned the restriction off, and the next
+probe returned `{"ok":true,"status":200,"detail":"account …"}`.
+
+Worth keeping as a procedure: **four cheap probes turned «which of my guesses is
+right» into «this option cannot work», and a table of four addresses is an
+argument nobody has to take on trust.**
+
+### The probe's final tally
+
+Twelve diagnostic rounds across the whole credential hunt, and the queue ended
+them at `max_read_ct` 2 of 5 — unchanged from where it started. Run through the
+worker instead, those twelve would have dead-lettered both invitations twice
+over, and the wreckage would have read as a DELIVERY failure rather than a
+credential one. `?probe=1` costs nothing and answers the only question that
+mattered.
+
+### What the comparison found that the deploy log did not
+
+`get_edge_function` was read after the send, as the ninth check applied to a
+function. Three things came back that reading the log would not have given:
+
+1. **The platform reports version 11; `supabase/functions/README.md` records
+   six.** Both are right — Supabase redeploys a function when the project's
+   secrets change, and this hunt involved several saves. The log's numbers are
+   deploys, not platform versions, and that is now written down before someone
+   reads the gap as a missing entry.
+2. **`env-check` is deleted**, confirmed by `list_edge_functions` returning
+   `mail-worker` alone — by listing, not by the report that it had been done.
+3. **`scripts/edge-bundle.ts` would have broken production on its first use.**
+   `lib/mail/brevo.ts` is written `from './env'`; Deno needs `./env.ts`. The
+   running function has the extension only because it was typed in by hand during
+   transcription, so the generator written to guarantee fidelity would have
+   regressed the one thing hand-transcription got right — and `./env` is a value
+   import, so the failure is module resolution on the first request, not a failed
+   type-check. Its assertion covered the entry point's imports and was silent
+   about the imports inside the files it copies. Now stated as the property (no
+   relative specifier in the bundle may lack an explicit extension), asserted
+   over the whole bundle, and proven to fire before being trusted.
+
+The third is the one to remember: **the tool built to prevent transcription error
+contained the same class of error, and only a comparison against the running
+system found it.** An apply is not evidence.
+
+### Still open after this
+
+- **`bounced_at` has no writer** (D133) — no Transactional → Webhooks on this
+  account. Unchanged.
+- **The provider's `messageId` is discarded** (D134, found in this send) — so
+  nothing joins a row to Brevo's own delivery view, which was the implicit
+  compensating control for D133. The two should be revisited together.
+- **`pg_net` is installed into `public`** — a new advisor, mine. Not moved while
+  `app.run_mail_worker()` depends on `net.http_post`.
+- **A minutely cron now runs in production**, ~1440 invocations a day, most
+  finding an empty queue and returning `sent: 0`. Within limits, but it also
+  writes a row to `net._http_response` each time; pg_net's own retention governs
+  that. Logged rather than tuned.
+- **`personvern@heituva.no`** in `legal.privacy6P` / `privacy8P` — held until the
+  replacement mailbox is confirmed to RECEIVE.
+
+## 2026-09-10 — the two advisor categories, classified once
+
+`get_advisors(type: security)` reports `anon_security_definer_function_executable` (7) and
+`authenticated_security_definer_function_executable` (31). **Neither is a defect list.** Both
+are the advisor observing this product's central architecture: CLAUDE.md invariant 1 says
+clients never select from `responses`/`answers` and every result read goes through a
+SECURITY DEFINER RPC, so a long list of callable definer functions is what compliance with
+that invariant LOOKS like from outside.
+
+Which is exactly why it needed classifying once and writing down. **A category that is
+mostly by-design and nobody's to own is a category that stays unread**, and the one real
+finding inside it stays unread with it.
+
+**Derived, not asserted.** Every public SECURITY DEFINER function was asked whether its body
+carries an authorisation predicate or validates a token, and what `anon`/`authenticated` may
+actually execute:
+
+```sql
+select p.proname,
+       (p.prosrc ~ 'app\.(is_|has_|can_)') as authz_predicate,
+       (p.prosrc ~ 'p_token|token_hash')   as token_validated,
+       has_function_privilege('anon', p.oid, 'EXECUTE')          as anon_can_call,
+       has_function_privilege('authenticated', p.oid, 'EXECUTE') as auth_can_call
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prosecdef order by 1;
+```
+
+**29 of 36 carry an authorisation predicate or validate a token.** The seven that carry
+neither, each classified:
+
+| Function | anon | auth | Classification |
+|---|---|---|---|
+| `mail_outbox_read` / `_delete` / `_archive` / `_depth` | ✗ | ✗ | **By design.** Service-role only; EXECUTE is revoked from both roles, so they appear in neither advisor category. `mail_worker_secret` is 5a3-CHECKED |
+| `mail_worker_secret` | ✗ | ✗ | **By design**, as above |
+| `claim_membership` | ✗ | ✓ | **By design, and it CANNOT check membership** — it is how a signed-in user claims an invited membership, so it necessarily runs before one exists. The check it does carry is on the invitation |
+| `request_demo` | **✓** | ✓ | **By design that it is public** — the splash form — **but see below** |
+
+**`request_demo` IS THE ONE THING THIS PASS FOUND.** It is anon-callable by design, writes
+`demo_requests`, and carries no authorisation predicate and no token, which is correct for a
+public form. Its abuse control is Cloudflare Turnstile — **and the Turnstile keys are not
+configured in production** (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`; launch
+readiness item 3, still open). The code is written and reads them; until they are set, the
+form's only protection is absent. **Not a code defect and not a new item** — it is the
+already-known launch item, but nobody had connected it to the fact that it leaves an
+anon-writable RPC unprotected on a live origin, and that connection is the reason to raise
+its priority above «a click Tor owes us».
+
+### A note on the probe, because it was wrong first
+
+The first pass matched `is_org_member|has_role|can_edit_survey|auth\.uid` and reported
+`get_trends` as having no membership check — a cross-org aggregate leak, if true. It was
+false: `get_trends` calls **`app.can_view_survey`**, which that alternation does not contain.
+**My classification predicate was itself an enumeration** — the four helpers I could think
+of, standing in for «an authorisation helper» — which is the shape this repository has now
+recorded eight times, committed here inside the pass written to close a security category.
+Re-derived as `app\.(is_|has_|can_)`, a property rather than a list.
+
+Same lesson as the migration probe two hours earlier that returned three false zeroes from
+guessed object names: **a negative from a predicate you wrote from memory is not evidence.**

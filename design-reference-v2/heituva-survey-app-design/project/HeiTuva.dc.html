@@ -1708,7 +1708,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
                         </sc-for>
                       </div>
                     </div>
-                    <div style="font-size:12px;color:var(--mut,#5F5849);line-height:1.5">Grupper med færre enn fem svar vises aldri nedbrutt, uavhengig av filter.</div>
+                    <div style="font-size:12px;color:var(--mut,#5F5849);line-height:1.5">Grupper under virksomhetens terskel vises aldri nedbrutt, uavhengig av filter.</div>
                   </div>
                 </sc-if>
 
@@ -2787,7 +2787,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
                 </div>
                 <div style="padding:24px;border-radius:18px;border:1px solid var(--line,#E8DFC9);background:var(--sf,#FFFDF6)">
                   <div style="font-size:16px;font-weight:600">Slik beskyttes anonymiteten</div>
-                  <div style="font-size:13.5px;line-height:1.7;color:var(--mut,#5F5849);margin-top:10px">Anonyme svar lagres uten kobling til bruker. Resultater vises først ved fem svar, og frisvar vises aldri sammen med gruppe når gruppen er mindre enn fem. Ingen — heller ikke administrator — kan slå opp hvem som svarte hva.</div>
+                  <div style="font-size:13.5px;line-height:1.7;color:var(--mut,#5F5849);margin-top:10px">Anonyme svar lagres uten kobling til bruker. Resultater vises først når terskelen dere har satt er nådd, og frisvar vises aldri sammen med gruppe under terskelen. Ingen — heller ikke administrator — kan slå opp hvem som svarte hva.</div>
                 </div>
               </div>
             </div>
@@ -4221,13 +4221,13 @@ const HELP_ARTICLES = {
     related:["Velg riktig spørsmålstype","Sett terskelen for virksomheten"] },
 
   "Sett terskelen for virksomheten": { cat:"Anonymitet", time:"4 min", tint:"#FBD5C4",
-    lead:"Terskelen bestemmer hvor mange svar som må inn før tall vises. Fem er standard. For sensitive temaer bør dere bruke åtte.",
+    lead:"Terskelen bestemmer hvor mange svar som må inn før tall vises. Dere velger den selv; vi anbefaler fem, åtte for sensitive temaer. Lovpålagte kartlegginger har låst minimum. Fem er standard. For sensitive temaer bør dere bruke åtte.",
     steps:[
-      ["Åpne Administrasjon → Personvern","Terskelen settes for hele virksomheten, og kan ikke senkes under minimum."],
+      ["Åpne Administrasjon → Personvern","Terskelen settes for hele virksomheten. Bare lovpålagte kartlegginger har et minimum som ikke kan senkes."],
       ["Vurder gruppestørrelsen","Grupper under terskelen slås sammen i rapporten, uansett hvem som ser den."],
       ["Forklar det til folk","Anonymitetsløftet vises øverst i svarflyten, med terskelen dere har valgt."]],
     mockTitle:"Administrasjon · Personvern", mockScreen:"Admin",
-    mock:[["Minsteterskel","5 svar","#FBD5C4"],["Sensitive temaer","8 svar","#FBD5C4"],["Lagre IP-adresse","av","#CFE7E4"],["Data i EU/EØS","på","#CFE7E4"]],
+    mock:[["Terskel (anbefalt 5)","5 svar","#FBD5C4"],["Sensitive temaer (anbefalt 8)","8 svar","#FBD5C4"],["Lagre IP-adresse","av","#CFE7E4"],["Data i EU/EØS","på","#CFE7E4"]],
     caption:"Terskel og personverninnstillinger i Administrasjon.",
     related:["Innsyn, retting og sletting","Roller og tilgang"] },
 
@@ -4657,13 +4657,13 @@ class Component extends DCLogic {
           (() => { const weak = heatRows.filter(r => r.cells.some(c => c.bg === "#FBD5C4")).map(r => r.label); return weak.length ? "Rødt i heatmap for " + weak.join(" og ") + " — foreslått tiltak: følg opp i teammøte innen to uker." : "Ingen grupper under 3,6 i utvalget."; })() ].filter(Boolean) },
         trend: { kind:"bars", bars: trend, note: "Snitt per runde, alle skalaspørsmål. Retning siste runde: " + (overall === null ? "—" : ((overall - prev) >= 0 ? "+" : "−") + no(Math.abs(overall - prev).toFixed(1))) },
         heatmap: { kind:"heat", cols: heatCols.map(({q}) => ({ label: q.text.length > 26 ? q.text.slice(0,24) + "…" : q.text })), rows: heatRows,
-          note: "Grønn ≥ 4,2 · gul ≥ 3,6 · rød under. Grupper med færre enn fem svar vises som n<5." },
+          note: "Grønn ≥ 4,2 · gul ≥ 3,6 · rød under. Grupper under terskelen vises som n<5." },
         drivers: { kind:"bars", bars: drivers.slice(0,3).map(d => bar(d, "var(--ac2)")).concat(drivers.slice(-3).reverse().map(d => bar(d, "var(--ac3)"))),
           note: "Tre høyeste og tre laveste spørsmål i utvalget." },
         teams: { kind:"bars", bars: TEAMS.filter(t => group === "alle" || t === group).map(team => { const cells = heatCols.map(({q, sv}) => teamCell(sv, q, team)); const ok = cells.every(c => c.n >= 5);
             const m = cells.reduce((a,c) => a + c.v, 0) / Math.max(1, cells.length);
             return { label: team, value: ok ? no(m.toFixed(1)) : "for få svar", pct: ok ? String(Math.round(m/5*100)) : "0", color: m >= 4.2 ? "var(--ac2)" : m >= 3.6 ? "var(--ac)" : "var(--ac3)" }; }),
-          note: "Snitt per team. Ledelse har færre enn fem svar og vises ikke." },
+          note: "Snitt per team. Ledelse ligger under terskelen og vises ikke." },
         themes: { kind:"text", lines: themes.length ? themes.map(t => t.label + " · nevnt " + t.count + " ganger") : ["Ingen frisvar i utvalget."] },
         quotes: { kind:"text", lines: ((st.repQuotes && st.repQuotes.length) ? st.repQuotes : texts.slice(0,3)).map(t => "«" + t + "»"), note: (st.repQuotes && st.repQuotes.length) ? "Sitater valgt av HR. Anonymiserte." : "Ingen sitater valgt ennå — de tre første vises. Velg under Innhold." },
         actions: { kind:"text", lines: (st.loopActions || []).map(l => l.text + " — " + l.when) },
@@ -5092,7 +5092,7 @@ class Component extends DCLogic {
         ["Kom i gang","Importer mottakere","CSV, Excel, Entra ID, Google eller innliming.","3 min","#FBEBBE"],
         ["Bygger","Velg riktig spørsmålstype","Skala, matrise, rangering, NPS og fritekst.","6 min","#CFE7E4"],
         ["Bygger","Slik unngår du ledende spørsmål","Hva kvalitetsvarslene betyr, og hva du gjør med dem.","5 min","#CFE7E4"],
-        ["Anonymitet","Sett terskelen for virksomheten","Hvorfor fem er standard og åtte gjelder sensitive temaer.","4 min","#FBD5C4"],
+        ["Anonymitet","Sett terskelen for virksomheten","Hvorfor vi anbefaler fem, og åtte for sensitive temaer.","4 min","#FBD5C4"],
         ["Lovpålagt","Psykososial kartlegging steg for steg","Forankring, utsending, risikovurdering og tiltaksplan.","8 min","#FBD5C4"],
         ["Lovpålagt","Rapport til Arbeidstilsynet","Hva rapporten må inneholde, og hvor den arkiveres.","6 min","#FBD5C4"],
         ["Rapporter","Bygg din egen rapport","Widgets, perioder og deling per rolle.","5 min","#EDE9F7"],
@@ -5128,7 +5128,7 @@ class Component extends DCLogic {
         return m[st.helpCat || "Alle"] || ""; })(),
       helpCatLabel: (st.helpCat && st.helpCat !== "Alle") ? st.helpCat : "Alle kategorier",
       noHelpHits: (() => {
-        const all = [["Kom i gang","Lag den første undersøkelsen","Fra veiviser til utsending i fem steg."],["Kom i gang","Importer mottakere","CSV, Excel, Entra ID, Google eller innliming."],["Bygger","Velg riktig spørsmålstype","Skala, matrise, rangering, NPS og fritekst."],["Bygger","Slik unngår du ledende spørsmål","Hva kvalitetsvarslene betyr, og hva du gjør med dem."],["Anonymitet","Sett terskelen for virksomheten","Hvorfor fem er standard og åtte gjelder sensitive temaer."],["Lovpålagt","Psykososial kartlegging steg for steg","Forankring, utsending, risikovurdering og tiltaksplan."],["Lovpålagt","Rapport til Arbeidstilsynet","Hva rapporten må inneholde, og hvor den arkiveres."],["Rapporter","Bygg din egen rapport","Widgets, perioder og deling per rolle."],["Oppgaver","Fra funn til effektvurdering","Hvordan et tiltak går gjennom livsløpet sitt."],["Administrasjon","Roller og tilgang","Hva administrator, redaktør, leser og verneombud kan se."],["Administrasjon","Koble til HR- og lønnssystem","Hvilke felter vi henter, og hvem som ser dem."],["Personvern","Innsyn, retting og sletting","Slik behandler du forespørsler innen fristen."]];
+        const all = [["Kom i gang","Lag den første undersøkelsen","Fra veiviser til utsending i fem steg."],["Kom i gang","Importer mottakere","CSV, Excel, Entra ID, Google eller innliming."],["Bygger","Velg riktig spørsmålstype","Skala, matrise, rangering, NPS og fritekst."],["Bygger","Slik unngår du ledende spørsmål","Hva kvalitetsvarslene betyr, og hva du gjør med dem."],["Anonymitet","Sett terskelen for virksomheten","Hvorfor vi anbefaler fem, og åtte for sensitive temaer."],["Lovpålagt","Psykososial kartlegging steg for steg","Forankring, utsending, risikovurdering og tiltaksplan."],["Lovpålagt","Rapport til Arbeidstilsynet","Hva rapporten må inneholde, og hvor den arkiveres."],["Rapporter","Bygg din egen rapport","Widgets, perioder og deling per rolle."],["Oppgaver","Fra funn til effektvurdering","Hvordan et tiltak går gjennom livsløpet sitt."],["Administrasjon","Roller og tilgang","Hva administrator, redaktør, leser og verneombud kan se."],["Administrasjon","Koble til HR- og lønnssystem","Hvilke felter vi henter, og hvem som ser dem."],["Personvern","Innsyn, retting og sletting","Slik behandler du forespørsler innen fristen."]];
         const hits = all.filter(a => ((!st.helpCat || st.helpCat === "Alle" || a[0] === st.helpCat)
           && (!st.helpQuery || (a[1] + " " + a[2] + " " + a[0]).toLowerCase().includes(String(st.helpQuery).toLowerCase()))));
         return hits.length === 0; })(),

@@ -12,11 +12,45 @@ export type Company = {
   contact_name: string
   contact_email: string
   dpo: string
+  timezone: string
 }
 
 const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
 const field =
   'mt-1.5 box-border w-full rounded-[10px] border border-line bg-bg px-[13px] py-[11px] text-[14px] text-ink outline-none'
+
+/*
+  Q50 — the zones offered for `organizations.timezone`.
+
+  A SELECT AND NOT A TEXT INPUT, which is a control the bundle does not draw
+  (D56's exception): the column is validated against `pg_timezone_names` by a
+  trigger, so a free-text field lets a customer type `CET` or `Oslo` and meet a
+  raised exception on save. The real constraint gets the real control, styled as
+  the other fields in this card are.
+
+  THE LIST ALWAYS CONTAINS THE CURRENT VALUE. That is the point of `zonesFor`
+  rather than a bare constant: the database accepts any zone PostgreSQL knows,
+  this list is the handful a Nordic customer plausibly wants, and the two are not
+  the same set. A row whose timezone was set by any other route must not be
+  silently rewritten by opening this form — an enumeration offered as a
+  convenience must never narrow what the column already holds.
+*/
+const COMMON_ZONES = [
+  'Europe/Oslo',
+  'Europe/Stockholm',
+  'Europe/Copenhagen',
+  'Europe/Helsinki',
+  'Atlantic/Reykjavik',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Warsaw',
+  'Europe/Vilnius',
+  'UTC',
+]
+
+function zonesFor(current: string): string[] {
+  return COMMON_ZONES.includes(current) ? COMMON_ZONES : [current, ...COMMON_ZONES]
+}
 
 /**
  * Firmaopplysninger card — HeiTuva.dc.html:1386-1397. Six fields in a 2-col
@@ -102,6 +136,30 @@ export function CompanyForm({ company }: { company: Company }) {
               />
             </label>
           ))}
+
+          {/* Q50 — the clock every scheduled send runs on. Read by all three
+              schedule sites since M:0051 and, until now, written by nothing:
+              a customer outside Oslo time could not say so, and their «09:00»
+              pulse went out at 09:00 Oslo. */}
+          <label className="block">
+            <span className={label}>{t('fTimezone')}</span>
+            {/* `touch-44-field` as well as the shared `field` class: a <select>
+                renders a little shorter than an <input> at the same padding, so
+                the inputs above clear 44px and this did not — CI measured 300x44
+                at 390px. The helper only applies below md, so the desktop
+                control is untouched. */}
+            <select
+              name="timezone"
+              defaultValue={company.timezone}
+              className={`${field} touch-44-field`}
+            >
+              {zonesFor(company.timezone).map((z) => (
+                <option key={z} value={z}>
+                  {z.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <p className="mt-4 text-[13px] leading-[1.6] text-mut">{t('companyNote')}</p>

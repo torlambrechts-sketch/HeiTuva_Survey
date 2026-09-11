@@ -9,6 +9,20 @@ import { requireViewer } from '@/lib/auth/session'
 
 export type LibraryResult = { ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
 
+/**
+ * `addBankQuestion` returns the row it inserted.
+ *
+ * The Builder's picker needs it. `Builder` holds its questions in
+ * `useState(initial)`, and **`useState` ignores a new initial value** — so
+ * `revalidatePath` re-renders the server component, hands down a fresh
+ * `initial`, and the list on screen does not move. The insert would have
+ * succeeded silently, which is the failure this whole overlay was built to stop
+ * happening on the Library route.
+ */
+export type AddBankResult =
+  | { ok: true; question: { id: string; type: string; text: string; config: unknown } }
+  | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
+
 /** A pack's `questions` jsonb. Only `text` and `type` are guaranteed; the rest
  *  is per-type config the builder understands. */
 // PackQuestion moved to lib/questions/pack.ts. It used to be declared here
@@ -125,7 +139,7 @@ export async function deleteTemplate(packId: string): Promise<LibraryResult> {
  * recently updated draft and the caller passes it explicitly — see
  * docs/DEVIATIONS.md D26.
  */
-export async function addBankQuestion(questionId: string, surveyId: string): Promise<LibraryResult> {
+export async function addBankQuestion(questionId: string, surveyId: string): Promise<AddBankResult> {
   const viewer = await requireEditor()
   if (!viewer) return { ok: false, error: 'forbidden' }
   if (!z.string().uuid().safeParse(questionId).success) return { ok: false, error: 'invalid' }
@@ -147,15 +161,19 @@ export async function addBankQuestion(questionId: string, surveyId: string): Pro
     .limit(1)
     .maybeSingle()
 
-  const { error } = await supabase.from('survey_questions').insert({
-    survey_id: surveyId,
-    position: (last?.position ?? -1) + 1,
-    type: q.type,
-    text: q.text,
-    config: q.config,
-  })
-  if (error) {
-    console.error(`addBankQuestion failed: ${error.message}`)
+  const { data: inserted, error } = await supabase
+    .from('survey_questions')
+    .insert({
+      survey_id: surveyId,
+      position: (last?.position ?? -1) + 1,
+      type: q.type,
+      text: q.text,
+      config: q.config,
+    })
+    .select('id, type, text, config')
+    .single()
+  if (error || !inserted) {
+    console.error(`addBankQuestion failed: ${error?.message ?? 'no row returned'}`)
     return { ok: false, error: 'failed' }
   }
 
@@ -165,7 +183,15 @@ export async function addBankQuestion(questionId: string, surveyId: string): Pro
     .eq('id', questionId)
 
   revalidatePath('/bibliotek')
-  return { ok: true }
+  // B3: the Builder's picker calls this too, and its own route is where the new
+  // question has to appear. Without this the overlay adds a row the page behind
+  // it does not show until a manual reload — the insert succeeds and the screen
+  // says nothing, which reads exactly like a failure.
+  revalidatePath(`/undersokelser/${surveyId}/bygg`)
+  return {
+    ok: true,
+    question: { id: inserted.id, type: inserted.type, text: inserted.text, config: inserted.config },
+  }
 }
 
 export async function deleteBankQuestion(questionId: string): Promise<LibraryResult> {

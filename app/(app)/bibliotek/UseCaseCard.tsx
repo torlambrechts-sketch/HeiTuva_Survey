@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 /**
- * A «Bruksområder» card — HeiTuva.dc.html:1877-1891.
+ * A «Bruksområder» card — V1:1877-1891.
  *
  * DECISIONS Q24: the six use cases are a registry, so the label, description
  * and tint are DATA. What the card computes is what it knows about the

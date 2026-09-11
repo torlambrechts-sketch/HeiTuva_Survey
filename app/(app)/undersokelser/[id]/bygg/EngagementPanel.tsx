@@ -47,7 +47,7 @@ const input =
 
 /**
  * "Engasjement og svarprosent" — the design's panel inside the Builder's
- * Innstillinger tab (HeiTuva.dc.html:556-650).
+ * Innstillinger tab (L:556-650).
  *
  * It belongs to the Builder, not to Send: what it sets is part of what the
  * survey *is*. `one_question`, `show_progress`, `reveal_results` and
@@ -115,7 +115,7 @@ export function EngagementPanel({
                     onChange(
                       // Switching to employees clears an incentive that would
                       // be inappropriate there, exactly as the design does
-                      // (HeiTuva.dc.html:3745) — otherwise the warning appears
+                      // (L:3745) — otherwise the warning appears
                       // for a choice the user cannot see any more.
                       a === 'ansatte' ? { audience: a, incentive: 'ingen' } : { audience: a },
                     )

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   ADD_PANEL_TINTS,
@@ -27,7 +28,7 @@ const iconButton =
   'touch-44 h-8 w-[30px] cursor-pointer rounded-[9px] border border-line bg-transparent text-xs text-mut disabled:opacity-40'
 
 /**
- * One question card (HeiTuva.dc.html:340-482).
+ * One question card (L:340-482).
  *
  * There is no per-type branch in this markup. Every editor renders because
  * `specOf(type)` says so, which is what CLAUDE.md's data-not-code rule asks
@@ -69,6 +70,24 @@ export function QuestionCard({
   savedToBank: boolean
 }) {
   const t = useTranslations('builder')
+  /**
+   * B0 — the mobile disclosure, which until now never closed.
+   *
+   * This was `<details className="mt-[11px] md:open" open>`. `open` is a Tailwind
+   * VARIANT (`open:bg-x`), never a utility, so `md:open` compiled to nothing and
+   * the `open` attribute beside it was unconditional: the panel was expanded at
+   * every width while the comment below claimed it started closed on mobile, and
+   * the `md:hidden` summary was a tappable control that did nothing.
+   *
+   * `<details>` cannot express «closed below md, open at md and up» — `open` is an
+   * attribute and no media query reaches it — so the disclosure is state-driven
+   * and the breakpoint is expressed where it can be: `max-md:hidden` on the panel,
+   * which stops applying at md. Below md the button decides; at md and up the mode
+   * chip decides, which is what the design does (V2:474 gates on `q.advanced`
+   * alone and draws no disclosure — the disclosure is RESPONSIVE.md's addition,
+   * not the bundle's).
+   */
+  const [mobileOpen, setMobileOpen] = useState(false)
   const spec = specOf(question.type)
   const config = question.config
 
@@ -103,7 +122,7 @@ export function QuestionCard({
           onChange={(e) => onChange({ text: e.target.value })}
           disabled={disabled}
           aria-label={t('questionText', { n: index + 1 })}
-          // `flex: 1 1 220px`, not `flex-1` (HeiTuva.dc.html:387). The basis is
+          // `flex: 1 1 220px`, not `flex-1` (V1:387). The basis is
           // what makes the row wrap: at 220px the controls no longer fit beside
           // the input, so they drop to their own line and the question text gets
           // the width instead. With a zero basis nothing wraps and the input
@@ -273,12 +292,31 @@ export function QuestionCard({
           (RESPONSIVE.md, three-pane Builder); at md and up the mode chip
           decides, exactly as the design does. */}
       {advanced ? (
-        <details className="mt-[11px] md:open" open>
-          <summary className="touch-44 cursor-pointer list-none text-[12.5px] font-semibold text-mut md:hidden">
+        <div className="mt-[11px]">
+          <button
+            type="button"
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
+            /* D141's arithmetic, derived rather than tuned. A `touch-44` control
+               claims 44px however tall it is painted, and the overflow is half
+               the difference. `p-0` at 12.5px paints ~15px, so it overflowed
+               ~14px each way — and the panel's first input, `touch-44-field` at
+               ~34px painted, overflows ~5px upward. 14 + 5 = 19px of demand
+               against `mt-2`'s 8px gap: the same collision D141 recorded on
+               `CustomizeCard`, in the control this phase introduced.
+               `py-[11px]` paints the button to ~37px (overflow ~3.5px) and the
+               gap goes to `mt-3` = 12px. 3.5 + 5 = 8.5px, which 12px clears.
+               Nothing above the button is interactive — the quality chips and
+               the anonymity warning are static — so only the downward pair
+               needed solving. */
+            className="touch-44 cursor-pointer border-none bg-transparent px-0 py-[11px] text-left text-[12.5px] font-semibold text-mut md:hidden"
+          >
             {t('moreOptions')}
-          </summary>
+          </button>
           <div
-            className="mt-2 flex flex-col gap-[10px] rounded-xl px-[14px] py-3 md:mt-0"
+            className={`mt-3 flex-col gap-[10px] rounded-xl px-[14px] py-3 md:mt-0 md:flex ${
+              mobileOpen ? 'flex' : 'hidden'
+            }`}
             style={{ background: 'var(--sf2)' }}
           >
             <input
@@ -387,7 +425,7 @@ export function QuestionCard({
               ) : null}
             </div>
           </div>
-        </details>
+        </div>
       ) : null}
 
       {/* Statement and option lists. One block, two labels — the markup is
@@ -502,7 +540,7 @@ export function QuestionCard({
       ) : null}
 
       {/* Image options: the design's 3-column grid of upload cards
-          (HeiTuva.dc.html:437-452), not a text list. The upload target itself
+          (L:437-452), not a text list. The upload target itself
           is Storage, which Phase 6 wires; until then the card shows the slot
           and its label, so the shape a respondent will see is visible here. */}
       {spec.imageOptions ? (

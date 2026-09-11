@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { addBankQuestion, deleteBankQuestion } from './actions'
+import { useBankNote } from './BankNote'
 
 /**
- * A question-bank row — HeiTuva.dc.html:1665-1679.
+ * A question-bank row — L:1665-1679.
  *
  * RESPONSIVE.md § Data tables, narrow row: badge + text + actions is three
  * fields that fit, so it stays a row and stacks below md only because the
@@ -30,10 +31,23 @@ export function BankRow({
   isOwn: boolean
   /** Set for a reader — see UsePackButton. */
   disabledReason?: string
-  labels: { add: string; added: string; remove: string; noDraft: string; failed: string }
+  /**
+   * Every one of these is a STRING, and that is load-bearing rather than tidy.
+   *
+   * `addedInto` was `(title: string) => string`, built in `bibliotek/page.tsx`
+   * — a SERVER component. A function cannot cross into a client component;
+   * Next throws «An error occurred in the Server Components render» and the
+   * whole bank tab 500s. CI run 108 caught it on `bibliotek-bank`, desktop and
+   * mobile, after every Builder capture passed.
+   *
+   * The draft's title is known where the labels are built, so the finished
+   * sentence crosses the boundary and no closure does.
+   */
+  labels: { add: string; addedInto: string; remove: string; noDraft: string; failed: string }
 }) {
   const [pending, startTransition] = useTransition()
-  const [state, setState] = useState<'idle' | 'added' | 'failed'>('idle')
+  const [state, setState] = useState<'idle' | 'failed'>('idle')
+  const { announce } = useBankNote()
 
   return (
     <div className="flex flex-col gap-3 border-b border-line py-3.5 md:flex-row md:items-center md:gap-3.5">
@@ -72,18 +86,26 @@ export function BankRow({
           type="button"
           // Disabled rather than hidden: rule 4 forbids removing a feature on
           // mobile, and the reason it cannot run is explained above the list.
-          disabled={pending || !targetSurveyId || state === 'added' || Boolean(disabledReason)}
+          /* `state === 'added'` used to be in here, which made a question
+             addable exactly once. Nothing in the schema asks for that —
+             `survey_questions` takes as many copies as an editor wants, and the
+             same scale question about two teams is ordinary. The confirmation
+             is the pill now, not the button. */
+          disabled={pending || !targetSurveyId || Boolean(disabledReason)}
           title={disabledReason ?? (targetSurveyId ? undefined : labels.noDraft)}
           onClick={() =>
             startTransition(async () => {
               if (!targetSurveyId) return
               const res = await addBankQuestion(questionId, targetSurveyId)
-              setState(res.ok ? 'added' : 'failed')
+              if (res.ok) {
+                setState('idle')
+                announce(labels.addedInto)
+              } else setState('failed')
             })
           }
           className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-sbg px-4 py-[9px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {state === 'added' ? labels.added : labels.add}
+          {labels.add}
         </button>
       </div>
 

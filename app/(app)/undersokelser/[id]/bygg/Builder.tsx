@@ -21,6 +21,7 @@ import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
 import { QuizPanel } from './QuizPanel'
+import { BankPicker, type BankRow } from './BankPicker'
 import {
   ADD_DESC_KEY,
   ADD_LABEL_KEY,
@@ -30,12 +31,19 @@ import {
   TYPE_OPTION_KEY,
   type BuilderDraft,
   type DraftQuestion,
+  type QuestionConfig,
 } from './types'
 import { saveDraft, saveQuestionToBank, saveSurveyAsTemplate } from './actions'
 
-const TABS = ['add', 'settings', 'preview'] as const
+/* V2:6472 — four, in this order: Generelt · Legg til · Innstillinger · Vis.
+   The app carried three and stacked RunModePanel, QuizPanel, PolicyPanel and
+   EngagementPanel under `settings`, so «Innstillinger» meant four panels where
+   the bundle means two. `general` is where a survey's MODE is decided; the rest
+   of the pane is about the questions. */
+const TABS = ['general', 'add', 'settings', 'preview'] as const
 type Tab = (typeof TABS)[number]
 const TAB_KEY: Record<Tab, string> = {
+  general: 'tabGeneral',
   add: 'tabAdd',
   settings: 'tabSettings',
   preview: 'tabPreview',
@@ -45,7 +53,7 @@ let seq = 0
 const newId = () => `${NEW_ID_PREFIX}${++seq}`
 
 /**
- * The Builder (HeiTuva.dc.html:322-690).
+ * The Builder (L:322-690).
  *
  * The whole draft is one piece of client state saved as a whole, debounced.
  * Field-by-field saves were the alternative and are worse here: a reorder
@@ -61,6 +69,7 @@ export function Builder({
   locked,
   policy,
   runMode,
+  bank,
   quizTimeBonus,
   quizTeamBoard,
 }: {
@@ -73,6 +82,8 @@ export function Builder({
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
   /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
   runMode: string
+  /** B3 — the rows the picker overlay offers, read on the server. */
+  bank: BankRow[]
   /** V2-10, Q84 — the two quiz toggles the narrowing kept. */
   quizTimeBonus: boolean
   quizTeamBoard: boolean
@@ -239,31 +250,25 @@ export function Builder({
 
   const rightPane = (
     <div className="flex flex-col gap-[14px]">
-      <div className="flex items-center justify-between gap-[10px]">
-        <span className="text-[12.5px] text-mut">{t('mode')}</span>
-        <div
-          className="flex gap-[3px] rounded-full p-1"
-          style={{ background: 'var(--sf2)' }}
-          role="group"
-          aria-label={t('mode')}
-        >
-          {([false, true] as const).map((mode) => (
-            <button
-              key={String(mode)}
-              type="button"
-              aria-pressed={advanced === mode}
-              onClick={() => setAdvanced(mode)}
-              className="touch-44 cursor-pointer rounded-full border-none px-4 py-[7px] text-[12.5px] font-semibold text-ink"
-              style={{ background: advanced === mode ? 'var(--ac)' : 'transparent' }}
-            >
-              {mode ? t('advanced') : t('simple')}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* RESPONSIVE.md § Tab rails and chip groups, applied because B2 made this
+          rail FOUR tabs and CI run 110 found all six `bygg` states at
+          scrollWidth 329 against a 320px viewport — 390px was clean. Three
+          `flex-1` tabs shrank to fit; four cannot, because `flex-1` leaves
+          `min-width: auto` and each button's min-content is its label plus
+          24px of padding.
 
+          The section says exactly what to do and it is not a judgement call:
+          wrap to multiple rows, chips keep their dimensions, nothing hidden, no
+          new interaction, left-aligned. The row gap is the design's 6px step,
+          which clears the 4px minimum the section sets for 44px hit areas on
+          vertically adjacent chips.
+
+          NOTE FOR THE NEXT READER: § Three-pane Builder says the pinned row is
+          «three buttons using the existing tab chip styling». It is four now.
+          That sentence is a COUNT of the tabs that existed when it was written —
+          D129's failure, third instance, same document. */}
       <div
-        className="flex gap-[3px] rounded-[13px] p-1"
+        className="flex flex-wrap gap-x-[3px] gap-y-1.5 rounded-[13px] p-1 md:flex-nowrap md:gap-y-0"
         style={{ background: 'var(--sf2)' }}
         role="tablist"
       >
@@ -288,40 +293,81 @@ export function Builder({
       {tab === 'add' ? (
         <div className="rounded-2xl border border-line bg-sf p-5">
           <p className="text-[13px] leading-normal text-mut">{t('insertNote')}</p>
-          <Link
-            href="/bibliotek?fane=bank"
-            className="touch-44 mt-3 block w-full cursor-pointer rounded-[10px] border-none bg-ac3 py-[11px] text-center text-[13px] font-semibold text-ink no-underline"
-          >
-            {t('fromBank')}
-          </Link>
+          {runMode === 'quiz' ? (
+            /* V2:646-648. Says what quiz mode changes about the types below,
+               where the editor is choosing one — the four-option limit is
+               `QUIZ_TILES.length` in QuestionInput, so this sentence and the
+               tiles cannot drift apart without the test noticing. */
+            <p className="mt-2.5 rounded-[11px] bg-sbg px-[13px] py-[11px] text-[12.5px] leading-[1.5]">
+              {t('quizAddNote')}
+            </p>
+          ) : null}
+          {/* V2:648-693. This was a <Link> to /bibliotek — the bundle's own label
+              and colour on a control that left the Builder. The overlay is what
+              the bundle draws, and it keeps the survey it was opened from. */}
+          <BankPicker
+            surveyId={surveyId}
+            surveyTitle={draft.title}
+            rows={bank}
+            canEdit={!disabled}
+            onAdded={(q) =>
+              setDraft((d) => ({
+                ...d,
+                questions: [
+                  ...d.questions,
+                  {
+                    id: q.id,
+                    type: q.type as QuestionType,
+                    text: q.text,
+                    help: '',
+                    required: false,
+                    commentMode: 'arv',
+                    followUpOnLow: false,
+                    /* A bank question carries no key — the bank has no notion of
+                       one — so this is null for the reason `answer_index`'s
+                       column comment gives, not as a placeholder. */
+                    answerIndex: null,
+                    points: 100,
+                    config: (q.config ?? {}) as QuestionConfig,
+                  },
+                ],
+              }))
+            }
+          />
           {TYPE_GROUP_ORDER.map((group) => {
             const items = ADD_PANEL_TYPES.filter((type) => specOf(type).group === group)
             if (!items.length) return null
             return (
-              <div key={group} className="mt-[18px]">
+              /* V2:694-702 REDREW THIS PANEL, and the app was byte-faithful to
+                 the bundle before it: L:513-525 is `flex-col gap-7`, a 26px
+                 radius-8 tint, a 13.5px/600 label and a VISIBLE 11.5px
+                 description — every property the app carried. v2 makes it two
+                 columns, a 20px radius-6 tint, a 12.5px/600 label at
+                 line-height 1.25, and moves the description to `title`.
+                 So the description is not something we added and are removing;
+                 it is one property of a panel the third handoff redrew, and
+                 Q52 hands a v2 phase the whole redraw rather than the parts of
+                 it that are convenient. */
+              <div key={group} className="mt-[14px]">
                 <div className="text-[11px] uppercase tracking-[.1em] text-mut">
                   {t(GROUP_KEY[group])}
                 </div>
-                <div className="mt-[9px] flex flex-col gap-[7px]">
+                <div className="mt-2 grid grid-cols-2 gap-[7px]">
                   {items.map((type, i) => (
                     <button
                       key={type}
                       type="button"
                       disabled={disabled}
                       onClick={() => addQuestion(type)}
-                      className="touch-44 flex cursor-pointer items-center gap-[11px] rounded-[11px] border border-line bg-bg px-[13px] py-[11px] text-left text-ink disabled:opacity-50"
+                      title={t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
+                      className="touch-44 flex min-w-0 cursor-pointer items-center gap-[9px] rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-left text-ink disabled:opacity-50"
                     >
                       <span
-                        className="block h-[26px] w-[26px] flex-none rounded-lg"
+                        className="block h-5 w-5 flex-none rounded-md"
                         style={{ background: tintFor(i) }}
                       />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13.5px] font-semibold">
-                          {t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type])}
-                        </span>
-                        <span className="mt-px block text-[11.5px] leading-snug text-mut">
-                          {t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
-                        </span>
+                      <span className="min-w-0 flex-1 text-[12.5px] font-semibold leading-[1.25]">
+                        {t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type])}
                       </span>
                     </button>
                   ))}
@@ -332,14 +378,17 @@ export function Builder({
         </div>
       ) : null}
 
-      {/* V2-9 — «Kjøremodus» sits at the TOP of the Innstillinger pane
-          (V2:565), above the policy: it decides what the rest of the pane is
-          about. */}
-      {tab === 'settings' ? (
+      {/* «Kjøremodus» opens the GENERELT pane (V2:564-577) — B2 moved it there
+          from Innstillinger, which is what the bundle has always drawn. It
+          decides what the rest of the pane is about, so it comes first and
+          Byggemodus follows it inside the same card. */}
+      {tab === 'general' ? (
         <RunModePanel
           surveyId={surveyId}
           runMode={runMode}
           anonymity={policy.anonymity}
+          advanced={advanced}
+          onAdvancedChange={setAdvanced}
           strings={{
             title: t('runModeTitle'),
             desc: t('runModeDesc'),
@@ -349,8 +398,13 @@ export function Builder({
             liveDesc: t('runModeLiveDesc'),
             quiz: t('runModeQuiz'),
             quizDesc: t('runModeQuizDesc'),
-            quizNote: t('runModeQuizNote'),
+            quizGuard: t('quizGuard'),
             namedSurvey: t('runModeNamedSurvey'),
+            buildMode: t('buildMode'),
+            buildModeDescSimple: t('buildModeDescSimple'),
+            buildModeDescAdvanced: t('buildModeDescAdvanced'),
+            simple: t('simple'),
+            advanced: t('advanced'),
             failed: t('policyError_failed'),
           }}
         />
@@ -359,7 +413,7 @@ export function Builder({
       {/* V2-10 — «Quizmodus» (V2:6148) sits directly under «Kjøremodus» and
           only in quiz mode: it is settings FOR the mode, so showing it in
           standard mode would offer a control that governs nothing. */}
-      {tab === 'settings' && runMode === 'quiz' ? (
+      {tab === 'general' && runMode === 'quiz' ? (
         <QuizPanel
           surveyId={surveyId}
           timeBonus={quizTimeBonus}
@@ -455,6 +509,11 @@ export function Builder({
              round exists to test against. A draft has none, and `mint_test_token`
              would answer `no_round`. */
           canTest={locked}
+          /* Gated on the SAME `runMode` prop QuizPanel is, so the two appear and
+             disappear together. Reading a second source here would let the
+             preview claim quiz while the settings pane says standard. */
+          quizMode={runMode === 'quiz'}
+          timeBonus={quizTimeBonus}
         />
       ) : null}
     </div>
@@ -470,8 +529,19 @@ export function Builder({
 
       {/* Below xl the right pane becomes a sheet behind a button row pinned
           under the header; the question list is the base layer (RESPONSIVE.md,
-          three-pane Builder). */}
-      <div className="mb-3 flex gap-2 xl:hidden">
+          three-pane Builder).
+
+          THIS IS THE RAIL THAT OVERFLOWED, and finding it took two CI rounds
+          because THERE ARE TWO. `rightPane` has its own `role="tablist"` and it
+          is the one a reader finds first; it renders inside the SHEET, so it is
+          on screen only when the sheet is open. This row renders on every
+          `bygg` state at 320px, which is why all six reported an identical
+          scrollWidth 329 — and why wrapping the other rail changed the number
+          by nothing at all.
+
+          Both wrap now. The property is «every rail that renders this tab set»,
+          not «the rail I found». */}
+      <div className="mb-3 flex flex-wrap gap-2 xl:hidden">
         {TABS.map((k) => (
           <button
             key={k}
@@ -566,7 +636,7 @@ export function Builder({
             >
               {t('toSend')}
             </Link>
-            {/* The design's three controls (HeiTuva.dc.html:483-489). "Lagre
+            {/* The design's three controls (L:483-489). "Lagre
                 utkast" is a link to the list because the draft is already
                 saved — the debounce owns persistence, so a second Save button
                 that did nothing would be a lie about what it does. */}

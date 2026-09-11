@@ -2440,6 +2440,11 @@ present and structurally mute on the claim.**
 | 4 | «`app.k_for` (…floor **2** for natural persons since **Q91**)» | The function returned `greatest(s.k_threshold, 3)`. The sentence was written when the CHECK moved and the function did not | `CLAUDE.md` standing invariant 1; see **D109** |
 | 5 | Q64 «the freeze surface is **V2:5033**» — in three documents | **V2:5033 is real, is about the freeze, and is the wrong source.** It is a string inside `auditRows` — the changelog's *echo*. The card that STATES the rule is `freezeNote` at **V2:5030**: «Medlemskapet fryses når undersøkelsen sendes.» The answer to the open question was sitting in the artefact, in its own words | `03-plan.md`, `01-briefs.md`, `04-decisions.md`; bundle V2:5024–5036 |
 
+**A SIXTH FAILURE MODE WAS ADDED 2026-09-10 AS D135 — documentation that was true when
+written, with nothing binding it to reality afterwards.** It belongs to this entry's family
+and is written separately because its fix is mechanical rather than editorial: a divergence
+note carries the command that re-derives it.
+
 **INSTANCE 5 IS A FOURTH FAILURE MODE, and it is the one a citation rule is worst at
 catching** (Tor, 2026-09-08). The first four instances fail because the claim went stale, was
 never built, was already satisfied, or moved underneath. This one fails while being **real,
@@ -3577,7 +3582,7 @@ taken.
 
 ---
 
-## D129 — a control no bundle draws, for the column that made every group empty
+### D129 — a control no bundle draws, for the column that made every group empty
 
 > **Numbered D125 when it was written, and renumbered here.** V2-10 had already taken
 > D125 for the quiz tiles' contrast, and I collided with it. `M:0090` and `M:0091` say
@@ -3633,7 +3638,7 @@ select is one component and one action to move.
 
 ---
 
-## D130 — «who writes this column?», answered for all ten
+### D130 — «who writes this column?», answered for all ten
 
 **S3, 2026-09-09.** CLAUDE.md's standing question has two answers, and the audit found that neither
 had been written down. `A7a-11`: **fifteen of the sixteen no-writer columns carried no column
@@ -3676,7 +3681,24 @@ looked total while being partial is worse than one that states its scope.
 
 ---
 
-## D131 — the gates that cannot see what they are trusted for
+### D131 — the gates that cannot see what they are trusted for
+
+> **THE PAIR, ADDED 2026-09-10 (Tor).** S2 found **thirteen gates that never ran because
+> nobody had scheduled them.** On 2026-09-10 runs 87, 88 and 89 each reached the browser job
+> and were killed mid-flight by my own next push — **three runs that never finished because
+> there was always one more commit.** Same outcome, opposite cause: in both cases a gate's
+> verdict did not exist while the work it covered was treated as verified.
+>
+> **S2's lesson arriving from the other side.** Scheduling a gate makes it *able* to run;
+> nothing makes it *finish*. Run 90 was the first since 86 to reach the end, and by then I had
+> been three pushes away from reporting green on `verify:responsive` — the gate that found four
+> blockers within one run of first being scheduled, and therefore the last one anyone should
+> assume about. It ran `12:47:31 → 12:50:52`, and `verify:visual` after it.
+>
+> The operational form: **a gate that is always about to run is not a gate that ran.** When a
+> run is being waited on, hold the commits; a push is a cancellation. And read the run, not the
+> workflow file — «I pushed and CI is green» is two claims, and the second one needs the job's
+> conclusion.
 
 **S4, 2026-09-09.** The audit's § 4.5, written down here because a limitation nobody records is
 indistinguishable from a limitation nobody has. These are not defects: every one is a gate that
@@ -3740,7 +3762,7 @@ limited» but **what its green means**, which is what each entry above states.
 
 ---
 
-## D132 — `get_peer_results` names the question when it refuses the number
+### D132 — `get_peer_results` names the question when it refuses the number
 
 **S4, 2026-09-09. Decided by Tor: acceptable. The reasoning, written down, because «acceptable»
 without it is indistinguishable from «not looked at».**
@@ -3781,3 +3803,712 @@ migration to production for a paragraph of reasoning is a schema change to say s
 document says better. `B2-03`'s separate finding — that `submit_response` has no replay bar on a
 share-link token, so the caller who READS this is the caller who SETS its k — remains open and is
 listed as such in the S1–S4 report.
+
+### D133 — the bounce path is blocked on the provider, not on us
+
+**2026-09-10, with the Brevo sending path.** `survey_invitations.bounced_at` still has no
+writer, and this entry is the reason it is shipping that way rather than the reason it was
+forgotten.
+
+**What is missing is a webhook that this account does not offer.** The Brevo account has no
+Transactional → Webhooks section available, so there is no delivered event and no bounce
+event to subscribe to. Nothing can be built against it: this is not a screen that is missing,
+and it is not work anyone here can do. D130 recorded the column as having no writer and named
+the missing piece as «the provider callback»; that diagnosis was right and the callback is now
+known to be unavailable rather than merely unbuilt.
+
+**What `sent_at` therefore means, which is weaker than its name.** The worker writes it from
+its own successful API call, so it records that **Brevo accepted the message** — the request
+was well-formed and queued at the provider. It does **not** record that the recipient's server
+took it. A message can be accepted and bounce afterwards, and nothing in this system will hear
+about it. The column's own comment says this in the database (`M:0095`), because that is where
+the next reader of the column will be, and the gap between «accepted» and «delivered» is
+exactly the kind a later reader closes by guessing the stronger reading.
+
+**THE COST, STATED PLAINLY, BECAUSE IT IS NOT ZERO.**
+
+- `bounced_at` stays unwritable.
+- An invalid address keeps counting toward `surveys.target` and toward Resultater's
+  «av {invited} inviterte». The denominator silently includes people who were never reached.
+- Q61's «Adressen svarer ikke» can never fire on a real organisation. The status exists, is
+  derived, is rendered — and is unreachable outside the demo seed.
+
+**WHERE THAT IS ACCEPTABLE AND WHERE IT STOPS BEING ACCEPTABLE.** It is acceptable for a demo
+and for a pilot with known addresses, where the sender knows every recipient and a silent
+failure is recoverable by asking them. **It is not acceptable for a customer uploading 200
+recipients from an HR system, where a handful are always wrong** — there, a response rate is
+quietly computed against a denominator nobody can audit, and the one status that would have
+explained it never appears.
+
+**That sentence is the trigger.** The first customer import of an address list nobody has
+checked by hand is the event that makes this a defect rather than a limitation. Revisiting it
+then means either a provider whose account exposes transactional webhooks, or an inbound route
+of our own — not a change to this schema, which is already correct and merely unwritten.
+
+### D134 — the provider's `messageId` is discarded, so nothing joins a row to Brevo's log
+
+**Found 2026-09-10, in the first proven production send.** `lib/mail/brevo.ts`
+reads Brevo's response and returns `{ ok: true, id: json.messageId ?? … }`. The
+worker's success path uses `result.ok` and nothing else: it writes `sent_at`,
+deletes the queue message and logs `sent ${job.kind} -> ${job.email}`. **`result.id`
+is not stored and not logged.** It exists for the width of one `if`.
+
+**Why this is more than tidiness.** D133 records that this Brevo account has no
+Transactional → Webhooks section, so `bounced_at` has no writer and there is no
+delivered event. The compensating control that made D133 acceptable for a pilot
+was implicit and is worth stating: *when a participant says they got nothing, go
+look the message up in Brevo's own delivery view.* That control needs a join key,
+and the join key is exactly what is being thrown away. What is left is matching on
+recipient address plus a timestamp — which is workable for two invitations to one
+address, and stops being workable at the 200-recipient upload D133 already names as
+its trigger, where several people share a send-second and one address may appear
+twice across rounds.
+
+So the two limitations compound rather than sit side by side: **no bounce event, and
+no handle with which to go and ask.**
+
+**Measured, not inferred.** Both invitations
+(`15c1b8a2…`, `bf43e859…`) have `sent_at` written from the cron run at
+11:29:01Z; the worker returned `{"ok":true,"sent":2,"left":0,"archived":0}`; and
+there is no column anywhere in `survey_invitations` holding a provider id —
+`sent_at` is the whole of the record. Asked the question CLAUDE.md requires of a
+column, in reverse: nothing writes a provider id because no such column exists,
+and the value that would fill it is produced and dropped on every send.
+
+**The fix, and its two halves.** The cheap half is one line — log `result.id`
+beside the address, so the Edge Function log carries the handle even before any
+schema does. The real half is a column (`survey_invitations.provider_message_id`,
+nullable, written by the worker in the same migration that adds it, per the
+standing «who writes this column?» rule) so the handle survives log retention.
+Neither is built here: the verification apparatus and the phase are closed, and
+this is logged for the next phase rather than added mid-flight.
+
+**Not a blocker for the demo or a known-address pilot** — the same boundary D133
+draws, for the same reason, which is why they should be revisited together and not
+separately.
+
+### D135 — a recorded divergence nobody re-checks is the same failure as an unrecorded one
+
+**Found 2026-09-10, in the file whose only job is to describe production.** Tor
+named the rule. This is a sixth failure mode in **D110**'s family: not a count
+that went stale, not a claim never built, not a citation that is real and wrong —
+**documentation that was TRUE WHEN WRITTEN, with nothing binding it to reality
+afterwards.**
+
+`supabase/functions/README.md` carried a section headed **KNOWN DIVERGENCE,
+recorded rather than deployed over**, saying the deployed `mail-worker` had
+
+```ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function drain(
+  svc: any,
+```
+
+while the repository had `type ServiceClient = any`. It was accurate the day it
+was written and it justified NOT taking a third production deploy for a lint
+pragma, which was the right call. Then some deploy between v2 and v11 carried the
+repository's form, and the paragraph went on asserting the old one. Measured
+against `get_edge_function` on 2026-09-10: **the running function has the
+repository's `ServiceClient`, and has had it for some number of versions nobody
+can now name.** The note stood wrong for four recorded versions.
+
+**Why this is worse than an ordinary stale sentence.** The paragraph existed
+*because* the project had twice been hurt by an unrecorded difference between a
+repository and a running system — `overview_activity` hand-applied, and two
+functions whose comment blocks were abridged in transit. It was the remedy. And a
+remedy that describes production wrongly is more expensive than no remedy at all,
+because the next reader consults it INSTEAD of looking: it is a gate nobody
+reads (D110's own second half) wearing the costume of diligence. **A divergence
+note is a claim about two systems at once, so it decays twice as fast as prose
+about either.**
+
+**The fix is not more documentation.** More prose has the same half-life. It is
+D110's own rule applied to divergence notes specifically: **a divergence note
+carries the command that re-derives it**, beside the claim, so checking costs one
+paste. `supabase/functions/README.md` now says what is divergent AND how the
+comparison was taken (`get_edge_function` against the repository, the ninth check
+aimed at a function instead of a migration), and the same discipline produced
+`npm run edge:bundle`'s per-file md5 manifest — which exists so that «did what I
+sent match what I generated» is a question with an answer rather than a memory.
+
+Applied in the same sitting to two other carried numbers, which is the test of
+whether a rule is real:
+- **CLAUDE.md's enumeration table** now states `awk '/^\| Where \| The
+  enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header, because a
+  correction arrived calling the new instance the tenth when the table held seven.
+  The number is written as what re-derives it, and the disagreement is recorded
+  rather than matched.
+- **The `heituva.no` sweep** states
+  `grep -ro 'heituva\.no' . | grep -v node_modules | grep -v '^./artifacts/' | wc -l`
+  beside its 28, because the first count was fourteen and wrong on both the
+  number and the place.
+
+**The general form, and it is short:** if a sentence asserts something about a
+system you are not looking at while you read it, it needs the command that looks.
+
+### D136 — `live_sessions.step` names a position the product cannot be in
+
+**2026-09-10.** Asked to build the missing writer for `live_sessions.step`
+(the sixth «who writes this column» instance), writer-only, no new screen beyond
+what the bundle draws. **The writer was not built, and the reason is the
+finding.**
+
+`step` renders as the small uppercase label above the live stage's question —
+`LiveStage.tsx:209`, bundle V2:1841 `{{ liveStage.step }}`. The demo seed sets
+it to **«Spørsmål 2 av 2»**.
+
+**No live session can be on question 2 of 2.** The stage renders `barsQuestion`,
+and `page.tsx:175` computes it as `firstScale?.text ?? null` — the first scale
+question, chosen on the server. There is no presenter control that moves between
+questions: the bundle's stage carries exactly two buttons, `onLiveReveal` and
+`goBuild`, and the code has no advance either.
+
+So the instruction and the bundle are in conflict, and the conflict is real
+rather than a gap in either: **the writer cannot exist until the navigation it
+would record exists.** Building that navigation is a feature — it changes what
+the live stage shows, needs its own copy, and nobody has drawn or decided it.
+The two ways to write `step` without it are both forbidden here:
+
+- inventing an advance control is the restyling CLAUDE.md's control-substitution
+  rule exists to refuse;
+- writing a plausible label server-side on every render is fabricating data in
+  the UI, and would also make a GET mutate.
+
+**The seed is the sharper half.** D102's standing limitation is that the demo
+seed reaches only states the current code creates. This is that sentence
+inverted: the seed reaches a state the code **cannot** create, and the result is
+a demo that shows a reviewer a navigation feature the product does not have. A
+seeded value is indistinguishable from a working one on screen — which is the
+whole reason «a column whose only writer is the seed is exactly the finding» is
+a rule.
+
+**RESOLVED 2026-09-10 — Tor's decision: DROP THE COLUMN** (`M:0098`). Option 2
+below, with the reasoning sharpened: Q61 says do not store what can be derived,
+and *this is worse than the case Q61 refuses — it stored something that does not
+exist.* A derived value kept in two places can at least disagree about something
+real. Presenter navigation is a feature to be decided on its own terms, not a
+thing a waiting column argues for; **if it is ever built, `step` returns WITH its
+writer in the same migration**, which is what the standing question asks and what
+this column never had. The instruction that produced this entry — «build the
+writer, no new screen beyond what the bundle draws» — was self-contradictory, and
+Tor named it so: handing back the conflict was the answer to a question posed
+wrongly.
+
+The drop was verified against the catalogue before it ran, not asserted: 0
+policies, 0 constraints, 0 views, 0 rows with a value. The function sweep
+returned ONE match, `public.close_live_session`, and reading it showed the phrase
+«one step down» in a comment. **The count said one dependency and the line said
+none** — a match is not a finding until it is read.
+
+**The two ways out as they stood, kept for the record:**
+1. **Build presenter navigation** as its own scoped piece, and `step` becomes
+   its record — the writer follows for free.
+2. **Derive and drop.** `step` is a pure function of (question shown, question
+   count), both of which the page already holds. Q61's «derive, do not
+   duplicate», and V2-10's precedent of removing `quiz_attempts` outright.
+   Dropping a column on the remote project is destructive, so it is asked for
+   rather than taken.
+
+Pinned by `tests/unit/live-step.test.ts` (5). The second assertion fails the day
+presenter navigation arrives — which is the moment this entry stops being true
+and the writer becomes buildable.
+
+### D137 — Turnstile was configured in the dashboard and absent from the deployment
+
+**2026-09-10.** The keys were set, and `request_demo` was still unprotected.
+Measured on the live origin: `https://www.heituva.com/` returns **zero**
+Turnstile markup — no `cf-turnstile` div, no Cloudflare script — with
+`x-vercel-cache: MISS`, `age: 0` and `no-store`, so the page was rendered fresh
+by the running function rather than served from an edge cache.
+
+`Turnstile({ siteKey })` is `if (!siteKey) return null`, and `page.tsx` reads
+`process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY` in a **server** component. Null
+markup therefore means that variable is undefined **inside the running
+deployment** — which is one operand of `turnstileConfigured()`'s AND, so the
+verifier's early `return true` was live.
+
+**Why the variable was set and absent at the same time: Vercel snapshots
+environment variables into a deployment.** Editing them in the dashboard does
+not reach deployments that already exist; a redeploy does. `export const dynamic
+= 'force-dynamic'` removes the *other* staleness — build-time inlining of a
+`NEXT_PUBLIC_` value into the client bundle — and says nothing about the
+function's environment. **I asserted earlier in the same session that no
+redeploy would be needed, and that was wrong**; recorded rather than quietly
+corrected, because it is the kind of half-true mechanism that reads as settled.
+
+**The general form, which is why this is an entry and not a note:** a control
+has TWO configurations — the one an operator edits and the one the running
+system holds — and «I set it» is a claim about the first. `env | grep` on a
+laptop, a dashboard screenshot and a Vercel settings page all confirm the first
+and none confirms the second. The observable is the running system's BEHAVIOUR:
+here, whether the widget the server renders exists at all.
+
+Fixed on the operator's side by a redeploy. Fixed on ours by D138.
+
+### D138 — a half-configured Turnstile passed everything through
+
+**2026-09-10, found while proving D137 rather than by any gate.**
+`turnstileConfigured()` was `Boolean(TURNSTILE_SECRET_KEY && NEXT_PUBLIC_TURNSTILE_SITE_KEY)`
+and `verifyTurnstile` opened with `if (!turnstileConfigured()) return true`.
+
+Two variables, three states — and the third had no handling:
+
+| | old behaviour | now |
+|---|---|---|
+| neither set | pass (local, CI — nothing to solve) | unchanged |
+| both set | enforce | unchanged |
+| **exactly one set** | **pass** | **refuse** |
+
+**The site-key-only case is the dangerous one and it is not exotic**: it is what
+a half-finished configuration looks like, and it *renders Cloudflare's widget on
+the splash* while verifying nothing. A visible control that enforces nothing —
+the reviewer's eye confirms exactly the thing the code is not doing. D115's
+shape (a revoke that grants nothing; an allowlist reason true of one clause),
+arriving on the only unauthenticated write surface in the product.
+
+`Boolean(A && B)` is a correct sentence about A and B and silent about
+A-without-B — the enumeration shape, in two variables. Replaced by
+`turnstileState(): 'absent' | 'partial' | 'configured'`, with **partial
+refusing** and naming which half is missing in the log (never the values). Both
+partial directions are loud: secret-only means no widget and no token,
+site-key-only means a solved widget rejected. Loud is the point — the failure
+mode it replaces was silent on a live origin.
+
+**AND THE TEMPTATION IS THE HALF WORTH WRITING DOWN, because the defect alone
+does not warn anyone.** Once the fix was in, the obvious next sentence was
+«Turnstile is enforcing now» — supported by the only evidence obtainable from
+this environment: `data-sitekey` present in the served HTML, proving
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` reached the running function.
+
+**That is this exact finding, committed a second time.** «The key reached the
+function» and «the control enforces» are different claims, and the first is
+one operand of the AND that the second needs. Presence is *precisely* what a
+half-configuration also satisfies — a site key alone renders the widget and
+proves nothing about the secret — so accepting it as proof would confirm the
+state the entry exists to catch.
+
+What makes it dangerous rather than merely wrong: **presence was the only half
+measurable from here.** The proxy closes the browser's tunnel to the origin, so
+the behavioural half — submit without a token, watch it refused, watch
+`demo_requests` not grow — needed a human. When one half of a proof is cheap and
+the other is blocked, the cheap half acquires a gravity it has not earned, and
+the report writes itself. The rule that survives: **when you cannot measure the
+thing, say which half you measured and which you did not — never promote the
+half you have.**
+
+Pinned by `tests/unit/turnstile-state.test.ts` (11), which failed on its
+assertions before the fix — `expected true to be false` on both partial cases.
+
+**Their FIRST run failed on something else, and that mattered.** All eleven went
+red on `import 'server-only'`, which throws outside a Server Component — a suite
+red for a reason that has nothing to do with the behaviour it claims to pin, and
+one that reads identically in CI to a suite that is doing its job. The harness
+was fixed (`vi.mock('server-only')`) and the tests re-run to red **before the
+implementation was touched**, so that «proven failing first» meant proven on the
+assertion. Nobody invoked the rule; it is the same rule as *a negative from a
+probe written from memory is not evidence of absence* — a red that does not come
+from the claim is not a proven negative, in either direction. Written down
+because the tempting move at that moment is to fix the code and watch the suite
+go green, which would have proved the import was fixed and nothing else.
+
+Also pinned by `tests/unit/marketing-guard.test.ts` (5), which asserts the property over
+the file rather than over today's two actions: **every exported server action in
+`app/(marketing)/actions.ts` calls `guard()` before it parses or touches an
+RPC**, with the action list derived from the source.
+
+### D139 — a seed that reaches a state the CODE CANNOT CREATE
+
+**A new shape, 2026-09-10 (Tor), not an instance of D102.** Named while dropping
+`live_sessions.step` (D136), and worth separating because the two point in
+opposite directions and only one of them lies.
+
+**D102's standing limitation:** *the demo seed reaches only states the current
+code creates.* Its cost is coverage — a screen whose empty state, warning state
+or multi-round trend nobody can photograph, because the seed cannot get there.
+The symptom is a **gap**, and a gap looks like a gap.
+
+**This is that sentence inverted:** the seed reaching a state the code CANNOT
+create. `scripts/seed-demo.ts` set `live_sessions.step` to «Spørsmål 2 av 2»
+while the live stage renders `firstScale?.text` — the first scale question,
+chosen on the server — with no control anywhere that moves between questions. No
+session could ever hold that value.
+
+**The inverted case is worse, and the reason is what makes it its own entry.** A
+seeded value is indistinguishable from a written one on screen. A missing state
+shows a reviewer a gap and invites the question «why is this empty?»; a
+fabricated one shows them a **working feature** and invites no question at all.
+So:
+
+- **D102 costs coverage. D139 costs truth.** One hides something real, the other
+  displays something false.
+- **D102 is discovered by trying to demonstrate a state. D139 survives every
+  demonstration**, because demonstrating it is exactly what it is good at. It
+  fails only against the schema and the code, never against the screen.
+- It is the «never fabricate data in the UI» rule arriving through the seed
+  rather than through a component. The rule says a fake value is worse than a
+  gap *because it is indistinguishable from a real one in review, and survives
+  into screenshots and demos as though it were true* — which is a description of
+  this, written before anyone had found it here.
+
+**The check that catches it is not a gate.** No gate can: the row is valid, the
+column is real, RLS is satisfied, the render is correct. It is caught by asking
+of a seeded value the same question the standing rule asks of a column — **can
+the product actually produce this?** — and the answer is a code path, not a
+constraint.
+
+Fixed by dropping the column and the seed line together (`M:0098`), and pinned
+by `tests/unit/live-step.test.ts`, whose fourth assertion is that the seed no
+longer carries it and whose last is the trigger for bringing `step` back with a
+writer if presenter navigation is ever built.
+
+**A note from the CI run that landed this, worth keeping for the gate rather
+than for the shape.** Dropping the column removed one test from
+`tests/db/no-writer-columns.test.ts`, which loops the set into one `it` per
+entry — 13 became 12 — and the census caught it and failed the run, saying in
+its own words: *a file that collects fewer tests than committed has stopped
+checking something; if the drop is intended, lower the number in the same
+commit.* The drop WAS intended and I had not lowered it. **The census was
+right, and it is the only gate that could have been**: every one of the 969
+tests passed.
+
+Two things follow. First, the census signal is **not available locally in this
+environment** — Docker is unavailable, so `vitest run tests/unit` is the most
+that runs here and the census then reports every db file as «did not run at
+all», which is noise rather than a check. The number can only be verified in
+CI, so lowering a floor is a change whose correctness is not observable at the
+moment it is written.
+
+Second, and this belongs beside **D131** as its most dangerous member:
+`verify:hermetic` runs the suite twice, before and after deliberate pollution,
+and inherits its exit code. A census failure therefore surfaced as **«NOT
+HERMETIC»** — a verdict about something that run never tested, on a run where
+the suite was green both times.
+
+**D131's family is gates that are GREEN about something narrower than their
+name. This one was RED about the wrong thing, and that is worse.** A gate green
+about the wrong thing costs you a finding you never learn about — bad, but
+passive, and it waits patiently to be discovered. A gate red about the wrong
+thing **spends** your attention and aims it: «NOT HERMETIC» names a specific,
+plausible, expensive failure — test pollution, ordering, shared state — and
+sends the diagnosis in that direction from the first second. The cost is not a
+missed finding but time spent looking where nothing is wrong, and the wrongness
+is invisible precisely because the verdict is confident and the failure is real.
+It was cheap here only because the census printed its own cause two lines above,
+and reading the whole log rather than the verdict is what caught it.
+
+The gate works; its VERDICT is narrower than the word it prints. Confirmed by
+the fix: `verify:hermetic` passed on the next run with no change to anything
+hermeticity-related, which is what settles that it was never a hermeticity
+problem — the suite's exit code wearing that name. Logged, not fixed: the
+apparatus is frozen.
+
+**Where to look for more of it:** any column whose only writer is the seed. That
+set is enumerated and asserted in `tests/db/no-writer-columns.test.ts`, and it
+now holds exactly one — `tasks.due_at`, which should be checked against this
+question rather than assumed to be the harmless kind.
+
+### D140 — a test that pins the current state turns finishing the work into breaking the suite
+
+**2026-09-10, found by CI run 97 when the quiz card was unlocked.** 977 of 978
+tests passed. The one failure was `tests/db/live.test.ts:18`, V2-9's «THE COLUMN
+HAS A WRITER — asserted, because it nearly did not»:
+
+```ts
+expect(src, 'behind a Zod enum that excludes quiz')
+  .toMatch(/z\.enum\(\['standard', 'live'\]\)/)
+```
+
+**The test was right about its rule and wrong about how it wrote it.** The rule
+is «`run_mode` has a writer and the writer validates» — that is what V2-9 was
+protecting, and it is a good test. «Excludes quiz» is not that rule. It is a
+fact about an unfinished feature, frozen into an assertion.
+
+**So finishing quiz broke the suite.** Not because anything regressed — the
+database CHECK had allowed `'quiz'` since `M:0085`, the guards were in place, 26
+quiz tests were green — but because a test had recorded the temporary state as
+though it were the invariant.
+
+**This is the enumeration-mistaken-for-a-property shape wearing a test's
+clothes, and it is the nastiest member of that family so far.** The others cost
+a missed case. This one costs something worse: **it makes completing the work
+look like a defect**, and the cheap way out is to edit the expectation until the
+suite is green again — which is exactly the move that would have taught nobody
+anything, and which a phase under time pressure will take.
+
+The shape has a tell: **an assertion that names a thing it expects to be
+ABSENT.** «Excludes quiz», «has no X yet», «is not built» — every one of those is
+a sentence about today rather than about the rule, and every one has to be
+revisited by whoever adds the thing.
+
+**Restated as the property, derived at run time:** the server boundary's Zod
+enum is exactly the set `surveys_run_mode_check` allows, read from
+`pg_constraint`. A fourth mode needs no edit here, and drift fails in BOTH
+directions — too permissive lets a value reach a raised exception surfaced as
+«failed», too narrow makes a legal state unreachable, which is precisely what
+happened to quiz for a whole phase (`docs/review/05-quiz.md`).
+
+Verified against the real inputs before trusting it, since no database runs in
+the environment that wrote it: the CHECK text from prod and the actual source
+both extract to `["live","quiz","standard"]`.
+
+### D141 — a spacing constant derived from one pair, applied to a different pair
+
+**2026-09-10, from CI run 98's `verify:responsive`.** Two findings at 390px, both
+mine, and the second is the one worth keeping:
+
+```
+[defect]  admin-firma — touch area 300x44 (<44) on <select>: Europe/Oslo…
+[blocker] dashboard/tilpass-oppsett — hit areas overlap by 169px²:
+          "Ledergruppa" / "Start på nytt"
+```
+
+**The defect** is a `<select>` that inherited the shared `field` class. The
+`<input>`s above it clear 44px at the same padding; a `<select>` renders a little
+shorter and did not. Fixed with `touch-44-field`, which is the helper written for
+exactly this and applies only below `md`.
+
+**The blocker is the interesting one, and it is a THIRD kind of
+enumeration-mistaken-for-a-property — in a NUMBER.**
+
+`docs/RESPONSIVE.md` says «with 44px hit areas need 14px between painted edges
+(7px overflow each side)». That is arithmetic, and it is correct **for the pair
+it was measured on**: two chips of about 30px, each overflowing ~7px. The
+`CustomizeCard` reset control already carried a comment recording that exact
+derivation — «the chip row above ends 7px into this control's hit area at 12px»
+— and the fix had been to raise 12px to 14px.
+
+But the pair here is not chip-to-chip. The chip above is ~33px and overflows
+~5px; **this control is a bare text link with `p-0` at 12.5px — about 15px
+painted, so its 44px area overflows ~14px.** Five plus fourteen is nineteen.
+Fourteen was never going to be enough, and the only reason it held until now is
+that the chip rail happened to wrap so «Ledergruppa» did not sit directly above
+it.
+
+**«14px between painted edges» reads like a property and is an instance.** The
+property is *the gap must exceed the sum of the two controls' overflows*, and
+those overflows depend on how tall each painted control is — which the sentence
+does not say. It is the RESPONSIVE.md worked-example failure (D129) a second
+time, in the same document, in a number rather than in a clause.
+
+Raised to 24px — the design's step above 19 — and derived in the comment rather
+than tuned, so the next reader can check the arithmetic instead of trusting a
+constant.
+
+**And a note on how it was found.** No capture can be taken in this environment,
+so this was diagnosed by downloading CI's `captures.zip` artifact and opening
+`dashboard.tilpass-oppsett.mobile.png`. The chip rail is visibly seven chips
+wrapping to four lines with «Ledergruppa» alone on the last, directly above the
+link. **Reasoning from the source would not have found it** — the wrap is a
+function of six shipped preset names, one seeded layout title and a 390px
+viewport. Worth recording as a route: when the gate cannot run here, its
+artifact can still be read here.
+
+---
+
+## D142 — Help-article prose is shipped copy that no gate reads (a LIMITATION)
+
+**Measured 2026-09-10. Decided as Q103.**
+
+`verify:copy` (`scripts/verify/threshold-copy.ts`) reads `messages/no.json` and `messages/en.json`
+and nothing else. The twelve help articles are seeded from the design bundle into
+`help_article_translations` (`scripts/seed-help.ts`), so **every sentence in them is shipped copy
+that is structurally invisible to the one gate written to catch a fixed number near a threshold
+word.**
+
+**The instance, and it is not hypothetical.** «Fem er standard. For sensitive temaer bør dere bruke
+åtte.» has been the lead of *Sett terskelen for virksomheten* since V2-6. It asserts a fixed number
+for a threshold that `organizations.default_k_threshold` makes settable 3–10 (`M:0034`) — exactly
+the class Q55 forbids and exactly the shape `verify:copy` was written to find. It sat in production
+until 2026-09-10 and tripped nothing, because it was never in a file the gate opens. It was found by
+reading the corrected bundle's diff, not by any check.
+
+**The apparatus stays frozen, so this is a limit and not a new gate.** The protection is the
+human claim-set sweep in CLAUDE.md's ADDING A BUNDLE checklist, step 7, which now covers
+`help_article_translations` as a surface alongside `messages/*.json` — same treatment, same
+question of every sentence: is this true of the running database? Whether `verify:copy`'s *inputs*
+should grow to include the table is a separate decision and is not taken here.
+
+**What makes it worth a numbered entry rather than a line in a phase report.** The gate is not
+wrong and its allowlist is not stale — it is looking in the right way at the wrong set. That is a
+different failure from a rule with a hole in it, and it is the second time this project has hit it:
+`verify:i18n` was missing `survey_questions.text` and `duty_definitions.basis` for the same reason.
+**A sweep's SCOPE ages exactly like an allowlist's contents**, and nothing re-derives it.
+
+---
+
+## D143 — The rendered reference baselines are non-deterministic, and it hid a real change
+
+**Measured 2026-09-10. Open as Q104.**
+
+Three clean renders of one unchanged bundle, compared byte-for-byte:
+
+| Screen | differs from itself |
+|---|---|
+| `live` | 551 px (0.011%) |
+| `live-revealed` | 726 px (0.011%) |
+| `send` | 1262 px (0.010%) |
+| `rapport-editor` | 27865 px (0.398%), rows 1538-1669 |
+| `rapport-editor-filter` | 3801 px (0.054%) |
+| `rapport-editor-del` | 71699 px (1.025%), rows 1045-1669 |
+| `admin-personvern`, `hjelp` | **0 px** |
+
+**The cause is `Math.random()`, and the first answer I gave was wrong.** Cropping the differing rows
+and reading them: `send` renders `…/s/q2rrzlu` in one pass and `…/s/qpagbqf` in the next; `live`
+renders `heituva.no/qwala`. Both are `uid()` — **V2:4133**, `"q" + Math.random().toString(36).slice(2,8)`.
+**One call site.** The first pass of this attributed it to the clock and named eleven `new Date` sites
+(V2:4533, 5289, 5376, 5395, 5527, 5531, 5541, 5542, 5547, 5550, 6014); those are mostly seeded
+constants (`new Date(2026, 8, 7 + …)`) or `getFullYear()`, and `rapport-editor`'s render-to-render
+diff **starts at row 1538, below its «generert …» date line at row ~600, which is byte-identical
+between renders.** The date was ruled out by the measurement that was supposed to support it.
+`rapport-editor`'s residual jitter is in the team bars; it is downstream of `uid()` on the available
+evidence and that link is **not established**.
+
+**The cost, which is the reason this is an entry and not a footnote.** A baseline that differs from
+itself is read as drift by whoever compares next — and it already caused the opposite error here.
+Three `rapport-editor` baselines were dropped as churn in the same session, when lines 4660 and 4666
+had genuinely moved in them; **five screens changed for the bundle revision, not two.** The
+comparison that produced the wrong count was itself wrong: a `git restore` ran between the two
+renders, so the second side of the diff was git HEAD rather than a second render. **An apply is not
+evidence, a comparison is — and a comparison is only evidence if both sides are what you think they
+are.**
+
+Nothing automated consumes these images (VERIFY.md § Gate 3a has a human open them), so this is not
+a broken gate. Whether to seed `Math.random` in the capture harness, exclude the six screens, or
+accept and annotate is Q104; editing a bundle is not among the options.
+
+---
+
+## D144 — The preview does not default a missing answer key to option one
+
+**B1, 2026-09-10.** `V2:6507` renders «Riktig svar: første alternativ» when a question's
+`answerIndex` is undefined. We render `quizNoKey` — «Ingen fasit valgt» — instead.
+
+**The reason is already written in the schema, by the migration that added the column.**
+`survey_questions.answer_index` has no default, and `M:0085:55-61` says why in its column
+comment: «The bundle defaults it to 0 for display (V2:6507, «Riktig svar: første alternativ»);
+the COLUMN does not, because a default of 0 would silently mark the first option correct on
+every question ever written — a fabricated answer key, which is worse than an absent one.»
+
+Implementing the bundle's display default would have put back into the UI exactly what the
+migration kept out of the table — and on the worse surface. The table is read by RPCs; **the
+preview is read by the editor deciding whether they have set a key.** Telling them option one
+is correct when they have set nothing is the fabricated-data rule with a scoring consequence:
+`quiz_leaderboard` awards points against `answer_index`, and a `NULL` key awards none, so the
+preview would have promised a score the leaderboard would never pay.
+
+`tests/unit/quiz-preview.test.ts` asserts the property (nothing marks a chip correct when
+`answerIndex` is null) **and** reads the reason back out of the migration, so the two cannot
+drift apart.
+
+---
+
+## D145 — The quiz preview's timer line drops the bundle's «20 sek»
+
+**B1, 2026-09-10.** `V2:6524` renders `timer: on.timeBonus ? "20 sek · tidsbonus" : "Ingen
+tidsgrense"`. We render «Tidsbonus» / «Ingen tidsgrense».
+
+**There is no configured time limit anywhere in the schema.** `M:0085` adds none;
+`grep -n "time_limit\|seconds" ` over it returns nothing, and the test asserts that rather than
+trusting it. What `timeBonus` actually does is scale points by how fast a correct answer
+arrives (`quizTimeBonusDesc`: «Raskere riktig svar gir flere poeng») — a multiplier, not a
+deadline. Twenty seconds is the mock's illustration of a feature it had no database behind.
+
+The true half of the sentence ships and the invented half does not. Rendering «20 sek» would
+have told an editor their respondents get twenty seconds per question, which is a promise
+nothing in the product keeps and which they would then have repeated to their own people.
+
+---
+
+## D146 — Q109 measured: the bundle's correct-answer green ships unchanged, and is not tokenised
+
+**B1, 2026-09-10.** `V2:6511-6516` marks the correct chip `#E4F2E0` / border and text
+`#2F5D2A`. Neither is a theme token and CLAUDE.md's token list carries no success colour.
+
+**Measured rather than assumed**, which is what decided it:
+
+| pair | ratio |
+|---|---|
+| `#2F5D2A` on `#E4F2E0` — as drawn | **6.65 : 1** |
+| `#2F5D2A` on `--bg #FCF6E9` | 7.17 : 1 |
+| `#2F5D2A` on `--sf #FFFDF6` | 7.59 : 1 |
+| `--mut #5F5849` on `--sf` — the app's own existing baseline | 6.93 : 1 |
+
+6.65 clears WCAG AA (4.5) with room, and sits within a quarter-point of a contrast the product
+already ships everywhere. **So nothing changes**: the pair is used exactly as drawn, and it is
+NOT promoted to a `--ok` / `--okbg` token pair. Promoting it would be four departures from the
+bundle (two token definitions, two usages, plus a permanent addition to a token list the design
+does not have) to solve a consistency problem that the measurement says does not exist.
+
+The colour is not the only channel: «✓ riktig» is rendered beside it, which is D125's shape —
+the quiz tiles carry a shape as a second channel for the same reason. The contrast ratio is
+**recomputed inside the test** from whatever hexes the file carries, so editing either one
+fails rather than silently dropping below AA.
+
+---
+
+## D147 — `question_bank.used_count` has a writer that RLS silently refuses on standard questions
+
+**Found in B3's database step, 2026-09-10. Not fixed here: the fix is a migration, and a
+migration reaches production.**
+
+`addBankQuestion` bumps the counter after inserting:
+
+```ts
+await supabase.from('question_bank').update({ used_count: (q.used_count ?? 0) + 1 }).eq('id', questionId)
+```
+
+`bank_cud_upd`'s USING clause, read off the production catalogue, is
+`(org_id IS NOT NULL) AND app.has_role(org_id, ARRAY['administrator','redaktor'])`. **A standard
+bank question has `org_id IS NULL`**, so the predicate is false, the UPDATE matches zero rows,
+and PostgREST returns no error. The call site does not check one either. So the bump is a
+**silent no-op for every standard question**, and `used_count` on the shared bank is permanently
+whatever the seed set.
+
+The Library renders it: `bankUsed` — «brukt i {count}» — on every row. So the number an
+organisation reads next to a validated question is not a count of anything.
+
+**This is the «who writes this column?» question one step further on, and the step is the
+interesting part.** The three instances CLAUDE.md records are columns with no writer. This one
+HAS a writer, in the obvious place, doing the obvious thing — and a policy silently declines it.
+A grep for the column name finds the writer and stops; only reading the policy beside it shows
+that the writer never lands. **«Who writes this column» is not answered by finding a writer; it
+is answered by finding a writer the database lets through.**
+
+Not fixed in B3 because every honest fix crosses the line this run was told to stop at: a
+`security definer` bump, or a policy change, is a migration. Options for whoever takes it —
+(a) a `security definer` function that increments and is granted narrowly, (b) widen
+`bank_cud_upd` to allow `used_count` alone on `org_id is null` rows, (c) derive the count from
+`survey_questions` instead of storing it, which removes the column and the question with it.
+(c) is the one that matches «derive, do not duplicate» (Q61).
+
+Adjacent and unmeasured: nothing checks the error on that update, so if it ever starts failing
+loudly, nothing will say so.
+
+---
+
+## D148 — 5a3's carried number was stale before this run, and I carried it four more times
+
+**Measured from CI run 106, 2026-09-10.**
+
+CLAUDE.md and `docs/review/04-builder-plan.md` carry **65 of 90**, last true at V2-10. Run 106's
+`verify:policy` enumerates **56 RLS tables + 36 SECURITY DEFINER functions = 92**, of which **67**
+report `ok` or `NO DATA`:
+
+```
+npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'      # 67
+npm run verify:policy 2>&1 | grep -E 'enumerated'            # 56 + 36 = 92
+```
+
+**5a3 is 67 of 92.** `M:0095`–`M:0098` landed between V2-10 and B0 and nobody re-derived it.
+
+**The part worth recording is not the drift; it is that I repeated it four times in one sitting.**
+Each of B0–B3's commit messages says «5a3 unchanged by construction: no RLS table, no SECURITY
+DEFINER function». *That claim is true* — no phase added a migration, so the gate's inputs could
+not move — and it was attached to a number I had not measured. **A structural claim about a
+DELTA does not license the BASE it is added to.** «Unchanged from X» is two assertions, and I
+verified one of them four times while the other quietly stayed wrong.
+
+This is the third time this project has recorded a carried number surviving unmeasured — «61 of
+83» ran for four phases, «14 heituva.no occurrences» was wrong on the number and the place — and
+the first where the carrier is the same session that wrote the rule about it. The command is
+above, beside the number, which is the only thing that has ever fixed this.

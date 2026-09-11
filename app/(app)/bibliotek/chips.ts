@@ -38,7 +38,7 @@ export const LIBRARY_TABS = ['bruksomrader', 'maler', 'bank'] as const
 export type LibraryTab = (typeof LIBRARY_TABS)[number]
 
 /** Message keys for the category chips; the design's own labels. */
-/** Only two categories carry a note in the design (HeiTuva.dc.html:3729). */
+/** Only two categories carry a note in the design (L:3729). */
 /**
  * `packCatNote` (NEW:4479). The bundle takes the note from the USE CASE's own
  * description where one is selected, and falls back to two hand-written notes
@@ -51,7 +51,7 @@ export const CATEGORY_NOTE_KEY: Record<string, string> = {
 }
 
 /**
- * Standard-pack tints (HeiTuva.dc.html:3737). The design indexes this array
+ * Standard-pack tints (L:3737). The design indexes this array
  * with the card's position and NO modulo, so only the first five cards on the
  * grid are tinted and the sixth onwards sit untinted on the page ground. That
  * is deliberate — the tints lead the eye into the grid rather than colouring
@@ -62,7 +62,7 @@ const STANDARD_TINTS = ['#FFFDF6', '#FBD5C4', '#CFE7E4', '#FBEBBE', '#F3E7DB'] a
 
 /**
  * Firmaets maler use a different, four-colour palette and DO cycle
- * (HeiTuva.dc.html:3817) — an org can save many templates and the design keeps
+ * (L:3817) — an org can save many templates and the design keeps
  * every one of them tinted.
  */
 const OWN_TINTS = ['#FBEBBE', '#CFE7E4', '#FBD5C4', '#F3E7DB'] as const
@@ -77,7 +77,7 @@ export function ownTint(i: number): string {
   return OWN_TINTS[i % OWN_TINTS.length]!
 }
 
-/** The design shows "~N min" at 0.6 min per question (HeiTuva.dc.html:3737). */
+/** The design shows "~N min" at 0.6 min per question (L:3737). */
 export function estimateMinutes(questionCount: number): number {
   return Math.max(1, Math.round(questionCount * 0.6))
 }

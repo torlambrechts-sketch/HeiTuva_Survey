@@ -93,7 +93,7 @@ export function LiveStage({
   roundId: string | null
   title: string
   isLiveMode: boolean
-  session: { id: string; code: string; revealed: boolean; step: string | null } | null
+  session: { id: string; code: string; revealed: boolean } | null
   qrSvg: string | null
   joinUrl: string | null
   k: number
@@ -138,7 +138,6 @@ export function LiveStage({
           <h1 className="font-display text-[28px] font-medium">{s.heading}</h1>
           <p className="mt-[3px] text-[13px] text-mut">
             {title}
-            {session?.step ? ` · ${session.step}` : ''}
           </p>
         </div>
         <div className="flex flex-wrap gap-[9px]">
@@ -206,7 +205,7 @@ export function LiveStage({
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="min-w-[260px] flex-1">
             <div className="text-[11px] uppercase tracking-[.1em] opacity-65">
-              {session?.step ?? s.heading}
+              {s.heading}
             </div>
             <div className="mt-2.5 font-display text-[38px] font-medium leading-[1.15]">
               {barsQuestion ?? title}

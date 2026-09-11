@@ -12,6 +12,7 @@
     "test:invariants": "vitest run tests/invariants",
     "seed:i18n": "tsx scripts/seed-i18n.ts",
     "gen:i18n": "tsx scripts/gen-i18n-types.ts",
+    "edge:bundle": "tsx scripts/edge-bundle.ts",
     "seed:demo": "tsx scripts/seed-demo.ts --local",
     "verify:db": "vitest run tests/invariants tests/db",
     "verify:attack": "tsx scripts/verify/attack.ts",
