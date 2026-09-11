@@ -261,7 +261,22 @@ export const ROUTES: RouteSpec[] = [
             { name: 'heituva.workspace', value: 'cx', url: page.url() },
           ])
           await page.reload({ waitUntil: 'networkidle' })
-          await page.getByText('Kunder og service').first().waitFor()
+          /*
+           * WAIT ON THE HINT, NOT THE LABEL.
+           *
+           * `getByText('Kunder og service')` matched the <option> inside the
+           * chip's transparent <select> FIRST — an element Playwright can never
+           * call visible, so the wait could not succeed however correct the
+           * page was. CI said so exactly: «64 × locator resolved to hidden
+           * <option selected value="cx">», which is also the proof the feature
+           * worked: the cookie was read and the server rendered cx.
+           *
+           * The hint is the better anchor on its own merits, not just because
+           * it is visible: it is cx's row in `workspaces`, rendered nowhere
+           * else, so waiting on it asserts the SERVER resolved this workspace
+           * rather than that some element mentioning its name exists.
+           */
+          await page.getByText('NPS i dag, trend og kritikere som venter på svar.').waitFor()
         },
       },
       {
