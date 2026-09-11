@@ -52,10 +52,20 @@ const NO_WRITER_SET: [table: string, column: string][] = [
   // `surveys.feedback_mode` was here for exactly one phase. C2 gave it
   // `setFeedbackMode`, so it LEFT this list in the commit that wrote the action
   // — which is what «giving a column a writer is a visible act» means.
-  ['survey_comments', 'handled_at'],       // C4 — «Marker som behandlet»
-  ['survey_comments', 'handled_by'],       // C4 — the same action
-  ['survey_comment_replies', 'author_member_id'], // C5 — the reply action
 ]
+
+/*
+  C4 and C5 both landed their writers in the same tranche, so all three of the
+  columns declared here in C1 left the list at once:
+
+    survey_comments.handled_at      -> public.set_comment_handled  (M:0101)
+    survey_comments.handled_by      -> the same function
+    survey_comment_replies.author_member_id -> public.reply_to_comment (M:0102)
+
+  Recorded rather than silently removed: a column leaving this list is the
+  visible act, and three leaving together is the thing a reader would otherwise
+  have to reconstruct from two migrations.
+*/
 
 function commentOf(table: string, column: string): string | null {
   const rows = psql(`
@@ -137,11 +147,10 @@ describe('every column the audit found without a writer answers the question', (
     // Seven until 2026-09-10; organizations.timezone left this group when
     // M:0097 gave it saveCompany. The number moves DOWN as writers arrive, and
     // a phase that adds a writer without moving it fails here.
-    // Six until 2026-09-11; C1 adds four columns that nothing writes YET, each
-    // carrying the phase that will. The number moves DOWN as writers arrive and
-    // UP only when a migration creates a column ahead of its action — which is
-    // a thing this project does deliberately, database before UI, and which is
-    // exactly why they are declared here in the same commit.
-    expect(nothing).toHaveLength(9)
+    // Six, and it went 6 -> 10 -> 6 inside one tranche: C1 declared four columns
+    // ahead of their actions (database before UI, deliberately), and C2, C4 and
+    // C5 gave all four a writer. The number moves DOWN as writers arrive and UP
+    // only when a migration creates a column ahead of its action.
+    expect(nothing).toHaveLength(6)
   })
 })

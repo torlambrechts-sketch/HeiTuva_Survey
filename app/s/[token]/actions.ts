@@ -147,3 +147,47 @@ export async function peerResults(token: unknown): Promise<PeerResults> {
   }
   return { question: r.question ?? '', n: r.n ?? 0, buckets: r.buckets ?? [] }
 }
+
+/**
+ * C5/Q111 — the respondent reads her own thread, after submitting.
+ *
+ * The whole capability in one call: `get_comment_thread` resolves the token,
+ * refuses a closed round, matches on `invitation_id`, names neither
+ * `public.responses` nor `public.answers`, and writes nothing — so none of the
+ * five properties needs enforcing here. What this wrapper adds is the Zod
+ * boundary and the rule that a failure is INDISTINGUISHABLE from an empty
+ * thread: a respondent who is told «that token is not valid» has been told
+ * something about a token she may not hold.
+ */
+export type Thread = {
+  comments: {
+    id: string
+    question_id: string | null
+    text: string
+    is_anonymous: boolean
+    created_at: string
+    replies: { text: string; created_at: string }[]
+  }[]
+}
+
+export async function commentThread(token: unknown): Promise<Thread> {
+  const parsed = z.string().min(16).max(512).safeParse(token)
+  if (!parsed.success) return { comments: [] }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+
+  const { data, error } = await supabase.rpc('get_comment_thread', { p_token: parsed.data })
+  if (error) {
+    // The code only — never the payload, which is a respondent's own words
+    // coming back (invariant 7).
+    console.error(`get_comment_thread failed: ${error.code ?? 'unknown'}`)
+    return { comments: [] }
+  }
+  const payload = (data ?? {}) as { error?: string; comments?: Thread['comments'] }
+  if (payload.error) return { comments: [] }
+  return { comments: payload.comments ?? [] }
+}

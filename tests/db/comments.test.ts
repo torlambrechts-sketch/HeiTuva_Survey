@@ -184,10 +184,17 @@ describe('C1 — survey_comments exists, outside the answers vault', () => {
     // DEFINER function in app and public and asserts that the only ones naming
     // this table are the comment RPCs themselves. The next aggregate that
     // touches it fails in the commit that adds it, not in a review.
-    // Only what exists NOW. A later phase's reply RPC is not pre-allowed: it
-    // should arrive failing this test and be added deliberately, which is the
-    // whole mechanism (D115's shape).
-    const ALLOWED = new Set(['submit_response', 'get_comment_thread'])
+    // Only what exists now, and each addition is DELIBERATE. C4's
+    // `set_comment_handled` and C5's `reply_to_comment` arrived failing this
+    // test and were added here by the phases that wrote them — which is the
+    // whole mechanism (D115's shape). An aggregate that reaches this table will
+    // do the same, and its author will have to say why.
+    const ALLOWED = new Set([
+      'submit_response',      // the ONE write path (invariant 2)
+      'get_comment_thread',   // Q111, the respondent's read-after-submit
+      'set_comment_handled',  // C4, the handled_at writer
+      'reply_to_comment',     // C5, the reply writer
+    ])
     const readers = psql(`
       select n.nspname || '.' || p.proname
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace

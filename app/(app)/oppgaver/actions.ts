@@ -158,3 +158,88 @@ export async function createCorrectingTask(input: unknown): Promise<TaskResult> 
   revalidatePath('/oppgaver')
   return { ok: true }
 }
+
+/**
+ * C4 — the writer for `survey_comments.handled_at`.
+ *
+ * Through `set_comment_handled` (M:0101) rather than a table update, because
+ * `survey_comments` has NO update policy: «nobody may change this content» is a
+ * property of the schema, and widening it to reach one bookkeeping column would
+ * open `body` with it.
+ *
+ * The function refuses a comment in another organisation with the same answer it
+ * gives for one that does not exist, so nothing here needs to distinguish them
+ * either — and must not, or the refusal would enumerate ids.
+ */
+const CommentHandledInput = z.object({
+  commentId: z.string().uuid(),
+  handled: z.boolean(),
+})
+
+export async function setCommentHandled(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = CommentHandledInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('set_comment_handled', {
+    p_comment: parsed.data.commentId,
+    p_handled: parsed.data.handled,
+  })
+  if (error) {
+    console.error(`set_comment_handled failed: ${error.code ?? 'unknown'}`)
+    return { ok: false, error: 'failed' }
+  }
+  if ((data as { error?: string } | null)?.error) return { ok: false, error: 'failed' }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}
+
+/**
+ * C5 — the manager's reply.
+ *
+ * Through `reply_to_comment` (M:0102) rather than a direct insert. The insert
+ * POLICY already admits an administrator or redaktør, so a table write would
+ * work; the function exists for the column the policy cannot fill —
+ * `author_member_id` is the caller's member id, and a client that supplies its
+ * own is supplying a claim.
+ *
+ * It also marks the comment handled, because replying IS handling it. Two
+ * controls meaning one thing is how a queue fills with rows that were answered
+ * and still look untouched.
+ */
+const ReplyInput = z.object({
+  commentId: z.string().uuid(),
+  body: z.string().trim().min(1).max(4000),
+})
+
+export async function replyToComment(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = ReplyInput.safeParse(input)
+  // The body is respondent-adjacent free text and never reaches a log, here or
+  // on the failure branch below (invariant 7).
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('reply_to_comment', {
+    p_comment: parsed.data.commentId,
+    p_body: parsed.data.body,
+  })
+  if (error) {
+    console.error(`reply_to_comment failed: ${error.code ?? 'unknown'}`)
+    return { ok: false, error: 'failed' }
+  }
+  if ((data as { error?: string } | null)?.error) return { ok: false, error: 'failed' }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}

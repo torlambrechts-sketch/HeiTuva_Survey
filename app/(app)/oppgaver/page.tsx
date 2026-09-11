@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { type TaskStatus } from '@/lib/tasks/lifecycle'
-import { TasksPanel, type TaskRow } from './TasksPanel'
+import { TasksPanel, type FeedbackRow, type TaskRow } from './TasksPanel'
 
 const KIND_KEY: Record<string, string> = {
   tiltak: 'taskKindTiltak',
@@ -104,5 +104,116 @@ export default async function TasksPage() {
   const assessedSet = new Set((assessed ?? []).map((a) => a.task_id))
   for (const task of tasks) task.assessed = assessedSet.has(task.id)
 
-  return <TasksPanel tasks={tasks} canEdit={viewer.role !== 'leser'} />
+  /*
+    C4 — the comments, on the same surface as the tasks (V3:2168-2300).
+
+    ── WHAT THE ROLE DOES HERE, AND WHY THE QUERY DOES NOT SAY IT ────────────
+
+    There is no `.eq('is_anonymous', true)` for a leser. The SELECT policy on
+    `survey_comments` already decides it (Q115): any member reads the anonymous
+    ones, and only an administrator or redaktør reads a NAMED one, because
+    CLAUDE.md invariant 4 gives a leser no named free text anywhere. Repeating
+    the rule here would be a second copy that can drift from the first, and the
+    one that matters is the one the database enforces.
+
+    The org scope is the same: RLS does it. `.eq('org_id', …)` is not available
+    anyway — the table has no org_id and is scoped through its round, which is
+    deliberate (one source of truth for tenancy on a table reachable by token).
+  */
+  const { data: commentRows } = await supabase
+    .from('survey_comments')
+    .select('id, round_id, question_id, body, is_anonymous, created_at, handled_at, invitation_id')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  const cList = commentRows ?? []
+  const cRoundIds = [...new Set(cList.map((c) => c.round_id))]
+  const cQuestionIds = [...new Set(cList.map((c) => c.question_id).filter(Boolean))] as string[]
+
+  const [{ data: cRounds }, { data: cQuestions }, { data: replies }] = await Promise.all([
+    cRoundIds.length
+      ? supabase.from('survey_rounds').select('id, survey_id').in('id', cRoundIds)
+      : Promise.resolve({ data: [] as { id: string; survey_id: string }[] }),
+    cQuestionIds.length
+      ? supabase.from('survey_questions').select('id, text').in('id', cQuestionIds)
+      : Promise.resolve({ data: [] as { id: string; text: string }[] }),
+    cList.length
+      ? supabase
+          .from('survey_comment_replies')
+          .select('id, comment_id, body, created_at')
+          .in('comment_id', cList.map((c) => c.id))
+          .order('created_at')
+      : Promise.resolve({ data: [] as { id: string; comment_id: string; body: string; created_at: string }[] }),
+  ])
+
+  const roundSurvey = new Map((cRounds ?? []).map((r) => [r.id, r.survey_id]))
+  const commentSurveyIds = [...new Set([...roundSurvey.values()])]
+  const { data: cSurveys } = commentSurveyIds.length
+    ? await supabase.from('surveys').select('id, title').in('id', commentSurveyIds)
+    : { data: [] as { id: string; title: string }[] }
+  const cSurveyTitle = new Map((cSurveys ?? []).map((x) => [x.id, x.title]))
+  const questionText = new Map((cQuestions ?? []).map((q) => [q.id, q.text]))
+
+  const repliesBy = new Map<string, { text: string; dateLabel: string }[]>()
+  for (const r of replies ?? []) {
+    const list = repliesBy.get(r.comment_id) ?? []
+    list.push({ text: r.body, dateLabel: fmt(r.created_at) ?? '' })
+    repliesBy.set(r.comment_id, list)
+  }
+
+  const feedback: FeedbackRow[] = cList.map((c) => {
+    const surveyId = roundSurvey.get(c.round_id) ?? null
+    return {
+      id: c.id,
+      text: c.body,
+      // The question the comment is ABOUT. Null is the end-of-survey box, which
+      // is a real state and not a missing value.
+      question: c.question_id ? (questionText.get(c.question_id) ?? null) : null,
+      surveyId,
+      survey: surveyId ? (cSurveyTitle.get(surveyId) ?? '—') : '—',
+      dateLabel: fmt(c.created_at) ?? '',
+      /*
+        Q116 — DERIVED, not stored. The bundle tags a row with one of six values
+        and only «Ny» has a writer in the bundle itself; the other five are
+        seeded strings. Two of the six ARE derivable and these are they:
+        «ubehandlet» is handled_at being null, «samtale» is having replies. The
+        four topical ones (Resultater, Ros, Spørsmålene, Utsending) are NOT
+        built: nothing in this product classifies a comment by topic, and a
+        `tag` column would have been a fifth instance of the standing question.
+      */
+      handled: c.handled_at !== null,
+      anonymous: c.is_anonymous,
+      replies: repliesBy.get(c.id) ?? [],
+      /*
+        C5 — whether a reply can reach anybody.
+
+        `invitation_id` is what `get_comment_thread` matches on. A comment
+        written through a share link has none, because every holder of that link
+        is the same principal and «her own thread» has no referent. So a reply to
+        it would be stored and never delivered, which is the shape of a control
+        that writes into nowhere.
+
+        NOTE THAT THIS IS THE ONLY THING THE SCREEN LEARNS FROM THE COLUMN. The
+        id itself is not rendered, not passed to the client, and not used to
+        group rows: it is read as a boolean and discarded. `invitation_id`
+        scopes a thread and is not a handle on a person (M:0099's comment).
+      */
+      hasThread: c.invitation_id !== null,
+    }
+  })
+
+  // A filter over surveys that actually have a comment. Offering every survey
+  // would list options that can only ever produce an empty table.
+  const surveyOptions = [...new Set(feedback.map((f) => f.surveyId).filter(Boolean))]
+    .map((id) => ({ id: id as string, title: cSurveyTitle.get(id as string) ?? '—' }))
+    .sort((a, b) => a.title.localeCompare(b.title, 'nb'))
+
+  return (
+    <TasksPanel
+      tasks={tasks}
+      feedback={feedback}
+      surveyOptions={surveyOptions}
+      canEdit={viewer.role !== 'leser'}
+    />
+  )
 }

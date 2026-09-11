@@ -5003,3 +5003,53 @@ than only the first.
 It needs a decision, not a patch: a post-submission comment-write capability on the invitation
 token, scoped the way Q111 scoped the read. `get_comment_thread` is the shape it would follow.
 Nothing in C1–C5 depends on the answer.
+
+---
+
+## D160 — Two of the feedback row's six tags are rendered, and «Lag oppgave» is drawn disabled
+
+**C4. Both are things the bundle draws that the product does not do, and both are logged rather
+than quietly dropped — a reviewer comparing the screen to the drawing will count fewer chips and
+find a dead button, and should find the reason here instead of asking.**
+
+### The tags — four of six not built (Q116)
+
+The bundle tags a feedback row with one of six values: `Ny`, `Samtale`, `Resultater`, `Ros`,
+`Spørsmålene`, `Utsending`. In the bundle itself **only `Ny` has a writer** (`onFbSend` sets it);
+the other five are strings in `DEFAULT_FEEDBACK`.
+
+Two of the six are FACTS about the row and are derived:
+
+| bundle tag | ours | derived from |
+|---|---|---|
+| `Ny` | «Ubehandlet» | `handled_at is null` |
+| `Samtale` | the reply thread's presence | `survey_comment_replies` |
+
+The other four are TOPICAL, and nothing in this product classifies a comment by topic. Building
+them means either a `tag` column with no writer — the standing question's fifth instance, in the
+tranche that closed the previous four — or inventing a classifier this plan does not have.
+
+**«Derive, do not duplicate» (Q61) and «never fabricate data in the UI», applied at the schema
+rather than at the screen.** There is no `tag` column.
+
+### «Lag oppgave» — drawn, rendered, and deliberately disabled
+
+The bundle's row offers a button that turns a comment into a task. It is rendered in its design
+treatment, at 45% opacity, with a `title` saying why — **not hidden**, because a control that
+vanishes teaches nothing and this one has a real reason.
+
+The reason is Q72. `tasks.source_kind` admits `manuell` and `survey`; `source_ref` is a foreign key
+to `public.surveys` and to nothing else, *deliberately* — «an untyped uuid is how a task ends up
+referencing another organisation's row». Widening it to reach a comment is a migration, and behind
+the migration is a **disclosure question**: the task register is readable in full by a `leser`
+(`tasks_sel` is `is_org_member`), and a task created from a comment would carry a respondent's own
+words into it.
+
+That is the same shape as the V2-4 finding this screen already guards against — the bundle's own
+fixture ships a task whose source reads «Psykososial kartlegging · under terskel», which discloses
+that a specific small group scored badly. **A decision about what a task may CONTAIN is not a
+wiring job and is not taken in a UI phase.**
+
+**What it would take:** a decision on Q72 for comment-sourced tasks, then a migration widening
+`source_kind` and adding a second typed FK. The disabled button and its sentence are the honest
+interim, and they are cheaper to remove than a feature is to unbuild.

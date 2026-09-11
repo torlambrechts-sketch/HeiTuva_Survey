@@ -23,6 +23,7 @@ import {
 import { Shell } from './Shell'
 import { QuestionInput } from './QuestionInput'
 import { submitResponse } from './actions'
+import { CommentThread } from './CommentThread'
 import { PeerResults } from './PeerResults'
 
 /** The design's promise: 90 seconds, counted down live (HeiTuva.dc.html:3298). */
@@ -611,7 +612,14 @@ function ThankYou({
             </div>
           </>
         ) : (
-          <PeerResults token={token} respondentKind={respondentKind} />
+          <>
+            <PeerResults token={token} respondentKind={respondentKind} />
+            {/* C5 — the other half of the round trip. Renders nothing until a
+                manager has actually replied, so it never sits empty. In the
+                NON-test branch only: a dry run wrote nothing, so there is no
+                thread of hers to read and a panel here would be furniture. */}
+            <CommentThread token={token} />
+          </>
         )}
       </div>
     </Shell>

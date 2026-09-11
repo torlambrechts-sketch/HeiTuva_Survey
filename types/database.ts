@@ -2921,6 +2921,14 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      reply_to_comment: {
+        Args: { p_body: string; p_comment: string }
+        Returns: Json
+      }
+      set_comment_handled: {
+        Args: { p_comment: string; p_handled: boolean }
+        Returns: Json
+      }
       submit_response: {
         Args: {
           p_anon_choice?: boolean

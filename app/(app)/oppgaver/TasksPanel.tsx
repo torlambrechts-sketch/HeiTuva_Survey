@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { STEP_KEY, TASK_STEPS, isLate, nextStep, stepIndex, type TaskStatus } from '@/lib/tasks/lifecycle'
 import { TASK_ERROR_KEY, advanceTask, assessTaskEffect, createCorrectingTask } from './actions'
+import { FeedbackList, type FeedbackRow } from './FeedbackList'
+
+export type { FeedbackRow }
 
 /**
  * Oppgaver — V2:2152–2214.
@@ -52,6 +55,16 @@ export type TaskRow = {
 }
 
 const CARD = 'rounded-[16px] border border-line bg-sf px-[22px] py-5'
+/** V3:2176-2190 — the rail that makes this ONE surface with one filter. Three
+ *  values, and «Alt» is the default because a manager arriving from the nav has
+ *  not yet said which half they came for. */
+const VIEWS = ['alle', 'oppgaver', 'tilbakemeldinger'] as const
+const VIEW_KEY: Record<(typeof VIEWS)[number], string> = {
+  alle: 'tfAll',
+  oppgaver: 'tfTasks',
+  tilbakemeldinger: 'tfFeedback',
+}
+
 const FILTERS = ['alle', 'mine', 'frist', 'lov'] as const
 const FILTER_KEY: Record<(typeof FILTERS)[number], string> = {
   alle: 'taskFilterAlle',
@@ -72,8 +85,21 @@ function blockedOnAssessment(r: { status: TaskStatus; assessed: boolean }): bool
   return r.status === 'gjennomfort' && !r.assessed
 }
 
-export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: boolean }) {
+export function TasksPanel({
+  tasks,
+  feedback,
+  surveyOptions,
+  canEdit,
+}: {
+  tasks: TaskRow[]
+  feedback: FeedbackRow[]
+  surveyOptions: { id: string; title: string }[]
+  canEdit: boolean
+}) {
   const t = useTranslations('tasks')
+  const [view, setView] = useState<(typeof VIEWS)[number]>('alle')
+  const showTasks = view !== 'tilbakemeldinger'
+  const showFeedback = view !== 'oppgaver'
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('alle')
   const [busy, startTransition] = useTransition()
   const [note, setNote] = useState<string | null>(null)
@@ -128,20 +154,23 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
             token. Same values as `ReportsScreen.tsx:94` and `ReportSidePanel.tsx:121`,
             which are this exact control — a third variant would be a third thing to
             keep in step. */}
+        {/* THREE, counted. RESPONSIVE.md's chip-rail rule and the same gaps the
+            task filters below use — the two rails are the same control and a
+            third variant would be a third thing to keep in step. */}
         <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
-          {FILTERS.map((f) => (
+          {VIEWS.map((v) => (
             <button
-              key={f}
+              key={v}
               type="button"
-              onClick={() => setFilter(f)}
-              aria-pressed={filter === f}
-              className="touch-44 cursor-pointer rounded-[999px] border-none px-[18px] py-2 text-[12.5px] font-semibold text-ink"
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className="touch-44 cursor-pointer rounded-[999px] border-none px-[18px] py-2 text-[12.5px] font-semibold"
               style={{
-                background: filter === f ? 'var(--sf)' : 'transparent',
-                boxShadow: filter === f ? '0 1px 3px rgba(25,21,16,.14)' : 'none',
+                background: view === v ? 'var(--ink)' : 'transparent',
+                color: view === v ? 'var(--sf)' : 'var(--ink)',
               }}
             >
-              {t(FILTER_KEY[f])}
+              {t(VIEW_KEY[v])}
             </button>
           ))}
         </div>
@@ -160,10 +189,39 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
         ))}
       </div>
 
-      {/* V2:5197 — the sentence the close guard enforces. */}
-      <p className="mt-4 rounded-[14px] bg-sbg px-[18px] py-3.5 text-[13px] leading-[1.55]">
-        {t('taskEffectNote')}
-      </p>
+      {/* V3:2192-2198 — the task filters move DOWN here, under a heading of
+          their own, because the rail at the top of the page is now the Alt /
+          Oppgaver / Tilbakemeldinger switch. Two rails, two jobs. */}
+      {showTasks ? (
+        <div className="mt-[22px] flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">{t('tasksHeading')}</h2>
+          <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                aria-pressed={filter === f}
+                className="touch-44 cursor-pointer rounded-[999px] border-none px-[15px] py-[7px] text-xs font-semibold text-ink"
+                style={{
+                  background: filter === f ? 'var(--sf)' : 'transparent',
+                  boxShadow: filter === f ? '0 1px 3px rgba(25,21,16,.14)' : 'none',
+                }}
+              >
+                {t(FILTER_KEY[f])}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* V2:5197 — the sentence the close guard enforces. Inside the task half:
+          it is about closing a task and says nothing about a comment. */}
+      {showTasks ? (
+        <p className="mt-3 rounded-[14px] bg-sbg px-[18px] py-3.5 text-[13px] leading-[1.55]">
+          {t('taskEffectNote')}
+        </p>
+      ) : null}
 
       {note || error ? (
         <p
@@ -175,7 +233,7 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-3">
+      <div className="mt-4 flex flex-col gap-3" hidden={!showTasks}>
         {tasks.length === 0 ? (
           <p className="text-[13px] text-mut">{t('taskNoTasks')}</p>
         ) : shown.length === 0 ? (
@@ -358,6 +416,9 @@ export function TasksPanel({ tasks, canEdit }: { tasks: TaskRow[]; canEdit: bool
           })
         )}
       </div>
+      {showFeedback ? (
+        <FeedbackList rows={feedback} surveyOptions={surveyOptions} canEdit={canEdit} />
+      ) : null}
     </main>
   )
 }
