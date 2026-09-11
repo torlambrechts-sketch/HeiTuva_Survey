@@ -43,7 +43,6 @@ export function QuizPanel({
     instantUnavailable: string
     certificate: string
     certificateUnavailable: string
-    guard: string
     failed: string
   }
 }) {
@@ -114,7 +113,6 @@ export function QuizPanel({
           </div>
         ))}
       </div>
-      <p className="mt-[11px] text-[12px] leading-[1.45] text-mut">{s.guard}</p>
       {error ? (
         <p role="alert" className="mt-2 text-[12px] text-mut">
           {error}

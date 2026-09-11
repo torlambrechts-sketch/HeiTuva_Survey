@@ -69,6 +69,7 @@ export function Builder({
   locked,
   policy,
   runMode,
+  packLocks,
   bank,
   quizTimeBonus,
   quizTeamBoard,
@@ -82,6 +83,10 @@ export function Builder({
   policy: Omit<PolicyPanelProps, 'surveyId' | 'questions' | 'rules'>
   /** V2-9 — `surveys.run_mode`, the switch «Kjøremodus» writes. */
   runMode: string
+  /** A statutory pack whose own policy is `locked`. NOT `policy.locked`, which
+   *  means «already sent» — the two are different locks and only this one is
+   *  the clause `app.guard_quiz_policy` refuses on. */
+  packLocks: boolean
   /** B3 — the rows the picker overlay offers, read on the server. */
   bank: BankRow[]
   /** V2-10, Q84 — the two quiz toggles the narrowing kept. */
@@ -387,6 +392,7 @@ export function Builder({
           surveyId={surveyId}
           runMode={runMode}
           anonymity={policy.anonymity}
+          packLocks={packLocks}
           advanced={advanced}
           onAdvancedChange={setAdvanced}
           strings={{
@@ -398,7 +404,9 @@ export function Builder({
             liveDesc: t('runModeLiveDesc'),
             quiz: t('runModeQuiz'),
             quizDesc: t('runModeQuizDesc'),
-            quizGuard: t('quizGuard'),
+            quizWillName: t('quizWillName'),
+            quizSwitchedToNamed: t('quizSwitchedToNamed'),
+            quizPackLocked: t('quizPackLocked'),
             namedSurvey: t('runModeNamedSurvey'),
             buildMode: t('buildMode'),
             buildModeDescSimple: t('buildModeDescSimple'),
@@ -428,7 +436,6 @@ export function Builder({
             instantUnavailable: t('quizInstantUnavailable'),
             certificate: t('quizCertificate'),
             certificateUnavailable: t('quizCertificateUnavailable'),
-            guard: t('quizGuard'),
             failed: t('policyError_failed'),
           }}
         />

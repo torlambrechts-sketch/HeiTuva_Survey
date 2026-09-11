@@ -37,6 +37,7 @@ export function RunModePanel({
   surveyId,
   runMode,
   anonymity,
+  packLocks,
   strings: s,
   advanced,
   onAdvancedChange,
@@ -44,6 +45,9 @@ export function RunModePanel({
   surveyId: string
   runMode: string
   anonymity: string
+  /** A statutory pack whose policy is `locked` — the clause in
+   *  `app.guard_quiz_policy` that is a real refusal rather than a consequence. */
+  packLocks: boolean
   strings: {
     title: string
     desc: string
@@ -52,8 +56,13 @@ export function RunModePanel({
     live: string
     liveDesc: string
     quiz: string
-    quizGuard: string
     quizDesc: string
+    /** Forward-looking: what picking Quiz WILL do, on a survey where it applies. */
+    quizWillName: string
+    /** Past tense: what picking Quiz just did. */
+    quizSwitchedToNamed: string
+    /** The one refusal that survives, and it stays a refusal. */
+    quizPackLocked: string
     namedSurvey: string
     failed: string
     /* B2 — «Byggemodus» moves inside this card, where V2:580-587 draws it:
@@ -70,7 +79,12 @@ export function RunModePanel({
   advanced: boolean
   onAdvancedChange: (next: boolean) => void
 }) {
-  const [mode, setMode] = useState<Mode>(runMode === 'live' ? 'live' : 'standard')
+  const [mode, setMode] = useState<Mode>(
+    runMode === 'live' ? 'live' : runMode === 'quiz' ? 'quiz' : 'standard',
+  )
+  /* Tracked locally because picking Quiz CHANGES it, and the sentence under the
+     cards has to stop predicting a switch that has already happened. */
+  const [anon, setAnon] = useState(anonymity)
   const [note, setNote] = useState<string | null>(null)
   const [pending, start] = useTransition()
 
@@ -79,15 +93,42 @@ export function RunModePanel({
     setNote(null)
     start(async () => {
       const r = await setRunMode({ surveyId, runMode: next })
-      if (r.ok) setMode(next)
-      // Both quiz guards are DATABASE refusals (app.guard_quiz_policy), so the
-      // card is pickable and the reason arrives named — the same choice live
-      // already made. `quizGuard` states both halves; it is the string the
-      // builder already shipped for exactly this.
-      else if (r.error === 'quizGuard') setNote(s.quizGuard)
-      else setNote(r.error === 'namedSurvey' ? s.namedSurvey : s.failed)
+      if (r.ok) {
+        setMode(next)
+        // The server reports whether it actually moved the anonymity, so this
+        // says what HAPPENED rather than what the client assumed it would.
+        if (r.switchedToNamed) {
+          setAnon('named')
+          setNote(s.quizSwitchedToNamed)
+        }
+        return
+      }
+      if (r.error === 'quizPackLocked') setNote(s.quizPackLocked)
+      else if (r.error === 'namedSurvey') setNote(s.namedSurvey)
+      else setNote(s.failed)
     })
   }
+
+  /**
+   * THE ONE SENTENCE UNDER THE CARDS, AND THE RULE FOR WHICH ONE IT IS.
+   *
+   * It used to be two restrictions at once, permanently, on a survey neither
+   * applied to — the editor was told what the product would refuse before they
+   * had asked it for anything. A screen that opens by listing prohibitions is
+   * describing itself, not helping.
+   *
+   * Now: at most one, only where it bears, and the anonymous case is a
+   * CONSEQUENCE rather than a prohibition — «this is what Quiz will do», not
+   * «this is what you may not have».
+   */
+  const standing =
+    mode === 'quiz'
+      ? null // Nothing to say: both conditions provably hold, or we would not be here.
+      : packLocks
+        ? s.quizPackLocked
+        : anon !== 'named'
+          ? s.quizWillName
+          : null
 
   const cards: { key: Mode; label: string; desc: string; locked: boolean }[] = [
     { key: 'standard', label: s.standard, desc: s.standardDesc, locked: false },
@@ -130,14 +171,17 @@ export function RunModePanel({
           refusal is a message about what just happened. */}
       {note ? (
         <p
+          role="status"
           className="mt-[11px] inline-block rounded-full px-[13px] py-2 text-[11.5px] font-semibold"
           style={{ background: 'var(--ac3)' }}
         >
           {note}
         </p>
-      ) : null}
-      {anonymity !== 'anonymous' && mode !== 'live' ? (
-        <p className="mt-2.5 text-[12px] leading-[1.45] text-mut">{s.namedSurvey}</p>
+      ) : standing ? (
+        /* Quiet, not a chip: the chip is `--ac3` and reads as a warning. This
+           sentence is information about the mode you are hovering over, and the
+           two must not look the same. */
+        <p className="mt-2.5 text-[12px] leading-[1.45] text-mut">{standing}</p>
       ) : null}
 
       {/* V2:580-587 — the rule, then Byggemodus. The description is the mode's

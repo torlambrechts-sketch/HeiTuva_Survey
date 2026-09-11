@@ -140,6 +140,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
       />
       <Builder
         runMode={survey.run_mode}
+        packLocks={packLocks}
         bank={bank}
         quizTimeBonus={survey.quiz_time_bonus}
         quizTeamBoard={survey.quiz_team_board}

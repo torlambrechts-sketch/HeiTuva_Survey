@@ -4683,3 +4683,83 @@ appears, the ICO is generated from the same `icon.svg` and the drift test extend
 **Neither file is in the visual gates.** `verify:browser` photographs pages, not `<head>`, so the
 icon is checked by the geometry test and by having been rendered and looked at at 16, 32, 64 and
 180px — not by any gate. A limit, recorded rather than papered over.
+
+---
+
+## D153 — The screen reported an obstacle where it could carry out the consequence
+
+**2026-09-11 (Tor). The defect was the presentation of the rules, not the rules.**
+
+`builder.quizGuard` read: «Quiz krever navngitte svar for å kunne gi poeng, og kan ikke brukes på
+lovpålagte maler. **Begge deler avvises av databasen, ikke bare av skjermen.**» Two restrictions in
+one sentence, handed to an editor who had asked for neither, plus a third clause written for the
+people who built it.
+
+**Three renders, and the third is the sharpest.** It arrived as a sticky chip after one click on
+Quiz; it was the standing text under the cards in an earlier form; and `QuizPanel` rendered it
+**unconditionally** — which means it was permanently on screen in the one state where *both
+conditions provably hold*. A survey in quiz mode is necessarily named and necessarily not on a
+statutory pack. The sentence described two things that could not fail.
+
+### What changed
+
+**The database rule is untouched.** `app.guard_quiz_policy` still refuses both clauses, and both
+reasons are right: a score is a fact about a person, and aml. § 4-3 does not have correct answers.
+
+**The UI stops reporting the first clause and carries it out.** Picking Quiz now sets
+`anonymity = 'named'` **in the same UPDATE** as `run_mode = 'quiz'`, so the trigger sees one
+finished row, passes its first clause, and still evaluates its second. *A guard that no longer
+fires because the screen does its job is what a guard should look like* — the rule did not weaken,
+the path to it stopped being a dead end.
+
+**The switch is reported, not silent.** `setRunMode` reads the row first and returns
+`switchedToNamed`, so the sentence afterwards is about what *happened*, not what the client
+predicted. Changing how a survey collects answers behind someone's back would be a worse defect
+than the one being fixed.
+
+**The pack lock stays a refusal**, with its own error member. It is the one with no next step but
+«use a different survey», and softening it would be a category error about what a statutory
+kartlegging is.
+
+**One sentence at most, and only where it bears**: a locked pack says the pack locks the mode; an
+anonymous survey says what Quiz *will do*; a named non-pack survey says nothing; a quiz says
+nothing. The standing sentence is muted body text, not the `--ac3` chip — a refusal and a note
+about a mode you are considering must not look the same.
+
+**Found while fixing it, same class, same panel:** `runModeNamedSurvey` («Live krever anonyme
+svar…») rendered on `anonymity !== 'anonymous' && mode !== 'live'` — permanently, on any named
+survey, about a mode the editor had not gone near. It is a refusal message now and only that.
+
+---
+
+## D154 — The Builder's voice, counted
+
+**Measured 2026-09-11, `npx tsx scripts/verify/builder-voice.ts`.** Asked for after D153: the
+fidelity review counted statutory-vs-customer vocabulary and found 7 to 0; this is the same
+measurement on a different axis.
+
+| | |
+|---|---|
+| builder keys rendered by the Builder | 186 of 252 |
+| of those, **sentences** (≥28 chars, not labels) | **66** |
+| restrictive | **10 (15%)** |
+| **restrictive AND pre-emptive** | **0** |
+
+**The second number is the one that matters and the first is nearly meaningless without it.** Ten
+restrictions is not a fault: `policyTwoText` is the product arguing with a threshold of 2,
+`policyWarnTargetBelow` says a result will never appear, `lockedNotice` explains a frozen survey
+*and names the next step*. Each is gated on the state it describes. **None greets a person who has
+asked for nothing** — which is what was wrong before, and is what was fixed.
+
+The two `«Ikke bygget»` sentences in `QuizPanel` are the only unconditional ones left, and they are
+Q84's deliberate absence-visible treatment: a reader must be able to tell «not built» from «not
+there».
+
+**THE CLASSIFICATION IS A HAND-WRITTEN LIST, AND THE FIRST ATTEMPT IS WHY.** A marker regex
+over-collected badly — «Ingen spørsmål ennå. Legg til ett fra panelet til høyre» is an empty state
+offering a next step; «Ingen skjemafelt bryter anonymiteten» is a checklist **pass**, good news
+counted as a prohibition. And one hit was this catalogue biting the measurement: `ready_policy`
+(«Terskel og målgruppe stemmer») matched `/må\b/` — **JavaScript's `\b` is ASCII, so «å» is a
+non-word character and there is a boundary inside «målgruppe».** That is D113/D116 exactly, in a
+script written to count something else, by the session that had just re-read them. The script now
+fails if a classified key stops being rendered, so the list cannot quietly suppress nothing.

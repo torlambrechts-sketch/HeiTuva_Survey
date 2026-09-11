@@ -388,17 +388,23 @@ export type PolicyResult =
       ok: false
       // 'namedSurvey' is V2-9's: app.guard_run_mode_anonymous refuses live on a
       // survey that is not anonymous.
-      // 'quizGuard' is V2-10's pair, surfaced 2026-09-10 when the card was
-      // unlocked: app.guard_quiz_policy refuses a quiz on an anonymous survey
-      // and on a statutory pack. ONE member for both, because builder.quizGuard
-      // states both halves and the editor needs the rule, not which clause fired.
+      // `app.guard_quiz_policy` has TWO clauses and they are no longer one
+      // member. They were, and that was the defect: an editor was handed both
+      // rules at once, before attempting either, and neither described what to
+      // do next. The clauses are different in kind — one is a CONSEQUENCE the
+      // screen can simply carry out, the other is a genuine refusal — so they
+      // are different members now.
       error:
         | 'forbidden'
         | 'invalid'
         | 'locked'
         | 'belowOrgFloor'
         | 'namedSurvey'
-        | 'quizGuard'
+        /** The pack lock. Stays a refusal: a statutory kartlegging is not a quiz. */
+        | 'quizPackLocked'
+        /** Defence in depth. The UI switches the mode first, so this should not
+         *  reach a person — if it does, something refused the anonymity change. */
+        | 'quizNeedsNamed'
         | 'failed'
     }
 
@@ -465,33 +471,71 @@ const RunModeInput = z.object({
   runMode: z.enum(['standard', 'live', 'quiz']),
 })
 
-export async function setRunMode(input: unknown): Promise<PolicyResult> {
+/**
+ * Picking a mode, and — for quiz — MAKING THE CONSEQUENCE HAPPEN.
+ *
+ * `app.guard_quiz_policy` refuses a quiz on a survey that is not `named`, and
+ * that rule is right: a score is a fact about a person. The defect was never the
+ * rule; it was that the screen reported the obstacle instead of clearing it. An
+ * editor who picks Quiz has said what they want, and «named answers» is what
+ * Quiz *is*, not a hoop in front of it.
+ *
+ * So the anonymity moves in the SAME statement. The trigger sees one NEW row
+ * carrying both values, passes its first clause, and still evaluates its
+ * second — **the pack lock is not relaxed and must not be.** A psychosocial
+ * kartlegging with a leaderboard is a category error about what the survey is
+ * for, and that stays a refusal.
+ *
+ * The switch is REPORTED rather than silent (`switchedToNamed`), because
+ * changing how a survey collects answers behind someone's back is a worse
+ * defect than the one this fixes. The screen says what it did.
+ */
+export async function setRunMode(
+  input: unknown,
+): Promise<(PolicyResult & { ok: true; switchedToNamed?: boolean }) | (PolicyResult & { ok: false })> {
   const viewer = await requireViewer()
   if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
 
   const parsed = RunModeInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'invalid' }
+  const { surveyId, runMode } = parsed.data
 
   const supabase = await createClient()
+
+  // Read before writing, so «did it change» is a fact rather than the client's
+  // claim about what it was showing.
+  let switchedToNamed = false
+  if (runMode === 'quiz') {
+    const { data: current } = await supabase
+      .from('surveys')
+      .select('anonymity')
+      .eq('id', surveyId)
+      .eq('org_id', viewer.orgId)
+      .maybeSingle()
+    switchedToNamed = Boolean(current) && current!.anonymity !== 'named'
+  }
+
   const { error } = await supabase
     .from('surveys')
-    .update({ run_mode: parsed.data.runMode })
-    .eq('id', parsed.data.surveyId)
+    // One statement: the trigger must see the finished row. Two updates would
+    // hand it an intermediate state that its own first clause refuses.
+    .update(runMode === 'quiz' ? { run_mode: runMode, anonymity: 'named' } : { run_mode: runMode })
+    .eq('id', surveyId)
     .eq('org_id', viewer.orgId)
   if (error) {
     if (/live_requires_anonymous/.test(error.message)) return { ok: false, error: 'namedSurvey' }
-    // Both quiz guards come back as one named refusal, because `builder.quizGuard`
-    // already states both halves and a reader picking the mode needs the rule,
-    // not which of the two clauses tripped.
-    if (/quiz_requires_named|quiz_not_on_statutory_pack/.test(error.message)) {
-      return { ok: false, error: 'quizGuard' }
+    // Named separately now. The pack lock is the only one an editor should ever
+    // see, and it is the one with no next step but «use a different survey».
+    if (/quiz_not_on_statutory_pack/.test(error.message)) {
+      return { ok: false, error: 'quizPackLocked' }
     }
+    if (/quiz_requires_named/.test(error.message)) return { ok: false, error: 'quizNeedsNamed' }
     console.error(`setRunMode failed: ${error.message}`)
     return { ok: false, error: 'failed' }
   }
 
-  revalidatePath(`/undersokelser/${parsed.data.surveyId}/bygg`)
-  return { ok: true }
+  revalidatePath(`/undersokelser/${surveyId}/bygg`)
+  return { ok: true, switchedToNamed }
 }
 
 /**
