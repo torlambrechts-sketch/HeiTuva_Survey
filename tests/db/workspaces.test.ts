@@ -164,7 +164,12 @@ describe('W0 · Q122 — the org default is a column with a writer, the choice i
 })
 
 describe('W0 · the registries are public by design, and that claim is CHECKED', () => {
-  const TABLES = ['workspaces', 'workspace_modules', 'workspace_module_links'] as const
+  const TABLES = [
+    'workspaces',
+    'workspace_modules',
+    'workspace_module_links',
+    'workspace_use_case_lifts',
+  ] as const
 
   it.each(TABLES)('%s carries no org id, no survey id and no number', (table) => {
     const cols = psql(`
@@ -272,6 +277,58 @@ describe('W0 · the standing constraint — no per-organisation value on a respo
       )
     }
   })
+
+  /**
+   * W3 STRENGTHENS THIS IN THE PHASE THAT COULD BREAK IT, which is the point:
+   * a constraint verified after the phase able to violate it is verified at the
+   * wrong time. W0 could only forbid the names it knew; W3 is where the
+   * vocabulary actually starts moving through the app, so the test has to
+   * forbid the shapes W3 introduced.
+   *
+   * The names are the ones W3 created: `readWorkspace`, `DEFAULT_VOCABULARY`,
+   * `vocabulary.`, and each of the four prop forms the four manager screens
+   * take. Any of them appearing under `app/s/` would mean a per-organisation
+   * word had reached a respondent — «deltaker» in one organisation and «kunde»
+   * in another, so a respondent answering two surveys learns they came from the
+   * same product.
+   */
+  it('and nothing under app/s/ reads W3\'s vocabulary either', () => {
+    const files = execFileSync('bash', [
+      '-lc',
+      "find 'app/s' -type f \\( -name '*.ts' -o -name '*.tsx' \\) | sort",
+    ], { encoding: 'utf8' }).split('\n').filter(Boolean)
+    expect(files.length, 'the respondent surface has source files').toBeGreaterThan(0)
+
+    const FORBIDDEN = [
+      'readWorkspace',
+      'DEFAULT_VOCABULARY',
+      'vocabulary.',
+      'personDef',
+      'personsCap',
+      'workspace/current',
+      'workspace/modules',
+    ]
+    for (const f of files) {
+      const src = readFileSync(f, 'utf8')
+      for (const name of FORBIDDEN) {
+        expect(src.includes(name), `${f} must not reference ${name}`).toBe(false)
+      }
+    }
+  })
+
+  /**
+   * AND THE OTHER HALF, WITHOUT WHICH THE ABOVE IS VACUOUS: the vocabulary
+   * must actually be in use somewhere, or a test that finds it nowhere is
+   * passing because the feature does not exist rather than because it is
+   * contained. Measured over the manager-facing screens W3 wired.
+   */
+  it('the vocabulary IS wired on the manager side — so the absence above means containment', () => {
+    const wired = execFileSync('bash', [
+      '-lc',
+      "grep -rl 'vocabulary\\.' 'app/(app)' || true",
+    ], { encoding: 'utf8' }).split('\n').filter(Boolean)
+    expect(wired.length, 'W3 wired the vocabulary on at least the four screens').toBeGreaterThanOrEqual(4)
+  })
 })
 
 describe('W0 carry · types/database.ts was hand-transcribed, so it is CHECKED against the catalogue', () => {
@@ -332,5 +389,34 @@ describe('W0 carry · types/database.ts was hand-transcribed, so it is CHECKED a
     expect(typed.length).toBeGreaterThan(5)
     expect(typed).toContain('workspace')
     expect(catalogueColumns('organizations')).toContain('workspace')
+  })
+})
+
+describe('W3 · the lift registry', () => {
+  it('every lift resolves to a real use case — the mapping is TOTAL', () => {
+    const dangling = psql(`
+      select l.workspace_key, l.use_case_key
+        from public.workspace_use_case_lifts l
+        left join public.use_cases u on u.key = l.use_case_key
+       where u.key is null`)
+    const all = psql(`select workspace_key from public.workspace_use_case_lifts`)
+    // NON-VACUITY: an empty lift table would make `dangling` empty too, and
+    // the assertion would pass over nothing. V1-5 asserted the pack mapping
+    // the same way, and for the same reason.
+    expect(all.length, 'lifts are seeded').toBeGreaterThanOrEqual(5)
+    expect(dangling, 'a lift naming a use case that does not exist').toEqual([])
+  })
+
+  it('Tilpasset lifts nothing — an absent row, not a null one', () => {
+    const rows = psql(`
+      select count(*) from public.workspace_use_case_lifts where workspace_key = 'custom'`)
+    expect(Number(rows[0]![0])).toBe(0)
+  })
+
+  it('the rank is meaningful: quiz lifts medlem above hr', () => {
+    const rows = psql(`
+      select use_case_key from public.workspace_use_case_lifts
+       where workspace_key = 'quiz' order by sort_order`)
+    expect(rows.map((r) => r[0])).toEqual(['medlem', 'hr'])
   })
 })

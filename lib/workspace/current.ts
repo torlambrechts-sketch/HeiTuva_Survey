@@ -53,6 +53,18 @@ export type WorkspaceState = {
   allModules: { key: string; label: string }[]
   /** What Oversikt renders, and the two rows' column templates. */
   show: WorkspaceShow
+  /** W3 — the vocabulary, ready to hand to an ICU argument.
+   *
+   *  `personsCap` IS DERIVED, NOT STORED, and that is a deliberate line: it is
+   *  the one transformation that is purely mechanical in Norwegian (capitalise
+   *  the first letter of a noun that is already in the right number and form).
+   *  Everything that is NOT mechanical — the definite «den ansatte» beside the
+   *  indefinite «ansatt» — is a column, because deriving those would put
+   *  grammar in a component and be wrong in the next language. */
+  vocabulary: { person: string; personDef: string; persons: string; personsCap: string }
+  /** W3 — use-case keys this workspace lifts to the top of the library, in
+   *  rank order. Empty for Tilpasset, which lifts nothing. */
+  lifts: string[]
   /** Q124 — the SHIPPED preset's title, joined from `dashboard_presets` by
    *  `preset_key`, never copied. Null for Tilpasset, which has no preset and
    *  renders «Dashboard beholder ditt eget oppsett» instead. */
@@ -86,7 +98,7 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
   // The module set. Two reads rather than a join, because the link rows are a
   // registry of a dozen rows and the join would be a second place for the
   // ordering to live.
-  const [{ data: links }, { data: mods }, { data: presets }] = await Promise.all([
+  const [{ data: links }, { data: mods }, { data: presets }, { data: lifts }] = await Promise.all([
     supabase
       .from('workspace_module_links')
       .select('workspace_key, module_key, sort_order')
@@ -97,6 +109,10 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
     // hand-written one would be a second place for the FK to live. The FK in
     // the migration is the authority; this is only a lookup.
     supabase.from('dashboard_presets').select('key, title'),
+    supabase
+      .from('workspace_use_case_lifts')
+      .select('workspace_key, use_case_key, sort_order')
+      .order('sort_order'),
   ])
 
   const known = (mods ?? []).map((m) => m.key)
@@ -115,6 +131,13 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
     modules,
     allModules: mods ?? [],
     show: computeShow(modules),
+    vocabulary: {
+      person: current.person,
+      personDef: current.person_def,
+      persons: current.persons,
+      personsCap: current.persons.charAt(0).toUpperCase() + current.persons.slice(1),
+    },
+    lifts: (lifts ?? []).filter((l) => l.workspace_key === current.key).map((l) => l.use_case_key),
     presetTitle: current.preset_key
       ? ((presets ?? []).find((p) => p.key === current.preset_key)?.title ?? null)
       : null,

@@ -94,3 +94,50 @@ export function parseModuleCookie(raw: string | undefined, known: readonly strin
   const seen = new Set<string>()
   return (parsed as string[]).filter((k) => known.includes(k) && !seen.has(k) && seen.add(k))
 }
+
+/**
+ * The vocabulary when the registry has not been seeded.
+ *
+ * IT IS TILPASSET'S OWN SET, WHICH IS ALSO THE COPY THESE SCREENS SHIPPED
+ * BEFORE W3 — «Slik ser respondenten det», «Standardspråk for respondenter».
+ * So an unseeded database renders exactly what it rendered yesterday rather
+ * than a blank, a key, or an invented word. Never fabricate: the fallback is
+ * the previous truth, not a guess.
+ */
+export const DEFAULT_VOCABULARY = {
+  person: 'respondent',
+  personDef: 'respondenten',
+  persons: 'respondenter',
+  personsCap: 'Respondenter',
+} as const
+
+/**
+ * W3 · V4:6684-6688 — sort the template library so the workspace's use cases
+ * come first.
+ *
+ * STABILITY IS LOAD-BEARING, NOT INCIDENTAL. The list arrives already ordered
+ * by the library's own editorial sequence (`template_packs.sort_order`, then
+ * `created_at`, then title), and this only re-ranks it by lift group. Array
+ * sort has been stable by specification since ES2019, so every pack keeps its
+ * editorial position WITHIN its group — which is what makes this a lift rather
+ * than a reshuffle. Written down because a future reader replacing this with a
+ * comparator that is not stable would silently scramble the library and no test
+ * of the FIRST card would notice.
+ *
+ * Keyed on `use_case`, never on a title: Q45 made that a foreign key precisely
+ * so ordering could be expressed against a stable key, and a title is editable.
+ *
+ * An empty `lifts` returns the input order unchanged — Tilpasset lifts nothing,
+ * and the library keeps its own sequence.
+ */
+export function liftOrder<T extends { useCase: string | null }>(
+  packs: readonly T[],
+  lifts: readonly string[],
+): T[] {
+  if (lifts.length === 0) return [...packs]
+  const rank = (p: T) => {
+    const i = p.useCase ? lifts.indexOf(p.useCase) : -1
+    return i > -1 ? i : lifts.length
+  }
+  return [...packs].sort((a, b) => rank(a) - rank(b))
+}

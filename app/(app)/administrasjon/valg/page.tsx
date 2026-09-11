@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { readWorkspace } from '@/lib/workspace/current'
+import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { requireViewer } from '@/lib/auth/session'
 import { entraAvailable } from '@/lib/auth/entra'
 import { OptionsPanel } from '../OptionsPanel'
@@ -7,6 +9,12 @@ import { OPTION_KEYS, type OptionKey } from '../keys'
 /** Valg tab — HeiTuva.dc.html:1543-1557. */
 export default async function OptionsTab() {
   const viewer = await requireViewer()
+  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the
+     choice is a cookie and only a server render can read it. The fallback
+     is Tilpasset's own set, which is also the copy this screen shipped
+     before W3 — an unseeded registry renders yesterday's sentence rather
+     than a key or an invented word. */
+  const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
   if (viewer.role !== 'administrator') return null
 
   const supabase = await createClient()
@@ -34,6 +42,7 @@ export default async function OptionsTab() {
 
   return (
     <OptionsPanel
+      persons={vocab.persons}
       options={options}
       defaultLang={org?.default_lang === 'en' ? 'en' : 'no'}
       entra={await entraAvailable()}

@@ -244,6 +244,26 @@ export const ROUTES: RouteSpec[] = [
           await page.getByText('Tilpasset').first().waitFor()
         },
       },
+      /*
+       * W3 · THE VOCABULARY ACROSS WORKSPACES, not in one.
+       *
+       * Norwegian inflection is not length-neutral — «kunde» to «deltaker» is
+       * three characters, and «Ansatte som skal svare» is not the width of
+       * «Deltakere som skal svare». A label can therefore overflow in ONE
+       * workspace and not another, which no single-workspace capture can see.
+       * So `cx` is captured beside the default `hr`: two vocabularies through
+       * the same four sentences, at every project width.
+       */
+      {
+        name: 'arbeidsflate-kunder',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.workspace', value: 'cx', url: page.url() },
+          ])
+          await page.reload({ waitUntil: 'networkidle' })
+          await page.getByText('Kunder og service').first().waitFor()
+        },
+      },
       {
         // Every module off. `[]` rather than a missing cookie: an ABSENT
         // cookie means «nothing chosen» and falls back to the workspace's own
@@ -853,6 +873,34 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'default',
         setup: async (page) => {
+          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('link', { name: 'Videre til utsending' }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/send'))
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        /*
+         * W3 — THE VOCABULARY UNDER A SECOND WORKSPACE, on the screen carrying
+         * the longest of the four substitutions.
+         *
+         * V4:3218 changed this heading from «Mottakere» to
+         * «{personsCap} som skal svare», so `cx` renders «Kunder som skal
+         * svare» where `hr` renders «Ansatte som skal svare». Norwegian
+         * inflection is not length-neutral — «kunde» to «deltaker» is three
+         * characters — so a label can overflow in ONE workspace and not
+         * another, and no single-workspace capture would ever see it.
+         *
+         * The cookie is set before the navigation because the substitution
+         * happens at SERVER render; setting it afterwards would photograph the
+         * previous workspace's words.
+         */
+        name: 'arbeidsflate-kunder',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.workspace', value: 'cx', url: page.url() },
+          ])
           await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()

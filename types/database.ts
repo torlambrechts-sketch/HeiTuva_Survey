@@ -2738,6 +2738,24 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_use_case_lifts: {
+        Row: {
+          sort_order: number
+          use_case_key: string
+          workspace_key: string
+        }
+        Insert: {
+          sort_order?: number
+          use_case_key: string
+          workspace_key: string
+        }
+        Update: {
+          sort_order?: number
+          use_case_key?: string
+          workspace_key?: string
+        }
+        Relationships: []
+      }
       workspace_modules: {
         Row: {
           key: string

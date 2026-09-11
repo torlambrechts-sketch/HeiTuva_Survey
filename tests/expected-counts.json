@@ -31,7 +31,7 @@
   "tests/db/test-mode.test.ts": 9,
   "tests/db/use-cases-page.test.ts": 6,
   "tests/db/use-cases.test.ts": 9,
-  "tests/db/workspaces.test.ts": 31,
+  "tests/db/workspaces.test.ts": 38,
   "tests/invariants/attributed-results.test.ts": 23,
   "tests/invariants/duty-signing.test.ts": 21,
   "tests/invariants/invariants.test.ts": 54,
@@ -80,5 +80,5 @@
   "tests/unit/threshold-tier.test.ts": 13,
   "tests/unit/turnstile-state.test.ts": 11,
   "tests/unit/workspace-chip.test.ts": 12,
-  "tests/unit/workspace-modules.test.ts": 21
+  "tests/unit/workspace-modules.test.ts": 29
 }

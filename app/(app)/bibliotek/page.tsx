@@ -1,4 +1,6 @@
 import { getTranslations } from 'next-intl/server'
+import { readWorkspace } from '@/lib/workspace/current'
+import { liftOrder } from '@/lib/workspace/modules'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import {
@@ -39,6 +41,10 @@ export default async function LibraryPage({
   searchParams: Promise<Search>
 }) {
   const viewer = await requireViewer()
+  /* W3 · V4:6684 — the workspace's use-case lift. Empty when the registry is
+     unseeded or the workspace is Tilpasset, and an empty lift leaves the
+     library in its own editorial order — which is what it did before W3. */
+  const lifts = (await readWorkspace(viewer.orgId))?.lifts ?? []
   const sp = await searchParams
   const t = await getTranslations('library')
   const tQ = await getTranslations('qtype')
@@ -124,6 +130,7 @@ export default async function LibraryPage({
         />
       ) : tab === 'maler' ? (
         <TemplatesTab
+          lifts={lifts}
           orgId={viewer.orgId}
           useLabel={useLabel}
           chips={chips}
@@ -158,6 +165,7 @@ type T = Awaited<ReturnType<typeof getTranslations<'library'>>>
 type TQ = Awaited<ReturnType<typeof getTranslations<'qtype'>>>
 
 async function TemplatesTab({
+  lifts,
   orgId,
   useLabel,
   chips,
@@ -185,6 +193,11 @@ async function TemplatesTab({
   t: T
   tQ: TQ
   supabase: Supa
+  /* W3 · V4:6684 — the workspace's use-case lift, in rank order. Empty means
+     no lift, which is Tilpasset and is also what an unseeded registry gives:
+     the library keeps its own editorial sequence, which is what it did
+     before W3. */
+  lifts: string[]
 }) {
   const { data, error } = await supabase
     .from('template_packs')
@@ -225,7 +238,11 @@ async function TemplatesTab({
   // kind that cuts across all six use cases; «annet» is `use_case is null`,
   // which after the total-mapping assertion holds only an organisation's own
   // untagged templates.
-  const standard = all
+  /* The lift is applied to the STANDARD packs only. An organisation's own
+     templates are not use-case tagged by the wizard, so lifting them would
+     order a group by a key most of them do not carry — and `liftOrder` would
+     put every one of them last, which is a reshuffle rather than a lift. */
+  const standard = liftOrder(all, lifts)
     .filter((p) => !p.isOwn)
     .filter((p) =>
       category === 'Alle'

@@ -35,11 +35,18 @@ const LABEL: Record<OptionKey, [string, string]> = {
  * the key, so an enabled switch would persist a setting nothing honours.
  */
 export function OptionsPanel({
+  persons,
   options,
   defaultLang,
   entra,
   admins,
 }: {
+  /* W3 · Q122 — the workspace's word for the person who answers. A plain
+     string prop rather than a read here: this is a client component and the
+     workspace resolves at SERVER render, because the choice is a cookie. One
+     form, not the whole vocabulary, so the call site states which the screen
+     needs rather than leaving a reader to guess. */
+  persons: string
   options: Record<OptionKey, boolean>
   defaultLang: 'no' | 'en'
   /** Whether Auth reports Entra ID as configured (lib/auth/entra.ts). */
@@ -196,10 +203,10 @@ export function OptionsPanel({
       <div className="my-[18px] h-px bg-line" />
 
       <div className="flex flex-wrap items-center gap-3.5">
-        <span className="text-[14px] font-semibold">{t('defaultRespondentLang')}</span>
+        <span className="text-[14px] font-semibold">{t('defaultRespondentLang', { persons })}</span>
         <select
           value={lang}
-          aria-label={t('defaultRespondentLang')}
+          aria-label={t('defaultRespondentLang', { persons })}
           onChange={(e) => {
             const next = e.target.value as 'no' | 'en'
             const previous = lang

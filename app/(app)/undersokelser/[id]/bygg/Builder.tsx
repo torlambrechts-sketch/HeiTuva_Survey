@@ -61,6 +61,7 @@ const newId = () => `${NEW_ID_PREFIX}${++seq}`
  * server would have to reconstruct intent from a stream of patches.
  */
 export function Builder({
+  personDef,
   surveyId,
   initial,
   rules,
@@ -76,6 +77,9 @@ export function Builder({
   quizTimeBonus,
   quizTeamBoard,
 }: {
+  /* W3 · Q122 — threaded through rather than read: Builder is a client
+     component and the workspace resolves at server render. */
+  personDef: string
   surveyId: string
   initial: BuilderDraft
   rules: QualityRule[]
@@ -530,6 +534,7 @@ export function Builder({
 
       {tab === 'preview' ? (
         <PreviewPane
+          personDef={personDef}
           title={draft.title}
           questions={draft.questions}
           surveyId={surveyId}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { computeShow, parseModuleCookie } from '@/lib/workspace/modules'
+import {
+  DEFAULT_VOCABULARY,
+  computeShow,
+  liftOrder,
+  parseModuleCookie,
+} from '@/lib/workspace/modules'
 
 const KNOWN = ['action', 'duties', 'loop', 'activity', 'nps', 'quiz'] as const
 
@@ -126,5 +131,63 @@ describe('W2 · parseModuleCookie — a cookie is client-editable, so it is chec
     // The filter is against the registry passed in, not a list in the module,
     // so retiring a key in a migration is enough.
     expect(parseModuleCookie('["quiz"]', ['action', 'activity'])).toEqual([])
+  })
+})
+
+describe('W3 · liftOrder — a lift, not a reshuffle', () => {
+  const P = (key: string, useCase: string | null) => ({ key, useCase })
+
+  it('an empty lift returns the input order unchanged', () => {
+    const packs = [P('a', 'hr'), P('b', 'kunder'), P('c', null)]
+    expect(liftOrder(packs, []).map((p) => p.key)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('lifted use cases come first, in the lift\'s rank order', () => {
+    const packs = [P('a', 'hr'), P('b', 'kunder'), P('c', 'intern')]
+    expect(liftOrder(packs, ['kunder', 'intern']).map((p) => p.key)).toEqual(['b', 'c', 'a'])
+  })
+
+  /**
+   * THE PROPERTY THAT MAKES IT A LIFT. The list arrives already ordered by the
+   * library's editorial sequence, and every pack must keep its position WITHIN
+   * its group. Array sort is stable by specification since ES2019; this test is
+   * what fails if someone replaces the comparator with one that is not.
+   */
+  it('is STABLE — editorial order survives inside each group', () => {
+    const packs = [P('a1', 'hr'), P('b1', 'kunder'), P('a2', 'hr'), P('b2', 'kunder')]
+    expect(liftOrder(packs, ['kunder']).map((p) => p.key)).toEqual(['b1', 'b2', 'a1', 'a2'])
+  })
+
+  it('an untagged pack sorts with the unlifted, not before them', () => {
+    const packs = [P('untagged', null), P('hr1', 'hr')]
+    expect(liftOrder(packs, ['hr']).map((p) => p.key)).toEqual(['hr1', 'untagged'])
+  })
+
+  it('a lift naming a use case no pack carries changes nothing', () => {
+    const packs = [P('a', 'hr'), P('b', 'kunder')]
+    expect(liftOrder(packs, ['medlem']).map((p) => p.key)).toEqual(['a', 'b'])
+  })
+
+  it('does not mutate its input', () => {
+    const packs = [P('a', 'hr'), P('b', 'kunder')]
+    liftOrder(packs, ['kunder'])
+    expect(packs.map((p) => p.key)).toEqual(['a', 'b'])
+  })
+})
+
+describe('W3 · the fallback vocabulary is the pre-W3 copy', () => {
+  it('is Tilpasset\'s own set — what these screens shipped before W3', () => {
+    expect(DEFAULT_VOCABULARY).toEqual({
+      person: 'respondent',
+      personDef: 'respondenten',
+      persons: 'respondenter',
+      personsCap: 'Respondenter',
+    })
+  })
+
+  it('personsCap is the capitalised plural, which is the one mechanical form', () => {
+    expect(DEFAULT_VOCABULARY.personsCap).toBe(
+      DEFAULT_VOCABULARY.persons.charAt(0).toUpperCase() + DEFAULT_VOCABULARY.persons.slice(1),
+    )
   })
 })

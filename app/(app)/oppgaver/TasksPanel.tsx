@@ -86,11 +86,18 @@ function blockedOnAssessment(r: { status: TaskStatus; assessed: boolean }): bool
 }
 
 export function TasksPanel({
+  persons,
   tasks,
   feedback,
   surveyOptions,
   canEdit,
 }: {
+  /* W3 · Q122 — the workspace's word for the person who answers. A plain
+     string prop rather than a read here: this is a client component and the
+     workspace resolves at SERVER render, because the choice is a cookie. One
+     form, not the whole vocabulary, so the call site states which the screen
+     needs rather than leaving a reader to guess. */
+  persons: string
   tasks: TaskRow[]
   feedback: FeedbackRow[]
   surveyOptions: { id: string; title: string }[]
@@ -145,7 +152,7 @@ export function TasksPanel({
         <div className="min-w-0">
           <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
           {/* Q71: not «varsles i Teams». */}
-          <p className="mt-[3px] text-[13px] text-mut">{t('taskChannels')}</p>
+          <p className="mt-[3px] text-[13px] text-mut">{t('taskChannels', { persons })}</p>
         </div>
         {/* RESPONSIVE.md §"Chip rows" — the row gap must keep the 44px hit areas of
             vertically adjacent chips apart when the pill wraps. `gap-[3px]` is the

@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import { readWorkspace } from '@/lib/workspace/current'
+import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -27,6 +29,18 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
   if (!UUID.test(id)) notFound()
 
   const viewer = await requireViewer()
+
+  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the
+
+     choice is a cookie and only a server render can read it. The fallback
+
+     is Tilpasset's own set, which is also the copy this screen shipped
+
+     before W3 — an unseeded registry renders yesterday's sentence rather
+
+     than a key or an invented word. */
+
+  const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
   const supabase = await createClient()
 
   const { data: survey, error } = await supabase
@@ -138,6 +152,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         current="send"
       />
       <SendScreen
+      personsCap={vocab.personsCap}
         surveyId={survey.id}
         title={survey.title}
         anonymity={survey.anonymity}

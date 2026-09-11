@@ -59,6 +59,7 @@ function previewChips(
  * design's respondent screens.
  */
 export function PreviewPane({
+  personDef,
   title,
   questions,
   surveyId,
@@ -66,6 +67,12 @@ export function PreviewPane({
   quizMode,
   timeBonus,
 }: {
+  /* W3 · Q122 — the workspace's word for the person who answers. A plain
+     string prop rather than a read here: this is a client component and the
+     workspace resolves at SERVER render, because the choice is a cookie. One
+     form, not the whole vocabulary, so the call site states which the screen
+     needs rather than leaving a reader to guess. */
+  personDef: string
   title: string
   questions: DraftQuestion[]
   /** V2-7 — «Test undersøkelsen» (V2:894) needs the survey it opens. */
@@ -90,7 +97,7 @@ export function PreviewPane({
       style={{ background: 'var(--sf2)' }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('previewTitle')}</div>
+        <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('previewTitle', { personDef })}</div>
         {canTest ? (
           // V2:894. «Svarene lagres ikke» is the banner's promise on the other
           // side of this link, and `p_dry_run` is what makes it true.

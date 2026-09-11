@@ -46,6 +46,7 @@ const CLOSES_IN_DAYS = 7
 type Group = { id: string; name: string; count: number }
 
 export function SendScreen({
+  personsCap,
   surveyId,
   title,
   anonymity: initialAnonymity,
@@ -65,6 +66,12 @@ export function SendScreen({
   schedule: scheduleState,
   status,
 }: {
+  /* W3 · Q122 — the workspace's word for the person who answers. A plain
+     string prop rather than a read here: this is a client component and the
+     workspace resolves at SERVER render, because the choice is a cookie. One
+     form, not the whole vocabulary, so the call site states which the screen
+     needs rather than leaving a reader to guess. */
+  personsCap: string
   surveyId: string
   /** V2-3b · Q60. Lower-cased addresses on the organisation's Reservasjonsliste.
    *  The DATABASE is what actually refuses these (`M:0060`); this is so the
@@ -355,7 +362,7 @@ export function SendScreen({
           {channels.includes('email') || channels.includes('sms') ? (
             <section className={CARD}>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className={H2}>{t('recipients')}</h2>
+                <h2 className={H2}>{t('recipients', { personsCap })}</h2>
                 <button
                   type="button"
                   disabled={!canSend}

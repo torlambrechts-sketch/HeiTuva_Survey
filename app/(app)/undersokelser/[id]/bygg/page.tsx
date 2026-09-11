@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import { readWorkspace } from '@/lib/workspace/current'
+import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { getTranslations } from 'next-intl/server'
 
 /** Canonical UUID shape; anything else cannot name a survey. */
@@ -27,6 +29,9 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   // here rather than that the address is wrong.
   if (!UUID.test(id)) notFound()
   const viewer = await requireViewer()
+  /* W3 · Q122 — see the sibling pages: the choice is a cookie, so only a
+     server render can resolve it, and the fallback is the pre-W3 copy. */
+  const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
   const tQ = await getTranslations('qtype')
   const supabase = await createClient()
 
@@ -165,6 +170,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         current="bygg"
       />
       <Builder
+        personDef={vocab.personDef}
         runMode={survey.run_mode}
         feedbackMode={survey.feedback_mode}
         linkOnly={linkOnly}

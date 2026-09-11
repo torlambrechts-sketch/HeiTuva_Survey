@@ -1,4 +1,6 @@
 import { getTranslations } from 'next-intl/server'
+import { readWorkspace } from '@/lib/workspace/current'
+import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { type TaskStatus } from '@/lib/tasks/lifecycle'
@@ -26,6 +28,12 @@ const KIND_KEY: Record<string, string> = {
  */
 export default async function TasksPage() {
   const viewer = await requireViewer()
+  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the
+     choice is a cookie and only a server render can read it. The fallback
+     is Tilpasset's own set, which is also the copy this screen shipped
+     before W3 — an unseeded registry renders yesterday's sentence rather
+     than a key or an invented word. */
+  const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
   const t = await getTranslations('tasks')
   const supabase = await createClient()
 
@@ -210,6 +218,7 @@ export default async function TasksPage() {
 
   return (
     <TasksPanel
+      persons={vocab.persons}
       tasks={tasks}
       feedback={feedback}
       surveyOptions={surveyOptions}
