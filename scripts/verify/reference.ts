@@ -93,11 +93,21 @@ const BUNDLES: Bundle[] = [
   },
   {
     key: 'v3',
-    role: 'fourth handoff — the target for every screen a v3 phase touches',
+    role: 'fourth handoff — the reference for screens a v3 phase built and no v4 phase touches',
     design: 'design-reference-v3/heituva-survey-app-design/project/HeiTuva.dc.html',
     // No `splash`, no `bruksomrader`: v3 handed over one file. Those two
     // surfaces stay governed by v2 and are rendered from v2's set.
     out: 'artifacts/reference-v3',
+  },
+  {
+    key: 'v4',
+    role: 'fifth handoff — the target for every screen a v4 phase touches',
+    design: 'design-reference-v4/heituva-survey-app-design/project/HeiTuva.dc.html',
+    // No `splash`, no `bruksomrader`, for the SECOND handoff running. v3 being
+    // one file was read once as the anomaly that made `Bundle.splash` optional;
+    // v4 being one file too is the evidence it is the norm, not the exception.
+    // Both surfaces stay v2's and are rendered from v2's set.
+    out: 'artifacts/reference-v4',
   },
 ]
 
@@ -280,7 +290,8 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>, fro
 }
 
 /**
- * Which bundles this run renders. Default: the v2 set only.
+ * Which bundles this run renders. Default: the TARGET set only — the last entry
+ * in BUNDLES, derived rather than named, so promoting a handoff is one edit.
  *
  * The legacy set is FROZEN, and not by discipline: re-rendering it moved five
  * PNGs the first time this ran, with no design change behind them — a newer
@@ -295,18 +306,23 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>, fro
  * loss the legacy freeze was introduced to prevent, one bundle along.
  *
  * THE V2 SET NOW FREEZES TOO, one bundle further along, and it carries an extra
- * duty the other frozen sets do not: v3 handed over one file, so `splash*.png`
- * and `bruksomrader.png` exist ONLY in the v2 set and are the live reference
- * for those surfaces, not merely a record of what v2 was judged against.
+ * duty the other frozen sets do not: NEITHER v3 NOR v4 handed over a splash or
+ * a Bruksområder, so `splash*.png` and `bruksomrader.png` exist ONLY in the v2
+ * set and are the live reference for those surfaces, not merely a record of
+ * what v2 was judged against. Two one-file handoffs running is why that duty is
+ * written as a standing property of the v2 set rather than as a note about v3.
+ *
+ * THE V3 SET FREEZES ON THE SAME TERMS the moment v4 becomes the target: it is
+ * the reference for every screen a v3 phase built and no v4 phase touches.
  *
  * So the default renders the TARGET set only, and an older set is regenerated
- * only when someone asks for it by name:
+ * only when someone asks for it by name. The names are BUNDLES' own keys —
+ * listing them here would be a copy that goes stale the next handoff, so the
+ * error message enumerates them from the array instead:
  *
- *   npx tsx scripts/verify/reference.ts              v3 only (default)
- *   npx tsx scripts/verify/reference.ts --all        all four
- *   npx tsx scripts/verify/reference.ts --bundle=v2
- *   npx tsx scripts/verify/reference.ts --bundle=v1
- *   npx tsx scripts/verify/reference.ts --bundle=legacy
+ *   npx tsx scripts/verify/reference.ts                 the target set (default)
+ *   npx tsx scripts/verify/reference.ts --all           every set
+ *   npx tsx scripts/verify/reference.ts --bundle=<key>  one set by name
  *
  * Either way every set stays on disk, named, side by side.
  */

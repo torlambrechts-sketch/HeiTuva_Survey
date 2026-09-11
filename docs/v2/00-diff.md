@@ -430,6 +430,64 @@ keep the bundle they have, even though v3's file contains a drawing of all of th
 is governed by the bundle a phase *built it from*, and reading the presence of a drawing as
 governance is the failure Q52 exists to prevent.
 
+## 0.3c — v4, the fifth handoff (added V4-0, 2026-09-11)
+
+Q18/Q52's rule extends a third time. `/design-reference-v4/` governs every screen a **v4 phase
+touches**; `/design-reference-v3/` keeps the screens a v3 phase built and no v4 phase touches;
+everything above is unchanged.
+
+**v4 IS A ONE-FILE HANDOFF, AND SO WAS v3.** `HeiTuva Splash.dc.html` and
+`HeiTuva Bruksomrader.dc.html` are absent again, so those two surfaces stay v2's for a second
+handoff running, and `artifacts/reference-v2/splash*.png` and `bruksomrader.png` remain the only
+rendered baselines they have. § 0.3b called this the shape of *v3*; two in a row makes it the
+shape of a handoff, and `scripts/verify/reference.ts` now states it that way — the v4 entry
+declares neither `splash` nor `bruksomrader`, and the screens declaring `splash: true` /
+`bruksomrader: true` are SKIPPED for any bundle lacking the file rather than captured from the
+app page.
+
+| Surface | Governed today | Governed after V4-0 | Because |
+|---|---|---|---|
+| `splash` | v2 | **stays v2** | **v4 handed over no splash file at all** — second handoff running. |
+| **Bruksområder** | v2 | **stays v2** | same. |
+| Everything else | as § 0.3 / § 0.3b | **unchanged until a v4 phase touches it** | a screen is governed by the bundle a phase *built it from*. v4's file draws the whole app; drawing is not governance. |
+
+**THE PER-SURFACE ROWS FOR W0–W3 ARE DELIBERATELY NOT IN THIS TABLE YET.** v4 changes the app
+shell (header, nav, the Oversikt module grid) and substitutes a vocabulary across several
+manager-facing screens, so the rows that move are decided by which of those a W-phase actually
+builds — and that is the planning round's output, not something to infer from the diff. Writing
+speculative rows here would put governance in the table for screens no phase has touched, which is
+precisely the failure the last sentence of § 0.3b names. This section gets its rows when the plan
+exists.
+
+### What v4 changes, measured
+
+v3 `c6f63589` 6981 lines → v4 `85c0ce00` 7172 lines. **+191 net; 31 lines removed, 222 added.**
+Key sets: **ten new `sc-if` keys, none removed** — `wsEmpty`, `wsIsCustom` and
+`wsShow.{action, activity, duties, loop, nps, quiz, rowA, rowB}`. Sixteen distinct `ws*`
+identifiers where v3 has zero.
+
+The change is in five places, not one:
+
+1. **The header is restructured** (`:160-215`). `flex-wrap:wrap` → `nowrap`; padding `12px 22px` →
+   `12px 14px 12px 18px`; a new `box-shadow:0 6px 20px rgba(25,21,16,.05)`. Nav items become pills
+   — `background:{{ n.pill }}`, `padding:9px 13px`, `border-radius:10px`, 13px → **15.5px**. The
+   wide toggle and the language `<select>` leave the header row. A new **Arbeidsflate chip** with a
+   colour dot arrives beside Hjelp.
+2. **`border-radius` on the header frame stays 16px.** Worth stating because an intermediate
+   handoff (`__2_`, `194c8389`) made it `999px` and `__3_` reverted it. The pill header was tried
+   and rejected; the theme's 16px stands.
+3. **Oversikt's modules become conditional** (`:272-485`) on `wsShow.*`, in two rows.
+4. **A vocabulary substitution** reaches at least four manager-facing surfaces — a preview label
+   (`:1024`), Oppgaver (`:2288`), Administrasjon → Språk (`:3021`) and the send screen's heading
+   (`:3218`) — via `wsPerson`, `wsPersonDef`, `wsPersons`, `wsPersonsCap`.
+5. **A registry and a persistence choice in the prototype's own JS** (`:4441`, `:4682`):
+   `ORG_WORKSPACE = "hr"`, four `WORKSPACES` rows, six `WS_MODULES`, and
+   `localStorage.getItem("heituva.workspace")`.
+
+**The vocabulary does not reach the respondent.** Measured: zero `ws*` identifiers anywhere in the
+`/s/[token]` region of v4's file. That matters because a per-org word for the respondent appearing
+on the respondent's own screen would be a fingerprint on an anonymous surface, and it is not there.
+
 ---
 
 ## A. BUNDLE DIFF — the three legs
