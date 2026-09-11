@@ -1127,7 +1127,8 @@
     "mgSuppressScopeTitle": "Slik virker en reservasjon",
     "mgSuppressScope1": "Den gjelder alle framtidige utsendinger fra virksomheten — også adresser som kommer inn i en synkronisert gruppe senere.",
     "mgSuppressScope2": "Den sletter ikke svar som allerede er gitt. Sletting hører til under Personvern og GDPR.",
-    "mgSuppressScope3": "Bare en administrator kan oppheve den, og opphevingen logges."
+    "mgSuppressScope3": "Bare en administrator kan oppheve den, og opphevingen logges.",
+    "fWorkspace": "Arbeidsflate"
   },
   "profile": {
     "aboutMe": "Om meg",

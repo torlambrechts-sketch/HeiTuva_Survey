@@ -1127,7 +1127,8 @@
     "mgSuppressScopeTitle": "What an opt-out does",
     "mgSuppressScope1": "It applies to every future send from the organisation — including addresses that arrive in a synchronised group later.",
     "mgSuppressScope2": "It does not delete answers already given. Deletion belongs under Privacy and GDPR.",
-    "mgSuppressScope3": "Only an administrator can lift it, and lifting it is logged."
+    "mgSuppressScope3": "Only an administrator can lift it, and lifting it is logged.",
+    "fWorkspace": "Workspace"
   },
   "profile": {
     "aboutMe": "About me",

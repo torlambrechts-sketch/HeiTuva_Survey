@@ -59,6 +59,22 @@ const CompanyInput = z.object({
     .min(1)
     .max(64)
     .regex(/^(UTC|[A-Za-z]+\/[A-Za-z0-9_+-]+(\/[A-Za-z0-9_+-]+)?)$/),
+  /*
+    W0 · Q122. The organisation's default arbeidsflate.
+
+    SHAPE, NOT MEMBERSHIP, for the reason `timezone` gives one field above: the
+    authoritative set is `public.workspaces`, and listing the four keys here
+    would be an enumeration standing in for a lookup — the failure this project
+    has now written down eleven times. The foreign key refuses an unknown key
+    at the database, which is where membership belongs; this regex only keeps a
+    malformed value out of the statement.
+  */
+  workspace: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z][a-z0-9_]*$/),
 })
 
 export async function saveCompany(_prev: AdminResult | null, formData: FormData): Promise<AdminResult> {
@@ -73,6 +89,7 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
     contact_email: formData.get('contact_email'),
     dpo: formData.get('dpo'),
     timezone: formData.get('timezone'),
+    workspace: formData.get('workspace'),
   })
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
@@ -89,6 +106,10 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
       // NOT `|| null`, unlike its neighbours: the column is NOT NULL with a
       // real default, and nulling it would raise inside the trigger.
       timezone: parsed.data.timezone,
+      // Same reasoning as `timezone` above: NOT NULL with a real default, and
+      // the FK is deferred, so an unknown key fails at COMMIT rather than at
+      // the statement. The action reports it the same way either path fails.
+      workspace: parsed.data.workspace,
     })
     .eq('id', admin.orgId)
   if (error) {

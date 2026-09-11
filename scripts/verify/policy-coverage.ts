@@ -58,6 +58,12 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   brand_accents:
     'the five accents the design offers (V2:4898); data-not-code, same shape as `use_cases` — a row carries a hex, a name key and a contrast ratio, and no org id, no survey id and no number. `tests/db/branding.test.ts` CHECKS that claim against the column list rather than repeating it here',
   use_cases: 'the six shipped use cases; data-not-code, DECISIONS Q24 — a use case carries no org id, no survey id and no number, and the wizard and library read it before a session exists',
+  workspaces:
+    'W0/Q122: the four arbeidsflater; data-not-code, same shape as `use_cases`, `brand_accents`, `segment_fields`, `task_kinds` and `live_stopwords` — a row carries a key, a label, a hint, two theme tokens, three vocabulary words, a `dashboard_presets` key and a sort order, and NO org id, no survey id and no count. The organisation\'s CHOICE of workspace is `organizations.workspace`, which is org-scoped and RLS-protected; this table is only the menu. `tests/db/workspaces.test.ts` CHECKS the column list against that claim rather than repeating it here, and separately checks that NO column could be a survey default — which is Q119 written as a property of the table',
+  workspace_modules:
+    'W0: the six Oversikt modules a workspace can switch on; data-not-code, same shape and same reason as `workspaces` above — a row carries a key, a label and a sort order. CHECKED against that claim in `tests/db/workspaces.test.ts` rather than trusted',
+  workspace_module_links:
+    'W0: which modules each workspace shows by default; data-not-code, same reason as `workspaces` — a row carries two registry keys and a sort order, and NOTHING org-scoped. The per-person override is deliberately NOT here: Q122 puts the per-device choice in a cookie, so there is no table for it to leak from. CHECKED against the column list in `tests/db/workspaces.test.ts`',
   live_stopwords:
     'Q79 (V2-9): per-language stopwords for the live word cloud; data-not-code, same shape as `use_cases`, `task_kinds`, `segment_fields` and `help_articles` — a row carries a language and a word, and NOTHING else: no org id, no survey id, no count. `tests/db/live.test.ts` test 13 CHECKS that against the column list rather than repeating it here. Read-only to everyone and writable by nobody, for `help_articles`\' reason: a client that could write this could hide a word from every cloud in the product',
   feature_flags: 'global flags; per-org rows are org-scoped by policy',

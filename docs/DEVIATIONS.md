@@ -5053,3 +5053,51 @@ wiring job and is not taken in a UI phase.**
 **What it would take:** a decision on Q72 for comment-sourced tasks, then a migration widening
 `source_kind` and adding a second typed FK. The disabled button and its sentence are the honest
 interim, and they are cheaper to remove than a feature is to unbuild.
+
+---
+
+## D161 — The workspace's per-person choice is a COOKIE, and the org default gets a control the bundle never drew
+
+**W0 · DECISIONS Q122.** Two departures from v4, both forced, both logged here because the
+mechanism is not in the bundle and that has to be visible.
+
+### The cookie
+
+**The bundle** holds the choice in `localStorage` (`V4:6059`,
+`localStorage.setItem("heituva.workspace", v)`) and says so in the Tilpasset hint: «Valget huskes
+på denne enheten.»
+
+**We store it in a cookie.** Not a preference between mechanisms — **one of them does not work
+here**. `wsShow.*` decides which modules Oversikt renders, Oversikt is a server component, and a
+`localStorage` value is not readable at server render. Keeping the bundle's mechanism would mean
+painting the organisation's default and swapping on hydration — a visible flash of the wrong
+modules on every load — or making Oversikt a client component, which is a bigger change than the
+feature.
+
+**A cookie is the smallest thing that is readable where the decision is made AND still per-device**,
+which is the half that matters for the copy: «huskes på denne enheten» stays TRUE of a cookie and
+would become false of a column. Of the three options this was the only one that did not also
+require changing a sentence the bundle wrote.
+
+**What is NOT stored anywhere**: a per-person workspace column. `tests/db/workspaces.test.ts`
+asserts `org_members` has no column matching `workspace`, so the absence is checked rather than
+remembered.
+
+### The Firma control
+
+**No bundle draws a control for the organisation's default.** v4 draws the header chip, which is
+the per-person choice; `ORG_WORKSPACE = "hr"` (`V4:4441`) is a hard-coded constant in the prototype
+with nothing behind it. So the org default is **genuinely unspecified**, and CLAUDE.md's rule for
+that is the minimal consistent option, logged — not an invention, and not a guess at a screen.
+
+Minimal and consistent means **this form and this control**: Q50's `timezone` is the exact
+precedent one label above it — an organisation-level default, a `<select>`, in Administrasjon →
+Firma — so the styling is taken from it rather than chosen, `touch-44-field` included and for the
+same measured reason (a `<select>` renders shorter than an `<input>` at the same padding, and CI
+measured 300×44 at 390px).
+
+**Why a control had to exist at all in this phase:** CLAUDE.md's standing question. A column whose
+writer is «a later phase» is the shape this project has hit four times — fully built, fully read,
+green on every gate, reachable only from psql. `saveCompany` writes it, and
+`tests/db/workspaces.test.ts` asserts that the action exists, writes the column, and writes the
+*validated* value rather than a literal.

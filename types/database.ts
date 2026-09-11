@@ -1030,6 +1030,7 @@ export type Database = {
           privacy: Json
           retention_months: number
           timezone: string
+          workspace: string
           updated_at: string
         }
         Insert: {
@@ -1054,6 +1055,7 @@ export type Database = {
           privacy?: Json
           retention_months?: number
           timezone?: string
+          workspace?: string
           updated_at?: string
         }
         Update: {
@@ -1078,6 +1080,7 @@ export type Database = {
           privacy?: Json
           retention_months?: number
           timezone?: string
+          workspace?: string
           updated_at?: string
         }
         Relationships: [
@@ -2716,6 +2719,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workspace_module_links: {
+        Row: {
+          module_key: string
+          sort_order: number
+          workspace_key: string
+        }
+        Insert: {
+          module_key: string
+          sort_order?: number
+          workspace_key: string
+        }
+        Update: {
+          module_key?: string
+          sort_order?: number
+          workspace_key?: string
+        }
+        Relationships: []
+      }
+      workspace_modules: {
+        Row: {
+          key: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      workspaces: {
+        Row: {
+          dot: string
+          hint: string
+          key: string
+          label: string
+          person: string
+          person_def: string
+          persons: string
+          preset_key: string | null
+          short: string
+          sort_order: number
+          tint: string
+        }
+        Insert: {
+          dot: string
+          hint: string
+          key: string
+          label: string
+          person: string
+          person_def: string
+          persons: string
+          preset_key?: string | null
+          short: string
+          sort_order?: number
+          tint: string
+        }
+        Update: {
+          dot?: string
+          hint?: string
+          key?: string
+          label?: string
+          person?: string
+          person_def?: string
+          persons?: string
+          preset_key?: string | null
+          short?: string
+          sort_order?: number
+          tint?: string
+        }
+        Relationships: []
       }
       use_cases: {
         Row: {

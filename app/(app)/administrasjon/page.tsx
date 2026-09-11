@@ -10,11 +10,17 @@ export default async function CompanyTab() {
 
   const t = await getTranslations('admin')
   const supabase = await createClient()
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, orgnr, address, contact_name, contact_email, dpo, timezone')
-    .eq('id', viewer.orgId)
-    .single()
+  const [{ data: org }, { data: workspaces }] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('name, orgnr, address, contact_name, contact_email, dpo, timezone, workspace')
+      .eq('id', viewer.orgId)
+      .single(),
+    // W0/Q122: the registry is the authority on which workspaces exist, so the
+    // control is built from it. `workspaces` carries no org id and its select
+    // policy is `using (true)` — the same shape as `use_cases`.
+    supabase.from('workspaces').select('key, label').order('sort_order'),
+  ])
 
   return (
     <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.2fr_.8fr]">
@@ -29,7 +35,11 @@ export default async function CompanyTab() {
           // Q50: the DB default is the fallback, never an empty string —
           // the column is NOT NULL and the select must not offer a blank.
           timezone: org?.timezone ?? 'Europe/Oslo',
+          // Same rule as `timezone` above: the column is NOT NULL with a real
+          // default, so the fallback is that default and never a blank option.
+          workspace: org?.workspace ?? 'hr',
         }}
+        workspaces={workspaces ?? []}
       />
 
       <aside className="rounded-[18px] border border-line bg-sbg p-6">

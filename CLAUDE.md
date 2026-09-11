@@ -213,9 +213,16 @@ Two consequences, both cheap:
    is a standing question rather than a lesson:** D102's pre-`M:0040` survey state, `created_by`
    (which V2-4's audit found had no writer at all), V2-9's `surveys.run_mode` — read by the
    Live page, read by the context bar, set by the seed, writable by no editor — and **Q50's
-   `organizations.timezone`, found in the remainder walk: the column exists, is `NOT NULL`,
-   is validated by `app.timezone_known`, and all three `next_run_at` sites read it, while
-   `grep -rn "timezone" app/ lib/` returns one hit and it is a Playwright browser context.**
+   `organizations.timezone`, found in the remainder walk: the column existed, was `NOT NULL`,
+   was validated by `app.timezone_known`, and all three `next_run_at` sites read it, while
+   `grep -rn "timezone" app/ lib/` returned one hit and it was a Playwright browser context.**
+   **THAT ONE IS FIXED, and the tense is corrected rather than the instance deleted
+   (re-measured 2026-09-11, at the start of W0):** `saveCompany` writes it
+   (`app/(app)/administrasjon/actions.ts:64`, the `timezone:` line with its own comment about
+   not nulling a NOT NULL column) and `CompanyForm.tsx:152` is the control. The example stays
+   because **the instance is the evidence for the question**, and an example silently repaired
+   into the present tense is how a rule stops being believed. Two of the four now have writers;
+   the question is unchanged.
    **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
    the question is not «is the column there» but «who WRITES it». A column that is read
    everywhere looks finished from every angle except the one that matters. If the answer is

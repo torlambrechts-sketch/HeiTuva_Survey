@@ -13,6 +13,7 @@ export type Company = {
   contact_email: string
   dpo: string
   timezone: string
+  workspace: string
 }
 
 const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
@@ -61,7 +62,19 @@ function zonesFor(current: string): string[] {
  * the header, which is the same treatment Profil's Om meg card uses — see
  * docs/DEVIATIONS.md D23.
  */
-export function CompanyForm({ company }: { company: Company }) {
+export type WorkspaceOption = { key: string; label: string }
+
+export function CompanyForm({
+  company,
+  workspaces,
+}: {
+  company: Company
+  /* Read from `public.workspaces` by the page, not listed here. A component
+     holding the four keys would be the enumeration this project has written
+     down eleven times; the registry is the authority and adding a workspace
+     must stay a row. */
+  workspaces: WorkspaceOption[]
+}) {
   const t = useTranslations('admin')
   const form = useRef<HTMLFormElement>(null)
   const dirty = useRef(false)
@@ -156,6 +169,36 @@ export function CompanyForm({ company }: { company: Company }) {
               {zonesFor(company.timezone).map((z) => (
                 <option key={z} value={z}>
                   {z.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* W0 · Q122 — the organisation's DEFAULT arbeidsflate: what a person
+              sees before they have chosen one on this device.
+
+              NOT DRAWN IN ANY BUNDLE, and logged as such (D159). v4 draws the
+              header chip, which is the per-person choice; `ORG_WORKSPACE` is a
+              hard-coded constant in the prototype with no control behind it at
+              all. So the org default is genuinely unspecified, and CLAUDE.md's
+              rule for that is the minimal consistent option, logged — not an
+              invention and not a guess at a screen.
+
+              Minimal and consistent means THIS form and THIS control: Q50's
+              timezone is the exact precedent one label above — an org-level
+              default, a select, in the Firma tab — so the styling is taken from
+              it rather than chosen, `touch-44-field` included and for the same
+              measured reason. */}
+          <label className="block">
+            <span className={label}>{t('fWorkspace')}</span>
+            <select
+              name="workspace"
+              defaultValue={company.workspace}
+              className={`${field} touch-44-field`}
+            >
+              {workspaces.map((w) => (
+                <option key={w.key} value={w.key}>
+                  {w.label}
                 </option>
               ))}
             </select>
