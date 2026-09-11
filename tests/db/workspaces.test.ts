@@ -322,12 +322,38 @@ describe('W0 · the standing constraint — no per-organisation value on a respo
    * passing because the feature does not exist rather than because it is
    * contained. Measured over the manager-facing screens W3 wired.
    */
-  it('the vocabulary IS wired on the manager side — so the absence above means containment', () => {
-    const wired = execFileSync('bash', [
+  it('the vocabulary IS wired at all four sites — so the absence above means containment', () => {
+    /*
+     * THE FIRST DRAFT GREPPED FOR `vocabulary.` AND FOUND ONE FILE, and the
+     * guard caught it: the pages bind `?.vocabulary ?? DEFAULT_VOCABULARY` and
+     * then pass `vocab.persons`, so the string it searched for was never the
+     * shape the code took. The wiring was there; the test was measuring a
+     * spelling.
+     *
+     * Restated as the pairs v4 actually marks. This IS an enumeration, and it
+     * says what it is an enumeration OF: the four sites v4 substitutes at —
+     * V4:1024, :2288, :3021, :3218 — which is a closed set fixed by the bundle,
+     * not a guess at which screens might use a word. A fifth site would be a
+     * bundle change, and adding it here is then part of adopting it.
+     */
+    const SITES: [component: string, prop: string][] = [
+      ['app/(app)/undersokelser/[id]/bygg/PreviewPane.tsx', 'personDef'],
+      ['app/(app)/oppgaver/TasksPanel.tsx', 'persons'],
+      ['app/(app)/administrasjon/OptionsPanel.tsx', 'persons'],
+      ['app/(app)/undersokelser/[id]/send/SendScreen.tsx', 'personsCap'],
+    ]
+    for (const [file, prop] of SITES) {
+      const src = readFileSync(file, 'utf8')
+      expect(src.includes(`${prop}: string`), `${file} declares ${prop}`).toBe(true)
+      expect(src.includes(`{ ${prop} }`), `${file} passes ${prop} to its message`).toBe(true)
+    }
+
+    // And the server side that supplies them: four pages resolve the workspace.
+    const resolvers = execFileSync('bash', [
       '-lc',
-      "grep -rl 'vocabulary\\.' 'app/(app)' || true",
+      "grep -rl 'readWorkspace' 'app/(app)' || true",
     ], { encoding: 'utf8' }).split('\n').filter(Boolean)
-    expect(wired.length, 'W3 wired the vocabulary on at least the four screens').toBeGreaterThanOrEqual(4)
+    expect(resolvers.length, 'the pages that feed those four sites').toBeGreaterThanOrEqual(4)
   })
 })
 
