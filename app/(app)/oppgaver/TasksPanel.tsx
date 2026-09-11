@@ -195,7 +195,14 @@ export function TasksPanel({
       {showTasks ? (
         <div className="mt-[22px] flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold">{t('tasksHeading')}</h2>
-          <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
+          {/* gap-y-14: these are the `py-[7px]` chips V3:2196 draws, 30px
+              painted, so the 44px areas overflow 7px each side and need 14px
+              between rows. The rail ABOVE keeps 13px because its chips are
+              `py-2` (40px) and overflow only 2px. Same class list, two
+              different correct answers — the number belongs to the chip, not
+              to the pattern. This is what overlapped at 320px: «Alle»/«Lovpålagt»
+              by 52px² and «Mine»/«Lovpålagt» by 34px². */}
+          <div className="flex flex-wrap gap-x-[3px] gap-y-[14px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
             {FILTERS.map((f) => (
               <button
                 key={f}

@@ -147,7 +147,13 @@ export function FeedbackList({
               value={survey}
               onChange={(e) => setSurvey(e.target.value)}
               aria-label={t('fbAllSurveys')}
-              className="touch-44 box-border rounded-[10px] border border-line bg-sf px-[11px] py-2 text-[12.5px] text-ink outline-none"
+              /* `touch-44-field`, NOT `touch-44`. A <select> is a REPLACED
+                 element and `::after` does not render on it, so the overlay
+                 utility paints nothing — the control measured 189x36 and the
+                 gate reported it. globals.css says exactly this, two utilities
+                 apart, and I reached for the wrong one. `--field-pad-y` keeps
+                 the painted height identical while the hit box grows. */
+              className="touch-44-field [--field-pad-y:8px] box-border rounded-[10px] border border-line bg-sf px-[11px] py-2 text-[12.5px] text-ink outline-none"
             >
               <option value="">{t('fbAllSurveys')}</option>
               {surveyOptions.map((o) => (
@@ -157,7 +163,14 @@ export function FeedbackList({
               ))}
             </select>
           ) : null}
-          <div className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
+          {/* gap-y-14, not 13. globals.css writes the arithmetic out: a 30px
+              painted control with a 44px hit area overflows (44-30)/2 = 7px
+              each side, so two stacked ones need 14px between painted edges.
+              These chips are `py-[7px]` (30px); the 13px I copied was computed
+              for the `py-2` (40px) rail above, where 2px of overflow makes it
+              ample. A spacing value is an enumeration of the control it was
+              measured against. */}
+          <div className="flex flex-wrap gap-x-[3px] gap-y-[14px] rounded-[999px] bg-sf2 p-1 xl:gap-y-[3px]">
             {FILTERS.map((f) => (
               <button
                 key={f}
