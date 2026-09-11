@@ -1890,6 +1890,110 @@ export type Database = {
           },
         ]
       }
+      survey_comment_replies: {
+        Row: {
+          author_member_id: string | null
+          body: string
+          comment_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_member_id?: string | null
+          body: string
+          comment_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_member_id?: string | null
+          body?: string
+          comment_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_comment_replies_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "survey_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comment_replies_author_member_id_fkey"
+            columns: ["author_member_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_comments: {
+        Row: {
+          body: string
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          invitation_id: string | null
+          is_anonymous: boolean
+          question_id: string | null
+          round_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          invitation_id?: string | null
+          is_anonymous: boolean
+          question_id?: string | null
+          round_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          invitation_id?: string | null
+          is_anonymous?: boolean
+          question_id?: string | null
+          round_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_comments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "survey_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comments_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "survey_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comments_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_editors: {
         Row: {
           created_at: string
@@ -2178,6 +2282,7 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           engage: Json
+          feedback_mode: string
           id: string
           k_threshold: number
           langs: string[]
@@ -2202,6 +2307,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
+          feedback_mode?: string
           id?: string
           k_threshold?: number
           langs?: string[]
@@ -2226,6 +2332,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           engage?: Json
+          feedback_mode?: string
           id?: string
           k_threshold?: number
           langs?: string[]
@@ -2700,6 +2807,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_comment_thread: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       get_peer_results: { Args: { p_token: string }; Returns: Json }
       get_quotes: {
         Args: {
@@ -2814,6 +2925,7 @@ export type Database = {
         Args: {
           p_anon_choice?: boolean
           p_answers: Json
+          p_comments?: Json
           p_dry_run?: boolean
           p_lang: string
           p_token: string
