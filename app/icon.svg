@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="2 1.68 28 28" fill="none" role="img" aria-label="HeiTuva">
+  <title>HeiTuva</title>
+  <path d="M6 3h20a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H14.6l-6.1 5.2A1 1 0 0 1 7 27.4V23H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="#F5C64A"/>
+  <rect x="8.5" y="14.5" width="3.6" height="4.6" rx="1.3" fill="#191510"/>
+  <rect x="14.2" y="11" width="3.6" height="8.1" rx="1.3" fill="#191510"/>
+  <rect x="19.9" y="7.4" width="3.6" height="11.7" rx="1.3" fill="#191510"/>
+</svg>

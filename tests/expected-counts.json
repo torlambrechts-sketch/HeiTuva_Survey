@@ -50,6 +50,7 @@
   "tests/unit/dashboard-panels.test.ts": 5,
   "tests/unit/engagement.test.ts": 12,
   "tests/unit/i18n-overlay.test.ts": 5,
+  "tests/unit/icon-is-the-logo.test.ts": 6,
   "tests/unit/import.test.ts": 20,
   "tests/unit/live-step.test.ts": 6,
   "tests/unit/mail-env.test.ts": 7,

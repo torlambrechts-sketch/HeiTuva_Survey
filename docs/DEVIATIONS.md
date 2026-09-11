@@ -4629,3 +4629,57 @@ What changes is the claim's scope. D145 should read: **no column configures a ti
 nothing enforces one; a scoring function decays a bonus to zero at twenty seconds.** The
 measurement was sound; the sentence written from it reached further than the measurement did —
 which is the same error as D150 one level down, in the same run.
+
+---
+
+## D152 — The browser icon: no bundle draws one, so the framing is a decision
+
+**2026-09-11.** The product had **no favicon at all** — no `app/icon.*`, no `public/`, no
+`metadata.icons`, so every tab showed the browser's default placeholder.
+
+**No bundle draws a favicon.** `grep -c favicon` returns 0 in all three, and there is no
+`rel="icon"` anywhere. So this is CLAUDE.md's genuinely-unspecified case: choose the minimal
+consistent option and log it.
+
+**What is NOT a decision, and was checked rather than assumed:** the mark itself. The logo path
+and its three bars are **byte-identical in all three bundles** (one occurrence each), so there is
+no Q52 governance question — every handoff draws the same mark. `app/icon.svg` carries that
+geometry character for character, and `tests/unit/icon-is-the-logo.test.ts` asserts it against
+`components/Logo.tsx`, whose own comment says «Do not redraw it». A favicon is looked at by users
+constantly and by developers almost never, which is exactly the arrangement where two copies drift
+unnoticed.
+
+### The three decisions
+
+**1. The favicon re-frames; it does not redraw.** Measured by rendering the path at 640px and
+trimming, rather than by reading the arc commands: the mark occupies **x 3→29, y 3→28.35** of the
+32-unit box — **81% of the tile**. At the 16px a tab actually paints, that wastes a fifth of an
+already tiny mark. `icon.svg` uses `viewBox="2 1.68 28 28"`: the same mark, centred, one unit of
+margin. Every coordinate is untouched; only the window onto them moves.
+
+**2. The Apple icon keeps the bundle's own `0 0 32 32`, and that was decided by looking.** Both
+framings were rendered at 180px on `--bg` and composited under a simulated corner mask. The
+re-framed one puts the bubble's rounded corners hard against the mask; the bundle's own padding is
+**exactly the safe area Apple's mask needs**, and it reads as a mark on the app's canvas rather
+than as a coloured tile. So the two files are framed differently **on purpose**: one fills a 16px
+strip, the other survives a 22% corner radius.
+
+**3. The hexes are the bundle's, not the token list's.** A standalone SVG has no CSS custom
+properties — `fill="var(--ac)"` renders as nothing. The literals come from the drawing itself,
+which writes `fill="var(--ac,#F5C64A)"` and `fill="var(--ink,#191510)"` (**L:142-145**). The
+Apple icon is flattened on `--bg #FCF6E9` because Apple composites touch icons on an unknown
+ground and asks for opaque; that is the app's own canvas colour, not a new one.
+
+### What this does not do
+
+No `metadata.icons` entry. `app/icon.svg` and `app/apple-icon.png` are Next's file conventions and
+the framework writes the `<head>` links itself; a metadata entry would be a second place to be
+wrong, and the test asserts it is absent.
+
+**No `favicon.ico`.** Nothing in the toolchain writes ICO, and the format matters only to browsers
+this product does not target. Stated as a choice rather than left as a gap: if a legacy target
+appears, the ICO is generated from the same `icon.svg` and the drift test extends to it.
+
+**Neither file is in the visual gates.** `verify:browser` photographs pages, not `<head>`, so the
+icon is checked by the geometry test and by having been rendered and looked at at 16, 32, 64 and
+180px — not by any gate. A limit, recorded rather than papered over.
