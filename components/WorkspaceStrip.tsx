@@ -61,8 +61,30 @@ export function WorkspaceStrip({
 
       {/* V4:278 — what the dashboard does under this workspace. The TITLE comes
           from the joined `dashboard_presets` row, never copied into a string
-          here: Q124 binds by key so a renamed preset stays correct. */}
-      <span className="flex-none whitespace-nowrap rounded-full border border-line bg-sf px-2.5 py-1 text-[11.5px] font-semibold">
+          here: Q124 binds by key so a renamed preset stays correct.
+
+          `flex-none` AND `whitespace-nowrap` ARE xl RULES, NOT UNCONDITIONAL
+          ONES, and the reason is measured rather than argued.
+
+          The bundle writes both (V4:278) and both are right at ≥1280px, which
+          is the only width v4 governs. At 320px they make this chip unable to
+          shrink OR wrap, so its width is set entirely by how long the preset's
+          title happens to be — and the title is a registry value that differs
+          per workspace. `verify:responsive` measured the consequence:
+
+            arbeidsflate-kunder @320px — scrollWidth 338 > clientWidth 320
+
+          «Dashboard følger oppsettet «Kundeopplevelse»» is three characters
+          longer than «…«Arbeidsmiljø»», and three characters at 11.5px
+          semibold is ~18px, which is the overflow exactly. The hr default and
+          both Tilpasset states pass; ONLY cx fails.
+
+          That is the defect a single-workspace capture cannot see, and it is
+          the same shape as enumeration row 10 one level out: a constant that is
+          correct in the context it was measured in, carried into a context
+          where the thing it constrains has a different size. Here the varying
+          thing is a WORD rather than a chip. */}
+      <span className="min-w-0 rounded-full border border-line bg-sf px-2.5 py-1 text-[11.5px] font-semibold xl:flex-none xl:whitespace-nowrap">
         {layoutNote}
       </span>
 

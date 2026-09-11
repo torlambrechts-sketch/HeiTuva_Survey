@@ -171,3 +171,38 @@ describe('W1 · the header carries only what v4 draws in it', () => {
     expect(header).toMatch(/langSlot=\{<LangPicker/)
   })
 })
+
+describe('W3 · the strip survives a longer preset title at 320px', () => {
+  /**
+   * `verify:responsive` found this and the arithmetic explains it:
+   *
+   *   arbeidsflate-kunder @320px — scrollWidth 338 > clientWidth 320
+   *
+   * «Dashboard følger oppsettet «Kundeopplevelse»» is three characters longer
+   * than «…«Arbeidsmiljø»», and three characters at 11.5px semibold is ~18px —
+   * the overflow exactly. The chip carried the bundle's `flex-none` and
+   * `whitespace-nowrap`, which are right at ≥1280px and make it unable to
+   * either shrink or wrap below that, so its width was decided by a REGISTRY
+   * VALUE that differs per workspace.
+   *
+   * The gate is the real check; this asserts the fix is not silently undone,
+   * because the failure only appears in one workspace at one width and a
+   * future edit restoring `whitespace-nowrap` unconditionally would look
+   * harmless in every other capture.
+   */
+  const src = readFileSync('components/WorkspaceStrip.tsx', 'utf8')
+
+  it('the layout note does not refuse to shrink or wrap below xl', () => {
+    const chip = src.slice(src.indexOf('{layoutNote}') - 400, src.indexOf('{layoutNote}'))
+    expect(chip.length).toBeGreaterThan(100)
+    const tokens = (chip.match(/className="([^"]*)"/)?.[1] ?? '').split(/\s+/)
+    expect(tokens.length, 'the chip has a class list').toBeGreaterThan(3)
+    expect(tokens, 'unconditional flex-none re-creates the 320px blocker').not.toContain('flex-none')
+    expect(tokens, 'unconditional nowrap re-creates the 320px blocker').not.toContain(
+      'whitespace-nowrap',
+    )
+    // The bundle's rules are KEPT where the bundle governs.
+    expect(tokens).toContain('xl:flex-none')
+    expect(tokens).toContain('xl:whitespace-nowrap')
+  })
+})
