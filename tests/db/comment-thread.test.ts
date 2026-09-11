@@ -78,10 +78,30 @@ describe('C4 — set_comment_handled is the only way handled_at moves', () => {
     expect(writers).toEqual(['reply_to_comment', 'set_comment_handled'])
   })
 
-  it('2. anon cannot execute it — this is what keeps it a CHECKED surface in 5a3', () => {
+  it('2. anon executes NEITHER new function — this is what keeps them CHECKED surfaces in 5a3', () => {
+    // An enumeration, and it says what it is an enumeration OF: the two
+    // functions this tranche added that no unauthenticated caller may run. Gate
+    // 5a3 asserts the general property over the whole catalogue; this fails
+    // here, by name, with the reason attached.
+    //
+    // IT CAUGHT A REAL DEFECT ON ITS FIRST RUN. Both migrations said
+    // `revoke all ... from public`, which leaves the grant `anon` INHERITS from
+    // PUBLIC standing. M:0013 learned that in September and wrote it down;
+    // CLAUDE.md lists it as instance 3 of «an enumeration mistaken for a
+    // property». Reproduced anyway. Not exploitable — the bodies resolve
+    // authority from app.has_role and an anon caller has no auth.uid() — and
+    // «it refuses anyway» is exactly the argument that keeps a wrong grant alive.
+    for (const sig of ['public.set_comment_handled(uuid,boolean)', 'public.reply_to_comment(uuid,text)']) {
+      expect(
+        one(`select has_function_privilege('anon','${sig}','execute')::text`),
+        `anon can execute ${sig}`,
+      ).toBe('false')
+    }
+    // And the one that MUST be anon-executable still is, so this test cannot
+    // pass by the grants having been stripped wholesale.
     expect(
-      one(`select has_function_privilege('anon','public.set_comment_handled(uuid,boolean)','execute')::text`),
-    ).toBe('false')
+      one(`select has_function_privilege('anon','public.get_comment_thread(text)','execute')::text`),
+    ).toBe('true')
   })
 
   it('3. an administrator of the owning org marks a comment handled', async () => {

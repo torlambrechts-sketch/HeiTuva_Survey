@@ -232,7 +232,7 @@ export function FeedbackList({
                     title={t('fbNoTaskYet')}
                     className="cursor-not-allowed whitespace-nowrap rounded-[10px] border-none bg-ac px-3.5 py-[9px] text-[12.5px] font-semibold text-ink opacity-45"
                   >
-                    {t('taskNew')}
+                    {t('fbMakeTask')}
                   </button>
                   <button
                     type="button"

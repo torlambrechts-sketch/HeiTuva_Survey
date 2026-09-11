@@ -1917,7 +1917,8 @@
     "fbReplyNoteAnon": "The reply appears for the respondent in the same link she answered from. You do not see who wrote it.",
     "fbReplyNoteNamed": "The reply appears for the respondent in the same link she answered from.",
     "fbReplyNoThread": "This comment came from a shared link, so there is no thread to reply in. You can mark it as handled.",
-    "fbReplyFailed": "Could not send the reply. Try again."
+    "fbReplyFailed": "Could not send the reply. Try again.",
+    "fbMakeTask": "Create task"
   },
   "help": {
     "title": "Help and support",

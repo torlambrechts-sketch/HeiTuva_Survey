@@ -306,8 +306,9 @@ correct about its members and always silent about the member that has not arrive
 specification, two in a CI workflow. Neither of those is a database construct, which is the
 evidence that this section is not a note about Postgres.
 
-**Extended 2026-09-10, after the mail tranche. Eight instances** — measured, not carried:
-`awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row.
+**Extended 2026-09-11, after C4/C5. NINE instances** — measured, not carried:
+`awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row,
+which returns 10 and therefore nine.
 Tor called the new one the tenth and the ninth correction; the table held seven when I counted it,
 so this is the EIGHTH and the number is written as what re-derives. Said rather than quietly
 matched, because this file already records a carried number that was wrong for four phases
@@ -316,7 +317,8 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-Eight instances, eight different constructs, one shape:
+**Nine instances now**, and the ninth is a REPEAT of the third — which is itself the finding.
+Eight different constructs, one shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -328,6 +330,7 @@ Eight instances, eight different constructs, one shape:
 | `supabase start -x …storage-api…` in CI (S2) | what the *old* job, which ran only `tests/invariants`, needed | «the services the gates in THIS job touch» |
 | `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
 | **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
+| **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | «no unauthenticated role may execute this» (`from public, anon`) |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -352,6 +355,23 @@ moves the example.
 The sixth and seventh are the same shape in CI, in one tranche, both mine: three instances in a
 single piece of work, which is the strongest evidence this section has that the shape is not
 about databases.
+
+**THE NINTH IS THE THIRD, REPEATED — WHICH IS THE ONLY ENTRY IN THIS TABLE THAT IS A DUPLICATE,
+AND THAT IS WHY IT IS WORTH A LINE.** `M:0101` and `M:0102` both wrote
+`revoke all on function … from public`, leaving standing the grant `anon` INHERITS from PUBLIC.
+`M:0013` found this on 2026-09-04 and wrote the reason into its own migration
+(«`revoke … from anon` alone leaves that PUBLIC grant standing»); this file lists it as row 3; the
+tranche that reproduced it cites this very table twice in its own commit messages.
+
+So **knowing a shape by name, having the instance written down, and quoting the table in the same
+work is not protection.** What caught it was a test asserting `has_function_privilege('anon', …)`
+— a measurement, on the object, after the fact. The transferable rule is not «remember row 3»: it is
+that **a grant is a fact about the catalogue and must be read back from the catalogue**, the same
+way an applied migration is (`get_edge_function` against the repository, the ninth check).
+
+Neither function was exploitable as written — both resolve authority from `app.has_role` and an anon
+caller has no `auth.uid()` — and «it refuses anyway» is precisely the argument that keeps a wrong
+grant alive until something changes underneath it.
 
 **THE EIGHTH IS THE YEAR'S IRONY, AND THE ENUMERATION WAS WRITTEN BY ME, IN THE COMMIT THAT SAID
 THE SCRIPT EXISTED TO PREVENT TRANSCRIPTION ERROR.** `scripts/edge-bundle.ts` assembles the

@@ -62,7 +62,21 @@ begin
   return jsonb_build_object('ok', true, 'reply_id', v_id);
 end $fn$;
 
-revoke all on function public.reply_to_comment(uuid, text) from public;
+-- REVOKE FROM PUBLIC **AND ANON**, and only then grant.
+--
+-- `from public` alone is not enough and this migration had it wrong until CI
+-- said so. PostgreSQL grants EXECUTE on a new function to PUBLIC by default and
+-- `anon` inherits it, so revoking PUBLIC leaves the inherited grant standing.
+-- `M:0013` learned this in 2026-09-04 and wrote the reason down; CLAUDE.md lists
+-- it as instance 3 of «an enumeration mistaken for a property» — the PUBLIC
+-- pseudo-role standing in for «no unauthenticated role may execute this» — and I
+-- reproduced it anyway, in a tranche that cites that table twice.
+--
+-- Not exploitable as written: the body resolves the caller's authority from
+-- `app.has_role`, and an anon caller has no `auth.uid()`, so it would have been
+-- refused. The grant is still wrong, Gate 5a3 would still have failed it, and
+-- «it refuses anyway» is the argument that keeps a wrong grant alive.
+revoke all on function public.reply_to_comment(uuid, text) from public, anon;
 grant execute on function public.reply_to_comment(uuid, text) to authenticated;
 
 comment on function public.reply_to_comment(uuid, text) is

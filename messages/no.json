@@ -1917,7 +1917,8 @@
     "fbReplyNoteAnon": "Svaret vises for respondenten i den samme lenken hun svarte fra. Du ser ikke hvem som skrev.",
     "fbReplyNoteNamed": "Svaret vises for respondenten i den samme lenken hun svarte fra.",
     "fbReplyNoThread": "Denne kommentaren kom fra en delt lenke, så det finnes ingen tråd å svare i. Du kan markere den som behandlet.",
-    "fbReplyFailed": "Kunne ikke sende svaret. Prøv igjen."
+    "fbReplyFailed": "Kunne ikke sende svaret. Prøv igjen.",
+    "fbMakeTask": "Lag oppgave"
   },
   "help": {
     "title": "Hjelp og støtte",

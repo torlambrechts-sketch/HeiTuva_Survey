@@ -233,7 +233,12 @@ export function TasksPanel({
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-3" hidden={!showTasks}>
+      {/* CONDITIONAL, not `hidden`. The HTML attribute sets display:none from
+          the UA stylesheet, and `flex` here sets display:flex from a class —
+          the class wins, so `hidden` would have been silently inert and the
+          task list would have rendered under the Tilbakemeldinger tab. Caught by
+          re-reading the diff, not by a gate: nothing in CI opens this screen. */}
+      <div className="mt-4 flex flex-col gap-3" style={{ display: showTasks ? undefined : 'none' }}>
         {tasks.length === 0 ? (
           <p className="text-[13px] text-mut">{t('taskNoTasks')}</p>
         ) : shown.length === 0 ? (

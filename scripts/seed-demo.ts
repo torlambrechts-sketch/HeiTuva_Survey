@@ -675,6 +675,28 @@ async function main() {
     p_comments: [{ question_id: null, text: 'Jeg vet ikke hvem jeg skal gå til når noe er galt.' }],
   })
 
+  /*
+    A comment through the SHARE LINK, so C4's «no thread to reply in» row is
+    reachable on a bare reset.
+
+    Without it that state is invisible: every seeded comment has an invitation,
+    the «Svar» button renders on all of them, and the one row that explains why a
+    reply is sometimes impossible never appears — a capture would photograph a
+    screen where the case does not exist and report the screen as built.
+
+    The share link is on `aboveRound`, which is `above`'s round, so the comment
+    lands on a survey whose feedback_mode is already `anonymous`.
+  */
+  await anonRpc('submit_response', {
+    p_token: DEMO_SHARE_TOKEN,
+    p_lang: 'no',
+    p_answers: { [above.questions[0]!.id]: { value: 4 } },
+    p_anon_choice: null,
+    p_comments: [
+      { question_id: null, text: 'QR-koden på vaktrommet var for liten til å skanne med hansker på.' },
+    ],
+  })
+
   // And one reply, so survey_comment_replies is PROVEN too and C5's screen has
   // a thread to render rather than a first message with nothing after it.
   const { data: firstComment } = await asAdmin
