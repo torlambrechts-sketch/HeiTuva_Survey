@@ -35,7 +35,13 @@ Tailwind: use `md:` (768) and `xl:` (1280). Do not introduce other breakpoints w
 Below `md`: logo + hamburger + user avatar only. Nav items move into a slide-over panel opened by the hamburger; the panel uses `--sf` surface, `--line` border, existing nav item styling at full width, 48px row height. "Ny undersøkelse" becomes the first item in the panel. Language switcher moves into the panel footer. The header must not wrap or overflow at 320px.
 
 **Three-pane Builder**
-Below `xl`: the right pane (Generelt / Add / Settings / Preview) becomes a full-screen sheet opened by a button row pinned under the header — **one button per tab**, using the existing tab chip styling, and the row **wraps** rather than shrinking. (It read «three buttons» until B2 added «Generelt» per V2:6472, and four `flex-1` tabs put every `bygg` state at scrollWidth 329 against 320px. **D129's failure a third time in this file: a worked example that is a COUNT of what existed the day it was written.** Count the tabs; do not trust this sentence.) The question list is the base layer. Below `md`: question cards go full-width, the advanced options row collapses into a disclosure ("Flere valg") that is closed by default.
+Below `xl`: the right pane (Generelt / Add / Settings / Preview) becomes a full-screen sheet opened by a button row pinned under the header — **one button per tab**, using the existing tab chip styling, and the row **wraps** rather than shrinking. (It read «three buttons» until B2 added «Generelt» per V2:6472, and four `flex-1` tabs put every `bygg` state at scrollWidth 329 against 320px. **D129's failure a THIRD time in this file — which is now enough instances to state the rule about
+the file itself: A SPECIFICATION'S WORKED EXAMPLE IS THE PART THAT AGES FASTEST AND IS QUOTED MOST.**
+The three: § Data tables' «email + role select + status», which S3 broke while quoting it
+approvingly; D141's «14px between painted edges», measured on one pair of ~30px chips and applied
+to a 15px text link; and this one. Each was true when written, each is a COUNT or a MEASUREMENT of
+what existed that day, and each reads as a property because it sits inside a rule. **Read the rule
+the example illustrates; then check whether your change moves the example.** Count the tabs; do not trust this sentence.) The question list is the base layer. Below `md`: question cards go full-width, the advanced options row collapses into a disclosure ("Flere valg") that is closed by default.
 
 **Tab rails and chip groups** (Administrasjon tabs, Undersøkelser filters, Bibliotek categories, Rapporter tabs, Builder mode chips, Resultater/Dashboard survey chips)
 Below `md`: **wrap to multiple rows.** Remove the width constraint and let the existing `flex-wrap` do the work. Chips keep their exact design dimensions, styling, order, and active state — nothing is hidden, no new interaction is introduced, and the page still has no horizontal scroll.

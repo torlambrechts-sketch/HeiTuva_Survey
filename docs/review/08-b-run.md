@@ -365,31 +365,60 @@ was the same rail fix landing on the wrong element.
 
 ## 7. The walkthrough — what to click, and what each screen should show
 
-**Where.** Not `www.heituva.com`. That serves `main`, and none of B0–B3 is merged. Vercel has a
-**preview deployment of this branch, Ready at `11ca4ba`**:
+**Where — and this is settled now, by measurement.** The branch is **merged to `main`**
+(`148425a`), so production carries B0–B3 once Vercel finishes deploying. Walk
+**`https://www.heituva.com`**; the branch preview is no longer the interesting target.
+
+### THE DATABASE QUESTION, ANSWERED: it is Production, and there is nowhere else
+
+I could not read Vercel's environment variables, and production's client bundle does not carry the
+Supabase URL (the login page is server-rendered), so both of the obvious routes were closed. The
+decisive measurement came from the database side instead:
 
 ```
-https://hei-tuva-survey-git-claude-ved-c8059e-tor-lambrechts-s-projects.vercel.app
+list_projects   → 6 projects. Exactly ONE is HeiTuva: `heituva-prod`
+                  (jmhhszsnjfqgclxzhciq), the only ACTIVE_HEALTHY one in
+                  eu-central-1. The other five are other products; five of six
+                  are INACTIVE.
+list_branches(jmhhszsnjfqgclxzhciq)
+                → ONE branch: `main`, is_default: true,
+                  project_ref == parent_project_ref. NO preview branch exists.
 ```
 
-**One thing to check before you start, because I could not.** I do not know which Supabase project
-that preview's env vars point at. If Preview inherits Production's — which is the default unless a
-Supabase branch integration is configured — **everything you do below writes real rows to the live
-database**, including a real invitation through Brevo at step 4. Check it in Vercel → the project →
-Settings → Environment Variables → Preview before step 4, or accept that the rows are real.
+**So there is no second database for a preview — or for production — to point at.** This is not
+inferred from Vercel config; it is that the alternative does not exist. Anything you do in the
+product writes to production.
 
-**What production already contains**, measured just now, so you know what you will find:
+### What that costs, step by step — and step E does not have to be paid
 
-| | |
-|---|---|
-| bank questions | **12**, all standard (`org_id null`), across 11 categories — 2 `choice`, 2 `yesno`, 7 `scale`, 2 `text` |
-| drafts | 5 — four blank «Ny undersøkelse», one «Psykososial kartlegging» on the statutory pack |
-| anonymity | **every draft is anonymous.** The only `named` survey is `aktiv`, so its Builder is locked |
-| quiz surveys | **0** |
-| keyed questions | **0** |
+Steps **A–D write rows** (a survey, its questions, a run-mode change, an answer key) and **send
+nothing**. Those four steps are the entire B0–B3 surface. They are ordinary product use.
 
-That shape is convenient: **both quiz guards are reachable from real data**, and nothing is
-pre-arranged.
+**Step E is the only one that reaches outside**, and it does not have to. Read from
+`send_round`'s body rather than assumed:
+
+```sql
+v_channel := case when v_email is not null and v_email_on then 'email' ...
+             else null end;
+continue when v_channel is null;          -- no invitation row, no pgmq.send
+```
+
+`v_email_on` is `'email' = any(p_channels)`. **A link- or QR-only send creates the share link and
+never enqueues mail** — the `pgmq.send('mail_outbox', …)` sits inside the loop that just
+`continue`d. So:
+
+> **Send by LINK, not email.** You get a real token, a real `/s/…` respondent flow and the quiz
+> tiles, and nothing leaves the building.
+
+**One consequence of that route, so it does not read as a bug:** the leaderboard groups by
+`r.respondent_group_id`, which is set from an invitation's `group_id`. A share link carries no
+group, so **a link-channel round can never populate the board**, however many people answer. If you
+want the board, that needs email invitations to grouped members — a separate decision, not part of
+this walk.
+
+**My recommendation: do A–D, send by link for step E if you want to see the tiles, and skip the
+board entirely.** A–D is what this run built; E's tiles and the board are V2-10's, already shipped
+and already tested.
 
 ### A · The two guards refuse (§2's last item, done first because the data suits it)
 
@@ -453,15 +482,35 @@ pre-arranged.
 
 ### E · Send and answer *(§2's middle — the step that writes)*
 
-19. **Send** → pick a channel → send to yourself. *(Real invitation if the preview points at
-    production.)*
-20. Open the link. The choice question should render as **large two-column tiles with icons**, not a
-    plain list. *(This was already built in V2-10; it is here so the chain is unbroken.)*
-21. **The leaderboard I cannot promise you.** «Lagtavle» is k-gated: a team below the threshold is
-    **absent**, not zeroed and not ranked. Proving that needs ≥ k real respondents on one team and
-    a second team under it. On the demo seed it is provable; on production with one respondent you
-    will see nothing, and **nothing is the correct output** — but it is indistinguishable from a
-    broken screen. **Do not read step 21 as a pass or a fail.**
+19. **Send — by LINK or QR, not email.** `send_round` only enqueues mail for the `email` channel;
+    a link-only send mints the token and sends nothing. You get a `/s/…` URL on the screen.
+20. Open that link. The choice question should render as **large two-column tiles with icons**, not
+    a plain list. *(V2-10's work; it is here so the chain is unbroken.)*
+
+21. **DO NOT WALK THE LEADERBOARD.** Two independent reasons, and the second is the one I missed
+    when I first wrote this step:
+    - with one respondent the board is empty, and **empty is the correct output** — which is
+      indistinguishable from a broken screen;
+    - **a link-channel round can never populate it at all.** The board groups by
+      `r.respondent_group_id`, which comes from an invitation's `group_id`; a share link has none,
+      so the join drops every row no matter how many people answer.
+
+    **What it SHOULD show at n ≥ k**, read off `quiz_leaderboard`'s body so you can recognise a real
+    board if you ever see one:
+
+    | | |
+    |---|---|
+    | shape | `{ k: <threshold>, teams: [ { team, score }, … ] }` |
+    | one row per | **group** whose distinct respondent count is `>= k` |
+    | order | `score` descending, then team name |
+    | score | per correctly-keyed answer: `points`, **plus** `(points / 2) × (20000 − elapsed_ms) / 20000` when Tidsbonus is on — so a fast correct answer is worth up to 1.5×, decaying to the base at twenty seconds and never below it |
+    | correctness | the chosen option's **index** is resolved against the question's own option list, not trusted from the client |
+    | **a team under k** | **ABSENT.** Not zero, not «for få svar», not ranked last. It is not in the array, because *a rank is itself a number about the team.* |
+    | board toggle off | `{ error: "board_disabled" }` — **said by name**, because an empty board would read as «nobody scored» |
+    | not a quiz / not a member | `{ error: "not_a_quiz" }` / `{ error: "forbidden" }` |
+
+    So a populated board with three groups and a fourth group missing is **correct and is the whole
+    point**; a populated board with a fourth group showing `0` would be the defect.
 
 ### F · Two small things elsewhere
 

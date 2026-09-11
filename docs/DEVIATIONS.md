@@ -4407,7 +4407,7 @@ drift apart.
 **B1, 2026-09-10.** `V2:6524` renders `timer: on.timeBonus ? "20 sek · tidsbonus" : "Ingen
 tidsgrense"`. We render «Tidsbonus» / «Ingen tidsgrense».
 
-**There is no configured time limit anywhere in the schema.** `M:0085` adds none;
+**No column configures a time limit and nothing enforces one** (scope corrected in D151: `M:0086`'s scoring function decays a bonus to zero at 20 000 ms, which is a curve, not a deadline). `M:0085` adds none;
 `grep -n "time_limit\|seconds" ` over it returns nothing, and the test asserts that rather than
 trusting it. What `timeBonus` actually does is scale points by how fast a correct answer
 arrives (`quizTimeBonusDesc`: «Raskere riktig svar gir flere poeng») — a multiplier, not a
@@ -4512,3 +4512,120 @@ This is the third time this project has recorded a carried number surviving unme
 83» ran for four phases, «14 heituva.no occurrences» was wrong on the number and the place — and
 the first where the carrier is the same session that wrote the rule about it. The command is
 above, beside the number, which is the only thing that has ever fixed this.
+
+---
+
+## D149 — A PLAUSIBLE FINDING STOPS THE SEARCH
+
+**Named 2026-09-11 (Tor), from CI runs 110 and 112. A new shape, not an instance of an existing
+one — the catalogue's other entries are about enumerations mistaken for properties, and this is
+about when you stop looking.**
+
+Run 110: every `bygg` state at `scrollWidth 329` against a 320px viewport. I read the Builder,
+found `rightPane`'s `role="tablist"`, saw that B2 had made it four `flex-1` tabs, knew that
+`flex-1` leaves `min-width: auto` so each tab's floor is its label plus 24px of padding, applied
+RESPONSIVE.md § Tab rails, and pushed.
+
+**Run 112 came back byte-identical.** Six states, 329 each, unchanged.
+
+That is not a flake and it is not a partial fix. **A byte-identical result after a change is the
+system saying the DIAGNOSIS was wrong, not the fix** — the element I edited was not on screen. The
+Builder has **two** rails: `rightPane`'s, which renders inside the sheet and so is visible only
+when the sheet is open, and the `xl:hidden` row pinned under the header, which renders on every
+`bygg` state at 320px.
+
+### The tell was in run 110's own output, and it was legible
+
+```
+  OVERFLOW bygg                  320px  scrollWidth=329  controls=25  small=0  overlaps=0
+  OVERFLOW bygg/avansert         320px  scrollWidth=329  controls=10  small=0  overlaps=0
+  OVERFLOW bygg/vis              320px  scrollWidth=329  controls=0   small=0  overlaps=0
+```
+
+Two facts in those three lines rule out the rail I fixed:
+
+- **`bygg` is the default state with no sheet open**, and it overflows. A rail inside a closed
+  sheet cannot widen a page.
+- **`bygg/vis` reports `controls=0`** — in the failing run and in the passing one before it. The
+  probe counts no interactive controls there at all, which is not what a page showing a four-button
+  rail looks like.
+
+I had both numbers in front of me when I wrote the first fix. I did not read them, **because I had
+already found something that looked like the answer.** The explanation was correct in every
+particular — `flex-1`, `min-width: auto`, four labels, the arithmetic — and correct about an
+element that was not there.
+
+### Why this deserves its own entry
+
+The other entries in this file are about a rule that is too narrow: an enumeration written where a
+property was meant. This is different and it has no gate. **A plausible finding terminates the
+search that would have found the real one.** The more coherent the explanation, the more completely
+it stops the looking — and a *wrong* explanation that happens to be internally sound is the most
+expensive kind, because nothing about it feels like a guess.
+
+Two consequences, and the second is the one that generalises:
+
+- **A byte-identical measurement after a fix is evidence about the DIAGNOSIS.** Re-read the
+  original output before re-fixing; do not re-run and do not adjust the fix.
+- **When you find a cause, keep reading until the evidence is EXHAUSTED, not until it is
+  EXPLAINED.** The question is not «does this account for the failure» but «does this account for
+  every number in front of me». `controls=0` was unexplained by my answer and I never asked it to
+  be.
+
+`tests/unit/builder-tabs.test.ts` now asserts the property rather than the two sites: it **counts**
+the elements that map `TABS` and requires `flex-wrap` on each, so a third rail fails a unit test
+instead of a CI round.
+
+---
+
+## D150 — «Unchanged from X» is two assertions, and I verified the half that did not matter
+
+**Named 2026-09-11 (Tor). D110's family; the sibling of D148, which records the instance.**
+
+All four of B0–B3's commit messages say «5a3 unchanged by construction». That claim is **true**: no
+phase added a migration, so the gate's inputs — RLS tables and SECURITY DEFINER functions in
+`public` — could not move. I checked it four times and it was right four times.
+
+The number it was attached to, 65 of 90, was stale before B0 opened. Measured: **67 of 92**.
+
+**A relative claim does not license the base it is added to.** «Unchanged from X» asserts a delta
+AND an X, and the verification effort went entirely into the delta — the half that was cheap to
+check, already believed, and of no consequence if wrong. The absolute number is the one a reader
+uses, and it is the one nobody re-derived.
+
+**The same shape produced B0's citation finding**, one class over: «all 28 citations are v1's
+numbers», generalised from a sample of one. That sample was correct — `QuestionCard.tsx`'s `:387`
+really is v1's line — and the conclusion was wrong about 24 of 28. **A blanket `V1:` backfill would
+have replaced 24 unlabelled citations with 24 falsely labelled ones, which is worse than the
+starting state**, because a wrong coordinate system is trusted and an absent one is questioned.
+
+The rule is the one already in this project, applied one level up: a carried number needs the
+command that re-derives it **beside it**, and a claim of the form «unchanged from X» needs that
+command for X, not for the change.
+
+---
+
+## D151 — D145 overstated its own measurement
+
+**Corrected 2026-09-11, on reading `quiz_leaderboard`'s body.**
+
+D145 says the quiz preview drops the bundle's «20 sek» because «there is no configured time limit
+anywhere in the schema». **«Anywhere in the schema» is wrong.** The test behind it asserts
+`not.toMatch(/time_limit|seconds/)` over `M:0085` — the migration that adds `answer_index` and
+`points` — and that is true and is the right scope. The prose generalised from it.
+
+`M:0086`'s `quiz_leaderboard` hard-codes **20000 ms**:
+
+```sql
+(q.points / 2) * greatest(0, 20000 - a.elapsed_ms) / 20000
+```
+
+**The decision stands and the reason is unchanged**: that constant is the decay curve of a points
+bonus, not a deadline. Nothing stops a respondent answering after twenty seconds; they earn the
+base points and no bonus. Telling an editor «20 sek» in a preview would still promise their
+respondents a time limit the product does not impose.
+
+What changes is the claim's scope. D145 should read: **no column configures a time limit, and
+nothing enforces one; a scoring function decays a bonus to zero at twenty seconds.** The
+measurement was sound; the sentence written from it reached further than the measurement did —
+which is the same error as D150 one level down, in the same run.
