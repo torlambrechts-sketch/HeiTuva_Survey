@@ -196,10 +196,51 @@ describe('W0 · the registries are public by design, and that claim is CHECKED',
     expect(b.data!.length).toBe(a.data!.length)
   })
 
-  it.each(TABLES)('nobody may WRITE %s through the API', async (table) => {
-    const before = await svc.from(table).select('key').limit(1)
-    expect(before.data?.length, `${table} has a row to try to change`).toBe(1)
-    const { error } = await outsider.from(table).insert({ key: 'smugled' } as never)
+  /**
+   * NOBODY MAY WRITE, ASSERTED FROM THE CATALOGUE RATHER THAN BY ATTEMPTING A ROW.
+   *
+   * The first version of this test did `select('key')` and then tried to insert
+   * `{ key: 'smugled' }` — `key` is a column on two of these three tables, and
+   * `workspace_module_links` is keyed `(workspace_key, module_key)`. So the
+   * setup read failed, and CI's very first run of this suite caught it.
+   *
+   * WHAT THE NON-VACUITY GUARD BOUGHT, because this is the whole argument for
+   * it: the insert would have been refused anyway — for the wrong reason, an
+   * unknown column rather than a missing policy — and the test would have
+   * PASSED while proving nothing. That is D158's shape exactly, and with no
+   * Docker here there was no red-first run to catch it instead.
+   *
+   * So the rewrite states the property rather than a better-chosen row: **no
+   * policy on these tables permits anything but SELECT.** It is catalogue-
+   * derived, it is uniform across the three tables, and it does not depend on
+   * knowing the shape of a row — which is the thing I got wrong.
+   */
+  it.each(TABLES)('no policy on %s permits anything but SELECT', (table) => {
+    const rows = psql(`
+      select polname, case polcmd
+               when 'r' then 'SELECT' when 'a' then 'INSERT'
+               when 'w' then 'UPDATE' when 'd' then 'DELETE' else 'ALL' end
+        from pg_policy where polrelid = 'public.${table}'::regclass`)
+    // NON-VACUITY: a table with NO policy at all would also return [], and that
+    // is a different state — RLS on with no policy denies everything, which
+    // would be a registry nobody can read.
+    expect(rows.length, `${table} has at least one policy`).toBeGreaterThan(0)
+    expect(
+      rows.filter((r) => r[1] !== 'SELECT'),
+      `${table}: a shipped registry a client could write is a registry a client could poison`,
+    ).toEqual([])
+  })
+
+  it.each(TABLES)('and the refusal is real: an outsider INSERT into %s fails', async (table) => {
+    const rows = psql(`select count(*) from public.${table}`)
+    expect(Number(rows[0]![0]), `${table} is seeded`).toBeGreaterThan(0)
+    // Each table's own shape, because an insert refused for a malformed row
+    // proves nothing about a policy — the lesson one test up.
+    const row =
+      table === 'workspace_module_links'
+        ? { workspace_key: 'hr', module_key: 'quiz' }
+        : { key: 'smugled', label: 'smugled' }
+    const { error } = await outsider.from(table).insert(row as never)
     expect(error, `${table}: no insert policy exists, so the write is refused`).not.toBeNull()
   })
 })
