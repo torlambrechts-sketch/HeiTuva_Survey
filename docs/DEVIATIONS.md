@@ -4811,3 +4811,92 @@ matters, and it reports `writes: false`), and an absent action.
 a mechanism does not fail when the rule is broken; it fails when the code is *tidied*. The signal
 it sends is «you changed something» — and the cheap response, every time, is to edit the regex to
 match the new spelling, which preserves a test that was never checking the rule.
+
+---
+
+## D156 — The bundle's per-question comment has one slot, and the key is the string `"undefined"`
+
+**Found in C0, by a baseline capture that would not render.** Recorded because it is a fact about
+the BUNDLE, not about the running product — the distinction CLAUDE.md's «name the system in the
+sentence» rule exists to protect, and this entry is written to that rule throughout.
+
+### What the bundle does
+
+`design-reference-v3/…/HeiTuva.dc.html` stores a respondent's per-question comment as
+`qcSaved[q.id]`, and reads it back at five sites — `V3:5346`, `5347`, `5356`, `5358`, `5363` — all
+keyed `(rq[stepIdx] || {}).id`, where `rq = this.respondList(st, sv)`.
+
+**`respondList` emits no `id`.** Measured over the whole function, not sampled:
+
+```
+awk 'NR>=4851 && NR<=4962' HeiTuva.dc.html | grep -o '[a-zA-Z]*[iI]d:' | sort | uniq -c
+      1 slotId:
+```
+
+So every read resolves to `undefined`, every write lands under the string `"undefined"`, and the
+prototype has exactly **one comment slot per respondent**, shown on whichever question is on screen.
+
+### Why it is worth an entry rather than a shrug
+
+**It makes a copy claim provably false rather than arguably so.** The `optional` mode advertises
+«Et valg per kommentar: anonymt eller med navn» (`V3:5339`). Two independent measurements say it is
+not: this one, and the fact that `V3:5362` and `V3:5378` both source the flag from `st.fbAnon`, a
+single submission-level toggle. **The bundle already behaves the way Q113 decides**, and only its
+prose disagrees — which downgrades Q113 from «we override the bundle's behaviour» to «we correct the
+bundle's copy». The weaker claim is the true one and it is the one now written in `01-decisions.md`.
+
+**It corrects something I wrote.** `docs/v3/00-diff.md § 4.2` recorded `qcSaved[id].anon` as
+«genuinely per question», reasoning from the storage *shape*. The shape is per-id. The behaviour is
+one choice, one slot. A shape is not a behaviour, and I filed the first as the second.
+
+### How it was found, which is the transferable part
+
+Not by reading — by a capture that came back byte-identical to its neighbour and tripped the
+harness's duplicate-hash check. The first `stateFrom` body **reimplemented** the prototype's key
+derivation (`sv.questions[step].id`) and produced a plausible key and a silently wrong screen. The
+second **called the prototype's own `respondList`** and got the key the prototype actually uses.
+
+**Deriving a value the way the system derives it is a different act from deriving it the way you
+believe the system derives it**, and only the first can surface a defect in the belief. The harness
+now hands `stateFrom` the logic instance for exactly this reason.
+
+### Ours
+
+Nothing is wrong in the running product, because C0 built nothing. C3 builds this surface, and it
+builds one comment per question with a real key — the database half in C1 gives
+`survey_comments.question_id` its own column and its own uniqueness, so the bundle's defect is not
+inheritable even by accident.
+
+---
+
+## D157 — Three fields in the reference harness were enumerations of the bundles that existed
+
+**Found in C0, all three in one sitting, none of them a v3 feature.** The same shape CLAUDE.md's
+table already carries eight instances of. They are logged here rather than promoted into that
+table because they are one phase's discovery in one file — and because the third is a weaker
+member than the other two: a literal-only patch field is a missing capability as much as it is a
+mistaken enumeration.
+
+| Field | The enumeration | The property it should have been |
+|---|---|---|
+| `Bundle.splash: string` | the three bundles that had a splash | «the files THIS bundle handed over» |
+| `Screen.only: string[]` | the bundles a screen existed in **when the line was written** | «the bundle it first appeared in, and every later one» |
+| `Screen.state` as a literal only | the states reachable without knowing a runtime value | «a patch may depend on what the prototype computes» (`stateFrom`) |
+
+**`only` is the one that would have cost something.** Eight v2 surfaces carried `only: ['v2']`,
+which was true when written and false the moment a fourth bundle arrived: v3 contains all eight, and
+the filter would have withheld every one from the set they are the target for. Not a crash — eight
+missing PNGs in the target baseline, which is «green for something that structurally could not be
+seen», the shape this project has hit six times. It is now `since`, and a fifth bundle needs no edit
+to any screen line.
+
+**`splash` is the one that would have been *satisfied wrongly*.** A required field invites the
+obvious fix — point v3's splash at v2's file — and that is the precise failure the per-screen
+declarations exist to prevent: a screen captured from a page its own bundle never drew and then
+compared against as though it had. Made optional; a screen whose file its bundle lacks is skipped,
+and the run prints that it skipped it.
+
+**The stated limit, because `since` is itself a property with an assumption inside it.** It assumes
+screens are added and not removed. That held v2 → v3 and was verified rather than assumed — the
+sorted `sc-if` key-set comparison in `docs/v3/00-diff.md`, `comm -23` empty. A handoff that drops a
+screen needs an `until`, and the check that would catch it is that same comparison.

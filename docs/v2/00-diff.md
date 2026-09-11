@@ -399,6 +399,39 @@ rather than a defect in it.
 
 ---
 
+## 0.3b — v3, the fourth handoff (added C0, 2026-09-11)
+
+Q18/Q52's rule extends once more, and **the extension is smaller than the previous two**
+because v3 is a one-file handoff that adds a feature rather than redrawing the app.
+
+`/design-reference-v3/` governs every screen a **v3 phase touches**. Everything else keeps the
+bundle in the table above. Three rows move, one row is new, and **two surfaces move BACKWARD
+in the sense that they are now pinned to v2 by absence rather than by the rule**:
+
+| Surface | Governed today | Governed after C0 | Because |
+|---|---|---|---|
+| `bygg` — Builder | v1, moved to v2 by V2-3 | **v3 for the Kjøremodus panel only** | v3 adds «Kommentar og samtale per spørsmål» into that same card (V3:580–594). The rest of the Builder body does not move. |
+| `respondent` (`/s/[token]`) | mixed; v2 for quiz tiles | **v3** | v3 adds the per-question comment (V3:3618–3665) and the end-of-survey box (V3:3675–3700) to the body. |
+| **Oppgaver** | v2 from birth (V2-4) | **v3**, and renamed **«Oppgaver og tilbakemeldinger»** | v3 puts a filter rail over it (V3:2176–2250) and changes the nav label (V3:4965). |
+| **Tilbakemeldinger** (the feedback rows) | — | **v3 from birth** (C4) | new surface. |
+| `splash` | original, moved to v2 by V2-8 | **stays v2** | **v3 did not hand over a splash file at all.** |
+| **Bruksområder** | v2 from birth (V2-8) | **stays v2** | same — v3 did not re-issue it. |
+
+**The last two rows are the ones worth reading twice.** A handoff that omits a file is not a
+handoff that deprecates it, and it is not licence to render that surface from the new bundle's
+app page. `artifacts/reference-v2/splash*.png` and `artifacts/reference-v2/bruksomrader.png`
+are therefore **live references, not archived evidence** — the only rendered baselines those
+surfaces have. The freeze on the v2 set now protects two different things at once, and a
+future `--bundle=v2` regeneration should be weighed knowing that.
+
+**What does NOT move.** Everything the plan's C-phases do not touch. In particular `send`,
+`resultater`, `dashboard`, `rapporter`, `bibliotek`, the admin tabs and the marketing pages
+keep the bundle they have, even though v3's file contains a drawing of all of them. A screen
+is governed by the bundle a phase *built it from*, and reading the presence of a drawing as
+governance is the failure Q52 exists to prevent.
+
+---
+
 ## A. BUNDLE DIFF — the three legs
 
 ### A.0 Counts, measured

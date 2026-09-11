@@ -82,20 +82,32 @@ says «respondenten ser svaret ved neste innlogging». A respondent does not log
 claim is sold to the person configuring it, which is worse than a wrong line on the respondent
 screen: it is the basis on which they pick the mode.
 
-### 4.2 `optional` really is per-comment, and that is the hazard
+### 4.2 `optional` is per-comment in its STORAGE SHAPE and per-submission in its BEHAVIOUR
 
-I nearly recorded the opposite. The end-of-survey box has ONE submission-level toggle
-(`st.fbAnon`), which looks like it already agrees with Tor's decision 3 — but the per-question
-comments do not:
+**CORRECTED IN C0 (2026-09-11). What stood here was wrong, and it was wrong in the direction that
+made Q113 sound like a bigger decision than it is.** The original text is kept below the correction
+because a number nobody re-derives is how a wrong one survives, and the same goes for a reading.
 
-```js
-const qc = this.state.qcSaved || {}
-Object.keys(qc).map(id => ({ …, who: qc[id].anon ? "Anonym" : "Tuva Berg", anon: qc[id].anon, … }))
-```
+What I wrote: «`anon` is stored per question id … Tor's decision 3 overrides the bundle's behaviour
+**and** its copy.» That reasoned from the storage *shape* — `qcSaved[id].anon` — and stopped there.
 
-**`anon` is stored per question id.** A respondent can be named on question 3 and anonymous on
-questions 1 and 2, and the bundle's own mode description promises exactly that: «Et valg per
-kommentar». Tor's decision 3 overrides the bundle's behaviour **and** its copy, not just its copy.
+**Measured properly, the bundle already behaves the way Q113 decides**, for two independent reasons:
+
+1. **The value has one source.** `V3:5362` (per-question save) and `V3:5378` (end-of-survey send) are
+   the same line: `const anon = mode === "anonymous" ? true : mode === "named" ? false :
+   (st.fbAnon !== false)`. In `optional` mode both read **`st.fbAnon`, one submission-level toggle.**
+   A respondent who flips it on question 3 has flipped it for questions 1 and 2. The chips at
+   `V3:5352-5353` write that same toggle.
+2. **The key never varies.** `respondList` emits no `id` (D156), so all five reads of
+   `(rq[stepIdx]||{}).id` resolve to `undefined` and there is one slot per respondent regardless.
+
+**So Q113 is a copy correction, not a behaviour override.** «Et valg per kommentar» (`V3:5339`) is
+false against the bundle's own implementation — and the bundle says so itself elsewhere: the
+Oppgaver subtitle reads «Valget anonymt eller med navn styres **per undersøkelse** under Generelt».
+Two sentences in one handoff, disagreeing about the feature's central privacy property.
+
+The decision does not change. What changes is the claim made *for* it, and the weaker claim is the
+true one.
 
 ### 4.3 The comments are created in the same handler that writes the response
 

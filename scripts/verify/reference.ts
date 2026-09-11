@@ -19,7 +19,7 @@ import { chromium, type Page } from '@playwright/test'
 import { serveCdnFromCache } from './cdn-cache'
 
 /**
- * THREE bundles, all rendered, all kept (DECISIONS Q18, extended by Q52).
+ * FOUR bundles, all rendered, all kept (DECISIONS Q18, extended by Q52).
  *
  * `design-reference/` is the first handoff and remains the reference for
  * Phase 1–7 work AS BUILT: a fidelity question about a screen no later phase
@@ -30,8 +30,13 @@ import { serveCdnFromCache } from './cdn-cache'
  * bundle ran; it is now the reference for every screen a v1 phase built and no
  * v2 phase touches.
  *
- * `design-reference-v2/` is the third handoff and is the TARGET for every
- * screen a v2 phase touches.
+ * `design-reference-v2/` is the third handoff. It was the target while the v2
+ * bundle ran; it is now the reference for every screen a v2 phase built and no
+ * v3 phase touches — AND it stays the reference for the two surfaces v3 did not
+ * hand over at all (splash, Bruksområder).
+ *
+ * `design-reference-v3/` is the fourth handoff and is the TARGET for every
+ * screen a v3 phase touches. It is a ONE-FILE handoff: `HeiTuva.dc.html` only.
  *
  * WHICH SURFACE IS JUDGED AGAINST WHICH IS NOT INFERRED HERE. It is written
  * down once, per surface, in `docs/v2/00-diff.md § 0.3`. This file only
@@ -46,10 +51,15 @@ type Bundle = {
   /** What this render set is FOR, printed in the run so the reader need not infer. */
   role: string
   design: string
-  splash: string
-  /** v2 ships a THIRD prototype file. Optional, because the earlier bundles do
-   *  not have it — a screen that names a file its bundle lacks is skipped
-   *  rather than rendered from the wrong page. */
+  /** OPTIONAL, and that is the correction v3 forced. This was typed `string`
+   *  because the first three handoffs all shipped a splash — an enumeration of
+   *  the bundles that existed, read as a property of bundles. v3 handed over
+   *  ONE file. A required field would have been satisfied by pointing v3's
+   *  splash at v2's, which is the exact failure the `only`/`bruksomrader`
+   *  machinery below exists to prevent: a screen captured from a page its own
+   *  bundle never drew, then compared against as though it had. */
+  splash?: string
+  /** v2 ships a THIRD prototype file. Optional for the same reason. */
   bruksomrader?: string
   out: string
 }
@@ -75,11 +85,19 @@ const BUNDLES: Bundle[] = [
   },
   {
     key: 'v2',
-    role: 'third handoff — the target for every screen a v2 phase touches',
+    role: 'third handoff — screens v2 built and no v3 phase touches, plus splash and Bruksområder, which v3 did not re-issue',
     design: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva.dc.html',
     splash: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva Splash.dc.html',
     bruksomrader: 'design-reference-v2/heituva-survey-app-design/project/HeiTuva Bruksomrader.dc.html',
     out: 'artifacts/reference-v2',
+  },
+  {
+    key: 'v3',
+    role: 'fourth handoff — the target for every screen a v3 phase touches',
+    design: 'design-reference-v3/heituva-survey-app-design/project/HeiTuva.dc.html',
+    // No `splash`, no `bruksomrader`: v3 handed over one file. Those two
+    // surfaces stay governed by v2 and are rendered from v2's set.
+    out: 'artifacts/reference-v3',
   },
 ]
 
@@ -98,13 +116,48 @@ type Screen = {
   splash?: true
   /** Bruksområder is a THIRD file, and only v2 has it. */
   bruksomrader?: true
-  /** Bundles this screen exists in. Omitted = every bundle. A v2-only screen
-   *  rendered against v1 would not fail loudly — the state key simply would not
-   *  apply and the previous screen would be captured under the new name, which
-   *  is the "measured as whatever page linked to it" failure VERIFY.md's
-   *  one-time setup already names. So the restriction is declared, not left to
-   *  the duplicate-hash check to catch after the fact. */
-  only?: string[]
+  /** The bundle this screen FIRST APPEARS IN. It is rendered for that bundle
+   *  and every later one. Omitted = it has been there from the first handoff.
+   *
+   *  A screen whose bundle does not have it would not fail loudly — the state
+   *  key simply would not apply and the previous screen would be captured under
+   *  the new name, which is the "measured as whatever page linked to it"
+   *  failure VERIFY.md's one-time setup already names. So the restriction is
+   *  declared, not left to the duplicate-hash check to catch after the fact.
+   *
+   *  THIS WAS `only: string[]` AND IT WAS AN ENUMERATION. Every v2 surface was
+   *  written `only: ['v2']`, which was true of the bundles that existed and
+   *  false the moment a fourth arrived: v3 contains all eight of those screens,
+   *  and `only` would have silently withheld every one of them from the set
+   *  they are the target for. The property is "present from v2 ONWARD", so
+   *  that is what the field now says. Adding a fifth bundle needs no edit to
+   *  any screen line.
+   *
+   *  The limit, stated rather than left implicit: this assumes screens are
+   *  added and not removed. It held v2 -> v3 and was VERIFIED, not assumed —
+   *  `docs/v3/00-diff.md` compares the sorted `sc-if` key sets and `comm -23`
+   *  returns nothing. If a handoff ever drops a screen, that needs an `until`,
+   *  and the check that would catch it is the same set comparison. */
+  since?: string
+  /** A patch that cannot be written as a literal, because it depends on a value
+   *  the prototype computes at runtime. Source of a function body taking the
+   *  prototype's own state `st` and its logic instance `logic`, and returning
+   *  the patch object; merged on top of `state`.
+   *
+   *  This exists because of `uid()` (D143): question ids are
+   *  `"q" + Math.random().toString(36).slice(2,8)`, so the respondent screen's
+   *  saved-comment state — `qcSaved` keyed BY a question id — has no literal
+   *  that reaches it. Without this the C3 phase would build a state with no
+   *  rendered baseline to be judged against, which is the "green for something
+   *  that structurally could not be seen" shape this project has hit six times.
+   *
+   *  `logic` is handed over as well as `st` so the body can DERIVE the key the
+   *  way the prototype derives it, rather than reimplementing the derivation
+   *  here. That distinction earned itself immediately: reimplementing it
+   *  produced a plausible key and a silently wrong capture, and calling the
+   *  prototype's own `respondList` produced the key the prototype actually
+   *  uses — which turned out not to be a question id at all (D156). */
+  stateFrom?: string
 }
 
 const SCREENS: Screen[] = [
@@ -142,24 +195,59 @@ const SCREENS: Screen[] = [
   { name: 'splash-priser-manedlig', state: { billing: 'mnd' }, splash: true },
   { name: 'splash-logg-inn', state: { mode: 'login' }, splash: true },
 
-  // v2's new surfaces. Declared `only: ['v2']` because the earlier bundles have
-  // no such `screen` value: the patch would not apply, and the run would
-  // capture whatever screen was already showing under the new name.
-  { name: 'oppgaver', state: { screen: 'tasks' }, only: ['v2'] },
-  { name: 'live', state: { screen: 'livestage' }, only: ['v2'] },
-  { name: 'live-revealed', state: { screen: 'livestage', liveRevealed: true }, only: ['v2'] },
-  { name: 'hjelp', state: { screen: 'help' }, only: ['v2'] },
-  { name: 'admin-profil', state: { screen: 'admin', adminTab: 'profil' }, only: ['v2'] },
-  { name: 'admin-malgrupper', state: { screen: 'admin', adminTab: 'malgrupper' }, only: ['v2'] },
-  { name: 'admin-integrasjoner', state: { screen: 'admin', adminTab: 'integrasjoner' }, only: ['v2'] },
-  { name: 'bruksomrader', state: {}, bruksomrader: true, only: ['v2'] },
+  // v2's new surfaces. `since: 'v2'` because the earlier bundles have no such
+  // `screen` value — the patch would not apply, and the run would capture
+  // whatever screen was already showing under the new name.
+  { name: 'oppgaver', state: { screen: 'tasks' }, since: 'v2' },
+  { name: 'live', state: { screen: 'livestage' }, since: 'v2' },
+  { name: 'live-revealed', state: { screen: 'livestage', liveRevealed: true }, since: 'v2' },
+  { name: 'hjelp', state: { screen: 'help' }, since: 'v2' },
+  { name: 'admin-profil', state: { screen: 'admin', adminTab: 'profil' }, since: 'v2' },
+  { name: 'admin-malgrupper', state: { screen: 'admin', adminTab: 'malgrupper' }, since: 'v2' },
+  { name: 'admin-integrasjoner', state: { screen: 'admin', adminTab: 'integrasjoner' }, since: 'v2' },
+  // Bruksområder is v2's third FILE, and v3 did not re-issue it. `since: 'v2'`
+  // plus the file guard means it renders for v2 and is skipped for v3 — not
+  // captured from v3's app page under the Bruksområder name.
+  { name: 'bruksomrader', state: {}, bruksomrader: true, since: 'v2' },
+
+  // v3's new surfaces: communication on every survey.
+  //
+  // `oppgaver` above is NOT duplicated here. Its `screen` value is unchanged
+  // and v3 renders it with the new tab rail, so the v3 set's `oppgaver.png` is
+  // already the new drawing. What is new is the two FILTERED states.
+  { name: 'oppgaver-oppgaver', state: { screen: 'tasks', tfView: 'oppgaver' }, since: 'v3' },
+  { name: 'oppgaver-tilbakemeldinger', state: { screen: 'tasks', tfView: 'tilbakemeldinger' }, since: 'v3' },
+  // The per-question comment editor, open. 390px: this is the respondent
+  // surface, which CLAUDE.md holds to a stricter bar than the app.
+  { name: 'respondent-kommentar', state: { screen: 'respond', qcOpen: true }, width: 390, since: 'v3' },
+  // The same question with a comment already saved. Reachable only through the
+  // question's own random id, hence `stateFrom`.
+  {
+    name: 'respondent-kommentar-lagret',
+    state: { screen: 'respond' },
+    // Keyed the way the PROTOTYPE keys it — `respondList(st, active())[step].id`
+    // — not the way a reader would assume. Those are different, and the
+    // difference is D156: `respondList` emits no `id` at all, so every one of
+    // the bundle's five reads resolves to the same slot.
+    stateFrom:
+      'const rq=logic.respondList(st, logic.active());' +
+      'const i=Math.min(st.step||0, Math.max(0, rq.length-1));' +
+      'const key=String((rq[i]||{}).id);' +
+      'return {qcOpen:false, qcText:"", qcSaved:{[key]:{text:"Vi mangler et sted a ta opp ting som haster.",anon:true,question:(rq[i]||{}).text}}}',
+    width: 390,
+    since: 'v3',
+  },
+  // The end-of-survey box. `respondent-takk` already captures its unsent state
+  // in v3 (the box is new there); this is the sent confirmation, which has no
+  // click path from a fresh load.
+  { name: 'respondent-takk-sendt', state: { screen: 'respond', thanked: true, fbSent: true }, width: 390, since: 'v3' },
 ]
 
 /** Reaches the prototype's logic instance through the React fiber and merges a
  *  state patch into it. Returns the resulting `screen` so the caller can prove
  *  the patch actually applied instead of capturing a stale screen. */
-async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
-  return page.evaluate((p) => {
+async function setPrototypeState(page: Page, patch: Record<string, unknown>, from?: string) {
+  return page.evaluate(({ p, from }) => {
     for (const el of Array.from(document.querySelectorAll('*'))) {
       const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'))
       if (!key) continue
@@ -169,14 +257,26 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
           | { logic?: { state?: Record<string, unknown>; setState?: (p: unknown) => void } }
           | undefined
         if (inst?.logic?.setState && inst.logic.state) {
-          inst.logic.setState(p)
+          let merged = p
+          if (from) {
+            // eslint-disable-next-line no-new-func
+            const derived = new Function('st', 'logic', from)(inst.logic.state, inst.logic) as Record<
+              string,
+              unknown
+            >
+            if (!derived || !Object.keys(derived).length) {
+              return { ok: false, screen: null, why: 'stateFrom returned nothing' }
+            }
+            merged = { ...p, ...derived }
+          }
+          inst.logic.setState(merged)
           return { ok: true, screen: inst.logic.state['screen'] as string }
         }
         fiber = fiber.return as typeof fiber
       }
     }
-    return { ok: false, screen: null }
-  }, patch)
+    return { ok: false, screen: null, why: 'no logic instance' }
+  }, { p: patch, from })
 }
 
 /**
@@ -188,21 +288,27 @@ async function setPrototypeState(page: Page, patch: Record<string, unknown>) {
  * browser build is a baseline that silently stops being the thing Phases 1-7
  * were judged against, which is the whole reason Q18 keeps it.
  *
- * THE V1 SET NOW FREEZES FOR THE SAME REASON, and Q52 adds a second: v1 is no
- * longer a target, it is the reference for every screen a v1 phase built and no
- * v2 phase touches. Re-rendering it under a newer Chromium would move PNGs that
+ * THE V1 SET FROZE FOR THE SAME REASON, and Q52 adds a second: v1 is no longer
+ * a target, it is the reference for every screen a v1 phase built and no v2
+ * phase touches. Re-rendering it under a newer Chromium would move PNGs that
  * are the only evidence of what V1-0…V1-6 were judged against — exactly the
  * loss the legacy freeze was introduced to prevent, one bundle along.
+ *
+ * THE V2 SET NOW FREEZES TOO, one bundle further along, and it carries an extra
+ * duty the other frozen sets do not: v3 handed over one file, so `splash*.png`
+ * and `bruksomrader.png` exist ONLY in the v2 set and are the live reference
+ * for those surfaces, not merely a record of what v2 was judged against.
  *
  * So the default renders the TARGET set only, and an older set is regenerated
  * only when someone asks for it by name:
  *
- *   npx tsx scripts/verify/reference.ts              v2 only (default)
- *   npx tsx scripts/verify/reference.ts --all        all three
+ *   npx tsx scripts/verify/reference.ts              v3 only (default)
+ *   npx tsx scripts/verify/reference.ts --all        all four
+ *   npx tsx scripts/verify/reference.ts --bundle=v2
  *   npx tsx scripts/verify/reference.ts --bundle=v1
  *   npx tsx scripts/verify/reference.ts --bundle=legacy
  *
- * Either way both sets stay on disk, named, side by side.
+ * Either way every set stays on disk, named, side by side.
  */
 function selectedBundles(): Bundle[] {
   const args = process.argv.slice(2)
@@ -213,8 +319,12 @@ function selectedBundles(): Bundle[] {
     if (!hit.length) throw new Error(`unknown bundle "${named}" — try ${BUNDLES.map((b) => b.key).join(' | ')}`)
     return hit
   }
-  return BUNDLES.filter((b) => b.key === 'v2')
+  return BUNDLES.filter((b) => b.key === TARGET)
 }
+
+/** The newest bundle is the target. Derived from the list's order rather than
+ *  written down a second time, so promoting a bundle is one edit. */
+const TARGET = BUNDLES[BUNDLES.length - 1]!.key
 
 async function main() {
   const browser = await chromium.launch()
@@ -234,9 +344,18 @@ async function main() {
     // silent failure, but two SCREENS rendering identically within one bundle
     // still are.
     const hashes = new Map<string, string>()
+    const bundleIndex = BUNDLES.findIndex((b) => b.key === bundle.key)
     const screens = SCREENS.filter((s) => {
-      if (s.only && !s.only.includes(bundle.key)) return false
+      if (s.since) {
+        const first = BUNDLES.findIndex((b) => b.key === s.since)
+        if (first < 0) throw new Error(`screen "${s.name}" declares since:"${s.since}", which is not a bundle key`)
+        if (bundleIndex < first) return false
+      }
+      // A screen living in a SECOND prototype file is skipped when this bundle
+      // does not ship that file — rather than captured from the app page under
+      // its name.
       if (s.bruksomrader && !bundle.bruksomrader) return false
+      if (s.splash && !bundle.splash) return false
       return true
     })
     const withheld = SCREENS.length - screens.length
@@ -254,7 +373,7 @@ async function main() {
 
       try {
         await serveCdnFromCache(page)
-        const file0 = s.bruksomrader ? bundle.bruksomrader! : s.splash ? bundle.splash : bundle.design
+        const file0 = s.bruksomrader ? bundle.bruksomrader! : s.splash ? bundle.splash! : bundle.design
         await page.goto(pathToFileURL(resolve(file0)).href, {
           waitUntil: 'domcontentloaded',
         })
@@ -271,8 +390,8 @@ async function main() {
           { timeout: 30_000 },
         )
 
-        const applied = await setPrototypeState(page, s.state)
-        if (!applied.ok) throw new Error('could not reach the prototype logic instance')
+        const applied = await setPrototypeState(page, s.state, s.stateFrom)
+        if (!applied.ok) throw new Error(`state patch did not apply: ${applied.why ?? 'unknown'}`)
 
         await page.waitForTimeout(400)
         await page.evaluate(() => document.fonts.ready)

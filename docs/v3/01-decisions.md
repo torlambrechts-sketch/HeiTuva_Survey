@@ -98,9 +98,17 @@ table, so the next aggregate to be written fails a test in the commit that adds 
 
 **TAKEN. This overrides the bundle's behaviour and its copy.**
 
-The bundle stores `anon` **per question id** (`qcSaved[id].anon`) and its mode description promises
-«Et valg per kommentar». Measured, not assumed — see `00-diff.md § 4.2`, where I nearly recorded
-the opposite.
+The bundle's mode description promises «Et valg per kommentar» (`V3:5339`).
+
+**CORRECTED IN C0: the bundle's BEHAVIOUR already agrees with this decision, and only its COPY does
+not.** `00-diff.md § 4.2` first read the storage shape — `qcSaved[id].anon` — as evidence of
+per-question choice. Measured properly it is not: `V3:5362` and `V3:5378` both source the flag from
+`st.fbAnon`, **one submission-level toggle**, and `respondList` emits no `id` at all, so the key
+never varies (D156). The bundle even contradicts its own mode description elsewhere — the Oppgaver
+subtitle says the choice «styres **per undersøkelse** under Generelt».
+
+So this is a **copy correction, not a behaviour override**. The decision below does not change; the
+claim made for it weakens, and the weaker claim is the true one.
 
 ### Why per-comment is unsafe
 
