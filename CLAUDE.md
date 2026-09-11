@@ -705,6 +705,12 @@ org/survey/count/threshold/total, that RLS is on, that a SEEDED read succeeds fo
 anon, and that no policy permits anything but SELECT. Tor's rule from Q118 is the one that
 applies: **new surfaces must not vanish from the count; the number is not required to rise.**
 
+**W1 took the census to 1142 across 81 files** (`tests/unit/workspace-chip.test.ts`, 12 — the
+tooltip's two clauses in both languages, the nav label Q123 kept, the chip's `touch-44-field`, and
+the header's contents asserted as *what v4 draws in it*). **5a3 is unmoved at 71 of 100**: W1 added
+no table and no SECURITY DEFINER function, which is the correct reading rather than a gap — a
+component is not a catalogue surface.
+
 **The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
 two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
 5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
