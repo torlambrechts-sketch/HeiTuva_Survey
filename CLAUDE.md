@@ -171,6 +171,20 @@ Two consequences, both cheap:
 1. **k-anonymity, k=5, database-enforced.** Clients never select from `responses` or `answers` (no RLS select policy exists for them — do not add one). All result reads go through the SECURITY DEFINER RPCs (`aggregate_results`, `get_quotes`, heatmap RPCs) which return `insufficient_data` for any cell with n < 5 and strip group labels below threshold.
 2. **Anonymity is structural.** Anonymous submissions: `invitation_id` NULL, no user id, no IP/user-agent anywhere, `submitted_hour` truncated to the hour. The DB CHECK constraint enforcing this stays. The only write path is `rpc.submit_response` (token-validated, single transaction: mark `responded_at`, insert unlinked response).
 3. RLS on every table, org-scoped via `app.is_org_member` / `app.has_role`. New table ⇒ RLS + policies in the same migration + a test.
+   **AND THE COROLLARY THAT V4-0 MADE STANDING: NO PER-ORGANISATION VALUE MAY REACH A
+   RESPONDENT-FACING SURFACE UNLESS A DECISION SAYS SO BY NAME.** `/s/[token]`, report share
+   links and the splash are read by people who were promised anonymity, and anonymity is a
+   property of what the RESPONDENT can observe, not only of what the database stores.
+   The instance this came from: v4 introduces a per-organisation vocabulary — «ansatt» in one
+   organisation, «kunde» in another, «deltaker» in a third — and **measured, it reaches zero
+   respondent surfaces**: all sixteen `ws*` identifiers sit on manager-facing screens. Had it
+   reached `/s/[token]`, a respondent answering two surveys would learn they came from the same
+   product, and a respondent seeing «deltaker» would learn something about the organisation that
+   invited them. That is a fingerprint, assembled out of a word.
+   **It is worth a standing rule rather than a note because vocabulary switching FEELS like an
+   improvement everywhere**, so the phase that carries it onto the respondent screen will be doing
+   it on purpose and for a good reason. Branding is the decided exception (Q58's logo and accent,
+   which the respondent is meant to see); everything else is a stop-and-ask.
 4. Role semantics: `administrator` (settings/privacy/users), `redaktor` (create/send), `leser` (aggregates only — no quote-RPC group filters, no named free text).
 5. Tokens hashed at rest (SHA-256), constant-time compare, expiry honored. Signed URLs only for Storage.
 6. Zod validation at every server boundary. Service-role key server-side only.
@@ -311,10 +325,11 @@ correct about its members and always silent about the member that has not arrive
 specification, two in a CI workflow. Neither of those is a database construct, which is the
 evidence that this section is not a note about Postgres.
 
-**Extended 2026-09-11, after C4/C5 and the verification pass that followed. TEN instances** —
-measured, not carried:
+**Extended 2026-09-11, after C4/C5, the verification pass that followed, and V4-0's sweep.
+ELEVEN instances** — measured, not carried, and the command is written here rather than the number
+so that the next addition corrects this paragraph by being made:
 `awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row,
-which returns 11 and therefore ten.
+which returns 12 and therefore eleven.
 Tor called the new one the tenth and the ninth correction; the table held seven when I counted it,
 so this is the EIGHTH and the number is written as what re-derives. Said rather than quietly
 matched, because this file already records a carried number that was wrong for four phases
@@ -323,8 +338,10 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Ten instances now.** The ninth is a REPEAT of the third — which is itself a finding — and the
-tenth is the subtlest of all of them. Nine different constructs, one shape:
+**Eleven instances now.** The ninth is a REPEAT of the third — which is itself a finding — the
+tenth is the subtlest of all of them, and the eleventh was caught by a SWEEP OVER PROSE rather than
+by a gate or a measurement, which is a third way of finding them. Ten different constructs, one
+shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -338,6 +355,7 @@ tenth is the subtlest of all of them. Nine different constructs, one shape:
 | **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
 | **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | **«A GRANT IS A FACT ABOUT THE CATALOGUE AND MUST BE READ BACK FROM THE CATALOGUE.»** `from public, anon` is the fix; `has_function_privilege('anon', …)` is the rule. |
 | **`gap-y-[13px]` carried to a smaller chip** (C4, `verify:responsive`) | 13px, measured against the `py-2` (40px) rail it was copied FROM | **«A CONSTANT COPIED FROM A WORKING CONTEXT CARRIES ITS CONTEXT'S ASSUMPTIONS INVISIBLY.»** The number belongs to the CONTROL, not to the pattern. |
+| **«Fire alternativer»** as a module label (V4-0 sweep, Q121) | four, counted off the bundle's fixture quiz | **«A DESCRIPTION OF A CLASS MAY NOT CARRY A COUNT OF THE INSTANCE IN FRONT OF YOU.»** `quizzable` is `choice \| yesno \| dropdown`; `yesno` has two. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**

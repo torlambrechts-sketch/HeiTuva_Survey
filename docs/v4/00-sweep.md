@@ -21,7 +21,7 @@ Nothing to fix and nothing to carry.
 
 ## Findings
 
-### 1. «setter standardvalg for nye undersøkelser» collides with the statutory lock — REAL
+### 1. «setter standardvalg for nye undersøkelser» collides with the statutory lock — REAL → **Q119: DROP THE CLAUSE**
 
 **The bundle draws** a header tooltip on the Arbeidsflate chip (`V4:181`):
 «Arbeidsflate — velger hvilke moduler Oversikt viser, sorterer maler og setter standardvalg for
@@ -36,13 +36,15 @@ oppgaver med hjemmel først» — a manager who picks a statutory pack gets the 
 **not** the workspace's defaults, silently. The tooltip promises a behaviour that is overridden in
 precisely the case the workspace exists for.
 
-This is not a defect in either system. It is an unresolved ORDER between two writers of the same
-columns, and it must be decided before a W-phase builds the chip — a decision for the plan, with
-the tooltip's wording following the decision rather than the other way round. Candidates: the
-workspace default applies only where no pack policy exists; or the tooltip says «for nye
-undersøkelser uten lovpålagt mal». **Do not build the tooltip as drawn.**
+**ANSWERED — Q119 (Tor, 2026-09-11).** The order was never open: **Q17 makes the pack policy a LOCK
+and a workspace a PREFERENCE, and a preference cannot override a lock.** So this is a race, not a
+copy error, and the resolution is to drop the third clause rather than to sequence the writers. The
+tooltip promises the two it keeps — which modules Oversikt shows, how templates are sorted — and the
+workspace writes no survey defaults at all. Tor: «Promising less than you do is fine; promising more
+is what we have spent fifteen phases removing.» **Making it true instead of smaller is a separate
+decision with a guard behind it and needs its own line; a W-phase may not take it silently.**
 
-### 2. «Kunde 3307 · sak #2291» is a re-identification handle on a comment row — REAL, and the sharpest
+### 2. «Kunde 3307 · sak #2291» is a re-identification handle on a comment row — REAL → **Q120: DO NOT BUILD**
 
 **The bundle draws** feedback rows in the Kunder-og-service workspace labelled
 «Kunde 3307 · levering 8. sep», «Kunde 4812 · sak #2291», «Kunde 5120 · sak #2288».
@@ -63,11 +65,12 @@ Two separate things, and both matter:
   can read the Tilbakemeldinger list», which is every `redaktor`. That is a different promise, and
   it is not the one Q113 took.
 
-**Stop-and-ask, not a default.** This one is on the list for the plan with the reasoning above, not
-something to take on my own classification: taking the default here would build something Tor might
-want unbuilt.
+**ANSWERED — Q120 (Tor, 2026-09-11): DO NOT BUILD.** No external reference is rendered beside a
+comment and no column is added for one. Three independent reasons, any one sufficient: the column
+does not exist; it is a different obligation from the one Q113 took; and nobody decided that
+obligation. **A promise the respondent was not given is not made by drawing it.**
 
-### 3. «Fire alternativer» is a demo quiz's shape, not the product's — WATCH
+### 3. «Fire alternativer» is a demo quiz's shape, not the product's — **Q121: REMOVE THE NUMBER**
 
 **The bundle draws**, on the quiz workspace's Oversikt card: «Fire alternativer med farge og ikon,
 nedtelling og resultattavle på storskjerm.»
@@ -76,10 +79,12 @@ nedtelling og resultattavle på storskjerm.»
 options. The bundle's sentence describes the particular quiz in its fixture, and as a module label
 it would be false for any yesno quiz.
 
-Not a defect in the bundle; a trap for the phase that copies the sentence into `ui_messages`. The
-label must not assert a count. Same shape as row 2 of CLAUDE.md's enumeration table
-(«nothing in this string asserts a fixed number»), and `verify:copy` will catch it if the numeral
-is written in Norwegian — «fire» is in that gate's list.
+**ANSWERED — Q121 (Tor, 2026-09-11): remove the number.** A module label asserts no count. This is
+the **eleventh instance** of an enumeration mistaken for a property, and the first found by a sweep
+over prose rather than by a gate or a measurement — now a row in CLAUDE.md's table:
+«a description of a class may not carry a count of the instance in front of you». `verify:copy`
+catches «fire» if it reaches `ui_messages`, which is the gate earning its place rather than a
+reason to relax.
 
 ### 4. «Valget huskes på denne enheten» — ACCURATE, with a consequence
 
@@ -112,6 +117,17 @@ respondent» across the app. Measured: **zero `ws*` identifiers anywhere in v4's
 region.** Every substitution site is manager-facing — a preview label (`V4:1024`), Oppgaver
 (`:2288`), Administrasjon → Språk (`:3021`), the send screen's heading (`:3218`).
 
-That is the right answer and worth recording as a positive result rather than as silence: a
-per-organisation word for the respondent, rendered on the respondent's own screen, would be a
-fingerprint on an anonymous surface. It is not there, and a W-phase must not put it there.
+That is the right answer and worth recording as a positive result rather than as silence.
+
+**PROMOTED TO A STANDING CONSTRAINT (Tor, 2026-09-11), beside security invariant 3 in CLAUDE.md:**
+*no per-organisation value may reach a respondent-facing surface unless a decision says so by name.*
+Tor's reasoning, which is sharper than the finding: «deltaker» in one organisation and «kunde» in
+another means **a respondent who answers two surveys learns they came from the same product**, and a
+respondent seeing «deltaker» learns something about the organisation that invited them. A
+fingerprint assembled out of a word.
+
+It is a standing rule rather than a note **because vocabulary switching FEELS like an improvement
+everywhere** — so the phase that carries it onto the respondent screen will be doing it deliberately
+and for a good reason, which is exactly the case a note does not stop. Branding is the decided
+exception (Q58's logo and accent, which the respondent is meant to see); everything else is a
+stop-and-ask.
