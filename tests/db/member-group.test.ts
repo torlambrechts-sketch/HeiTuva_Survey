@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { writesValidatedColumn } from './factories'
 
 /**
  * S3 item 2 — `org_members.group_id` has a writer.
@@ -54,7 +56,14 @@ describe('org_members.group_id has a writer in the product', () => {
       hits,
       'setMemberGroup is the only thing standing between a group and being permanently empty',
     ).toContain('group_id')
-    expect(hits).toMatch(/update\(\{ group_id|group_id: parsed\.data/)
+    // The alternation here was the workaround, not the rule: two spellings
+    // enumerated because neither was the property. `grepRepo` returns matching
+    // LINES, so the source is read directly for the real question.
+    const src = readFileSync('app/(app)/administrasjon/actions.ts', 'utf8')
+    const w = writesValidatedColumn(src, 'setMemberGroup', 'group_id')
+    expect(w.writes, 'setMemberGroup writes group_id').toBe(true)
+    expect(w.validated, 'and validates before it writes').toBe(true)
+    expect(w.literal, 'and the value is not hard-coded').toBe(false)
   })
 
   it('the action is exported under a name the panel imports', () => {

@@ -4763,3 +4763,51 @@ counted as a prohibition. And one hit was this catalogue biting the measurement:
 non-word character and there is a boundary inside «målgruppe».** That is D113/D116 exactly, in a
 script written to count something else, by the session that had just re-read them. The script now
 fails if a classified key stops being rendered, so the list cannot quietly suppress nothing.
+
+---
+
+## D155 — D140's shape, second time, in the same test — and three more armed beside it
+
+**CI run 121 on `main`, red. 2026-09-11.**
+
+The Kjøremodus fix (D153) destructured `parsed.data` inside `setRunMode`. That changed no
+behaviour whatsoever, and it turned `main` red:
+
+```
+tests/db/live.test.ts:475
+  expect(src, 'a server action writes run_mode').toMatch(/run_mode:\s*parsed\.data\.runMode/)
+```
+
+**D140 rewrote a different assertion in that same test, for exactly this reason** — it had pinned
+the Zod enum's membership, so finishing quiz meant breaking the suite. The rewrite carried a long
+comment about enumerations wearing a test's clothes. **This line sits one screen below it and was
+doing the same thing.** The fix landed beside the defect and did not look sideways.
+
+**Both CI failures were this one test.** `verify:hermetic` runs the suite twice, so it reported the
+same failure again — and the log's first alarming line, `ERROR: live_requires_anonymous`, was a
+negative test's expected output. Reading down to the assertion rather than stopping at the first
+plausible line is D149, applied on its first outing.
+
+### The class, not the instance
+
+`grep` for assertions matching a `parsed.data.*` spelling found **four, in three files**:
+
+| | |
+|---|---|
+| `live.test.ts:475` | `/run_mode:\s*parsed\.data\.runMode/` |
+| `quiz.test.ts:358-359` | `quiz_time_bonus`, `quiz_team_board` |
+| `member-group.test.ts:57` | `/update\(\{ group_id\|group_id: parsed\.data/` — **already hedged with an alternation**, which is the enumeration-of-spellings workaround rather than the rule |
+
+All four now call `writesValidatedColumn(src, fn, column)` in `tests/db/factories.ts`, which states
+the property once: **the column is named in a write inside THAT action's body, and the value came
+through the Zod boundary rather than being a literal.** How it is spelled on the way is the
+action's business.
+
+The helper is proven to discriminate rather than to pass — five synthetic sources: a good one, a
+hard-coded value, an unvalidated write, **a column written by a different action** (the one that
+matters, and it reports `writes: false`), and an absent action.
+
+**What this costs if it is got wrong is the reason it is worth a numbered entry.** A test that pins
+a mechanism does not fail when the rule is broken; it fails when the code is *tidied*. The signal
+it sends is «you changed something» — and the cheap response, every time, is to edit the regex to
+match the new spelling, which preserves a test that was never checking the rule.

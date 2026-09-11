@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { anonClient, leserClient, outsiderClient, type Client } from './clients'
+import { writesValidatedColumn } from './factories'
 
 /**
  * V2-9 — Live. **Q79, the QR join path, Q80, Q81 and Q82 answered by Tor
@@ -472,7 +473,15 @@ describe('(V2-9) `run_mode` — the column has a writer, and the rule is the dat
     // rewrite of the panel: a server action must both name the column and
     // validate it.
     const src = readFileSync('app/(app)/undersokelser/[id]/bygg/actions.ts', 'utf8')
-    expect(src, 'a server action writes run_mode').toMatch(/run_mode:\s*parsed\.data\.runMode/)
+    // THE PROPERTY, not the spelling. This line used to be
+    // `/run_mode:\s*parsed\.data\.runMode/` and it failed when `setRunMode`
+    // destructured `parsed.data` — a change to no behaviour at all. D140
+    // rewrote the assertion BELOW this one for the same reason and left this
+    // one standing, one screen down, doing the same thing.
+    const w = writesValidatedColumn(src, 'setRunMode', 'run_mode')
+    expect(w.writes, 'a server action writes run_mode').toBe(true)
+    expect(w.validated, 'and validates before it writes').toBe(true)
+    expect(w.literal, 'and the value is not hard-coded').toBe(false)
 
     /*
       REWRITTEN 2026-09-10. This line used to read

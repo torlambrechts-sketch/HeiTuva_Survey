@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { writesValidatedColumn } from './factories'
 
 /**
  * V2-10 — Quiz. **Q84 ANSWERED BY TOR (narrowed: points, time bonus and the
@@ -355,8 +356,12 @@ describe('(V2-10) every column added by this phase has a writer', () => {
 
   it('14. `quiz_time_bonus` and `quiz_team_board` — written by `setQuizSettings`', () => {
     const src = readFileSync('app/(app)/undersokelser/[id]/bygg/actions.ts', 'utf8')
-    expect(src).toMatch(/quiz_time_bonus: parsed\.data\.timeBonus/)
-    expect(src).toMatch(/quiz_team_board: parsed\.data\.teamBoard/)
+    for (const col of ['quiz_time_bonus', 'quiz_team_board']) {
+      const w = writesValidatedColumn(src, 'setQuizSettings', col)
+      expect(w.writes, `${col} is written`).toBe(true)
+      expect(w.validated, `${col} is validated first`).toBe(true)
+      expect(w.literal, `${col} is not hard-coded`).toBe(false)
+    }
     // And NOT the two Q84 did not build — a parameter that is accepted and
     // ignored reads as a capability and is silent about doing nothing.
     expect(src, 'no `instant` parameter').not.toMatch(/instant:\s*z\./)

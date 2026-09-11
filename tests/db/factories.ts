@@ -355,3 +355,44 @@ export async function dropOrg(name: string, svc: Client = serviceClient()) {
     if (delErr) throw new Error(`dropOrg(${name}): ${delErr.message}`)
   }
 }
+
+/**
+ * «THIS COLUMN HAS A VALIDATED WRITER» — the property, stated once.
+ *
+ * Four assertions across three files used to pin the SPELLING of the value
+ * instead: `/run_mode:\s*parsed\.data\.runMode/`, `/quiz_time_bonus: parsed\.data\.timeBonus/`
+ * and so on. Every one of them is a fact about how the action happened to be
+ * written on the day, not about the rule the test is named for.
+ *
+ * `tests/db/live.test.ts:475` proved it twice. D140 rewrote a DIFFERENT
+ * assertion in that same test for exactly this reason — it had pinned the Zod
+ * enum's membership and so turned finishing quiz into breaking the suite — and
+ * this line survived the rewrite, one screen below it, doing the same thing.
+ * It then failed when `setRunMode` destructured `parsed.data`, which changed no
+ * behaviour at all.
+ *
+ * The rule is: **the column is named in a write, and the value reaching it came
+ * through the Zod boundary rather than being a literal.** How it is spelled on
+ * the way is the action's business.
+ */
+export function writesValidatedColumn(
+  src: string,
+  fn: string,
+  column: string,
+): { writes: boolean; validated: boolean; literal: boolean } {
+  // The function's own body: from its declaration to the next top-level export,
+  // so a column written by some OTHER action cannot satisfy this one.
+  const from = src.indexOf(`export async function ${fn}`)
+  if (from < 0) return { writes: false, validated: false, literal: false }
+  const rest = src.slice(from + 1)
+  const to = rest.indexOf('\nexport ')
+  const body = to < 0 ? rest : rest.slice(0, to)
+
+  return {
+    writes: new RegExp(`${column}\\s*:`).test(body),
+    // Something was parsed and checked before the write.
+    validated: /\.safeParse\(/.test(body),
+    // A hard-coded value would make the column a constant, not a writer.
+    literal: new RegExp(`${column}\\s*:\\s*['"\`]`).test(body),
+  }
+}
