@@ -306,9 +306,10 @@ correct about its members and always silent about the member that has not arrive
 specification, two in a CI workflow. Neither of those is a database construct, which is the
 evidence that this section is not a note about Postgres.
 
-**Extended 2026-09-11, after C4/C5. NINE instances** — measured, not carried:
+**Extended 2026-09-11, after C4/C5 and the verification pass that followed. TEN instances** —
+measured, not carried:
 `awk '/^\| Where \| The enumeration/,/^$/' CLAUDE.md | grep -c '^| [^-]'` minus the header row,
-which returns 10 and therefore nine.
+which returns 11 and therefore ten.
 Tor called the new one the tenth and the ninth correction; the table held seven when I counted it,
 so this is the EIGHTH and the number is written as what re-derives. Said rather than quietly
 matched, because this file already records a carried number that was wrong for four phases
@@ -317,8 +318,8 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Nine instances now**, and the ninth is a REPEAT of the third — which is itself the finding.
-Eight different constructs, one shape:
+**Ten instances now.** The ninth is a REPEAT of the third — which is itself a finding — and the
+tenth is the subtlest of all of them. Nine different constructs, one shape:
 
 | Where | The enumeration | The property it should have been |
 |---|---|---|
@@ -331,6 +332,7 @@ Eight different constructs, one shape:
 | `playwright install … chromium` in CI (S2) | the browser I had in mind | «the browsers the suite's projects use» — the mobile project is WebKit |
 | **`scripts/edge-bundle.ts`'s import assertion** (mail tranche) | the entry point's three imports, which are the ones the script rewrites | «no relative specifier ANYWHERE in the bundle may lack an explicit extension» |
 | **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | **«A GRANT IS A FACT ABOUT THE CATALOGUE AND MUST BE READ BACK FROM THE CATALOGUE.»** `from public, anon` is the fix; `has_function_privilege('anon', …)` is the rule. |
+| **`gap-y-[13px]` carried to a smaller chip** (C4, `verify:responsive`) | 13px, measured against the `py-2` (40px) rail it was copied FROM | **«A CONSTANT COPIED FROM A WORKING CONTEXT CARRIES ITS CONTEXT'S ASSUMPTIONS INVISIBLY.»** The number belongs to the CONTROL, not to the pattern. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -383,6 +385,41 @@ Neither function was exploitable as written — both resolve authority from `app
 caller has no `auth.uid()` — and «it refuses anyway» is precisely the argument that keeps a wrong
 grant alive until something changes underneath it.
 
+**THE TENTH IS THE HARDEST OF ALL OF THEM TO SEE, BECAUSE THE ENUMERATION IS A NUMBER THAT IS
+CORRECT SOMEWHERE ELSE.** (Tor, 2026-09-11, after `verify:responsive` failed on C4's screen.)
+
+C4 moved the task-filter rail out of the Oppgaver header and re-styled its chips to V3:2196's
+smaller `py-[7px]` — 30px painted instead of 40px — while copying `gap-y-[13px]` from the rail it
+came from. `verify:responsive` reported four blockers at 320px: «Alle»/«Lovpålagt» overlapping by
+52px², «Mine»/«Lovpålagt» by 34px².
+
+`app/globals.css` had already done the arithmetic, for this exact case, in the comment on
+`.touch-cluster`: *a 30px painted control with a 44px hit area overflows (44 − 30) / 2 = 7px on each
+side, so two adjacent ones need at least 14px between their painted edges.* **Thirteen is one short.
+At 40px the overflow is 2px and thirteen is ample** — so the same class list has **two different
+correct answers**, and which one applies is decided by the chip, not by the pattern.
+
+**Why this is harder than the other nine.** Every earlier instance is a list that is visibly a list
+— three imports, one pseudo-role, two constructs, the browsers you had in mind. A reader can at
+least ask «is this all of them?» **A number cannot be interrogated that way: a constant that is
+right in one place looks identical to a constant that is right everywhere.** `gap-y-[13px]` carried
+its context — a 40px chip — invisibly, and nothing about the token says what it was measured
+against.
+
+**What made it a property rather than a fix**: sweeping the repo for every 30px chip rail instead of
+correcting the one the gate named. That found `FeedbackList`'s rail carrying the same latent defect
+— it simply had three chips rather than four and did not wrap at the widths tested — and confirmed
+the only two such rails in existence are the two C4 created. **One gate finding, two fixes, and a
+measured statement about the rest of the codebase.**
+
+**And the same phase supplies the companion case, which is row 9 seen in a class list.**
+`FeedbackList`'s `<select>` measured 189×36 because it was given `touch-44`, whose hit area is an
+`::after` — and a `<select>` is a REPLACED element, on which `::after` renders nothing at all.
+`globals.css` carries `touch-44-field` for precisely this, immediately below, with the reason in its
+own comment. **Two utilities, one of them named for the case, the explanation adjacent, and the
+wrong one taken** — a spelling that must be recalled at the moment of writing, which is exactly what
+that form of rule cannot prevent. The measurement caught it; the documentation did not.
+
 **THE EIGHTH IS THE YEAR'S IRONY, AND THE ENUMERATION WAS WRITTEN BY ME, IN THE COMMIT THAT SAID
 THE SCRIPT EXISTED TO PREVENT TRANSCRIPTION ERROR.** `scripts/edge-bundle.ts` assembles the
 `mail-worker` payload because there is no `SUPABASE_ACCESS_TOKEN` here and the deploy goes through
@@ -420,6 +457,53 @@ Three things make it the sharpest entry in this table:
   was repaired by moving the rule to a column no cascade can withdraw, not by adding a fourth
   disjunct — so the fourth construct, whatever it is, does not need this rule rewritten again.
   Fix the column, not the predicate.
+
+## A CONTINUOUS RUN ON A SHARED BRANCH PAYS FOR WORK IT THROWS AWAY
+
+**Added 2026-09-11 (Tor), after C0–C5 ran as six phases continuously on one branch.** The
+arrangement was asked for deliberately and it delivered; what it also did was bill twice, and both
+bills were invisible until somebody counted.
+
+> **A continuous run on a shared branch with `cancel-in-progress` pays for work it throws away,
+> twice: once in unmeasured gates and once in minutes.**
+
+**The first bill: nine of eleven browser gates never executed across the entire tranche.** Not
+failed — never run. The workflow's concurrency group is `ci-${{ github.ref }}`, so each phase's push
+killed the previous phase's slowest job, and the browser job is always the slowest. Measured across
+all six runs rather than assumed: `verify:roundtrip` passed on five, `verify:hermetic` on one, and
+**`interaction`, `i18n`, `respondent`, `send`, `export`, `splash`, `browser`, `responsive` and
+`visual` on none at all.** Every phase reported its database half green and its visual half
+UNVERIFIED, which was true and read as a Docker limitation rather than as a structural one.
+
+**The second bill: 2000 Actions minutes, exhausted in about an hour.** Eight runs, most cancelled
+halfway through the expensive job. The Free tier's Linux limit with no spending limit set means
+GitHub stops allocating runners rather than billing, so four consecutive runs failed in two seconds
+with zero steps — a failure that looks like nothing at all and is not in the diff. **A cancelled run
+has already spent its minutes; cancellation stops the clock, it does not refund it.**
+
+**The two are the same bill.** Work started and thrown away costs the minutes it burned AND the
+evidence it would have produced. Running the phases continuously meant every phase's verification
+was cancelled by the next phase's start, so the tranche reached its end with the database half
+well-evidenced and the visual half barely evidenced at all — and then had no minutes left to find
+out.
+
+**What it does not mean.** Not «never run phases continuously» — the arrangement was right and the
+database work is better for it. It means the cost is real and should be chosen with open eyes:
+
+- **The verification of phase N is not free once phase N+1 has started.** On a branch with
+  `cancel-in-progress`, starting the next phase is the act that discards it.
+- **A phase whose gates were cancelled has not been verified, and «UNVERIFIED» in a report should
+  distinguish «no runner» from «the gate ran and could not see it».** Those read the same and are
+  not the same.
+- **Count the gates that actually executed, per run, before writing the number down.** «11 gates
+  done» on a cancelled job counts the skipped ones; the honest measure is `conclusion == 'success'`,
+  and this tranche proved the difference twice.
+
+**The instance that closes it:** once the quota was restored and the gates finally ran,
+`verify:responsive` failed with four blockers — on the one screen C4 had just added four controls
+to. **The gate that would have caught it existed, was scheduled, and had been cancelled five times
+running.** It had earned its place once before, in S2, by failing within one run of first being
+scheduled.
 
 ## A catch-all is a decision, not a safety measure
 **A catch-all is not a safety measure, it is a decision to make one class of failure
