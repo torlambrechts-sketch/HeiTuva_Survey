@@ -559,6 +559,43 @@ leaves the customer's systems.
 status showing is a hand override the next sync will undo. No bundle draws a directory marker, so it
 is an unspecified state of an existing screen taking the minimal consistent treatment (D163).
 
+## Production sync — M:0108 to M:0111 (2026-09-12)
+
+Prod head **20260912125913**, 186 migrations. Applied through MCP, each file verbatim, one at a
+time, **each verified by comparison rather than by the apply returning success.**
+
+**M:0108 was a live defect on production, confirmed by reading the catalogue before touching it:**
+`app.enqueue_reminders` contained no reference to `is_suppressed`, and
+`guard_invitation_not_suppressed` was still `BEFORE INSERT OR UPDATE`. One invitation was awaiting a
+reminder at that moment. Zero objections had been lodged, so nobody had been bitten — **live and
+unexercised, which is the good case and not the same as absent.**
+
+**The evidence is twenty-eight fingerprints, all byte-identical to a local database at HEAD:** nine
+for M:0108 (five function definitions plus all four triggers on `survey_invitations`) and nineteen
+for M:0109–M:0111 (eleven functions, four column definitions WITH their comments, two constraint
+definitions, the table's column count, and `relrowsecurity` with its policy count). A hand
+transcription of 921 lines is exactly the risk CLAUDE.md's `edge-bundle` entry records, and the
+comparison is what makes it safe rather than hopeful.
+
+**The grants were read back from prod's own catalogue**, not trusted from the migration text — row 3
+and row 9 of the enumeration table, which this project has paid for twice:
+`scim_lookup`, `scim_touch`, `scim_provision_user`, `scim_deprovision_user` are
+`anon=false authenticated=false service_role=true`; `create_scim_token`, `revoke_scim_token` and
+`scim_connection_status` are `anon=false authenticated=true`, which is required — the role check is
+inside each function and an administrator signs in as `authenticated` like everyone else.
+
+**Advisors: no new SHAPE.** `rls_enabled_no_policy` gained `scim_credentials`, which is the decided
+design (the same shape as `responses`/`answers`, with the reason in the table comment).
+**`anon_security_definer_function_executable` is UNCHANGED at 8** — the confirmation that matters,
+since seven new SECURITY DEFINER functions landed and not one of them is anon-executable. Lint 0029
+rose 34 → 37 with the three administrator RPCs, which is invariant 1 described from the outside
+(Q132). Leaked-password protection is still Tor's click.
+
+**The SCIM endpoint is NOT live**, because the app deploy is a decision and not mine: the schema is
+on production and `www.heituva.com` is still serving the previous build, so `/api/scim/v2` returns
+whatever that build returns. The database half is inert until the deploy, which is the correct
+order — a schema ahead of its code is safe, code ahead of its schema is not.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.
