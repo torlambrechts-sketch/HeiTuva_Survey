@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { mintScimToken, revokeScimToken } from './actions'
-import { activeCount, type ConnectorGroup, type ConnectorRow, type EntraState } from '@/lib/scim/catalogue'
+import { disconnectEntra } from './actions'
+import { activeCount, type ConnectorGroup, type ConnectorRow, type EntraState } from '@/lib/directory/catalogue'
 
 /**
  * Integrasjoner — HeiTuva.dc.html:2869-2926.
@@ -42,7 +42,6 @@ export function IntegrationsPanel({
   members: number
 }) {
   const t = useTranslations('integrations')
-  const [token, setToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
 
@@ -54,21 +53,15 @@ export function IntegrationsPanel({
     absent: { label: t('statusAbsent'), bg: 'var(--sf2)', fg: 'var(--mut)' },
   }
 
-  function mint() {
+  /* I2: one action, and it is the destructive one. Under push the customer held
+     a bearer token we minted; under pull their administrator consents in Entra
+     and holds nothing. Connecting therefore leaves this screen — it is a
+     redirect to Microsoft — and only disconnecting happens here. */
+  function disconnect() {
     setError(null)
     start(async () => {
-      const res = await mintScimToken()
-      if (res.ok && res.token) setToken(res.token)
-      else setError(t('mintFailed'))
-    })
-  }
-
-  function revoke() {
-    setError(null)
-    setToken(null)
-    start(async () => {
-      const res = await revokeScimToken()
-      if (!res.ok) setError(t('revokeFailed'))
+      const res = await disconnectEntra()
+      if (!res.ok) setError(t('disconnectFailed'))
     })
   }
 
@@ -147,11 +140,18 @@ export function IntegrationsPanel({
                 {live ? (
                   <button
                     type="button"
-                    onClick={entra.status === 'absent' ? mint : revoke}
-                    disabled={pending}
+                    onClick={entra.status === 'absent' ? undefined : disconnect}
+                    disabled={pending || entra.status === 'absent'}
+                    /* «Koble til» is NOT a button here: consent is a redirect to
+                       Microsoft, and the consent route is I2's remaining half —
+                       it needs AZURE_CLIENT_ID, which this deployment does not
+                       have yet. A live button that cannot complete is the
+                       promise D163 refuses, so the control is disabled with the
+                       reason beside it rather than wired to nothing. */
+                    title={entra.status === 'absent' ? t('connectPending') : undefined}
                     className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-4 py-[10px] text-[12.5px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {entra.status === 'absent' ? t('ctaConnect') : t('ctaRevoke')}
+                    {entra.status === 'absent' ? t('ctaConnect') : t('ctaDisconnect')}
                   </button>
                 ) : (
                   /* Disabled rather than absent. The row is what the screen is
@@ -174,28 +174,23 @@ export function IntegrationsPanel({
         </section>
       ))}
 
-      {(token || error || entra.status !== 'absent') && (
+      {(error || entra.status !== 'absent') && (
         <section className="rounded-[18px] border border-line bg-sf px-6 py-[22px]">
-          <h3 className="text-[16px] font-semibold">{t('tokenTitle')}</h3>
-          {token ? (
-            <>
-              <p className="mt-1 text-[12.5px] leading-[1.55] text-mut">{t('tokenOnce')}</p>
-              <code className="mt-[14px] block overflow-x-auto rounded-[10px] border border-dashed border-line bg-bg px-[14px] py-3 font-mono text-[12.5px]">
-                {token}
-              </code>
-            </>
-          ) : (
-            <p className="mt-1 text-[12.5px] leading-[1.55] text-mut">
-              {entra.prefix ? t('tokenExisting', { prefix: entra.prefix }) : t('tokenNone')}
-            </p>
-          )}
+          <h3 className="text-[16px] font-semibold">{t('connectionTitle')}</h3>
+          {/* NO TOKEN IS SHOWN, because under pull the customer holds none. What
+              they hold is a consent in their own tenant; what we hold is a
+              refresh token in the vault that no screen can reach (M:0115). */}
+          <p className="mt-1 text-[12.5px] leading-[1.55] text-mut">
+            {entra.status === 'absent'
+              ? t('connectionNone')
+              : t('connectionHeld', { tenant: entra.tenantId ?? '—' })}
+          </p>
           {entra.status === 'failing' && entra.lastError && (
             <p className="mt-[11px] text-[11.5px] text-mut">
               {t('lastError', { detail: entra.lastError })}
             </p>
           )}
           {error && <p className="mt-[11px] text-[11.5px] font-semibold text-mut">{error}</p>}
-          <p className="mt-[11px] text-[11.5px] text-mut">{t('endpointHint')}</p>
         </section>
       )}
     </div>

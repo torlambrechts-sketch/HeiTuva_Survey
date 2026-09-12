@@ -819,41 +819,35 @@ export async function uploadLogo(formData: FormData): Promise<LogoResult> {
 }
 
 /**
- * I1-3 — mint and revoke the organisation's SCIM bearer token.
+ * I2 — disconnecting Entra ID.
  *
- * Thin, deliberately: `public.create_scim_token` resolves the administrator from
- * `auth.uid()` and refuses anyone else, so the authority check is in the
- * database and not here. This action exists to carry the result back to the
- * screen and to revalidate, not to decide anything.
+ * THE MINT/REVOKE PAIR IS GONE WITH SCIM (M:0114). Under push the customer
+ * pasted a bearer token we minted into their provisioning job; under pull there
+ * is no token for them to hold at all — their administrator consents once, and
+ * what we hold is a refresh token they never see.
  *
- * THE TOKEN IS RETURNED TO THE BROWSER ONCE AND IS NEVER LOGGED. It is not
- * stored whole — the database holds the public prefix and a SHA-256 of the
- * secret half — so there is nothing to retrieve later and minting again is how
- * rotation works. `audit` records THAT a token was minted and by whom; it must
- * never record the token.
+ * So there is one action and it is the destructive one. Thin, deliberately:
+ * `public.disconnect_entra` resolves the administrator from `auth.uid()` and
+ * refuses anyone else, so the authority check is in the database. Deleting the
+ * row takes the vault secret with it through the trigger in `M:0115` — the vault
+ * is outside the foreign-key graph, so that trigger is the only thing that keeps
+ * a live credential from outliving the connection it belonged to.
+ *
+ * `audit` records THAT the connection was removed and by whom. It must never
+ * record anything about the token, which is why there is nothing token-shaped in
+ * the meta object.
  */
-export async function mintScimToken(): Promise<AdminResult & { token?: string }> {
+export async function disconnectEntra(): Promise<AdminResult> {
   const admin = await requireAdmin()
   if (!admin) return { ok: false, error: 'forbidden' }
 
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('create_scim_token')
+  const { data, error } = await supabase.rpc('disconnect_entra')
   if (error) return { ok: false, error: dbError(error) }
+  if ((data as { error?: string } | null)?.error) return { ok: false, error: 'forbidden' }
 
-  await audit(admin.orgId, 'scim.token_minted', admin.email ?? admin.orgId, {})
+  await audit(admin.orgId, 'entra.disconnected', admin.email ?? admin.orgId, {})
   revalidatePath('/administrasjon/integrasjoner')
-  return { ok: true, token: String(data) }
-}
-
-export async function revokeScimToken(): Promise<AdminResult> {
-  const admin = await requireAdmin()
-  if (!admin) return { ok: false, error: 'forbidden' }
-
-  const supabase = await createClient()
-  const { error } = await supabase.rpc('revoke_scim_token')
-  if (error) return { ok: false, error: dbError(error) }
-
-  await audit(admin.orgId, 'scim.token_revoked', admin.email ?? admin.orgId, {})
-  revalidatePath('/administrasjon/integrasjoner')
+  revalidatePath('/administrasjon/integrasjoner/entra')
   return { ok: true }
 }

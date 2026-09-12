@@ -6,10 +6,11 @@ import { requireViewer } from '@/lib/auth/session'
 import {
   CONNECT_STEPS,
   DIRECTORY_FIELDS,
-  TOKEN_CAPABILITIES,
+  REQUESTED_SCOPES,
   connectorState,
+  type ConnectionRow,
   type EntraState,
-} from '@/lib/scim/catalogue'
+} from '@/lib/directory/catalogue'
 
 /**
  * Microsoft Entra ID — the detail page, v5:3819-3902.
@@ -39,10 +40,9 @@ export default async function EntraDetailPage() {
 
   const t = await getTranslations('integrations')
   const supabase = await createClient()
-  const { data } = await supabase.rpc('scim_connection_status')
-  const row = (data ?? [])[0] ?? null
+  const { data } = await supabase.rpc('entra_connection_status')
+  const row = ((data ?? []) as ConnectionRow[])[0] ?? null
   const entra: EntraState = connectorState(row)
-  const members = Number(row?.members_from_directory ?? 0)
 
   /* The same four chips the list screen draws, from the same state machine.
      Duplicated here rather than exported because they are four literals and a
@@ -56,7 +56,7 @@ export default async function EntraDetailPage() {
     absent: { label: t('statusAbsent'), bg: 'var(--sf2)', fg: 'var(--mut)' },
   }
 
-  const chip = statusChip[entra.status]
+  const chip = statusChip[entra.status]!
 
   const when = (iso: string | null) =>
     iso
@@ -104,27 +104,36 @@ export default async function EntraDetailPage() {
         <div className="mt-[18px] flex flex-wrap gap-[22px] border-t border-line pt-4">
           <span>
             <span className={LABEL}>{t('detailLastSync')}</span>
-            {/* `last_used_at` — the last time Entra actually called us, which is
-                the only sync fact this side of the connection knows. */}
+            {/* `last_sync_at`, and it means a COMPLETED sync: `entra_record_sync`
+                advances it only when the error is null, so a run that died on
+                page 4 leaves yesterday's timestamp standing rather than claiming
+                today's. That distinction is the whole of property 1. */}
             <span className="mt-[3px] block text-sm font-semibold">
-              {when(entra.lastUsedAt) ?? t('detailNeverSynced')}
+              {when(entra.lastSyncAt) ?? t('detailNeverSynced')}
             </span>
           </span>
           <span>
             <span className={LABEL}>{t('detailNextSync')}</span>
-            {/* NOT A TIME. v5 renders «I morgen kl. 06:00»; SCIM is push, so the
-                schedule lives in Entra and this product is never told it.
-                Rendering a clock here would be the never-fabricate rule with a
-                time instead of a number. */}
+            {/* A REAL CLOCK NOW, and it is real because the schedule is OURS.
+                Under push this read «Bestemmes i Entra», which was the honest
+                answer to a question we could not answer. Pull moved the
+                schedule to pg_cron, so the page states the cadence rather than a
+                fabricated timestamp — «hver natt kl. 03» is a fact about the
+                job, where «I morgen kl. 06:00» was a fact about nothing. */}
             <span className="mt-[3px] block text-sm font-semibold">
-              {t('detailNextSyncUnknown')}
+              {entra.status === 'absent' ? t('detailNextSyncNone') : t('detailNextSyncCadence')}
             </span>
           </span>
-          {entra.prefix ? (
+          {entra.tenantId ? (
             <span>
-              <span className={LABEL}>{t('detailTokenPrefix')}</span>
+              {/* REAL NOW. v5:3826 draws `nordiskstudio.onmicrosoft.com`, which
+                  was a fiction under push because SCIM hands us a bearer token
+                  and not a directory identity. Consent hands us the tenant, so
+                  an administrator can confirm they consented for the right
+                  directory — which is the one thing this field is FOR. */}
+              <span className={LABEL}>{t('detailTenant')}</span>
               <span className="mt-[3px] block font-mono text-sm font-semibold">
-                {entra.prefix}
+                {entra.tenantId}
               </span>
             </span>
           ) : null}
@@ -178,41 +187,70 @@ export default async function EntraDetailPage() {
               rather than about Graph scopes we do not hold. */}
           <section className="rounded-[18px] border border-line bg-sbg px-6 py-[22px]">
             <h3 className="text-base font-semibold">{t('detailScopesTitle')}</h3>
-            {TOKEN_CAPABILITIES.map((c) => (
-              /* THIS ROW WAS THE 320px BLOCKER — `scrollWidth 353 > clientWidth
-                 320`, measured by `verify:responsive`. Two causes, both in one
-                 row: `POST · PUT · PATCH /Users` carried `whitespace-nowrap` on
-                 a monospace face, and the label beside it was `flex-1` with no
-                 `min-w-0`, so neither item could shrink. The key may now wrap
-                 and the label may shrink, and the pair stacks below `md` where
-                 a right-aligned second column has nowhere to sit. */
+            {/* REAL GRAPH SCOPES AGAIN, and read back from what the
+                administrator ACTUALLY CONSENTED TO rather than from what we
+                asked for — `entra_connections.scopes` is written at consent.
+                Before a connection exists the page shows what WILL be asked,
+                which is a different claim and is labelled as one.
+
+                ONE SCOPE, not the bundle's three. `Directory.Read.All` is not
+                registered at all: it reads the catalogue's structure and is
+                broader than the need. `Group.Read.All` IS registered and is not
+                REQUESTED, because nothing calls it yet — Entra's own groups are
+                an audience and the audience shape is undecided. A permission an
+                administrator must approve has to be defensible line by line, and
+                «we might use it later» is not a line. */}
+            {(entra.scopes.length > 0 ? entra.scopes : [...REQUESTED_SCOPES]).map((scope) => (
               <div
-                key={c}
+                key={scope}
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-[rgba(25,21,16,.12)] py-2.5"
               >
-                <span className="min-w-0 font-mono text-[11.5px] font-semibold">
-                  {t(`detailCapKey_${c}`)}
-                </span>
+                <span className="min-w-0 font-mono text-[11.5px] font-semibold">{scope}</span>
                 <span className="min-w-0 flex-1 text-xs text-mut md:text-right">
-                  {t(`detailCapLabel_${c}`)}
+                  {t('detailScopeUsers')}
                 </span>
               </div>
             ))}
-            <p className="mt-3 text-[11.5px] leading-[1.5] text-mut">{t('detailScopesNote')}</p>
+            <p className="mt-3 text-[11.5px] leading-[1.5] text-mut">
+              {entra.scopes.length > 0 ? t('detailScopesNote') : t('detailScopesPlanned')}
+            </p>
           </section>
 
-          {/* v5:3866-3876 — «Grupper i synk». The endpoint declares ONE resource
-              type, `User`; every other path is a 404, so no group ever arrives.
-              The section renders the state it is actually in rather than four
-              rows of fixture. */}
+          {/* v5:3866-3876 — «Grupper i synk», and THE INSTRUCTION AND THE BUILD
+              DISAGREE HERE, deliberately.
+
+              «Show which Entra groups sync» assumes Entra's groups are what
+              arrives. The model decision says otherwise: a DEPARTMENT breaks
+              down (one each, stable, a leader who owns the cell) and an Entra
+              GROUP targets (overlapping by design, no owner). So what syncs is
+              departments, as breakdown groups — and Entra's own groups are not
+              read at all, because they are an audience and `segments` cannot
+              carry an explicit membership list as it stands.
+
+              A CUSTOMER WILL ASSUME OTHERWISE — «we have a group for the night
+              shift, so we can see how the night shift answered» is the obvious
+              reading — so the page says which of the two these are, in as many
+              words, rather than leaving it to be discovered from a report. */}
           <section className={CARD}>
             <h3 className="text-base font-semibold">{t('detailGroupsTitle')}</h3>
             <p className="mt-1.5 text-[12.5px] leading-[1.55] text-mut">
-              {t('detailGroupsNone')}
+              {t('detailGroupsAreDepartments')}
             </p>
-            {entra.status === 'connected' ? (
-              <p className="mt-2 text-[12.5px] text-mut">
-                {t('membersFromDirectory', { count: members })}
+            <p className="mt-2 text-[12.5px] leading-[1.55] text-mut">
+              {t('detailGroupsNotEntra')}
+            </p>
+            {/* THE DEPARTMENT-COVERAGE LINE, per the model decision. A person
+                with no department lands in NO group, never an invented one — so
+                the honest thing is to say how many that is. Rendered only after
+                a sync has produced the numbers: before that they are null and
+                the sentence would be about nothing. */}
+            {entra.membersSeen !== null && entra.membersWithDepartment !== null ? (
+              <p className="mt-3 rounded-[11px] bg-sbg px-3.5 py-[11px] text-[12.5px] leading-[1.5]">
+                {t('detailDepartmentCoverage', {
+                  with: entra.membersWithDepartment,
+                  seen: entra.membersSeen,
+                  without: entra.membersSeen - entra.membersWithDepartment,
+                })}
               </p>
             ) : null}
           </section>
@@ -253,12 +291,12 @@ export default async function EntraDetailPage() {
         <p className="mt-1 text-[12.5px] leading-[1.55] text-mut">{t('detailLogNoHistory')}</p>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-3.5 gap-y-1 border-b border-line py-2.5">
           <span className="flex-none whitespace-nowrap text-xs text-mut md:w-[116px]">
-            {when(entra.lastErrorAt ?? entra.lastUsedAt) ?? '—'}
+            {when(entra.lastErrorAt ?? entra.lastSyncAt) ?? '—'}
           </span>
           <span className="min-w-0 flex-1 text-[13px] font-semibold">
             {entra.status === 'failing'
               ? t('detailLogFailing', { count: entra.errors })
-              : entra.lastUsedAt
+              : entra.lastSyncAt
                 ? t('detailLogOk')
                 : t('detailLogNever')}
           </span>

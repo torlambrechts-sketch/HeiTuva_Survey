@@ -5,7 +5,6 @@
  * Idempotent: drops and recreates the two demo orgs each run so captures are
  * reproducible. Auth users are reused, so their ids stay stable.
  */
-import { createHash } from 'node:crypto'
 import { config } from 'dotenv'
 import {
   createOrg,
@@ -816,28 +815,38 @@ async function main() {
      credential with a published secret belongs only in a database that is
      disposable by construction.
 
-     `scim_credentials` has RLS on and no policy, so without a row the policy is
+     `entra_connections` has RLS on and no policy, so without a row the policy is
      never actually asked to refuse anything and 5a3 reports PROTECTED BUT
      UNPROVEN — a green that means «nothing could be seen», which is the shape
      this project has hit six times. */
-  const demoScimSecret = 'f'.repeat(64)
-  const { data: scimAdmin } = await svc
+  const { data: entraAdmin } = await svc
     .from('org_members')
     .select('id')
     .eq('org_id', org.id)
     .eq('email', PERSONAS.administrator.email)
-    .single()
-  const { error: scimError } = await svc.from('scim_credentials').upsert(
-    {
-      org_id: org.id,
-      token_prefix: 'deadbeef1234',
-      token_hash: createHash('sha256').update(demoScimSecret).digest('hex'),
-      created_by: scimAdmin?.id ?? null,
-      last_used_at: new Date(Date.now() - 36 * 3600_000).toISOString(),
-    },
-    { onConflict: 'org_id' },
-  )
-  if (scimError) throw new Error(`seed scim_credentials: ${scimError.message}`)
+    .maybeSingle()
+
+  /*
+    I2 — a demo Entra connection, planted THROUGH THE WRITE PATH.
+
+    `app.entra_store_connection` puts the refresh token in `vault.secrets` and
+    the handle in `entra_connections`, so the fixture exercises the same code an
+    administrator's consent would. Inserting the row by hand would leave the
+    vault empty and every screen reading a connection whose token does not
+    exist — and the denial tests would then be denying access to nothing (D158).
+
+    The token is UNMISTAKABLY SYNTHETIC. A fixture that looks like a credential
+    is one somebody later tries to use, which is the same reason the DSR row
+    says so in its own resolution text.
+  */
+  const { error: entraError } = await svc.rpc('store_entra_connection' as never, {
+    p_org: org.id,
+    p_tenant: 'demo-tenant.invalid',
+    p_scopes: ['User.Read.All'],
+    p_token: 'SYNTHETIC-DEMO-REFRESH-TOKEN-NOT-VALID-ANYWHERE',
+    p_by: entraAdmin?.id ?? null,
+  } as never)
+  if (entraError) throw new Error(`seed entra_connections: ${entraError.message}`)
 
   // V2-4 · Q68 (DEFAULTED): `loop_actions` is superseded by `tasks` and dropped
   // (`M:0062`). The register replaces it, and it needs a row at EVERY one of the

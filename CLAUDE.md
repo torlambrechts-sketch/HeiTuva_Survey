@@ -760,8 +760,29 @@ The verification apparatus itself is frozen: VERIFY.md's seven gates, Gate 5a3
 (`verify:policy`), the test census (`tests/census.ts` + `tests/expected-counts.json`) and
 the 5a3 allowlist are what exist and they are enough. Do not add gates, meta-checks,
 manifests or rules mid-phase. Something interesting that surfaces gets logged for the next
-phase, not built. Two numbers carry forward and may only move up: **57 of 77 surfaces
-actively checked** by 5a3, and **40 files / 668 tests** in the census manifest.
+phase, not built.
+
+**TWO NUMBERS CARRY FORWARD, AND THEY ARE CONSEQUENCES THAT MUST BE READABLE — NOT TARGETS
+THAT MUST BE REACHED.** (Tor, 2026-09-12, rewriting his own rule.) This said «may only move
+up» for six phases, and that form is **a target expressed as a counter, which a counter can
+satisfy by making the product worse.** D158 proved it from the other side: removing four
+negative tests that could not fail made the census FALL, and the fall was correct — the
+tests were passing against a database with none of the feature, so deleting them is what
+made the number mean something again.
+
+So the rule is:
+
+> **A number may move in either direction. What must never happen is a number moving with
+> nobody able to say why.** Every movement carries the derivation beside it: the command
+> that re-derives it, and one sentence naming what moved and whether it was added, removed
+> or re-measured.
+
+That is the same rule this file already states for `«61 of 83»` — a carried number nobody
+re-derives is how a wrong one survives four phases — and for capability claims. One rule,
+a third instance.
+
+The two numbers are **57 of 77 surfaces actively checked** by 5a3, and **40 files / 668
+tests** in the census manifest, as of V1-0.
 Both were re-measured on a fresh `supabase db reset` at the start of V1-0
 (2026-09-06): 5a3 enumerated 42 RLS tables + 29 SECURITY DEFINER functions = 71,
 of which 16 were allowlisted by design, leaving 55. **V1-4 took it to 56 of 73:**
@@ -893,6 +914,39 @@ layout rule and the varying thing is a WORD.
 **M:0109 took the census to 1227 across 88 files** (`tests/db/scim.test.ts`, 11 — all eleven proven RED first against functions that did not exist). **5a3 holds at 71 of 101**: both SCIM functions live in the `app` schema, which neither sweep enumerates — the same recorded limit as `M:0107`'s, and the correct reading rather than a gap.
 
 **M:0108 took the census to 1216 across 87 files** — `tests/db/deactivation.test.ts` 6 -> 14, and no other entry moved (the proof is the one-line diff, not the total). 5a3 holds at **71 of 101**: both new functions live in the `app` schema, which neither sweep enumerates. Green from a bare `supabase db reset` — with `npm run seed:i18n` and `npm run seed:help` after it, without which four `ui_messages`/`help_articles` tests fail for want of content rather than for a defect.
+
+**I2 TOOK THE CENSUS TO 1340 ACROSS 95 FILES AND 5a3 TO 81 OF 111 — AND IT IS THE FIRST TRANCHE
+WHOSE NUMBERS WENT DOWN BEFORE THEY WENT UP, which is the reason the rule above is worded as it now
+is.** The derivation, because that is what the rule asks for:
+
+```
+census   1325  − 37 (scim.test.ts 14, scim-endpoint.test.ts 23, both deleted)
+               + 51 (entra-credential 25, entra-sync 13, entra-graph 13)
+               +  1 (integrations 19 → 20)
+               = 1340 across 95 files
+```
+
+**AND I WROTE 1324 HERE FIRST, FROM A RUN THAT PREDATED THE LAST TWO TEST FILES.** Recorded rather
+than silently corrected, because it is the rule's own failure mode arriving in the paragraph that
+states the rule: a number carried from an earlier measurement, into a document, by the person who
+took it. The reconciliation above is what caught it — the arithmetic did not close, and the honest
+reading of that was «the total is stale», not «the parts are strange».
+
+**A FILE'S COUNT IS NOT A RECORD OF WHAT IT CHECKS**, and `integrations.test.ts` is the proof: it
+moved by one while SIX of its assertions were rewritten, because I2 reversed what V5-3 had measured
+about the same screen. The diff is the evidence; the total is a summary of it.
+
+5a3 went **80 of 110 → 81 of 111**, through an intermediate **72 of 102**: eight SCIM surfaces
+removed (`scim_credentials` plus seven `public` functions) and nine added (`entra_connections`,
+`entra_connection_status`, `disconnect_entra`, `store_entra_connection` and the five worker
+wrappers). Every one is CHECKED; none is allowlisted. The four `app.scim_*` and the six `app.entra_*`
+functions are in neither sweep's denominator — the same recorded limit of that gate, twice more.
+
+**AND 5a3's OWN ASSUMPTION SURFACED AS A CRASH.** It probes every RLS table with
+`select id from <table> where org_id = …`, and `entra_connections` was keyed on `org_id` alone.
+«Every org-scoped RLS table has an `id`» is an enumeration of the forty that existed. The apparatus
+is frozen, so **the table conformed rather than the gate** — a surrogate `id`, the claim kept in
+`unique (org_id)` — and the assumption is logged for whoever unfreezes it (D168).
 
 **V5-2 AND V5-3 TOOK THE CENSUS TO 1325 ACROSS 94 FILES AND 5a3 TO 80 OF 110.** V5-2's two files
 carry 37 (`tests/db/worklist-notes.test.ts` 16, `tests/unit/worklist-rows.test.ts` 21) and V5-3 took

@@ -5500,3 +5500,76 @@ a source»). The only writer of that row is `tests/invariants/k-surface.test.ts`
 reachable only after the db suite — which is `verify:all`'s order, and why it is green there and only
 there. Same shape as the six-tables-unproven note CLAUDE.md carries for Gate 5a3: **run order
 changes what a gate can prove, not the number.**
+
+## D168 — SCIM push removed, Entra pull built, and the four columns that did not know the difference
+
+**I2.** The direction changed and the schema mostly did not have to. Recorded because the *shape* of
+that is the useful part: what survived a transport swap is exactly what described the PERSON rather
+than the wire.
+
+**REMOVED (M:0114).** The route `app/api/scim/v2/[...path]/route.ts`, `lib/scim/{auth,resource}.ts`,
+`public.scim_credentials`, eleven `scim_*` functions, the middleware's public-path line, the seed
+block, three message keys, and two test files (37 tests). **2 329 lines.**
+
+**KEPT, AND THIS IS WHY IT IS NOT A ROLLBACK.** `org_members.{external_id, synced_at, source,
+status_source}` — added by `M:0109` for SCIM — all four stay, because they describe a member
+*sourced from a directory* and that is direction-agnostic. Pull writes every one. Q142's «Endret her
+— Entra ID overskriver ved neste synkronisering» stays true in the same words.
+
+**AND ONE OF THEM STILL BROKE, WHICH IS THE INSTRUCTIVE HALF (M:0117).**
+`org_members_status_source_check` was `('local','scim')` — an enumeration of the transports that
+existed — and the column means *which SIDE last wrote `status`*. Removing the transport turned a
+value into a constraint violation, found by `app.entra_apply_page`'s very first run. Restated
+`('local','directory')`: there are two sides and there have only ever been two. **Fix the column,
+not the predicate** — a third disjunct would have left the next directory to break it again. The
+Q142 reader on Brukere compared against `'scim'` on both columns and would have silently stopped
+firing; it now compares `source !== 'local'` against `status_source === 'local'`, which is the
+question it was always asking.
+
+**THE SCREEN REVERSES FOUR OF D166's SIX REFUSALS**, and each reversal has its own reason rather
+than «pull, so now we can»:
+
+| Section | D166 (push) | I2 (pull) |
+|---|---|---|
+| Tenant | not rendered — SCIM hands a token, not an identity | **rendered.** Consent hands us the tenant, and confirming the right directory is what that field is FOR |
+| «Neste synk» | «Bestemmes i Entra» | **a cadence** — «hver natt kl. 03», true of `M:0118`'s cron line. Still not a timestamp: a cadence describes the job, «I morgen kl. 06:00» would describe nothing |
+| «Sist synkronisert» | when Entra last called | **when a sync last COMPLETED** — `entra_record_sync` advances it only on success, so a run that died on page 4 leaves yesterday standing |
+| «Tillatelser» | the bearer token's capabilities | **real Graph scopes, read back from what was consented** — and ONE of them (Q167) |
+| «Grupper i synk» | none — no `/Groups` resource | **departments**, with the distinction said out loud (Q166) |
+| «Synklogg» | latest outcome, no table | **unchanged.** Q170 stands |
+
+**A GATE'S ASSUMPTION SHOWED UP AS A CRASH, AND THE TABLE CONFORMED RATHER THAN THE GATE.** Gate 5a3
+probes every RLS table with `select id from <table> where org_id = …`; `entra_connections` was keyed
+on `org_id` alone and the sweep failed to parse. The apparatus is frozen, so the table gained a
+surrogate `id` and kept its claim in `unique (org_id)`. **«Every org-scoped RLS table has an `id`» is
+itself an enumeration** — true of the forty that existed — and it is logged here rather than fixed,
+because fixing a gate mid-phase is the thing the freeze exists to prevent.
+
+**AND THE CENSUS GUARD COULD NOT TELL A DELETION FROM A SKIPPED RUN**, correctly: it refuses to write
+from a partial run, and two files being absent looks identical whether they were deleted or never
+collected. The two entries were removed by hand and the census then written from a full run. That is
+the deliberate-decrease case Q163's rule rewrite is about, arriving in the mechanism rather than in
+the number.
+
+## D169 — D167 closed: the report sheet is a portal below `xl`
+
+**I2-4.** V5-2 logged this rather than half-fixing it, and the reason it needed a phase of its own
+holds up: at `xl` the same node is the in-layout panel (`xl:static`, its own grid cell), so
+portalling it unconditionally would lift the desktop panel out of the page. A class change could not
+express that.
+
+The fix is a render restructure. `isWide` comes from `matchMedia('(min-width: 1280px)')`, starts
+`false` so SSR and first paint agree, and the only path to the portal is a CLICK — by which time the
+effect has long run, so there is no flash. Below `xl` with the sheet open, the children render inside
+`ModalLayer`, which portals to `document.body` and marks every other body child `inert`.
+
+**The defect was never a tap conflict.** `fixed inset-0 z-[70]` means a tap reaches the sheet.
+**Focus is a separate axis**, and with the layer beneath not inerted, Tab from inside the open sheet
+walked into the app header and — since V5-1 put one there — into the footer's twelve links. The
+gate's own comment says it: *«the dialogs mark the layer beneath them `inert` rather than relying on
+paint order»*. `ModalLayer` existed, the wizard and the Builder's sheet used it, and this panel did
+not.
+
+The children are the same subtree in both branches, and every piece of state they read lives in
+`ReportSidePanel` — so moving them between parents cannot lose the half-typed value in the Del panel,
+which is what the old `hidden`-rather-than-unmounted comment was protecting.

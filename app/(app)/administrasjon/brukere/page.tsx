@@ -44,7 +44,12 @@ export default async function UsersTab() {
       // whether the status SHOWING is the directory's answer or a hand override
       // the next sync will undo.
       fromDirectory: m.source === 'scim',
-      statusOverridden: m.source === 'scim' && m.status_source !== 'scim',
+      // M:0117: `source` names the DIRECTORY ('entra'), `status_source` names
+      // the SIDE ('local' | 'directory'). The old form compared both against
+      // the transport 'scim' and would have silently stopped firing the moment
+      // pull replaced push — a sentence that quietly goes away is the defect
+      // Q142 exists to prevent.
+      statusOverridden: m.source !== null && m.source !== 'local' && m.status_source === 'local',
       initials: initialsOf(name),
     }
   })
