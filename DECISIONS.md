@@ -677,6 +677,43 @@ reach the product, and `tuvaFace` is declared in the data block and read by noth
 rapport» making on a public page, arriving for a third time. `apiKey` and `webhookEvents` are also
 still in this bundle and were already declined by Q151.
 
+## Q152–Q154 — the Arbeidsliste's persistence, and the question that got smaller (2026-09-12)
+
+`M:0112`. **V5-2's foundation; the screen rebuild itself is not done — see the report.**
+
+**THE PERSISTENCE QUESTION HAD A SMALLER ANSWER THAN IT WAS ASKED.** Tor put it as «the column
+toggles and the view mode are per-person state». Measured: **there are no column toggles on that
+screen.** `colOwner`, `colStatus`, `colDate`, `colResponses` and `colScore` render at
+**v5:2959-2971**, inside `isUitest` (2913-3127) — the table-variant playground's «Vis kolonner»
+control, fed by `uiColumns`, read from `st.uiCols`. `isTasks` (3128 onward) contains **not one**
+reference to any of them.
+
+So the per-person state the Arbeidsliste actually has is **one thing: list or board.** Building five
+column toggles because an instruction listed them would have been inventing controls the bundle does
+not draw on that screen — and it also corrects V5-0's own count from 23 of 45 to **28 of 45**,
+because those five are the playground's. Second time in this bundle that a state was assigned by its
+NAME rather than by the screen it renders on; `hasSubtools` was the first, and `col*` is the harder
+of the two because it looks like product vocabulary in a way `ui*` does not.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q152** | Where does the view mode live? | **Cookie plus column, as Q122 — `heituva.worklist` for the person, `organizations.worklist_view` for the organisation's default.** Resolved against the set in three steps, never trusted. | Tor's decision, and «own storage» rather than `dashboard_layouts` is the half that matters: Q51 stores panel identifiers and their order, and widening «a layout» to hold a view mode in order to avoid a column is the trade this refuses. The cookie is per-DEVICE, which is what makes «huskes på denne enheten» true of it and false of a column — Q122's own argument — and the Arbeidsliste is a server component so localStorage cannot reach it either way. An unknown cookie falls back exactly as an absent one does, in three explicit steps, because collapsing them hides a bad cookie behind a correct-looking render. |
+| **Q153** | Does the column also hold a default COLUMN SET? | **DEFAULTED: no, and the asymmetry is deliberate.** | There is no organisation-level fact about which columns one person wants to see. A house default for «list or board» is a real choice — some organisations run this as a board and some as a queue — while a house default for «show the score column» would be a setting nobody asked for, and inventing the control to write it would be the larger sin than leaving the halves uneven. Moot in any case now that the toggles are measured to be the playground's. |
+| **Q154** | The column's writer. | **`saveCompany`, with its control in Administrasjon → Firma beside Q122's workspace select — added in this phase, not deferred.** | Invariant 8, and this project has four recorded instances of a column that was read everywhere and written by nothing. The zod field is `z.enum(WORKLIST_VIEWS)` importing the **same array the reader uses**, so a third mode cannot be accepted by one side and refused by the other — and it is enumerated here unlike `workspace`, which defers to `public.workspaces`. That difference is the point: `workspaces` is a REGISTRY a migration extends, while these two are rendering modes the screen implements, and a third would be new code rather than a new row. |
+
+**«LUKK VALGTE» COULD NEVER HAVE WORKED, WHICH MAKES TOR'S REFUSAL COST-FREE.** Measured against
+`guard_task_close` in a rolled-back transaction:
+
+```
+foreslatt -> lukket                      REFUSED  (the lifecycle advances one step)
+gjennomfort -> effektvurdert, no row     REFUSED  task_effect_state_needs_assessment
+```
+
+So a bulk close would have failed on every row not already at `effektvurdert`, and on those it is
+one step anyway. **A button that fails on almost every selection is worse than no button** — which
+is a stronger argument than the one the decision needed. `ivHasChecked` stays and the bar keeps
+assign, set-a-deadline and advance-one-step; closing stays per task with its assessment.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.

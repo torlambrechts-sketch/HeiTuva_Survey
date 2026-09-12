@@ -3,6 +3,7 @@
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { WORKLIST_VIEWS } from '@/lib/worklist/view'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
@@ -69,6 +70,19 @@ const CompanyInput = z.object({
     at the database, which is where membership belongs; this regex only keeps a
     malformed value out of the statement.
   */
+  /*
+    V5-2. The organisation's default Arbeidsliste view — «list» or «board».
+
+    ENUMERATED HERE, unlike `workspace` two fields down, and the difference is
+    the point: `workspace` defers to `public.workspaces` because that set is a
+    REGISTRY a migration extends, and listing its keys would be an enumeration
+    standing in for a lookup. This set is not a registry — it is two rendering
+    modes the screen itself implements, and a third would be new CODE rather
+    than a new row. `lib/worklist/view.ts` holds the one copy both the reader
+    and this boundary use, so a third mode cannot be accepted by one and
+    refused by the other.
+  */
+  worklist_view: z.enum(WORKLIST_VIEWS),
   workspace: z
     .string()
     .trim()
@@ -90,6 +104,7 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
     dpo: formData.get('dpo'),
     timezone: formData.get('timezone'),
     workspace: formData.get('workspace'),
+    worklist_view: formData.get('worklist_view'),
   })
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
@@ -110,6 +125,12 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
       // the FK is deferred, so an unknown key fails at COMMIT rather than at
       // the statement. The action reports it the same way either path fails.
       workspace: parsed.data.workspace,
+      // V5-2 — the Arbeidsliste's default view. NOT NULL with a real default
+      // ('list'), so it is written unconditionally rather than `|| null`: the
+      // same reasoning `timezone` and `workspace` give above, and the reason
+      // the column has a writer in the phase that adds it rather than becoming
+      // a fifth instance of «who writes this column?».
+      worklist_view: parsed.data.worklist_view,
     })
     .eq('id', admin.orgId)
   if (error) {

@@ -1079,6 +1079,7 @@ export type Database = {
           retention_months: number
           timezone: string
           updated_at: string
+          worklist_view: string
           workspace: string
         }
         Insert: {
@@ -1104,6 +1105,7 @@ export type Database = {
           retention_months?: number
           timezone?: string
           updated_at?: string
+          worklist_view?: string
           workspace?: string
         }
         Update: {
@@ -1129,6 +1131,7 @@ export type Database = {
           retention_months?: number
           timezone?: string
           updated_at?: string
+          worklist_view?: string
           workspace?: string
         }
         Relationships: [
@@ -1817,10 +1820,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "scim_credentials_created_by_fkey"
-            columns: ["created_by"]
+            columns: ["created_by", "org_id"]
             isOneToOne: false
             referencedRelation: "org_members"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "scim_credentials_org_id_fkey"

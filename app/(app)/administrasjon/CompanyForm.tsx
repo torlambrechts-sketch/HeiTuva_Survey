@@ -14,6 +14,7 @@ export type Company = {
   dpo: string
   timezone: string
   workspace: string
+  worklistView: string
 }
 
 const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
@@ -149,6 +150,29 @@ export function CompanyForm({
               />
             </label>
           ))}
+
+          {/* V5-2 — the organisation's default Arbeidsliste view. The column
+              half of Tor's «cookie plus column, as Q122»: this is what a person
+              sees before they choose, and their own choice is the cookie
+              `heituva.worklist`, which is per-device and says so.
+
+              TWO OPTIONS AND NO COLUMN SET, because measured there are no
+              column toggles on that screen at all — `colOwner`..`colScore`
+              render inside `isUitest` (v5:2959-2971) and `isTasks` contains
+              none of them. A house default for «list or board» is a real
+              choice; one for «show the score column» would have been a setting
+              nobody asked for. */}
+          <label className="block">
+            <span className={label}>{t('fWorklistView')}</span>
+            <select
+              name="worklist_view"
+              defaultValue={company.worklistView}
+              className={`${field} touch-44-field`}
+            >
+              <option value="list">{t('fWorklistList')}</option>
+              <option value="board">{t('fWorklistBoard')}</option>
+            </select>
+          </label>
 
           {/* Q50 — the clock every scheduled send runs on. Read by all three
               schedule sites since M:0051 and, until now, written by nothing:

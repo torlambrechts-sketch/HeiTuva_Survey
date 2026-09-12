@@ -14,7 +14,7 @@ export default async function CompanyTab() {
   const [{ data: org }, { data: workspaces }] = await Promise.all([
     supabase
       .from('organizations')
-      .select('name, orgnr, address, contact_name, contact_email, dpo, timezone, workspace')
+      .select('name, orgnr, address, contact_name, contact_email, dpo, timezone, workspace, worklist_view')
       .eq('id', viewer.orgId)
       .single(),
     // W0/Q122: the registry is the authority on which workspaces exist, so the
@@ -53,6 +53,7 @@ export default async function CompanyTab() {
           // Same rule as `timezone` above: the column is NOT NULL with a real
           // default, so the fallback is that default and never a blank option.
           workspace: org?.workspace ?? 'hr',
+          worklistView: org?.worklist_view ?? 'list',
         }}
         workspaces={options}
       />

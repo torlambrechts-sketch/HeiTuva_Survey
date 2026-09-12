@@ -904,11 +904,24 @@ rendered baselines those two surfaces have.
 
 ### `uitest` IS ABSENT FROM THE PRODUCT, NOT FROM THE BUNDLE — and that is a different refusal
 
-**23 of the 45 new states are a table-variant playground**, subnav label «Tabellvarianter»:
+**CORRECTED AT V5-2: 28 of the 45, not 23.** The five column toggles belong here too —
+`colOwner`, `colStatus`, `colDate`, `colResponses`, `colScore` render at **v5:2959-2971**, inside
+`isUitest` (2913-3127), as the playground's «Vis kolonner» control fed by `uiColumns` and read from
+`st.uiCols`. **`isTasks` (3128 onward) contains not one reference to any of them.** So the same
+mistake was made twice in this section — a state assigned by its NAME rather than by the screen it
+renders on, `hasSubtools` first and these five second. A prefix is not a location, and `col*` looks
+like product vocabulary in a way `ui*` does not.
+
+That correction is not cosmetic: the V5-2 instruction lists the five as part of «the unified row
+model», and building them on the Arbeidsliste would have been inventing five controls the bundle
+does not draw there. `tests/unit/worklist-view.test.ts` asserts the line ranges so the claim is
+re-derivable rather than remembered.
+
+**28 of the 45 new states are a table-variant playground**, subnav label «Tabellvarianter»:
 `isUitest`, `isUitest2`, `isUitest3`, `uiA`, `uiB`, `uiD`, `uiE`, `uiBoxView`, `uiListView`,
 `uiColsOpen`, `uiFiltersOpen`, `uiMoreOpen`, `uiTipOpen`, `uiExported`, `uiNoRows`,
-`uiFilterCount`, `hasSubtools`, and the six `u2*`. **It is design exploration and no phase builds
-it.** Written here so that nobody counting states plans it later.
+`uiFilterCount`, `hasSubtools`, the five `col*` and the six `u2*`. **It is design exploration and no
+phase builds it.** Written here so that nobody counting states plans it later.
 
 Two corrections to the instruction's own account of that set, both measured:
 
@@ -929,7 +942,8 @@ Recorded, not chased.
 
 ### Five product states the instruction does not name
 
-Of the 22 non-uitest additions, the instruction names 18 (the two `int*Open`, `hasSubnav`, the seven
+**(Re-counted at V5-2: seventeen non-uitest additions, not 22 — the five `col*` moved to the
+playground above.)** Of them, the instruction names 13 (the two `int*Open`, `hasSubnav`, the seven
 `r.*`, the two `iv*View`, the five `col*`, `newTaskOpen`). **Four are unaccounted for**, and two of
 them are claims:
 
