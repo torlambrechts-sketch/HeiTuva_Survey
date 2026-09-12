@@ -474,7 +474,16 @@ export async function setMemberStatus(memberId: string, active: boolean): Promis
   }
 
   const status = active ? 'active' : 'inactive'
-  const { error } = await supabase.from('org_members').update({ status }).eq('id', memberId)
+  /* `status_source` is stamped here and not left to the default, because the
+     default is only right for a row a sync has never touched. An administrator
+     overriding a SCIM-written status must leave a mark saying so: the Brukere
+     screen reads it to warn that the next sync will write the directory's answer
+     back, and without the mark the administrator watches their own change
+     disappear with no explanation (M:0109). */
+  const { error } = await supabase
+    .from('org_members')
+    .update({ status, status_source: 'local' })
+    .eq('id', memberId)
   if (error) return { ok: false, error: dbError(error) }
 
   await audit(admin.orgId, 'member.status', before?.email ?? memberId, {

@@ -838,6 +838,8 @@ REGISTRY VALUE — «Kundeopplevelse» is three characters longer than «Arbeids
 semibold, and the measured overflow was 18px exactly. Row 10 one level out: the constant is a
 layout rule and the varying thing is a WORD.
 
+**M:0109 took the census to 1227 across 88 files** (`tests/db/scim.test.ts`, 11 — all eleven proven RED first against functions that did not exist). **5a3 holds at 71 of 101**: both SCIM functions live in the `app` schema, which neither sweep enumerates — the same recorded limit as `M:0107`'s, and the correct reading rather than a gap.
+
 **M:0108 took the census to 1216 across 87 files** — `tests/db/deactivation.test.ts` 6 -> 14, and no other entry moved (the proof is the one-line diff, not the total). 5a3 holds at **71 of 101**: both new functions live in the `app` schema, which neither sweep enumerates. Green from a bare `supabase db reset` — with `npm run seed:i18n` and `npm run seed:help` after it, without which four `ui_messages`/`help_articles` tests fail for want of content rather than for a defect.
 
 **M:0107 took the census to 1208 across 87 files** (`tests/db/deactivation.test.ts`, 6 — two

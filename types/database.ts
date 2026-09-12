@@ -990,40 +990,52 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          external_id: string | null
           group_id: string | null
           id: string
           invited_by: string | null
           name: string | null
           org_id: string
           role: "administrator" | "redaktor" | "leser"
+          source: string | null
           sso_exempt: boolean
           status: string
+          status_source: string
+          synced_at: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          external_id?: string | null
           group_id?: string | null
           id?: string
           invited_by?: string | null
           name?: string | null
           org_id: string
           role?: "administrator" | "redaktor" | "leser"
+          source?: string | null
           sso_exempt?: boolean
           status?: string
+          status_source?: string
+          synced_at?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          external_id?: string | null
           group_id?: string | null
           id?: string
           invited_by?: string | null
           name?: string | null
           org_id?: string
           role?: "administrator" | "redaktor" | "leser"
+          source?: string | null
           sso_exempt?: boolean
           status?: string
+          status_source?: string
+          synced_at?: string | null
           user_id?: string | null
         }
         Relationships: [
