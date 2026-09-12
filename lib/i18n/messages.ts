@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { SOURCE_LOCALE, i18nCacheTag, type Locale } from './locales'
 import { overlay, type Messages } from './overlay'
+import { bundleFingerprint } from './fingerprint'
 import bundledNo from '@/messages/no.json'
 import bundledEn from '@/messages/en.json'
 
@@ -90,8 +91,45 @@ async function fetchShipped(locale: Locale): Promise<Messages> {
  * The shipped layer for one locale: every key in the build, and slow to change
  * (a seed, a migration). It sits in the data cache under the locale's tag.
  */
+/**
+ * A fingerprint of the COMPILED message set, per locale, part of the cache key.
+ *
+ * WHY, measured rather than supposed (2026-09-12). The cached value is
+ * `overlay(BUNDLED, rows)` — it depends on BOTH halves — and the key named only
+ * the locale. Next's Data Cache persists ACROSS DEPLOYMENTS on Vercel, so a
+ * deploy that added keys to the bundle kept serving the PREVIOUS deployment's
+ * merged set, and any key the old bundle lacked rendered as a raw
+ * `namespace.key` until `revalidate` expired it. That is exactly what was seen
+ * on /oppgaver after C4 shipped 116 new keys.
+ *
+ * THE ORIGINAL DIAGNOSIS WAS WRONG AND IS RECORDED AS WRONG. It was read as
+ * «the gate checks messages/*.json while the product serves ui_messages», i.e.
+ * missing ROWS. Measured: the live deployment carries C4's own copy, so the
+ * bundle has the keys, and a missing row cannot render raw because the bundle
+ * is the BASE. The stale half was the cache, not the table.
+ *
+ * A FINGERPRINT RATHER THAN A DEPLOYMENT ID. `VERCEL_DEPLOYMENT_ID` would fix
+ * the case in front of us and nothing else: it is absent off Vercel, it changes
+ * when the bundle has not, and it says nothing about the thing the cached value
+ * actually depends on. The fingerprint IS that thing — change a message and the
+ * key changes, on any host, including `next dev`. Prefer the fix that is robust
+ * against the construct nobody has thought of.
+ *
+ * Computed once at module load. `JSON.stringify` over an imported JSON module
+ * is deterministic within a build because key order is the file's order.
+ */
+const BUNDLE_FINGERPRINT: Record<string, string> = Object.fromEntries(
+  Object.entries(BUNDLED).map(([locale, messages]) => [
+    locale,
+    bundleFingerprint(messages),
+  ]),
+)
+
 function getShippedMessages(locale: Locale): Promise<Messages> {
-  return unstable_cache(() => fetchShipped(locale), ['ui_messages', locale], {
+  return unstable_cache(
+    () => fetchShipped(locale),
+    ['ui_messages', locale, BUNDLE_FINGERPRINT[locale] ?? 'no-bundle'],
+    {
     tags: [i18nCacheTag(locale)],
     // Without an expiry this cache never lets go: after seeding new keys the
     // running server kept serving the old set and the UI rendered raw
@@ -99,8 +137,9 @@ function getShippedMessages(locale: Locale): Promise<Messages> {
     // revalidate from a seed; this is the safety net for every other path that
     // changes the shipped rows out of band (a migration, a direct edit in
     // Studio).
-    revalidate: 300,
-  })()
+      revalidate: 300,
+    },
+  )()
 }
 
 /**

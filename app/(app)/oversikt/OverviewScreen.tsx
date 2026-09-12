@@ -112,7 +112,12 @@ export async function OverviewScreen({
   const peak = Math.max(1, ...activity.days.map((d) => d.n))
   const doneLoop = loop.filter((l) => l.done).length
 
-  const card = 'rounded-[18px] border border-line bg-sf px-6 py-6'
+  /* V4 draws `padding:24px 26px` on every Oversikt card — six occurrences in
+     the screen's own region — and this was `px-6` (24px), two short on each
+     side. Measured against the bundle rather than noticed: Oversikt is
+     v4-governed because W2 touched it, so 26px is the target and 24px was
+     inherited from the frame an earlier handoff set. */
+  const card = 'rounded-[18px] border border-line bg-sf px-[26px] py-6'
 
   return (
     <main className="animate-enter pt-[26px]">

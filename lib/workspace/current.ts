@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { cookies } from 'next/headers'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { computeShow, parseModuleCookie, type WorkspaceShow } from './modules'
 
@@ -87,6 +88,44 @@ export type WorkspaceState = {
 
 const COLUMNS = 'key, label, short, hint, tint, dot, person, person_def, persons, preset_key, visible'
 
+/* Q129 — the registry's `label` and `short` are SEEDED NORWEGIAN, and they
+   reach the chrome of every page through the chip, Oversikt's strip, the
+   Firma tab's select and the library's lift note. Translated HERE, at the one
+   read site, rather than at each of those four: a per-consumer fix is an
+   enumeration of the consumers that exist today, and the fifth one will render
+   Norwegian on an English page exactly as these four did.
+
+   The registry value is the FALLBACK, so adding a workspace stays a row — it
+   renders its seeded name until someone adds the message, never blank.
+
+   GENERALISED to `use_cases` in the same breath, because the same measurement
+   found the same gap there: `use_cases.label` for `hr` is the identical string,
+   which is how the gate came to blame a workspace key for a library chip. Two
+   of the three untranslated shipped registries are closed here; the third,
+   `dashboard_presets`, is measured and logged in Q129 rather than fixed, since
+   its titles are BOUND (Q124 renders `dashboard_presets.title` from the joined
+   row) and translating them is a change to what that sentence promises. */
+export async function localiseRegistryNames<T extends { key: string; label: string; short?: string }>(
+  rows: T[],
+  prefix: 'ws' | 'uc',
+): Promise<T[]> {
+  const t = await getTranslations('nav')
+  return rows.map((w) => ({
+    ...w,
+    label: t.has(`${prefix}Label_${w.key}`) ? t(`${prefix}Label_${w.key}`) : w.label,
+    ...(w.short === undefined
+      ? {}
+      : { short: t.has(`${prefix}Short_${w.key}`) ? t(`${prefix}Short_${w.key}`) : w.short }),
+  }))
+}
+
+/** The workspace registry, by the name its four call sites already use. */
+export async function localiseWorkspaceNames<T extends { key: string; label: string; short: string }>(
+  rows: T[],
+): Promise<T[]> {
+  return localiseRegistryNames(rows, 'ws')
+}
+
 export async function readWorkspace(orgId: string): Promise<WorkspaceState | null> {
   const supabase = await createClient()
   const [{ data: all }, { data: org }] = await Promise.all([
@@ -95,15 +134,19 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
   ])
   if (!all?.length) return null
 
+  // Localised once, here, so `current`, `all` and `selectable` are all derived
+  // from the same translated rows and no consumer sees an untranslated one.
+  const rows = await localiseWorkspaceNames(all)
+
   const jar = await cookies()
   const chosen = jar.get(WORKSPACE_COOKIE)?.value
-  const byKey = (k: string | null | undefined) => all.find((w) => w.key === k)
+  const byKey = (k: string | null | undefined) => rows.find((w) => w.key === k)
 
   // Deliberately three steps rather than `chosen ?? org ?? all[0]`: each
   // fallback is a different fact, and collapsing them would hide an unknown
   // cookie behind a correct-looking render.
   const fromCookieRow = chosen ? byKey(chosen) : undefined
-  const current = fromCookieRow ?? byKey(org?.workspace) ?? all[0]!
+  const current = fromCookieRow ?? byKey(org?.workspace) ?? rows[0]!
 
   // The module set. Two reads rather than a join, because the link rows are a
   // registry of a dozen rows and the join would be a second place for the
@@ -136,10 +179,10 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
 
   return {
     current,
-    all,
+    all: rows,
     // One clause rather than a concat, so registry order survives: appending a
     // hidden `current` would put it last, where its own workspace is not.
-    selectable: all.filter((w) => w.visible || w.key === current.key),
+    selectable: rows.filter((w) => w.visible || w.key === current.key),
     fromCookie: Boolean(fromCookieRow),
     modules,
     allModules: mods ?? [],

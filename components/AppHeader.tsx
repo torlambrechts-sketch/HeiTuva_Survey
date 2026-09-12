@@ -39,6 +39,7 @@ const NAV = [
 
 export async function AppHeader({ viewer }: { viewer: Viewer }) {
   const t = await getTranslations('nav')
+
   const ws = await readWorkspace(viewer.orgId)
 
   return (

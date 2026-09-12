@@ -121,10 +121,15 @@ describe('Q125 — the quiz workspace option is paired to its cards', () => {
        and in the SQL — the W1 slip, where a substring matched the JSDoc. */
     const reader = readFileSync('lib/workspace/current.ts', 'utf8')
     // Resolution reads every row...
-    expect(reader).toContain('const current = fromCookieRow ?? byKey(org?.workspace) ?? all[0]!')
+    expect(reader).toContain('const current = fromCookieRow ?? byKey(org?.workspace) ?? rows[0]!')
     // ...and only the picker list filters, keeping a hidden CURRENT visible so
     // a <select> never displays a row other than the one it would submit.
-    expect(reader).toContain('all.filter((w) => w.visible || w.key === current.key)')
+    expect(reader).toContain('rows.filter((w) => w.visible || w.key === current.key)')
+    // Q129 — `rows` is `all` after localisation, so resolution still sees every
+    // row: the localiser maps, it does not filter. Asserted, because a helper
+    // that grew a filter would hide a workspace without any flag saying so.
+    expect(reader).toContain('const rows = await localiseWorkspaceNames(all)')
+    expect(reader).toContain('return rows.map((w) => ({')
 
     // Both pickers must consume that list. The chip:
     expect(readFileSync('components/AppHeader.tsx', 'utf8')).toContain('options={ws.selectable}')

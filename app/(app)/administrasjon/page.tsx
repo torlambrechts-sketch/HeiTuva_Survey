@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server'
+import { localiseWorkspaceNames } from '@/lib/workspace/current'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { CompanyForm } from './CompanyForm'
@@ -19,7 +20,7 @@ export default async function CompanyTab() {
     // W0/Q122: the registry is the authority on which workspaces exist, so the
     // control is built from it. `workspaces` carries no org id and its select
     // policy is `using (true)` — the same shape as `use_cases`.
-    supabase.from('workspaces').select('key, label, visible').order('sort_order'),
+    supabase.from('workspaces').select('key, label, short, visible').order('sort_order'),
   ])
 
   /* Q125 — the option list is the VISIBLE rows, plus this organisation's own
@@ -28,7 +29,13 @@ export default async function CompanyTab() {
      missing the current value would display a different row and `saveCompany`
      would write THAT one on the next save of any field on this form. Hiding
      governs the picker; it must not reassign an organisation's workspace. */
-  const options = (workspaces ?? []).filter((w) => w.visible || w.key === (org?.workspace ?? 'hr'))
+  /* Q129 — this tab reads the registry directly rather than through
+     readWorkspace, so it needs the same localisation or it renders the seeded
+     Norwegian names in an English session. The shared helper, not a second
+     copy of the rule. */
+  const options = await localiseWorkspaceNames(
+    (workspaces ?? []).filter((w) => w.visible || w.key === (org?.workspace ?? 'hr')),
+  )
 
   return (
     <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.2fr_.8fr]">

@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { readWorkspace } from '@/lib/workspace/current'
+import { localiseRegistryNames, readWorkspace } from '@/lib/workspace/current'
 import { liftOrder } from '@/lib/workspace/modules'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -67,7 +67,12 @@ export default async function LibraryPage({
     .from('use_cases')
     .select('key, label, short, description, tint, preset_key')
     .order('sort_order')
-  const uses = useCases ?? []
+  const usesRaw = useCases ?? []
+  /* Q129 — `use_cases` is the second untranslated shipped registry, and its
+     `hr` row carries the SAME Norwegian string as the workspace's, which is how
+     verify:i18n came to blame a workspace key for a library chip. Localised
+     through the shared helper; the registry value stays the fallback. */
+  const uses = await localiseRegistryNames(usesRaw, 'uc')
   const useLabel = new Map(uses.map((u) => [u.key, u.label]))
 
   // The admissible chips are the three fixed ones plus the registry's keys.
