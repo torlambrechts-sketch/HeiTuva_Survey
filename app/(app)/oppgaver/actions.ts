@@ -18,27 +18,17 @@ import { TASK_STEPS, nextStep, type TaskStatus } from '@/lib/tasks/lifecycle'
  * from `app.guard_task_close` are mapped to their own results here rather than
  * collapsed into `save_failed` — V2-3a's defect 5 was exactly that collapse one
  * screen over, and it is the mistake this action is written to avoid repeating.
+ *
+ * The union and its copy map live in `./task-errors` rather than here, for the
+ * reason `administrasjon/types.ts` states and the walk of 2026-09-12 proved: a
+ * 'use server' module may export only async functions, and `export const
+ * TASK_ERROR_KEY` in this file made Next refuse to register it — HTTP 500 on
+ * every one of this screen's eleven actions, with the page itself rendering
+ * perfectly. A type export is erased at build time and is harmless; a Record is
+ * a runtime object and is not.
  */
-export type TaskError =
-  | 'forbidden'
-  | 'invalid'
-  | 'needs_effect_assessment'
-  | 'step_skipped'
-  | 'step_backwards'
-  | 'save_failed'
-
-export type TaskResult = { ok: true } | { ok: false; error: TaskError }
-
-/** Message key per refusal, so every one of them has copy and none can be added
- *  without noticing that it does not. */
-export const TASK_ERROR_KEY: Record<TaskError, string> = {
-  forbidden: 'taskErrForbidden',
-  invalid: 'taskErrInvalid',
-  needs_effect_assessment: 'taskErrNeedsEffect',
-  step_skipped: 'taskErrStepSkipped',
-  step_backwards: 'taskErrStepBackwards',
-  save_failed: 'taskErrSaveFailed',
-}
+export type { TaskError, TaskResult } from './task-errors'
+import type { TaskError, TaskResult } from './task-errors'
 
 const fromDatabase = (message: string): TaskError => {
   if (/task_close_needs_effect_assessment/.test(message)) return 'needs_effect_assessment'

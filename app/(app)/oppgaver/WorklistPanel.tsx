@@ -23,7 +23,6 @@ import {
 } from '@/lib/worklist/rows'
 import { type WorklistView } from '@/lib/worklist/view'
 import {
-  TASK_ERROR_KEY,
   addWorklistNote,
   advanceTask,
   advanceTasks,
@@ -35,6 +34,7 @@ import {
   setTaskDue,
   setWorklistView,
 } from './actions'
+import { TASK_ERROR_KEY } from './task-errors'
 
 /**
  * Arbeidsliste — v5:3128-3374, one list over two tables.

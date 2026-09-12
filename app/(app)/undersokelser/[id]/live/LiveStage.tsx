@@ -274,7 +274,14 @@ export function LiveStage({
                 moderation, so that sentence would be a promise the product does
                 not keep. It states the floor instead, which is what actually
                 decides whether a word appears. */}
-            <span className="text-[11.5px] text-mut">{s.cloudFloor}</span>
+            {/* WALK 2026-09-12: only when the floor is KNOWN. `live_cloud` returns
+                `{insufficient_data, n, k}` below the threshold — with no `floor`
+                key at all — and the page's `?? 0` turned that absence into «Ord
+                minst 0 personer har skrevet», projected on a wall, one line under
+                the promise that the threshold is respected. A floor of 0 says the
+                cloud may show a word nobody wrote, which is the opposite of what
+                gating does. The number is unknown here, so the sentence goes. */}
+            {cloud?.gated ? null : <span className="text-[11.5px] text-mut">{s.cloudFloor}</span>}
           </div>
           {!cloudQuestion ? (
             <p className="mt-3.5 text-[13px] text-mut">{s.cloudNoQuestion}</p>

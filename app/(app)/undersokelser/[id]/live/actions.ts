@@ -10,9 +10,6 @@ import { createClient } from '@/lib/supabase/server'
  */
 const Uuid = z.string().uuid()
 
-/** A voucher code: the shape `live_sessions.code`'s CHECK enforces. */
-const Code = z.string().regex(/^[A-Z0-9]{6,10}$/)
-
 function randomCode(): string {
   // No I, O, 0 or 1: a code is read aloud in a room and typed by someone at the
   // back of it. Six characters from a 32-symbol alphabet is ~30 bits, and the
@@ -85,4 +82,3 @@ export async function setRevealed(
   return {}
 }
 
-export { Code }
