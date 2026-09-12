@@ -857,3 +857,94 @@ registry — those exist (`M:0046`–`M:0049`).
 - Whether the standing limitation in `docs/v1/06-closeout.md § 3` (**every gate reads
   local; nothing has ever read prod**) bites on any v2 surface. It is not this bundle's
   finding and it has no owner; it is carried into 03-plan as a limit, not solved there.
+
+---
+
+## 0.3d — v5, the sixth handoff (added V5-0, 2026-09-12)
+
+Q18/Q52's rule extends a fourth time. `/design-reference-v5/` governs every screen a **v5 phase
+touches**; `/design-reference-v4/` keeps the screens a v4 phase built and no v5 phase touches;
+everything above is unchanged.
+
+**VERIFIED BEFORE TRUSTED.** The handoff was delivered with a hash, a line count and a state
+count, and all three were re-derived rather than accepted:
+
+```
+md5    fc3b4db66616cfa15b817e7ae15d73c2   claimed fc3b4db6…   MATCH
+lines  8836                               claimed 8836        MATCH
+states 265 distinct sc-if keys            claimed 265         MATCH
+```
+
+The counting method was calibrated first: `grep -o 'sc-if value="{{ *KEY'` unique returns **228 on
+v4**, which is v4's recorded number, so the method is the project's own. Against v4: **+45 added,
+−8 removed, 228 + 45 − 8 = 265**, and the eight removed are exactly C4's model — `showTasks`,
+`showFeedback`, `fb.hasQuestion`, `fb.hasReplies`, `fb.replyOpen`, `t2.hasLaw`, `t2.isLate`,
+`t2.needsEffect`. +1664 lines, also as stated.
+
+**`__2_` WAS NOT DELIVERED AND IS THEREFORE NOT VERIFIED.** Only `__3_` was handed over, so the
+claim that `__2_` is this file minus `intDetailOpen` and `intListOpen` — and its hash `57d7159b…` —
+is **accepted on the author's word, not measured.** The two keys ARE in v5's added set, which is
+consistent with the claim and does not establish it. It does not matter for the install: `__3_` is
+the bundle, `__2_` is installed nowhere, and nothing in the tree points at it. Recorded because an
+unverified claim that goes unlabelled becomes a verified one by repetition.
+
+**v5 IS A ONE-FILE HANDOFF, FOR THE THIRD TIME RUNNING** — which retires the question. Splash and
+Bruksområder stay v2's; `artifacts/reference-v2/splash*.png` and `bruksomrader.png` remain the only
+rendered baselines those two surfaces have.
+
+| Surface | Governed today | Governed after V5-0 | Because |
+|---|---|---|---|
+| `splash` | v2 | **stays v2** | v5 handed over no splash file — third handoff running. |
+| **Bruksområder** | v2 | **stays v2** | same. |
+| **Arbeidsliste** (was Oppgaver og tilbakemeldinger) | v3/C4 | **v5 governs it, and v5 REPLACES it** | the only surface in six handoffs where the new bundle removes the old model's keys rather than extending them. Eight keys gone; this is a redraw, not a fidelity delta. |
+| Everything else | as § 0.3 / § 0.3b / § 0.3c | **unchanged until a v5 phase touches it** | a screen is governed by the bundle a phase *built it from*. v5's file draws the whole app; drawing is not governance. |
+
+**THE PER-SURFACE ROWS FOR V5-1…V5-3 ARE DELIBERATELY NOT IN THIS TABLE YET**, for the reason
+§ 0.3c gives: speculative rows would put governance in the table for screens no phase has touched.
+
+### `uitest` IS ABSENT FROM THE PRODUCT, NOT FROM THE BUNDLE — and that is a different refusal
+
+**23 of the 45 new states are a table-variant playground**, subnav label «Tabellvarianter»:
+`isUitest`, `isUitest2`, `isUitest3`, `uiA`, `uiB`, `uiD`, `uiE`, `uiBoxView`, `uiListView`,
+`uiColsOpen`, `uiFiltersOpen`, `uiMoreOpen`, `uiTipOpen`, `uiExported`, `uiNoRows`,
+`uiFilterCount`, `hasSubtools`, and the six `u2*`. **It is design exploration and no phase builds
+it.** Written here so that nobody counting states plans it later.
+
+Two corrections to the instruction's own account of that set, both measured:
+
+- **There is no `uiC`.** The instruction writes the range «uiA-uiE»; the bundle has `uiA`, `uiB`,
+  `uiD`, `uiE` as `sc-if` keys and no `uiC` at all. (`grep uiC` returns 13 hits and every one is
+  `uiCount`, `uiColsOpen` or `uiColumns` — a substring, not a state.) A range is an enumeration
+  with the gaps hidden.
+- **`hasSubtools` belongs to the set and is not named in it.** It is `st.screen === "uitest"`,
+  literally uitest-only, and it does not start with `ui`/`u2`/`isUitest` — so splitting the 45 by
+  NAME PREFIX puts it on the product side. That made the count 22; the property is «which screen
+  does this belong to», and by that the count is **23**. The first split was the same enumeration
+  mistake one level down, and it was mine.
+
+`tuva/faces/f12.png` is referenced three times and **was not handed over** — the first bundle in
+six to reference an asset it does not ship. Both `<img>` uses are inside `isUitest`/`isUitest2`, so
+it cannot reach the product; `tuvaFace` is declared in the data block and never read by anything.
+Recorded, not chased.
+
+### Five product states the instruction does not name
+
+Of the 22 non-uitest additions, the instruction names 18 (the two `int*Open`, `hasSubnav`, the seven
+`r.*`, the two `iv*View`, the five `col*`, `newTaskOpen`). **Four are unaccounted for**, and two of
+them are claims:
+
+| State | What it gates | Why it matters |
+|---|---|---|
+| `ivEmpty` | the Arbeidsliste's empty view (`inboxFiltered(st).length === 0`) | implied by the instruction's seed list, never named as a state. Harmless. |
+| `ivHasChecked` | **a bulk action bar**: `onIvBulkOwner`, `onIvBulkAdvance` («Flytt ett steg») and **`onIvBulkClose` («Lukk valgte»)** | **«Lukk valgte» is a bulk bypass of Q69**, which says a task cannot close before its effect is assessed. Either the guard holds and the button silently fails on most selections, or the button works and Q69 does not. Not a fidelity question — a decision. |
+| `c.hasGoal` | a goal marker on a dashboard card, drawn at **`left:70%`** with `title="Mål: 70 %"` | **the 70 % is a literal in the markup.** There is no goal or target column anywhere in the schema, so this is «never fabricate data in the UI» on a card that reads as a measured target. |
+| `cd.hasLaw` | a statute chip inside the task-detail loop (`hasLaw: !!t2.law`) | the same fact C4's removed `t2.hasLaw` carried, renamed into the new model. Continuity, not an addition. |
+
+### And two measured corrections to the shell claim
+
+- **`hasSubnav` is on five screens, confirmed**: `uitest`, `tasks`, `admin`, `dashboard`, `reports`,
+  and `headRadius` switches on exactly the same five.
+- **But `subnavLabel` has only FOUR branches.** `uitest` → «Tabellvarianter», `tasks` →
+  «Arbeidsliste», `admin` → «Administrasjon», and **everything else → «Innsikt»** — so `dashboard`
+  and `reports` share a label. «subnavLabel per screen» is true of three of the five.
+

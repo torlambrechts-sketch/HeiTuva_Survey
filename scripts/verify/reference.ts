@@ -101,13 +101,21 @@ const BUNDLES: Bundle[] = [
   },
   {
     key: 'v4',
-    role: 'fifth handoff — the target for every screen a v4 phase touches',
+    role: 'fifth handoff — the reference for every screen a v4 phase built and no v5 phase touches',
     design: 'design-reference-v4/heituva-survey-app-design/project/HeiTuva.dc.html',
     // No `splash`, no `bruksomrader`, for the SECOND handoff running. v3 being
     // one file was read once as the anomaly that made `Bundle.splash` optional;
     // v4 being one file too is the evidence it is the norm, not the exception.
     // Both surfaces stay v2's and are rendered from v2's set.
     out: 'artifacts/reference-v4',
+  },
+  {
+    key: 'v5',
+    role: 'sixth handoff — the target for every screen a v5 phase touches',
+    design: 'design-reference-v5/heituva-survey-app-design/project/HeiTuva.dc.html',
+    // No `splash`, no `bruksomrader`, for the THIRD handoff running — which is
+    // now simply what a handoff looks like. Both surfaces stay v2's.
+    out: 'artifacts/reference-v5',
   },
 ]
 

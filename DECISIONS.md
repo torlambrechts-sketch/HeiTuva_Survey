@@ -596,6 +596,87 @@ on production and `www.heituva.com` is still serving the previous build, so `/ap
 whatever that build returns. The database half is inert until the deploy, which is the correct
 order — a schema ahead of its code is safe, code ahead of its schema is not.
 
+## V5-0 — the v5 bundle installed, and its claim set measured (2026-09-12)
+
+`design-reference-v5/` is the sixth handoff and the target for every screen a v5 phase touches.
+Install verified per CLAUDE.md's seven-step checklist; the per-surface governance table is
+`docs/v2/00-diff.md § 0.3d`. **No code was built.** The five claims Tor has already decided are
+recorded below as his; everything under «beyond the five» is measurement.
+
+**THE NUMBERS WERE RE-DERIVED, NOT ACCEPTED**, including the counting method: unique
+`sc-if value="{{ KEY` returns **228 on v4**, which is v4's recorded figure, so the method is the
+project's own before it is pointed at anything new. Then md5 `fc3b4db6…` ✓, 8836 lines ✓, 265
+states ✓, +45/−8 ✓ (228 + 45 − 8 = 265), +1664 lines ✓. Six for six.
+
+**`__2_` was not delivered, so its hash and its «same file minus two keys» are NOT verified** —
+accepted on the author's word and labelled as such. It matters nowhere: `__3_` is the bundle and
+nothing in the tree points at `__2_`.
+
+### Tor's five, confirmed against the database and the running product
+
+| # | The claim | Measured |
+|---|---|---|
+| 1 | «Data lagres i Norge og EØS» | **In the footer, at :5154 — not :5059 — and hard-coded in the MARKUP, not in a `foot*` data key.** That changes the fix: it is a literal in a component, not a registry value. Nothing is in Norway (Supabase eu-central-1, Vercel fra1, Brevo French). Building it as «Data lagres i EØS». |
+| 2 | `footBadges` carries «DPIA gjennomført» | Confirmed, three badges. Note **«Data i EØS» is ALREADY EØS-only** — item 1's correction applies to the sentence above the badges, not to the badge. |
+| 3 | `footStatus` «Alle tjenester kjører normalt» | **A string literal at :7674.** No health source exists. Does not ship. |
+| 4 | `intConnected` = «4 aktive tilkoblinger» from `{entra:1, hr:1, teams:1, brreg:1}` | Confirmed unchanged from v4 — and **I1-3 already shipped the fix**: the count is read from `scim_connection_status`, and the captured baseline shows «1 aktiv tilkobling». |
+| 5 | `intDetail.entra` is fiction | Confirmed and worse than stated — see below. |
+
+### Beyond the five: six findings the instruction does not name
+
+1. **The Entra field list has EIGHT fields, not six, and THREE have a column, not two.**
+   `displayName`→`name`, `mail`→`email`, `accountEnabled`→`status` land. Five do not — and two of
+   them are not missing columns but **undecided product features**: `employeeHireDate` «Utløser
+   oppstartssjekk» and `employeeLeaveDateTime` «Utløser exit-undersøkelse» **claim a directory event
+   automatically sends a survey**, with no editor acting. And `manager` «Gir leder tilgang til egen
+   enhet» is **a directory attribute granting data access** — which Q139 refused by name for `role`,
+   for the reason that it is a privilege path through a system we do not control.
+2. **`ivHasChecked` gates a bulk action bar** — `onIvBulkOwner`, `onIvBulkAdvance` and
+   **`onIvBulkClose` («Lukk valgte»)**. A bulk close is a bulk bypass of **Q69**, which the
+   instruction lists among the three that do not change. Either the guard holds and the button fails
+   silently on most selections, or the button works and Q69 does not.
+3. **`c.hasGoal` draws a goal marker at `left:70%` with `title="Mål: 70 %"` — the 70 is a literal.**
+   No goal or target column exists anywhere. A hard-coded target on a dashboard card reads as a
+   measured one.
+4. **`footVersion: "Versjon 2.4 · september 2026"`** — zero version columns in the schema,
+   `package.json` says `0.1.0`, zero «Versjon» in shipped copy. It is the example CLAUDE.md's
+   never-fabricate rule actually gives («a hard-coded `v1`»), in the footer, on every page.
+5. **`hjelp@heituva.no` with «svar innen én arbeidsdag»** — a **third** occurrence of the domain
+   CLAUDE.md records as «not HeiTuva's domain and never was», now carrying a service-level promise
+   on top. The other `heituva.no` hits in this bundle are inert fixture addresses; this one is a
+   contact channel.
+6. **`footLegal` asserts «{company} er behandlingsansvarlig» and `organizations` has no column for
+   it.** Columns are `name, orgnr, address, contact_name, contact_email, dpo, …` — no legal-role
+   field. The claim is very likely correct in law (customer controller, HeiTuva processor, which the
+   DPA presupposes) but it is **asserted by the bundle and recorded nowhere**, so «verify that is
+   what organizations holds» has the answer: it does not hold it. Naming the wrong legal role on
+   every page is worse than naming none, so this is a decision and not a render.
+
+### `uitest` is refused, and the count is 23 of 45
+
+Design exploration, no phase builds it, written into § 0.3d so nobody counting states plans it.
+Two corrections there, both mine to make: **there is no `uiC`** (the instruction's «uiA-uiE» is a
+range hiding a gap; every `uiC` grep hit is `uiCount`/`uiColumns`), and **`hasSubtools` is
+uitest-only** (`st.screen === "uitest"`) but does not start with `ui`/`u2`/`isUitest` — so my first
+split, by NAME PREFIX, put it on the product side and reported 22. The property is «which screen
+does this belong to». **23.**
+
+### The Arbeidsliste is the first surface in six handoffs that a new bundle REPLACES
+
+Eight `sc-if` keys removed, all of them C4's. `since` in the reference harness assumes screens are
+added and not removed, so that was CHECKED rather than assumed: every state key the `SCREENS`
+manifest sets still resolves in v5, and the 35 captures are 35 distinct hashes — so no `until` was
+needed. `tfView` survives and now drives the row model's type filter.
+
+**`tuva/faces/f12.png` is referenced three times and was not handed over** — the first bundle in six
+to reference an asset it does not ship. Both uses are inside `isUitest`/`isUitest2`, so it cannot
+reach the product, and `tuvaFace` is declared in the data block and read by nothing.
+
+**`lonn` is confirmed OUT** (Q88's class), and its field list is why it matters: `gender`
+«Kjønnsdelt rapport etter ldl. § 26» is the identical false promise CLAUDE.md records «Kjønnsdelt
+rapport» making on a public page, arriving for a third time. `apiKey` and `webhookEvents` are also
+still in this bundle and were already declined by Q151.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.
