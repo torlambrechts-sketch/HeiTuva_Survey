@@ -50,46 +50,52 @@ describe('Q125 — the quiz workspace option is paired to its cards', () => {
     expect(type).toBe('boolean')
   })
 
-  it("honours Q125's condition as written: quiz is selectable iff BOTH the nps and quiz cards render", () => {
+  it('enforces the property: a workspace is selectable iff every module it shows has a card', () => {
+    /* Q128. The condition used to name «nps AND quiz», which was an
+       enumeration: the quiz workspace does not show nps at all. Stated as the
+       property it decides every row with one sentence, and it is the reason
+       this test can be the same test after the decision moved BOTH ways. */
     const rows = psql(`select key, visible from public.workspaces order by key`)
-    // Non-vacuity first (D158): an empty registry would pass every assertion
-    // below for the wrong reason.
+    // Non-vacuity first (D158): an empty registry passes everything below for
+    // the wrong reason.
     expect(rows.length).toBeGreaterThan(0)
-    const visible = new Map(rows.map((r) => { const [k, v] = r.split('|'); return [k!, v === 't'] }))
-    expect(visible.has('quiz')).toBe(true)
 
-    // The rule, in the exact terms Q125 sets, so building the missing card
-    // flips this without anybody editing the test.
-    expect(visible.get('quiz')).toBe(rendersCard('nps') && rendersCard('quiz'))
+    const links = psql(`
+      select workspace_key, string_agg(module_key, ',' order by module_key)
+        from public.workspace_module_links group by workspace_key`)
+    const modulesOf = new Map(links.map((l) => {
+      const [k, mods] = l.split('|')
+      return [k!, (mods ?? '').split(',').filter(Boolean)]
+    }))
+    expect(modulesOf.size).toBe(rows.length)
+
+    for (const row of rows) {
+      const [key, visible] = row.split('|')
+      const mods = modulesOf.get(key!) ?? []
+      expect(mods.length, `${key} switches on no modules — the registry gives every workspace at least one`)
+        .toBeGreaterThan(0)
+      const missing = mods.filter((m) => !rendersCard(m))
+      expect(visible === 't',
+        `${key}: visible=${visible}, modules ${mods.join(', ')}, without a card: ${missing.join(', ') || 'none'}`)
+        .toBe(missing.length === 0)
+    }
   })
 
-  it('records the measurement that Q125 condition is STRICTER than its intent', () => {
-    /* Q128, logged not fixed. Q125's condition names «nps AND quiz», inherited
-       from W3's sentence «quiz and nps have no Oversikt card». Measured, the
-       QUIZ WORKSPACE does not switch on nps at all — its module set is
-       {quiz, activity}. So the condition makes the Quiz option wait on a card
-       belonging to a different workspace, and the module whose absence actually
-       made Quiz render one card is `quiz`, which now renders.
+  it('pins WHICH rows the property currently decides, and why', () => {
+    /* Not a restatement of the flag: this pins the REASON, so a later reader
+       can tell «the card still does not exist» from «somebody hid it». Both
+       halves move together or this fails. */
+    // quiz: {quiz, activity}, both rendered -> selectable.
+    expect(psql(`select module_key from public.workspace_module_links
+                  where workspace_key='quiz' order by module_key`)).toEqual(['activity', 'quiz'])
+    expect(rendersCard('quiz')).toBe(true)
+    expect(psql(`select visible from public.workspaces where key='quiz'`)[0]).toBe('t')
 
-       The same measurement surfaces the finding underneath: `nps` belongs to
-       `cx`, whose set is {nps, activity, action} and which is SELECTABLE with
-       its nps card unrendered — the very defect Q125 names, one workspace over,
-       unhidden because the sentence was about quiz.
-
-       Asserted rather than written in a report alone, so it cannot quietly stop
-       being true: if nps is ever added to the quiz workspace, or cx's card is
-       built, this test says so. */
-    const quizMods = psql(`select module_key from public.workspace_module_links
-                            where workspace_key='quiz' order by module_key`)
-    expect(quizMods).toEqual(['activity', 'quiz'])
-    expect(quizMods).not.toContain('nps')
-
-    const cxMods = psql(`select module_key from public.workspace_module_links
-                          where workspace_key='cx' order by module_key`)
-    expect(cxMods).toContain('nps')
-    const [cxVisible] = psql(`select visible from public.workspaces where key='cx'`)
-    expect(cxVisible).toBe('t')
+    // cx: carries nps, which Q126 refused on an invariant that does not expire.
+    expect(psql(`select module_key from public.workspace_module_links
+                  where workspace_key='cx' order by module_key`)).toContain('nps')
     expect(rendersCard('nps')).toBe(false)
+    expect(psql(`select visible from public.workspaces where key='cx'`)[0]).toBe('f')
   })
 
   it('keeps hiding out of the resolver: every workspace row still resolves', () => {
