@@ -175,6 +175,21 @@ async function buildKSurface() {
 
 beforeAll(async () => {
   ctx = await buildKSurface()
+
+  /* Q134 — the benchmark rows these tests need are created HERE, with a real
+     source, instead of being taken from the seed.
+     They used to rely on `seed.sql`'s six invented industry figures. Those are
+     gone: they were rendered to customers as a comparison bar with a developer
+     note under it admitting the number was made up. A test that depends on
+     seeded fixtures also silently changes meaning the day the seed changes,
+     which is what happened here — so owning the row is the better shape
+     regardless of why the seed moved. */
+  await admin().from('benchmarks').upsert([
+    { industry: 'Teknologi og IT', metric_key: 'engagement_avg', value: 3.9,
+      source: 'Testfixtur, k-surface.test.ts' },
+    { industry: 'Teknologi og IT', metric_key: 'enps', value: 12,
+      source: 'Testfixtur, k-surface.test.ts' },
+  ], { onConflict: 'industry,metric_key' })
 }, 120_000)
 
 /** Unwraps a jsonb-returning RPC, failing loudly rather than yielding `{}`. */

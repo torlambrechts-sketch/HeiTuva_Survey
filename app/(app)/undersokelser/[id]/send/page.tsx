@@ -1,6 +1,4 @@
 import { notFound } from 'next/navigation'
-import { readWorkspace } from '@/lib/workspace/current'
-import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -30,17 +28,20 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
 
   const viewer = await requireViewer()
 
-  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the
+  /* Q133 — THE WORKSPACE VOCABULARY IS NOT READ ON THIS SCREEN, and its
+     absence is the decision rather than an omission.
 
-     choice is a cookie and only a server render can read it. The fallback
+     W3 wired `send.recipients` to it, so the card read «{personsCap} som skal
+     svare». Walking the product as a customer showed what that produces: an
+     organisation on the default `hr` workspace, sending a CUSTOMER NPS round
+     built from the Kunder pack, was told to add «Ansatte». The workspace
+     describes what the ORGANISATION usually calls a respondent; this screen is
+     about ONE survey, whose audience the workspace does not know and can
+     contradict in either direction.
 
-     is Tilpasset's own set, which is also the copy this screen shipped
-
-     before W3 — an unseeded registry renders yesterday's sentence rather
-
-     than a key or an invented word. */
-
-  const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
+     So the label is the neutral word the bundle had before W3. Promising less
+     than you know is the rule this project has spent fifteen phases applying;
+     the other three vocabulary sites are organisation-level and keep it. */
   const supabase = await createClient()
 
   const { data: survey, error } = await supabase
@@ -152,7 +153,6 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         current="send"
       />
       <SendScreen
-      personsCap={vocab.personsCap}
         surveyId={survey.id}
         title={survey.title}
         anonymity={survey.anonymity}

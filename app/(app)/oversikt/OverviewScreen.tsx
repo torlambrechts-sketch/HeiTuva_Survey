@@ -105,9 +105,17 @@ export async function OverviewScreen({
 
   const hour = new Date().getHours()
   const greeting =
-    hour < 11 ? t('greetMorning', { name: firstName })
-    : hour < 18 ? t('greetDay', { name: firstName })
-    : t('greetEvening', { name: firstName })
+    /* No name is a real state and it renders as one: an invited colleague who
+       has not signed in yet has no display name, and the fallback used to be
+       the EMAIL ADDRESS — greeting someone by their address on a screen a
+       colleague can see over their shoulder, and calling it their name. */
+    firstName
+      ? (hour < 11 ? t('greetMorning', { name: firstName })
+        : hour < 18 ? t('greetDay', { name: firstName })
+        : t('greetEvening', { name: firstName }))
+      : (hour < 11 ? t('greetMorningNoName')
+        : hour < 18 ? t('greetDayNoName')
+        : t('greetEveningNoName'))
 
   const peak = Math.max(1, ...activity.days.map((d) => d.n))
   const doneLoop = loop.filter((l) => l.done).length

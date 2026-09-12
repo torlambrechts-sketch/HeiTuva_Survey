@@ -47,6 +47,7 @@
   "tests/unit/anonymity-promise.test.ts": 13,
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/bank-picker.test.ts": 19,
+  "tests/unit/benchmark-sourced.test.ts": 3,
   "tests/unit/brevo-provider.test.ts": 17,
   "tests/unit/builder-disclosure.test.ts": 5,
   "tests/unit/builder-tabs.test.ts": 10,

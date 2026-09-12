@@ -37,7 +37,20 @@ export default async function OnboardingPage() {
           <p className="mt-1 text-[13px] leading-[1.55] text-mut">{t('sub')}</p>
 
           <OnboardingForm
-            defaultName={user.email?.split('@')[0] ?? ''}
+            /* EMPTY, deliberately. This prefilled the field with
+               `user.email.split('@')[0]`, and a prefilled REQUIRED field is
+               accepted as-is by most people — so a customer who signed up as
+               anna.berg@… was named «anna.berg» in the product, permanently,
+               starting with «God morgen, anna.berg» on the first screen they
+               ever saw. Found by walking the product as a customer; no gate
+               reaches it, because every seeded fixture has a real name.
+               An email local part is not a name, and deriving one from it
+               («jsmith», «post», «firmapost») invents capitalisation and word
+               boundaries that are frequently wrong — CLAUDE.md's never-fabricate
+               rule, applied to a person. The field is `required`, so empty
+               means they type it once, which is the only way the product learns
+               something true. */
+            defaultName={''}
             labels={{
               company: t('fCompany'),
               orgnr: t('fOrgnr'),

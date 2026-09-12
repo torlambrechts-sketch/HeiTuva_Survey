@@ -148,14 +148,23 @@ insert into public.quality_rules (key, lang, pattern, rule, message) values
 -- schema change and this is a panel.
 ('policy_pronoun','no','\m(du|deg|din|ditt|dine|jeg|meg|min|mitt|mine)\M','{"kind":"policy_pronoun"}','«{question}» handler om enkeltpersoner, men svarene attribueres til virksomheten.');
 
--- Benchmarks (static reference seed — DECISIONS Q8; replace with sourced values) --
-insert into public.benchmarks (industry, metric_key, value, source) values
-('Teknologi og IT','engagement_avg',3.9,'Seed — erstatt med kildeført referanse'),
-('Teknologi og IT','enps',12,'Seed — erstatt med kildeført referanse'),
-('Teknologi og IT','response_rate',0.72,'Seed — erstatt med kildeført referanse'),
-('Alle bransjer','engagement_avg',3.7,'Seed — erstatt med kildeført referanse'),
-('Alle bransjer','enps',8,'Seed — erstatt med kildeført referanse'),
-('Alle bransjer','response_rate',0.66,'Seed — erstatt med kildeført referanse');
+-- Benchmarks: NONE ARE SEEDED, and the absence is the decision (Q134) ----------
+--
+-- This block shipped six rows of INVENTED industry figures — 3.9, 12, 0.72,
+-- 3.7, 8, 0.66 — each with the source «Seed — erstatt med kildeført referanse».
+-- Every database built from this file, production included, then rendered a
+-- comparison bar positioned by a made-up number with a developer note under it
+-- admitting the number was made up. It was the first comparison a new customer
+-- would ever see, and it was the «never fabricate data in the UI» rule broken
+-- in the most direct way the rule describes.
+--
+-- Found by walking the product as a customer would. No gate reaches it: a gate
+-- checks that the figure renders, not whether anybody stands behind it.
+--
+-- So nothing is seeded. `get_benchmarks` already returns nothing when the table
+-- is empty and the screen already has an absent state for it, so an empty table
+-- is a supported state rather than a hole. Real benchmarks arrive the day
+-- somebody has a citation, as rows — which is what data-not-code means here.
 
 -- Feature flags: global defaults ------------------------------------------------
 insert into public.feature_flags (key, org_id, enabled) values

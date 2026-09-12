@@ -322,7 +322,7 @@ describe('W0 · the standing constraint — no per-organisation value on a respo
    * passing because the feature does not exist rather than because it is
    * contained. Measured over the manager-facing screens W3 wired.
    */
-  it('the vocabulary IS wired at all four sites — so the absence above means containment', () => {
+  it('the vocabulary IS wired at its three organisation-level sites — and NOT at the fourth', () => {
     /*
      * THE FIRST DRAFT GREPPED FOR `vocabulary.` AND FOUND ONE FILE, and the
      * guard caught it: the pages bind `?.vocabulary ?? DEFAULT_VOCABULARY` and
@@ -336,16 +336,34 @@ describe('W0 · the standing constraint — no per-organisation value on a respo
      * not a guess at which screens might use a word. A fifth site would be a
      * bundle change, and adding it here is then part of adopting it.
      */
+    /* THREE, NOT FOUR (Q133). V4:3218 is the Send screen's recipients card and
+       it is DELIBERATELY not wired — asserted as an ABSENCE below rather than
+       quietly dropped from this list. The workspace says what the ORGANISATION
+       calls a respondent; the Send screen is about ONE survey, whose audience
+       the workspace does not know and can contradict. Walking the product as a
+       customer showed what that produced: an organisation on the default `hr`
+       workspace, sending a customer NPS round built from the Kunder pack, was
+       told to add «Ansatte». */
     const SITES: [component: string, prop: string][] = [
       ['app/(app)/undersokelser/[id]/bygg/PreviewPane.tsx', 'personDef'],
       ['app/(app)/oppgaver/TasksPanel.tsx', 'persons'],
       ['app/(app)/administrasjon/OptionsPanel.tsx', 'persons'],
-      ['app/(app)/undersokelser/[id]/send/SendScreen.tsx', 'personsCap'],
     ]
     for (const [file, prop] of SITES) {
       const src = readFileSync(file, 'utf8')
       expect(src.includes(`${prop}: string`), `${file} declares ${prop}`).toBe(true)
       expect(src.includes(`{ ${prop} }`), `${file} passes ${prop} to its message`).toBe(true)
+    }
+
+    /* Q133's absence, asserted so it cannot be «restored» as a tidy-up. */
+    const send = readFileSync('app/(app)/undersokelser/[id]/send/SendScreen.tsx', 'utf8')
+    expect(send.includes('personsCap'), 'the Send screen must NOT take the workspace vocabulary (Q133)')
+      .toBe(false)
+    for (const lang of ['no', 'en']) {
+      const msgs = JSON.parse(readFileSync(`messages/${lang}.json`, 'utf8')) as
+        { send: Record<string, string> }
+      expect(msgs.send.recipients, `${lang}: send.recipients must name no vocabulary (Q133)`)
+        .not.toMatch(/\{person/)
     }
 
     // And the server side that supplies them: four pages resolve the workspace.

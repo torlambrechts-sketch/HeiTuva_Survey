@@ -99,31 +99,39 @@ async function buildLocal(): Promise<void> {
  * overlays and unminified layout shifts would poison a pixel comparison.
  */
 /**
- * The build id the RUNNING SERVER is actually serving, or null.
+ * Is the server on this port serving OUR build? Asked as a POSITIVE test: fetch
+ * the asset that only our build can serve.
  *
  * WHY THIS EXISTS, and it is the third instance in one day of «the thing
  * measured was not the thing claimed». `buildTargetsLocal()` and
  * `buildIsStale()` both inspect OUR `.next` directory. That is an excellent
  * proxy for «the running server is correct» — and only while the running server
- * is the one we started. Neither can see the server at all.
+ * is the one we started. Neither can see the server at all. So a `next-server`
+ * left behind by an earlier session, on a different Next MAJOR, serving another
+ * working copy, passed both and was reused; one `verify:responsive` run against
+ * it reported 6464 findings and 277 blockers on a two-pixel CSS change.
  *
- * So a `next-server` left behind by an earlier session, on a different Next
- * MAJOR, serving an entirely different working copy, passed both guards and was
- * reused. One `verify:responsive` run against it reported 6464 findings and 277
- * blockers on a two-pixel CSS change, and the CSS was fine. The guards were not
- * wrong; they were answering a different question.
+ * AND THE FIRST VERSION OF THIS CHECK REPEATED THE MISTAKE IT WAS WRITTEN FOR,
+ * which is why it is a fetch and not a regex. It scraped the build id out of
+ * the HTML with `/_next/static/([^/]+)/` — and `/_next/static/` also holds
+ * `chunks/`, `css/` and `media/`, so it read «css» as a build id, or nothing at
+ * all on a page that references no build-scoped asset. Either way it never
+ * equalled ours, so the guard killed a LEGITIMATE server on every run. It did
+ * that twice before the walk caught it: measuring the wrong object, in the
+ * function whose entire purpose is to measure the right one.
  *
- * Next serves its assets under `/_next/static/<buildId>/`, so the id is in the
- * HTML of any page. Comparing it against `.next/BUILD_ID` asks the server what
- * it is, rather than asking our directory what it ought to be.
+ * `/_next/static/<buildId>/_buildManifest.js` is emitted by every build and
+ * served only by the build that owns it, so a 200 is proof of identity and a
+ * 404 is proof of difference. No parsing, nothing to mis-scrape.
  */
-async function serverBuildId(): Promise<string | null> {
+async function servesOurBuild(ourBuildId: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/logg-inn`, { cache: 'no-store' })
-    const html = await res.text()
-    return /\/_next\/static\/([^/"']+)\//.exec(html)?.[1] ?? null
+    const res = await fetch(`${BASE_URL}/_next/static/${ourBuildId}/_buildManifest.js`, {
+      cache: 'no-store',
+    })
+    return res.ok
   } catch {
-    return null
+    return false
   }
 }
 
@@ -149,14 +157,9 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
     // or an earlier session, on another Next major — answers this port exactly
     // like ours does, and every other check here would pass. Killed at the
     // START of the run rather than discovered after a scare.
-    const [serving, ours] = await Promise.all([
-      serverBuildId(),
-      readFile('.next/BUILD_ID', 'utf8').then((t) => t.trim()).catch(() => null),
-    ])
-    if (ours && serving !== ours) {
-      console.log(
-        `  server: ${BASE_URL} is serving build ${serving ?? 'unknown'}, not ours (${ours}) — killing it`,
-      )
+    const ours = await readFile('.next/BUILD_ID', 'utf8').then((t) => t.trim()).catch(() => null)
+    if (ours && !(await servesOurBuild(ours))) {
+      console.log(`  server: ${BASE_URL} is not serving our build (${ours}) — killing it`)
       killPort(port)
       await new Promise((r) => setTimeout(r, 1500))
     }

@@ -125,7 +125,10 @@
     "quizNextNone": "No quiz is scheduled.",
     "quizBoards": "Latest leaderboards",
     "quizBoardsEmpty": "No quiz has run yet.",
-    "quizBoardTeams": "{n} teams"
+    "quizBoardTeams": "{n} teams",
+    "greetMorningNoName": "Good morning",
+    "greetDayNoName": "Good afternoon",
+    "greetEveningNoName": "Good evening"
   },
   "wizard": {
     "overline": "Wizard",
@@ -448,7 +451,7 @@
     "chSms": "SMS",
     "chSmsDesc": "For shifts and field work · 71 % on average",
     "chComingSoon": "Coming later",
-    "recipients": "{personsCap} to be surveyed",
+    "recipients": "Recipients who will answer",
     "importButton": "Import recipients",
     "impCsv": "CSV file",
     "impCsvDesc": "Drag in or choose a file",

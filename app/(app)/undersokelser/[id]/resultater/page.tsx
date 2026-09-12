@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
+import { isSourced } from '@/lib/benchmarks/sourced'
 import {
   readAggregate,
   readAttributed,
@@ -64,11 +65,16 @@ export default async function ResultsPage({
 
   // The industry chips are the industries the benchmark table actually holds.
   // The design lists five; seeding five would be inventing four datasets.
+  /* Q134 — an UNSOURCED benchmark is not a benchmark. The seed shipped invented
+     industry figures whose own source string said «erstatt med kildeført
+     referanse», and the screen rendered both the bar and that sentence. Filtered
+     here, at the read, so the chips and the card disappear together rather than
+     leaving a chip that selects an industry with nothing behind it. */
   const { data: industries } = await supabase
     .from('benchmarks')
-    .select('industry')
+    .select('industry, source')
     .order('industry')
-  const industryList = [...new Set((industries ?? []).map((r) => r.industry))]
+  const industryList = [...new Set((industries ?? []).filter((r) => isSourced(r.source)).map((r) => r.industry))]
   const industry =
     bransje && industryList.includes(bransje) ? bransje : (industryList[0] ?? 'Alle bransjer')
 

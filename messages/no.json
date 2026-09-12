@@ -125,7 +125,10 @@
     "quizNextNone": "Ingen quiz er planlagt.",
     "quizBoards": "Siste resultattavler",
     "quizBoardsEmpty": "Ingen quiz er kjørt ennå.",
-    "quizBoardTeams": "{n} lag"
+    "quizBoardTeams": "{n} lag",
+    "greetMorningNoName": "God morgen",
+    "greetDayNoName": "God dag",
+    "greetEveningNoName": "God kveld"
   },
   "wizard": {
     "overline": "Veiviser",
@@ -448,7 +451,7 @@
     "chSms": "SMS",
     "chSmsDesc": "For skift og felt · snitt 71 %",
     "chComingSoon": "Kommer senere",
-    "recipients": "{personsCap} som skal svare",
+    "recipients": "Mottakere som skal svare",
     "importButton": "Importer mottakere",
     "impCsv": "CSV-fil",
     "impCsvDesc": "Dra inn eller velg fil",

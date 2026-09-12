@@ -46,7 +46,6 @@ const CLOSES_IN_DAYS = 7
 type Group = { id: string; name: string; count: number }
 
 export function SendScreen({
-  personsCap,
   surveyId,
   title,
   anonymity: initialAnonymity,
@@ -71,7 +70,6 @@ export function SendScreen({
      workspace resolves at SERVER render, because the choice is a cookie. One
      form, not the whole vocabulary, so the call site states which the screen
      needs rather than leaving a reader to guess. */
-  personsCap: string
   surveyId: string
   /** V2-3b · Q60. Lower-cased addresses on the organisation's Reservasjonsliste.
    *  The DATABASE is what actually refuses these (`M:0060`); this is so the
@@ -362,7 +360,11 @@ export function SendScreen({
           {channels.includes('email') || channels.includes('sms') ? (
             <section className={CARD}>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className={H2}>{t('recipients', { personsCap })}</h2>
+                {/* Q133 — NOT the workspace vocabulary. This screen is about ONE survey, and
+                    the workspace does not know its audience: a `hr` organisation sending a
+                    customer NPS round was told to add «Ansatte». The neutral word is the one
+                    the bundle had before W3, and it is true of every survey. */}
+                <h2 className={H2}>{t('recipients')}</h2>
                 <button
                   type="button"
                   disabled={!canSend}

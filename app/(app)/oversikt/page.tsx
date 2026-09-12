@@ -279,7 +279,9 @@ export default async function OverviewPage() {
     <OverviewScreen
       workspace={await readWorkspace(viewer.orgId)}
       orgName={viewer.orgName}
-      firstName={(viewer.displayName || viewer.email).split(' ')[0] ?? ''}
+      /* The email is NOT a fallback name — see the greeting in OverviewScreen.
+         An absent display name renders a greeting with no name at all. */
+      firstName={(viewer.displayName ?? '').trim().split(' ')[0] ?? ''}
       canEdit={viewer.role !== 'leser'}
       activeSurveys={activeSurveys}
       totalSurveys={(surveys ?? []).length}
