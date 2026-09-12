@@ -364,6 +364,52 @@ not whether it is true of the person reading it.**
 | **Q134** | Under «Mot bransjen», a comparison bar and the sentence **«Kilde: Seed — erstatt med kildeført referanse»**. | **DEFAULTED, and this is the worst thing the walk found: `seed.sql` no longer ships benchmark rows at all, and an unsourced benchmark is refused at the read (`lib/benchmarks/sourced.ts`).** | `seed.sql` shipped six INVENTED industry figures — 3.9, 12, 0.72, 3.7, 8, 0.66 — each with a source string saying the number should be replaced. Every database built from that file, **production included**, rendered a comparison positioned by a made-up figure with a developer's note underneath admitting it. It is «never fabricate data in the UI» broken in precisely the terms the rule uses — *indistinguishable from a real one in review, and it survives into screenshots and demos as though it were true* — and it was the FIRST comparison a new customer would ever see. **Two halves, because one is not enough:** the seed change protects every new database; the read-time refusal closes the ones that already have the rows, production included, without a migration. **The limit is stated in the module:** a string test can only refuse a source that declares itself provisional, so the durable half is the seed, not the predicate. Removing the rows from production is a `delete` on the remote project and therefore Tor's, not a phase's. |
 | **Q135** | The first screen after signing up said **«God morgen, anna.berg1789204282414»**. | **DEFAULTED: onboarding no longer prefills the name from the email, and an absent name renders a greeting with no name rather than an address.** | `/kom-i-gang` prefilled the required name field with `user.email.split('@')[0]`, and **a prefilled required field is accepted as-is by most people** — so a customer who signed up as `anna.berg@…` was named «anna.berg» in the product permanently, starting with the first screen they ever saw. An email local part is not a name; deriving one («jsmith», «post», «firmapost») invents capitalisation and word boundaries that are often wrong. The never-fabricate rule, applied to a person. The greeting's own fallback was the EMAIL ADDRESS, which also went: greeting someone by their address on a screen a colleague can see over their shoulder, and calling it their name. |
 
+## Q136 — deactivation did not stop the scheduler (2026-09-12)
+
+A live defect fixed as its own piece of work, ahead of I1, because it bites a customer who
+deactivates someone today. `M:0107`, `tests/db/deactivation.test.ts`.
+
+**What was wrong.** `setMemberStatus` has written `org_members.status = 'inactive'` since Phase 1
+and the Brukere screen has offered it that long. `public.send_round` honours it — its group loop
+selects `m.status = 'active'`. **`app.run_due_schedules` did not.** The scheduler builds round N+1
+by copying round N's invitation rows verbatim and consulted only `app.is_suppressed`. So an
+administrator deactivated someone who had left the company, the next group-targeted send correctly
+skipped them, **and the weekly survey they were already on kept arriving — every round,
+indefinitely, from a path no screen leads to.** The person who left keeps being asked about a
+workplace they no longer work at, and the administrator who did the right thing has no way to see
+that it did not take.
+
+**THIRD TIME `run_due_schedules` HAS BEEN THE PATH NOBODY COUNTED.** V2-3b found it for
+suppression and wrote «THIS IS THE PATH THE PLAN DID NOT COUNT» into the body it was fixing; Q98
+found it for blind-spot tasks; this is deactivation. The shape is identical each time and it is
+not carelessness: **every other writer of invitations reasons about a PERSON, and this one reasons
+about last round's ROWS.** A rule expressed as «who may be invited» is therefore invisible to it by
+construction, which is why the function's comment now states that requirement rather than
+describing what it does.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q136a** | The guard needs a key. `survey_invitations.member_id` is right there. | **DEFAULTED: the guard keys on `(org_id, lower(trim(email)))`, not on `member_id`.** | Two facts about the schema, not opinions. `member_id` is **`on delete set null`**, so removing a member would silently un-protect the very person who left — the guard stops working at the moment it matters most. And **only one of `send_round`'s loops sets it**; its own comment says «this is the only loop that KNOWS the member», so an invitation created from an imported named address carries NULL even when that address belongs to a member. Keying on `member_id` keys on *the loop that happened to populate it*; keying on `(org_id, email)` — UNIQUE on `org_members` — keys on **the person**. Row-10's shape: the obvious column carries its context invisibly. Written out in the migration header because `member_id` will look like the obvious simplification to whoever reads it next. |
+| **Q136b** | Should an address with no `org_members` row be stopped too? | **DEFAULTED: no. An address with no membership is untouched.** | External respondents — customers, suppliers, members of the public — have no membership and must keep receiving what they were invited to. Reading the rule as «anyone we cannot vouch for» would **silently empty every customer survey**, which is the opposite failure and the worse one. Two of the six tests are controls asserting exactly this, so the rule cannot be widened without turning one red. |
+| **Q136c** | The status check is `<> 'active'`, not `= 'inactive'`. | **DEFAULTED: `<> 'active'`, stated as the property.** | `send_round`'s own group loop is written `m.status = 'active'`, and the two must agree or a member is invitable by one path and not the other. Enumerating the non-active values would be the table's own failure: `status` gains a value the day SCIM deprovisioning lands (I1), and a guard written `= 'inactive'` would be silently wrong for it. **«Active is what may be invited» is the property; every other value is whatever the product decides next.** |
+
+**The derivation, extended.** Test 6 sweeps `pg_proc` for every function inserting into
+`survey_invitations` and asserts each either consults membership status or is allowlisted **with a
+reason CHECKED against its own source** — `mint_test_token` because it writes `is_test = true` (a
+dry run addressed to the editor themselves), `redeem_live_voucher` because its insert names no
+`email` column at all (a live participant is anonymous in the room). So a fifth insertion point
+fails in the commit that adds it, which is what I1-1's property 1 is going to need.
+
+**Tests 1–2 were proven RED first** — `expected [...] to not include 'deact-linked-…@example.test'`
+— with 3–5 passing as controls, so the suite was not vacuous before the migration made it green
+(D158).
+
+**One test-shape slip, recorded because it is the same shape as W1's.** The derivation first read
+`prosrc` with `psql -At -F`, which **split multi-line function bodies on newlines**, so it reported
+that `run_due_schedules` consulted nothing *immediately after* `M:0107` had guarded it. A reader
+keyed on how the value happens to be formatted rather than on what it is. Replaced with a
+`psqlBlob` helper that reads each body whole.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.

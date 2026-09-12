@@ -8,6 +8,7 @@
   "tests/db/comment-thread.test.ts": 11,
   "tests/db/comments.test.ts": 30,
   "tests/db/dashboard-layouts.test.ts": 22,
+  "tests/db/deactivation.test.ts": 6,
   "tests/db/fk-tenancy.test.ts": 5,
   "tests/db/guards-over-state.test.ts": 9,
   "tests/db/help.test.ts": 10,

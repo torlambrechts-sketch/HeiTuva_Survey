@@ -818,6 +818,19 @@ REGISTRY VALUE — «Kundeopplevelse» is three characters longer than «Arbeids
 semibold, and the measured overflow was 18px exactly. Row 10 one level out: the constant is a
 layout rule and the varying thing is a WORD.
 
+**M:0107 took the census to 1208 across 87 files** (`tests/db/deactivation.test.ts`, 6 — two
+proven RED first, two controls asserting an external address is untouched, one asserting the
+answer counts are unchanged, and the catalogue derivation over every insertion point into
+`survey_invitations`). **5a3 is unmoved at 71 of 101**, which is the correct reading rather than a
+gap: `M:0107` REPLACES a function that already existed, and it lives in the `app` schema, which
+neither sweep enumerates — a recorded limit of that gate, twice over.
+
+**AND THAT RUN SETTLED THE QUESTION THE PARAGRAPH BELOW LEAVES OPEN.** `CENSUS_WRITE=1` ran on a
+machine with a database for the first time since the mail tranche, and
+`tests/db/catalogue-invariants.test.ts` came back **7** — the hand-raised entry was right. The
+proof that nothing else moved is the diff, not the total: the rewrite changed exactly one line.
+A hand-corrected floor confirmed by the mechanism it stood in for.
+
 **The mail tranche and the S-block took the census to 942 across 64 files**, and `M:0096`'s
 two `proconfig` tests are the last of them — hand-raised in `tests/expected-counts.json` from
 5 to 7 for `catalogue-invariants`, because Docker was unavailable in the session that added
