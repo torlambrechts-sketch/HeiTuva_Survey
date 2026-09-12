@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { serviceClient, type Client } from './clients'
+import { adminClient, serviceClient, type Client } from './clients'
 import { ORG_PRIMARY } from './personas'
 
 /**
@@ -31,6 +31,7 @@ import { ORG_PRIMARY } from './personas'
  */
 const made: string[] = []
 let svc: Client
+let admin: Client
 let orgId: string
 
 const DB = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -112,6 +113,10 @@ async function member(email: string, status: 'active' | 'inactive') {
 
 beforeAll(async () => {
   svc = serviceClient()
+  // `send_round` resolves the actor through `app.can_edit_survey`, so the
+  // service role reaches it as `forbidden` — returned as a PAYLOAD, not an
+  // error. Test 7 needs a signed-in editor.
+  admin = await adminClient()
   const { data } = await svc.from('organizations').select('id').eq('name', ORG_PRIMARY).single()
   orgId = data!.id
 }, 60_000)
@@ -119,6 +124,9 @@ beforeAll(async () => {
 afterAll(async () => {
   for (const id of made) await svc.from('surveys').delete().eq('id', id)
   await svc.from('org_members').delete().eq('org_id', orgId).eq('name', 'Deakt Test')
+  // The art. 21 fixture (test 10) writes a real objection. Left behind it would
+  // suppress that address for every later reader of this database.
+  await svc.from('suppressions').delete().eq('org_id', orgId).like('email', 'deact-%@example.test')
 })
 
 describe('a deactivated member is not re-invited by the scheduler', () => {
@@ -257,4 +265,228 @@ describe('every insertion point into survey_invitations answers for deactivation
         `with a reason that can be checked against the row it writes.`).toBe(true)
     }
   })
+})
+
+/**
+ * ── I1-1: THE SAME RULE, ONE LEVEL OUT ──────────────────────────────────────
+ *
+ * `M:0107` closed the scheduler and this file's derivation was written to catch
+ * the next one. Measured at the start of I1-1, the derivation was ITSELF an
+ * enumeration: it swept FUNCTIONS, and the property is INSERTION POINTS.
+ * `public.send_round` holds TWO — a named-recipients loop and a group loop —
+ * and passed the sweep on the strength of the group loop's `m.status = 'active'`
+ * while the named loop consulted only suppression.
+ *
+ * And widening it to insertion points is still not the property. The thing that
+ * reaches a person is not a ROW, it is a `pgmq.send` — and `app.enqueue_reminders`
+ * sends one without inserting anything at all. It filters `is_test`,
+ * `responded_at`, `bounced_at` and `sent_at`, and neither membership status nor
+ * suppression. So a member who leaves, and — worse — a person who has exercised
+ * their GDPR art. 21 objection, still receives the reminder for an invitation
+ * already out.
+ *
+ * THE PROPERTY IS: **every producer of a mail_outbox message answers for both
+ * suppression and membership status.** There are three (`send_round`,
+ * `app.run_due_schedules`, `app.enqueue_reminders`) and the derivation below is
+ * over `pgmq.send` rather than over `insert into`.
+ */
+describe('I1-1 · a deactivated member is not reached by any other producer', () => {
+  it('7. send_round does not invite a deactivated member NAMED as a recipient', async () => {
+    const email = `deact-named-${rnd()}@example.test`
+    const id = await member(email, 'active')
+    const { data: s, error: sErr } = await svc.from('surveys')
+      .insert({ org_id: orgId, title: `deact-named-${rnd()}`, status: 'aktiv', respondent_kind: 'person' })
+      .select('id').single()
+    expect(sErr, 'fixture survey').toBeNull()
+    made.push(s!.id)
+    await svc.from('survey_questions')
+      .insert({ survey_id: s!.id, position: 1, type: 'scale', text: 'Hvordan går det?' })
+
+    await svc.from('org_members').update({ status: 'inactive' }).eq('id', id)
+
+    const { data: res, error } = await admin.rpc('send_round', {
+      p_survey: s!.id,
+      p_channels: ['email'],
+      p_recipients: [{ email, name: 'Deakt Test' }] as never,
+    })
+    expect(error, 'the send itself must succeed — the leaver is SKIPPED, not an abort').toBeNull()
+    expect((res as { error?: string } | null)?.error, 'and not be refused as a payload').toBeUndefined()
+
+    const { data: rounds, error: rErr } = await svc.from('survey_rounds')
+      .select('id').eq('survey_id', s!.id).order('round_no', { ascending: false }).limit(1)
+    expect(rErr, 'reading the round').toBeNull()
+    expect(rounds ?? [], 'the send must have produced a round, or "not invited" is vacuous')
+      .toHaveLength(1)
+    const { data: invs } = await svc.from('survey_invitations')
+      .select('email').eq('round_id', rounds![0]!.id)
+    expect((invs ?? []).map((i) => (i.email ?? '').toLowerCase())).not.toContain(email.toLowerCase())
+  }, 60_000)
+
+  it('8. and a direct insert for a deactivated member is refused by the database', async () => {
+    /* The structural backstop. Tests 1-2 and 7 guard the three loops that exist;
+       this guards the loop nobody has written yet, and the psql session, and the
+       server action a later phase adds. Prefer the fix robust against the
+       construct nobody has thought of. */
+    const email = `deact-trigger-${rnd()}@example.test`
+    const id = await member(email, 'active')
+    const { surveyId, roundId } = await fixture(email, id, false)
+    expect(surveyId).toBeTruthy()
+    await svc.from('org_members').update({ status: 'inactive' }).eq('id', id)
+
+    const { error } = await svc.from('survey_invitations').insert({
+      round_id: roundId, email, token_hash: tokenHash(), channel: 'email',
+    })
+    expect(error?.message ?? '', 'the trigger must refuse it by name').toContain('recipient_inactive')
+  }, 60_000)
+
+  it('9. enqueue_reminders does not remind a member who left after the send', async () => {
+    const email = `deact-remind-${rnd()}@example.test`
+    const id = await member(email, 'active')
+    const { roundId } = await fixture(email, id, true)
+    // An invitation that is due a reminder: sent three days ago, unanswered.
+    await svc.from('survey_invitations')
+      .update({ sent_at: new Date(Date.now() - 3 * 86_400_000).toISOString() })
+      .eq('round_id', roundId)
+    await svc.from('schedules').update({ reminder_after_days: 1 }).eq('survey_id',
+      (await svc.from('survey_rounds').select('survey_id').eq('id', roundId).single()).data!.survey_id)
+
+    await svc.from('org_members').update({ status: 'inactive' }).eq('id', id)
+    const r = spawnSync('psql', [DB, '-tAc', 'select app.enqueue_reminders()'], { encoding: 'utf8' })
+    expect(r.status, r.stderr).toBe(0)
+
+    const { data: after } = await svc.from('survey_invitations')
+      .select('reminded_at').eq('round_id', roundId).single()
+    expect(after!.reminded_at ?? [], 'a person who has left gets no reminder').toHaveLength(0)
+  }, 60_000)
+
+  it('10. and does not remind an address that has OBJECTED — GDPR art. 21', async () => {
+    /* Not a deactivation case at all, and the sharpest thing this sweep found.
+       V2-3b put the objection guard in send_round's two loops and in a trigger
+       on survey_invitations. `enqueue_reminders` inserts nothing, so the trigger
+       never sees it, and it queues mail directly — so an objection lodged after
+       the invitation went out was ignored on every reminder. */
+    const email = `deact-objected-${rnd()}@example.test`
+    const { roundId, surveyId } = await fixture(email, null, false)
+    await svc.from('survey_invitations')
+      .update({ sent_at: new Date(Date.now() - 3 * 86_400_000).toISOString() })
+      .eq('round_id', roundId)
+    await svc.from('schedules').update({ reminder_after_days: 1 }).eq('survey_id', surveyId)
+
+    const { error: sErr } = await svc.from('suppressions')
+      .insert({ org_id: orgId, email: email.toLowerCase(), reason: 'objection' })
+    expect(sErr, 'the objection must be recorded, or this passes vacuously').toBeNull()
+
+    const r = spawnSync('psql', [DB, '-tAc', 'select app.enqueue_reminders()'], { encoding: 'utf8' })
+    expect(r.status, r.stderr).toBe(0)
+
+    const { data: after } = await svc.from('survey_invitations')
+      .select('reminded_at').eq('round_id', roundId).single()
+    expect(after!.reminded_at ?? [], 'an objection stops the reminder too').toHaveLength(0)
+  }, 60_000)
+
+  it('11. and STILL reminds an ordinary unanswered invitation — the controls', async () => {
+    const email = `deact-remind-ok-${rnd()}@example.test`
+    const { roundId, surveyId } = await fixture(email, null, false)
+    await svc.from('survey_invitations')
+      .update({ sent_at: new Date(Date.now() - 3 * 86_400_000).toISOString() })
+      .eq('round_id', roundId)
+    await svc.from('schedules').update({ reminder_after_days: 1 }).eq('survey_id', surveyId)
+
+    const r = spawnSync('psql', [DB, '-tAc', 'select app.enqueue_reminders()'], { encoding: 'utf8' })
+    expect(r.status, r.stderr).toBe(0)
+
+    const { data: after } = await svc.from('survey_invitations')
+      .select('reminded_at').eq('round_id', roundId).single()
+    expect(after!.reminded_at ?? [], 'if this is empty, tests 9 and 10 pass for the wrong reason')
+      .toHaveLength(1)
+  }, 60_000)
+})
+
+/**
+ * THE DERIVATION, RESTATED OVER WHAT ACTUALLY REACHES A PERSON.
+ *
+ * The version `M:0107` shipped swept `insert into public.survey_invitations`.
+ * That was an enumeration twice over: it counted functions rather than insertion
+ * points, and it counted ROWS rather than MESSAGES. `app.enqueue_reminders`
+ * produces neither a row nor an insertion point and reaches the person anyway.
+ *
+ * A `pgmq.send` on `mail_outbox` is the thing that reaches somebody, so that is
+ * what this sweeps. The fourth producer fails here in the commit that adds it.
+ */
+describe('every producer of mail answers for both suppression and membership', () => {
+  it('each one consults org_members.status AND app.is_suppressed', () => {
+    const names = psqlLines(`
+      select n.nspname||'.'||p.proname
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where p.prokind = 'f' and n.nspname in ('public','app')
+         and p.prosrc like '%pgmq.send%'
+       order by 1`)
+
+    // Non-vacuity (D158): three exist today. If the sweep finds fewer, it is
+    // broken and every assertion below passes for the wrong reason.
+    expect(names, 'the known producers must be among them').toEqual(
+      expect.arrayContaining(['app.enqueue_reminders', 'app.run_due_schedules', 'public.send_round']))
+
+    for (const name of names) {
+      const [schema, fn] = name.split('.')
+      const src = psqlBlob(`
+        select p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = '${schema}' and p.proname = '${fn}' limit 1`)
+      expect(/org_members/.test(src) && /status/.test(src),
+        `${name} queues mail and never consults org_members.status — a person who ` +
+        `has left the organisation would be reached by it.`).toBe(true)
+      expect(/is_suppressed/.test(src),
+        `${name} queues mail and never consults app.is_suppressed — a person who has ` +
+        `objected under GDPR art. 21 would be reached by it.`).toBe(true)
+    }
+  })
+})
+
+/**
+ * THE TWO PROPERTIES M:0108 CLAIMS ABOUT ITSELF, ASSERTED RATHER THAN WRITTEN.
+ *
+ * Both are the kind of claim a migration header makes and nothing checks: «a new
+ * status value raises instead of defaulting» and «token rotation and `sent_at`
+ * are let through». Prose in a comment is true on the day it is typed.
+ */
+describe('M:0108 · the predicate has a home, and the guards permit maintenance', () => {
+  it('12. an unrecognised member status RAISES rather than picking a side', () => {
+    const r = spawnSync('psql', [DB, '-tAc',
+      "select app.member_blocks_invitation('suspended')"], { encoding: 'utf8' })
+    expect(r.status, 'an unknown status must not return a boolean').not.toBe(0)
+    expect(r.stderr).toContain('unknown member status')
+
+    // And the three it knows, so test 12 is not passing because everything raises.
+    const known = spawnSync('psql', [DB, '-tAc',
+      "select app.member_blocks_invitation('active') || ',' ||" +
+      " app.member_blocks_invitation('invited') || ',' ||" +
+      " app.member_blocks_invitation('inactive')"], { encoding: 'utf8' })
+    expect(known.status, known.stderr).toBe(0)
+    expect(known.stdout.trim()).toBe('false,false,true')
+  })
+
+  it('13. an objection lodged AFTER the send no longer blocks the mail worker', async () => {
+    /* The inversion M:0108 undid, and the reason it is a test rather than a
+       note. `guard_invitation_not_suppressed` was `before insert or update`, so
+       writing `sent_at` — which the worker does AFTER Brevo has accepted the
+       message — threw for a newly-objecting address. The worker could not mark
+       the message spent, the queue redelivered it, and OBJECTING CAUSED REPEATED
+       MAIL TO THE PERSON WHO OBJECTED. Scoped to `update of email` now:
+       re-pointing an invitation is a new invitation; recording that one was sent
+       is not. */
+    const email = `deact-late-objection-${rnd()}@example.test`
+    const { roundId } = await fixture(email, null, false)
+    await svc.from('suppressions')
+      .insert({ org_id: orgId, email: email.toLowerCase(), reason: 'objection' })
+
+    const { error } = await svc.from('survey_invitations')
+      .update({ sent_at: new Date().toISOString() }).eq('round_id', roundId)
+    expect(error, 'the mail worker must still be able to record what it sent').toBeNull()
+
+    // And the rule it still enforces: you may not RE-POINT an invitation at an
+    // address that has objected. If this passed, the rescope went too far.
+    const { error: repoint } = await svc.from('survey_invitations')
+      .update({ email: email.toLowerCase() }).eq('round_id', roundId)
+    expect(repoint?.message ?? '', 'and re-pointing is still refused').toContain('recipient_suppressed')
+  }, 60_000)
 })

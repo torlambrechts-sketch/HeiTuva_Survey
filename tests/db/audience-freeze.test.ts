@@ -170,24 +170,69 @@ describe('(Q64) BLOCKER — a membership change after send moves no denominator'
     // (`tests/db/test-mode.test.ts` asserts that over the catalogue). The reason
     // is here rather than a name being silently added, per D110's addition:
     // **state the scope of the exemption, not only that there is one.**
-    const BUILDERS: Record<string, string> = {
-      send_round: 'builds the audience — the one moment live membership is correct',
-      run_due_schedules: 'builds round N+1 by copying round N, and may read members',
-      mint_test_token:
-        'V2-7: reads org_members ONLY for the previewing editor’s own address, and ' +
-        'computes no denominator — the row it writes is is_test and is excluded from ' +
-        'all of them',
+    //
+    // I1-1 (M:0108) added a FOURTH and this test caught it — the derivation
+    // working a second time. `app.enqueue_reminders` now reads live membership,
+    // and it is not a builder: it decides whether to send a SECOND piece of mail
+    // to someone already invited. It computes no denominator at all.
+    //
+    // AND THE REASONS ARE NOW CHECKED RATHER THAN TRUSTED, which is the repair
+    // this entry earned. A reason written as prose is true on the day it is
+    // typed; `M:0107`'s sweep showed what it costs when the function moves under
+    // it. Each predicate below is verified against the body it describes, so an
+    // exemption that stops being true fails here instead of standing.
+    const BUILDERS: Record<string, { why: string; check: (src: string) => boolean }> = {
+      send_round: {
+        why: 'builds the audience — the one moment live membership is correct',
+        check: (src) => /insert into public\.survey_rounds/.test(src),
+      },
+      run_due_schedules: {
+        why: 'builds round N+1 by copying round N, and may read members',
+        check: (src) => /insert into public\.survey_rounds/.test(src),
+      },
+      mint_test_token: {
+        why: 'V2-7: reads org_members ONLY for the previewing editor’s own address, and ' +
+             'computes no denominator — the row it writes is is_test and is excluded from ' +
+             'all of them',
+        check: (src) => /insert into public\.survey_invitations[^;]*is_test/s.test(src),
+      },
+      enqueue_reminders: {
+        why: 'M:0108: reads live membership to decide whether a SECOND piece of mail may ' +
+             'be sent to someone already invited — a prohibition, not a denominator. It ' +
+             'creates no round and reads neither responses nor answers, so there is no ' +
+             'number here for a membership change to move',
+        check: (src) =>
+          !/insert into public\.survey_rounds/.test(src) &&
+          !/\bpublic\.responses\b/.test(src) &&
+          !/\bpublic\.answers\b/.test(src),
+      },
     }
-    const offenders = psql(
+    const readsBoth = psql(
       `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname in ('public','app')
           and p.prosrc ~ 'survey_invitations'
           and p.prosrc ~ 'org_members'
         order by 1`,
-    )
-      .map((r) => r[0]!)
-      .filter((fn) => !(fn in BUILDERS))
+    ).map((r) => r[0]!)
 
+    // Non-vacuity (D158): the four known readers must be among them, or the
+    // sweep is broken and every assertion below passes for the wrong reason.
+    expect(readsBoth).toEqual(expect.arrayContaining(Object.keys(BUILDERS)))
+
+    for (const fn of readsBoth) {
+      const allow = BUILDERS[fn]
+      if (!allow) continue
+      const src = psql(
+        `select p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname in ('public','app') and p.proname = '${fn}' limit 1`,
+      )
+        .map((r) => r[0]!)
+        .join('\n')
+      expect(allow.check(src), `${fn} is exempt because it ${allow.why} — and it no longer does`)
+        .toBe(true)
+    }
+
+    const offenders = readsBoth.filter((fn) => !(fn in BUILDERS))
     expect(
       offenders,
       `these read a round's invitations AND live membership: ${offenders.join(', ') || '(none)'}`,

@@ -410,6 +410,54 @@ that `run_due_schedules` consulted nothing *immediately after* `M:0107` had guar
 keyed on how the value happens to be formatted rather than on what it is. Replaced with a
 `psqlBlob` helper that reads each body whole.
 
+## Q137 — every producer of mail answers, and two guards were inverted (2026-09-12)
+
+I1-1 opened by checking whether the instruction's property 1 — «a deprovisioned member cannot
+receive a new invitation» — already stood on the strength of `M:0107`. It did not, in three ways,
+and the third had turned a compliance guard into its own opposite. `M:0108`.
+
+**1. `M:0107`'S OWN DERIVATION WAS AN ENUMERATION, TWICE OVER.** It swept
+`insert into public.survey_invitations` so that «a fifth insertion point fails in the commit that
+adds it». Measured: four functions, **five** insertion points —
+`public.send_round` holds two. The sweep read each FUNCTION BODY, so `send_round` passed on the
+strength of its group loop's `m.status = 'active'` while its **named-recipients loop consulted only
+suppression**. An administrator pasting a leaver's address, or importing a six-month-old CSV from
+HR, sent to them.
+
+And insertion points are still not the property. **What reaches a person is not a ROW, it is a
+`pgmq.send`** — and `app.enqueue_reminders` produces one without inserting anything at all. It
+filtered `is_test`, `responded_at`, `bounced_at` and `sent_at`, and neither membership status nor
+suppression. So a member who had left kept receiving reminders — **and so did a person who had
+exercised their GDPR art. 21 objection.** The derivation is now over `pgmq.send` producers; there
+are three, and a fourth fails in the commit that adds it.
+
+**2. AND THE OBJECTION GUARD HAD INVERTED ITSELF — the sharpest thing in this phase.**
+`guard_invitation_not_suppressed` was written `BEFORE INSERT OR UPDATE`. The rule it means is «no
+invitation may be CREATED for, or RE-POINTED at, an objecting address». Written over every UPDATE,
+it also refused the updates the system makes on its own behalf:
+
+- `app.enqueue_reminders` rotates the token, so **ONE objecting address aborted the entire reminder
+  sweep, for every organisation**, on a pg_cron job whose failure is silent. Measured: tests 10 and
+  11 both failed, and test 11's error named test 10's address.
+- the mail worker writes `sent_at` **after** Brevo has accepted the message
+  (`supabase/functions/mail-worker/index.ts:209`), so an objection lodged between queueing and
+  sending made that write throw, the worker could not mark the message spent, and the queue
+  redelivered it. **Objecting caused REPEATED MAIL TO THE PERSON WHO OBJECTED.** Proven in a
+  transaction and rolled back, not reasoned about:
+  `ERROR: recipient_suppressed: probe-supp@example.test` on a plain `update … set sent_at = now()`.
+
+**Seventh instance of «immutability rules must permit referential maintenance», and the first where
+the maintenance is done by a WORKER rather than by the database.** The family was triggers, then
+foreign keys, then CHECK constraints; this is a trigger whose *scope* was the enumeration. The fix
+is the column and not the predicate: `update of email` says what was meant.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q137a** | `M:0107` wrote `om.status <> 'active'` and Q136c defended it. With three values, that also refuses `invited`. Correct the spelling, or the home? | **DEFAULTED: the home. `app.member_blocks_invitation(status)` is the single place, it is used by all four call sites, and an unrecognised status RAISES rather than returning a boolean.** | Q136c's *reasoning* was right — the rule must survive a new status value — and its *spelling* was chosen against an enumeration of two values when there are three. `invited` is a member who has not signed in YET, not someone who has left. But `= 'inactive'` is no better: it is an enumeration in the other direction, and a fifth value would default to «may be mailed». **Neither spelling is the property; a CASE that raises on the unknown is**, because it cannot default its way into either answer. Row 9's lesson applied to a predicate instead of a grant: the form of the rule that does not depend on remembering. Asserted, not claimed — test 12 calls it with `'suspended'` and requires a raise, then calls it with all three known values so it is not passing because everything raises. |
+| **Q137b** | The named loop: skip the leaver, or let the new trigger refuse the insert? | **DEFAULTED: SKIP in the loop, REFUSE in the trigger — both, which is V2-3b's own shape.** | A refusal aborts the whole `send_round` transaction, so **one leaver in a pasted list of forty would cost the other thirty-nine their round.** The skip is also what stops the `pgmq.send`, which the trigger cannot do: a row silently dropped would still put the mail on the queue, and the worker never reads `survey_invitations` before sending — V2-3b wrote that reasoning into its own migration and it is unchanged here. The trigger is the structural backstop for the producer nobody has written yet, the psql session, and the server action a later phase adds. **No `pg_proc` sweep can see an insert made from application code; a trigger can.** |
+| **Q137c** | The trigger refuses `inactive` while `send_round`'s group loop includes only `active`. Is that an inconsistency to fix? | **DEFAULTED: no — they answer different questions, and the asymmetry is written into the migration header so it is not «tidied up» later.** | The group loop is an **inclusion** rule: who belongs in a bulk audience, answered conservatively as `active` only. The trigger is a **prohibition**: who may never be reached, by any path. A member mid-onboarding may be surveyed if someone names them explicitly; a member the organisation has deactivated may not. Collapsing the two would either start mailing pending members in bulk or stop an editor naming one, and neither was asked for. |
+| **Q137d** | `verify:policy` and Q64's audience-freeze test both fired on this change. Suppress, or answer? | **DEFAULTED: answered, and Q64's allowlist REPAIRED from trusted prose to checked predicates.** | Both gates were right and neither found a defect in the change — which is the useful case, because it is where a gate is most likely to be worked around. `M:0096`'s sweep wanted `search_path` on the new predicate: pinned, `= ''`, with the reason that an exemption which has to be argued is worth less than a line of DDL. Q64's sweep flags any function reading both `survey_invitations` and `org_members`; `enqueue_reminders` now does, and it is **not** a builder — it decides whether a SECOND piece of mail may go to someone already invited, a prohibition rather than a denominator. Added with a reason, and the other three converted from prose to predicates in the same edit: `send_round` and `run_due_schedules` must still create a round, `mint_test_token` must still write `is_test`, and `enqueue_reminders` must still create no round and read neither `responses` nor `answers`. **A reason written as prose is true on the day it is typed; `M:0107` showed what it costs when the function moves under it.** |
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.

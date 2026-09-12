@@ -307,9 +307,27 @@ refused, at commit; deleting the organisation is allowed, because by commit time
 points at the group. **The rule is never "this row is sacred"; it is "no record may be
 left pointing at something that stopped existing under it".**
 
-This has now been rediscovered SIX separate times: D50, D51, D57, the duty-archive case,
+This has now been rediscovered SEVEN separate times: D50, D51, D57, the duty-archive case,
 V2-3b's FK pair — which then bit a second time in the same migration, when an audit trigger
-on a lifted objection tried to write a row for an organisation already erased — and V2-9's.
+on a lifted objection tried to write a row for an organisation already erased — V2-9's, and
+Q137's.
+
+**Q137'S IS THE FIRST WHERE THE MAINTENANCE IS DONE BY A WORKER RATHER THAN BY THE DATABASE, AND
+THE FIRST WHERE THE GUARD INVERTED INTO ITS OWN OPPOSITE.** The construct is a TRIGGER SCOPE:
+`guard_invitation_not_suppressed` was declared `before insert or update`, where the rule it means is
+«no invitation may be CREATED for, or RE-POINTED at, an objecting address». Written over every
+UPDATE it also refused the writes the system makes on its own behalf — `app.enqueue_reminders`
+rotating a token, so ONE objecting address aborted the whole reminder sweep for every organisation
+on a silent pg_cron job; and the mail worker writing `sent_at` AFTER Brevo has accepted the message,
+so the worker could not mark it spent and the queue redelivered it. **A person exercising their
+GDPR art. 21 objection was therefore sent the same mail repeatedly, BY the guard written to protect
+them.** `update of email` is the fix, and it is the column rather than the predicate, as every
+earlier instance also turned out to be.
+
+So the list of constructs is now: triggers, foreign keys, CHECK constraints, and **the scope
+clause of a trigger**. The question to ask is unchanged and is the only part worth memorising:
+*which of the columns this rule names can be changed by something other than the code I am looking
+at?* A cascade is such a something. **So is a background worker recording what it did.**
 
 **V2-9's is the one that widens the family, so it is worth a sentence of its own.** It was a
 **CHECK constraint** — a third construct after triggers and foreign keys — and the phase
@@ -361,7 +379,7 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Twelve instances now** — the command above returns 13 and therefore twelve. The ninth is a REPEAT of the third — which is itself a finding — the
+**Fourteen instances now** — the command above returns 15 and therefore fourteen. The ninth is a REPEAT of the third — which is itself a finding — the
 tenth is the subtlest of all of them, and the eleventh was caught by a SWEEP OVER PROSE rather than
 by a gate or a measurement, which is a third way of finding them. Ten different constructs, one
 shape:
@@ -379,6 +397,8 @@ shape:
 | **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | **«A GRANT IS A FACT ABOUT THE CATALOGUE AND MUST BE READ BACK FROM THE CATALOGUE.»** `from public, anon` is the fix; `has_function_privilege('anon', …)` is the rule. |
 | **`gap-y-[13px]` carried to a smaller chip** (C4, `verify:responsive`) | 13px, measured against the `py-2` (40px) rail it was copied FROM | **«A CONSTANT COPIED FROM A WORKING CONTEXT CARRIES ITS CONTEXT'S ASSUMPTIONS INVISIBLY.»** The number belongs to the CONTROL, not to the pattern. |
 | **«Fire alternativer»** as a module label (V4-0 sweep, Q121) | four, counted off the bundle's fixture quiz | **«A DESCRIPTION OF A CLASS MAY NOT CARRY A COUNT OF THE INSTANCE IN FRONT OF YOU.»** `quizzable` is `choice \| yesno \| dropdown`; `yesno` has two. |
+| **`M:0107`'s own invitation derivation** (Q137, I1-1) | the FUNCTIONS that insert invitations — and then, one level out, the ROWS that reach a person | **«WHAT REACHES A PERSON IS NOT A ROW, IT IS A `pgmq.send`.»** Four functions hold five insertion points (`send_round` has two), so a body-wide read let the group loop's guard stand in for the named loop's. And `app.enqueue_reminders` inserts nothing at all and reaches them anyway. |
+| **`before insert or update` as a guard scope** (Q137, `M:0108`) | every UPDATE — which is the operation the author was thinking about, not the rule | **«A GUARD'S SCOPE IS THE COLUMN THE RULE IS ABOUT.»** `update of email` re-checks a re-pointed invitation; every-UPDATE also refused token rotation and the worker's `sent_at`, so **objecting caused repeated mail to the person who objected.** |
 | **`verify:i18n`'s Norwegian detector** (Q129, 2026-09-12) | the strings it already knows — the `no` message set — used as the definition of «Norwegian» | **«A DETECTOR THAT IDENTIFIES A DEFECT BY MATCHING KNOWN STRINGS CAN ONLY REPORT THE DEFECTS THAT COLLIDE WITH ONE.»** Not a gate looking in the wrong place: a gate that can only see what collides with something it already holds. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
@@ -817,6 +837,8 @@ carried the bundle's `flex-none` and `whitespace-nowrap` and its width was there
 REGISTRY VALUE — «Kundeopplevelse» is three characters longer than «Arbeidsmiljø», ~18px at 11.5px
 semibold, and the measured overflow was 18px exactly. Row 10 one level out: the constant is a
 layout rule and the varying thing is a WORD.
+
+**M:0108 took the census to 1216 across 87 files** — `tests/db/deactivation.test.ts` 6 -> 14, and no other entry moved (the proof is the one-line diff, not the total). 5a3 holds at **71 of 101**: both new functions live in the `app` schema, which neither sweep enumerates. Green from a bare `supabase db reset` — with `npm run seed:i18n` and `npm run seed:help` after it, without which four `ui_messages`/`help_articles` tests fail for want of content rather than for a defect.
 
 **M:0107 took the census to 1208 across 87 files** (`tests/db/deactivation.test.ts`, 6 — two
 proven RED first, two controls asserting an external address is untouched, one asserting the
