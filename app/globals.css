@@ -191,3 +191,27 @@
     box-shadow: inset 0 0 0 1px var(--line);
   }
 }
+
+/* V5-1 — the shell card's inner corners (v5:160-161, v5:228).
+   v5 moved the frame width, border, 16px radius and shadow onto a WRAPPER and
+   left the header with a background and `border-radius:{{ headRadius }}`: 15px,
+   or `15px 15px 0 0` where a subnav attaches beneath it. The 15px is not a
+   drift from the theme's 16px — an inner fill inside a 16px border needs one
+   pixel less, or the border shows through at the corner.
+
+   Keyed on `:has(> nav)`, so the radius follows whether the subnav ACTUALLY
+   rendered. The alternative — repeating the which-screens rule here — is two
+   copies of one fact, and the copies disagree the first time one moves.
+   `> nav` is the direct child only: AppNav's own <nav> lives inside <header>
+   and cannot match. */
+.shell-card > header {
+  border-radius: 15px;
+}
+.shell-card:has(> nav) > header {
+  border-radius: 15px 15px 0 0;
+}
+.shell-card > nav:last-child {
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+

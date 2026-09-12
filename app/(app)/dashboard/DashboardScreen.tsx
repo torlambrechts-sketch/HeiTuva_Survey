@@ -3,7 +3,6 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { numberWord } from '@/lib/respondent/anonymity-promise'
 import { DASH, fmt, heatTone, no, panelTone, pctOf5 } from '@/lib/results/present'
 import { isGated, type DashboardSummary, type Heatmap, type Theme } from '@/lib/results/types'
-import { InsightTabs } from '@/components/InsightTabs'
 import { PinButton } from './PinButton'
 import { OpenPinnedButton } from './OpenPinnedButton'
 import { FreezeButton } from './FreezeButton'
@@ -124,7 +123,26 @@ export async function DashboardScreen({
       key: 'rate',
       label: t('statRate'),
       value: pct === null ? DASH : `${pct} %`,
-      note: unavailable ? DASH : pct !== null && pct >= 70 ? t('statRateAbove') : t('statRateBelow'),
+      /* V5-1 — «over målet på 70 %» IS GONE, AND IT WAS LIVE, NOT DRAWN.
+         `dash.statRateAbove`/`statRateBelow` told every organisation it was
+         above or below a 70 % response-rate target, with the 70 a literal here
+         and a second copy of it inside the sentence. **There is no goal column
+         anywhere in the schema**, so the target belonged to nobody: a manager
+         read it as their own.
+
+         Found from the v5 bundle's `c.hasGoal`, which draws a goal marker at
+         `left:70%` titled «Mål: 70 %» — and checking whether that was buildable
+         turned up the sentence already shipped. The bundle's marker is not
+         built either.
+
+         The note now says what the number IS — the denominator it is a
+         percentage OF — which is the same treatment the card above it already
+         gives («31 av 42 inviterte»). Setting response-rate targets is a
+         feature, and it is one nobody has asked for. */
+      note:
+        unavailable || summary === null
+          ? DASH
+          : t('statRateNote', { invited: summary.invited, n: summary.n }),
     },
     {
       key: 'avg',
@@ -313,15 +331,17 @@ export async function DashboardScreen({
         <div>
           {/* The v1 bundle merges Dashboard and Rapporter under one heading
               with a rail between them (HeiTuva.dc.html:918-928). */}
+          {/* V5-1 — THE RAIL MOVED INTO THE SHELL. v5 draws the same two items
+              in the subnav under the header (v5:227) AND keeps this in-page copy
+              (v5:1321) — as it does on admin, and on tasks. A mock accumulates;
+              a product should not carry two controls doing one job.
+              The subnav replaces this one because its list is COMPLETE — exactly
+              the two screens that exist. On admin the same subnav lists six of
+              nine tabs, so there it cannot replace anything and AdminTabs stays.
+              That is the test for whether a shell rail may absorb an in-page
+              one, and it is measurable rather than a preference. */}
           <div className="flex flex-wrap items-center gap-[14px]">
             <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
-            <InsightTabs
-              label={tNav('insightTabs')}
-              tabs={[
-                { href: '/dashboard', label: tNav('dashboard') },
-                { href: '/rapporter', label: tNav('reports') },
-              ]}
-            />
           </div>
           {/* "Levende tall · {utvalg} · {terskel}". The threshold is the one
               the RPCs actually applied to the panels on this screen — the k

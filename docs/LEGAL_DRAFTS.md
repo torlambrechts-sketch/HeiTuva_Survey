@@ -8,7 +8,7 @@ subprocessor list get a Norwegian lawyer's read before any customer sees them."
 
 | Document | Where | Status |
 |---|---|---|
-| Personvernerklæring | `/personvern` — `legal.privacy*` in `messages/*.json` | DRAFT — banner shown on the page |
+| Personvernerklæring | `/personvern` — `legal.privacy*` in `messages/*.json` | DRAFT — banner shown on the page. **`privacy8P` names the DEMO ORGANISATION as the contact and `privacy7P` names the wrong email provider — both in shipped public text, see the section at the end (V5-1)** |
 | Databehandleravtale | `/databehandleravtale` — `legal.dpa*` | DRAFT — banner shown on the page. **`dpa4P` has been WRONG TWICE in committed text (Q55, then Q91) — see the table below; start the review here** |
 | Oversikt over underleverandører | inside both texts (privacy §7, DPA §5) | DRAFT — part of the above |
 | Risikovurdering (DPIA) | not written; Administrasjon → Personvern lists it as "Ikke lastet opp ennå" | NOT STARTED |
@@ -92,3 +92,68 @@ becomes a contract.** The sign-off commit must check that row.
 The `legal.draftNotice` banner renders on both pages until the key is emptied
 by the reviewed text's commit — that commit is the sign-off record. Do not
 remove the banner without it.
+
+---
+
+## TWO NEW FINDINGS IN SHIPPED, PUBLIC TEXT — found by V5-1's footer sweep (2026-09-12)
+
+Neither is a drafting question. Both are **factual errors in committed copy on a page the
+middleware makes public** (`path === '/personvern'`), and both were found while checking whether
+the v5 footer's «Data lagres i EØS» claim was true — which is how a footer sweep reaches a privacy
+notice: the footer asserts a residency fact, and § 7 is where that fact is actually listed.
+
+### 1 · `legal.privacy8P` («Kontakt») NAMES THE DEMO ORGANISATION
+
+```
+privacy8P: "Nordisk Studio AS, Storgata 12, 0155 Oslo. personvern@heituva.no."
+```
+
+**«Nordisk Studio» is `ORG_PRIMARY` in `tests/db/personas.ts` — the demo fixture's company.** The
+contact section of the privacy notice gives a data subject the demo org's name, a street address
+that belongs to nobody, and an invented mailbox on a domain this project has recorded twice as
+«not HeiTuva's domain and never was».
+
+This is the sharpest form of the never-fabricate rule, because **the whole purpose of a contact
+section is to be actionable**: a data subject who cannot reach the controller has no route to any
+of the rights the section above it enumerates. A fabricated value here does not merely mislead —
+it removes the remedy.
+
+**IT CANNOT BE FIXED FROM HERE, and that is the point of recording it rather than editing it.** The
+replacement needs HeiTuva's registered entity name, its registered address and a mailbox confirmed
+to RECEIVE. Inventing any of the three would be the same error with better spelling. What is needed,
+exactly:
+
+- the legal entity name as registered in Brønnøysund, and its organisation number;
+- the registered address;
+- a mailbox that receives — the existing `personvern@heituva.no` is already held under the standing
+  rule that a `.com` which bounces is worse than a `.no` that is at least someone's inbox.
+
+### 2 · `legal.privacy7P` («Underleverandører») NAMES THE WRONG EMAIL PROVIDER
+
+```
+privacy7P: "… Amazon Web Services (e-post — Stockholm), LINK Mobility (SMS — Norge) …"
+```
+
+**Email goes to BREVO, not AWS.** Q6a superseded Q6's Amazon SES; SES survives only as a dormant
+adapter behind `MAIL_PROVIDER=ses`, and the production consumer has been the Brevo path since
+2026-09-10, proven by two delivered invitations. **Brevo is French, not Stockholm.**
+
+A sub-processor list is a disclosure a data subject is entitled to rely on, and this one names a
+company that processes none of their mail and a country it does not pass through. France is EØS, so
+the **residency promise survives** — which is worth stating plainly, because it means the footer's
+«Data lagres i EØS» is true while § 7's account of *how* is wrong.
+
+Two further rows want the reviewer's eye for the same reason:
+
+- **LINK Mobility (SMS — Norge)**: SMS is behind a feature flag and no message has ever been sent.
+  A sub-processor that processes nothing is not a disclosure, it is a plan.
+- **Cloudflare (bot-beskyttelse på forsiden)**: this one IS live — `challenges.cloudflare.com` is in
+  the deployed CSP — so it stays.
+
+**Why this reached shipped text and no gate saw it:** `verify:copy` reasons about thresholds, and
+`verify:i18n` compares rendered text against the message set — so a message whose *content* is
+false about the world is invisible to both. The gates protect schema and data. **Nothing mechanical
+protects prose**, which is the sentence CLAUDE.md already carries, arriving here for the fourth
+time: ten false sentences in the help articles, eleven in Bruksområder, three in the v5 integration
+rows, and now two in the privacy notice.
+

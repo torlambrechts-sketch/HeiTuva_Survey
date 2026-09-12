@@ -119,7 +119,13 @@ describe('W1 · nowrap is an xl rule, because v4 overflows at 320 without us', (
   const src = readFileSync('components/AppHeader.tsx', 'utf8')
 
   it('the header wraps by default and only refuses to wrap at xl', () => {
-    const header = src.slice(src.indexOf('<header'), src.indexOf('>', src.indexOf('<header')))
+    /* Anchored on `<header className=` and not on `<header`, because V5-1
+       proved the looser anchor matches PROSE: a comment in that file mentioning
+       the header element by name was found first, and the slice came back seven
+       characters long. A source-grepping test has to name the thing it means. */
+    const at = src.indexOf('<header className=')
+    expect(at, 'the header element must be findable').toBeGreaterThan(-1)
+    const header = src.slice(at, src.indexOf('>', at))
     expect(header.length).toBeGreaterThan(50)
     expect(header).toMatch(/\bflex-wrap\b/)
     expect(header).toMatch(/\bxl:flex-nowrap\b/)

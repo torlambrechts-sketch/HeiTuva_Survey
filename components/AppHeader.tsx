@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Logo, Wordmark } from '@/components/Logo'
 import { AppNav } from '@/components/AppNav'
+import { AppSubnav } from '@/components/AppSubnav'
 import { LangPicker } from '@/components/LangPicker'
 import { UserMenu } from '@/components/UserMenu'
 import { MobileNav } from '@/components/MobileNav'
@@ -56,7 +57,25 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
        ≥1280px design, which is the only width v4 governs. Below it CLAUDE.md
        hands the question to docs/RESPONSIVE.md, and the answer there is the
        one this header already had: wrap. */
-    <header className="frame mt-4 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-[16px] border border-line bg-sf py-3 pl-[18px] pr-[14px] shadow-[0_6px_20px_rgba(25,21,16,.05)] xl:flex-nowrap">
+    /* V5-1 — THE SHELL IS NOW A CARD CONTAINING THE HEADER, not a header that
+       IS the card. v5:160 moves `width`, `max-width`, `margin`, `border`,
+       `border-radius:16px` and the shadow onto a WRAPPER, and leaves the
+       `<header>` with a background and `border-radius:{{ headRadius }}` only —
+       15px, or `15px 15px 0 0` where a subnav attaches.
+
+       The 15px is not a drift from the theme's 16px: an inner fill inside a
+       16px border needs one pixel less or the border shows through at the
+       corner. v4 had no `headRadius` key at all because its header WAS the
+       outer card. */
+    <div className="shell-card frame relative z-30 mt-4 rounded-[16px] border border-line shadow-[0_6px_20px_rgba(25,21,16,.05)]">
+    {/* The header's radius is decided in CSS by `.shell-card:has(> nav)`, not
+        here. AppHeader is a SERVER component and cannot read the pathname, and
+        `overflow:hidden` on the wrapper — the other way to get these corners —
+        would clip the user menu and the mobile nav, which are absolutely
+        positioned precisely to escape this box. `:has()` keys the radius on
+        whether the subnav ACTUALLY RENDERED rather than on a second copy of the
+        rule about which screens get one, so the two cannot disagree. */}
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-3 bg-sf py-3 pl-[18px] pr-[14px] xl:flex-nowrap">
       {/* The logo goes to Oversikt, not to `/` — `/` is the public splash now,
           and a signed-in user clicking their own product's wordmark should not
           land on the marketing page. */}
@@ -146,5 +165,14 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
         />
       </div>
     </header>
+      <AppSubnav
+        labels={{
+          insight: t('subnavInsight'),
+          dashboard: t('subnavDashboard'),
+          reports: t('subnavReports'),
+          tasks: t('subnavTasks'),
+        }}
+      />
+    </div>
   )
 }

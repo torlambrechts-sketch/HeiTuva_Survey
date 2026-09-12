@@ -5216,3 +5216,98 @@ minimal consistent treatment: one 11px muted line under the status. Two facts, a
 is a warning — «Styres av Entra ID» when `source = 'scim'`, and **«Endret her — Entra ID overskriver
 ved neste synkronisering»** when the status showing is a hand override the next sync will undo.
 Without the second, an administrator watches their own change disappear with no explanation.
+
+## D164 — the v5 shell: four footer claims removed, one rail moved, one invented target found live
+
+**V5-1, 2026-09-12.** `v5:5145-5179` (footer), `v5:160-161` and `v5:227-234` (shell card and subnav).
+
+### The footer ships on every page, so four of its five assertions do not ship at all
+
+| Drawn | Shipped | Because |
+|---|---|---|
+| «Data lagres i **Norge** og EØS» | «Data lagres i EØS» | Supabase is eu-central-1 (Frankfurt), Vercel answers from fra1, Brevo is French. **Nothing is in Norway.** Hard-coded in the MARKUP at `v5:5154`, not in a `foot*` data key — so the fix is a literal in a component, which is also why a grep of the data block missed it first time. |
+| «DPIA gjennomført» badge | *removed* | The DPIA has not been started. On a compliance product this is the most load-bearing false claim available. |
+| «Alle tjenester kjører normalt» | *removed* | A string literal at `v5:7674` with no health source. **A status indicator that cannot report trouble is worse than none, because it is believed.** |
+| «Versjon 2.4 · september 2026» | *removed* | Zero version columns in the schema, `package.json` says `0.1.0`, zero «Versjon» in shipped copy. It is the example the never-fabricate rule actually gives — «a hard-coded `v1`» — in the footer, on every page. |
+| «{company} er behandlingsansvarlig» | «HeiTuva er databehandler» | **The subject changed, not the sentence.** `organizations` holds `name, orgnr, address, contact_name, contact_email, dpo, …` and **no legal-role column**. Tor's rule was «either the column exists or the sentence does not» — and a column would be wrong too: its value is identical for every customer, so it is a constant wearing a column's clothes. So the footer asserts what we DO hold, which is our own role. The full statement lives in the databehandleravtale, where a legal statement belongs, and the badge links to it. |
+
+The badge «Databehandleravtale» **stays, and what it claims is stated**: that the document exists and
+is reachable, which it is (`/databehandleravtale` is a real public route). It does **not** claim the
+text is reviewed — it is not, and that page carries its own draft banner.
+
+**The bottom row therefore has one child where the drawing has three**, so it reads left-aligned
+instead of `space-between`. That is the honest consequence of removing a fake status and a fake
+version, not a layout preference.
+
+**`hjelp@heituva.no` is not shipped either.** The bundle's help channel carries it with «svar innen
+én arbeidsdag» — a service-level promise on a domain this project has recorded twice as never having
+been HeiTuva's. A third invented address is not introduced; the two that exist are held in
+`docs/LEGAL_DRAFTS.md` until a mailbox is confirmed to RECEIVE.
+
+### The shell is now a card containing the header, not a header that IS the card
+
+`v5:160` moves the frame width, the border, the 16px radius and the shadow onto a WRAPPER and leaves
+the header element with a background and `border-radius:{{ headRadius }}` — 15px, or `15px 15px 0 0`
+where the subnav attaches. **The 15px is not a drift from the theme's 16px**: an inner fill inside a
+16px border needs one pixel less, or the border shows through at the corner. v4 had no `headRadius`
+key at all, because its header *was* the outer card.
+
+The radius is decided in CSS by `.shell-card:has(> nav)`, not in the component. `AppHeader` is a
+server component and cannot read the pathname, and `overflow:hidden` — the other way to get these
+corners — would clip the user menu and the mobile nav, which are absolutely positioned precisely to
+escape this box. **`:has()` keys the radius on whether the subnav ACTUALLY rendered** rather than on
+a second copy of the which-screens rule; two copies disagree the first time one moves.
+
+### The subnav ships on two screens, not five — and it ABSORBS the rail it duplicates
+
+The bundle puts it on `uitest`, `admin`, `tasks`, `dashboard`, `reports`. **On every screen where it
+appears, v5 also keeps the in-page rail carrying the same items** — `insightTabs` at `v5:1321`,
+`adminTabs` at `v5:5195`, the `tfView` rail on tasks. A mock accumulates; a product should not carry
+two controls doing one job.
+
+**The test for whether the shell rail may absorb the in-page one is whether its item list is
+COMPLETE**, and it is measurable rather than a preference:
+
+- **`dashboard` / `rapporter` — yes.** The subnav lists Dashboard and Rapporter, which is exactly
+  the two screens that exist. `components/InsightTabs.tsx` is **deleted** and the subnav is its home.
+- **`admin` — no.** The subnav lists **six** tabs where nine exist, missing Profil og avsender,
+  Målgrupper and Språk; the bundle's own in-page `adminTabs` has eight. The six-item list is an
+  enumeration of the tabs that existed when it was drawn — row 5 of CLAUDE.md's table, one screen
+  over. `AdminTabs` stays and admin gets no subnav. **If a later phase wants it there, what it
+  replaces is `AdminTabs` — it does not supplement it.**
+- **`tasks` — V5-2's**, because that rail is the screen's own filter state.
+- **`uitest` — refused** (§ 0.3d).
+
+**`subnavLabel` has four branches for five screens** — `dashboard` and `reports` share «Innsikt».
+Built as drawn, noted because «a label per screen» is true of three of the five.
+
+**I introduced the duplication I had just argued against, and only the screenshot showed it.** The
+first build rendered the subnav on dashboard with `InsightTabs` still in the page body — two
+Dashboard/Rapporter rails, one above the other, all gates green. No assertion reaches «these two
+controls do the same thing»; opening the capture does.
+
+### AND THE ONE THAT WAS ALREADY LIVE: «over målet på 70 %»
+
+Chasing the bundle's `c.hasGoal` — a goal marker drawn at `left:70%` titled «Mål: 70 %», with the 70
+a literal — turned up **the same invented target already shipped**:
+
+```
+dashboard.statRateAbove: "over målet på 70 %"
+dashboard.statRateBelow: "under målet på 70 %"
+DashboardScreen.tsx:127   pct >= 70 ? statRateAbove : statRateBelow
+```
+
+**There is no goal column anywhere in the schema**, so every organisation was being told it was above
+or below a response-rate target nobody had set — with the 70 written twice, once in code and once
+inside the sentence. It is worse than the bundle's marker, because a marker is a tick on a bar and a
+sentence is read as *your* target.
+
+Both keys are gone and the note now says what the number IS — `{n} av {invited} inviterte har
+svart`, the same treatment the card beside it already gives. **Setting response-rate targets is a
+feature, and it is one nobody has asked for.** The bundle's marker is not built either.
+
+One slip worth recording because it is the defect class this project has been bitten by: the first
+edit put the new key under `dash` where the screen reads `dashboard`, which `tsc` cannot see and
+which renders **a raw key**. Caught by grepping for the old string and finding it still present —
+not by a type check.
+

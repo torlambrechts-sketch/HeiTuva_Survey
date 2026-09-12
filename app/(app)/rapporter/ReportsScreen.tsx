@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { InsightTabs } from '@/components/InsightTabs'
 import { DutyCard } from './DutyCard'
 import { DeleteReportButton, NewReportButton, ShareReportButton } from './ReportRowActions'
 import type { DutyCardData, ReportTemplate, SavedReport } from './types'
@@ -65,15 +64,17 @@ export async function ReportsScreen({
         <div>
           {/* Same merged heading as Dashboard (HeiTuva.dc.html:1205-1214): one
               "Innsikt", the rail choosing which half of it you are on. */}
+          {/* V5-1 — THE RAIL MOVED INTO THE SHELL. v5 draws the same two items
+              in the subnav under the header (v5:227) AND keeps this in-page copy
+              (v5:1321) — as it does on admin, and on tasks. A mock accumulates;
+              a product should not carry two controls doing one job.
+              The subnav replaces this one because its list is COMPLETE — exactly
+              the two screens that exist. On admin the same subnav lists six of
+              nine tabs, so there it cannot replace anything and AdminTabs stays.
+              That is the test for whether a shell rail may absorb an in-page
+              one, and it is measurable rather than a preference. */}
           <div className="flex flex-wrap items-center gap-[14px]">
             <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
-            <InsightTabs
-              label={tNav('insightTabs')}
-              tabs={[
-                { href: '/dashboard', label: tNav('dashboard') },
-                { href: '/rapporter', label: tNav('reports') },
-              ]}
-            />
           </div>
           <p className="mt-[6px] text-[13px] text-mut">
             {t('frozenShared')} · {t('counts', counts)}

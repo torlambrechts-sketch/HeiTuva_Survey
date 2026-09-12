@@ -84,6 +84,7 @@
   "tests/unit/run-mode-voice.test.ts": 11,
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/sentry-scrub.test.ts": 8,
+  "tests/unit/shell-footer.test.ts": 8,
   "tests/unit/threshold-line.test.ts": 5,
   "tests/unit/threshold-tier.test.ts": 13,
   "tests/unit/turnstile-state.test.ts": 11,
