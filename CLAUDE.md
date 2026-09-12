@@ -595,6 +595,48 @@ the real state, render nothing, or render the design's empty/unknown treatment. 
 value is worse than a gap: it is indistinguishable from a real one in review, and it
 survives into screenshots and demos as though it were true.
 
+## A CLAIM CARRIES THE CALL THAT ESTABLISHED IT — the same rule as D110's, for capabilities
+
+**Added 2026-09-12 (Tor), after a five-route availability report had two wrong rows.** This is not a
+new rule. It is the SECOND INSTANCE of one this file already states for numbers: *a number in a
+document must be derivable by a command, and the command goes beside it* — the rule out of «61 of
+83», added beside D110. Written as one rule with two instances rather than as two rules, because the
+thing being prevented is identical: **a claim that was true when someone wrote it, carried forward by
+people who cannot check it.**
+
+> **NEVER REPORT A CAPABILITY AS UNAVAILABLE WITHOUT THE CALL BESIDE THE CLAIM.** Not the notice, not
+> the banner, not the last session's finding — the call, and what it returned.
+
+`npm run verify:capability` (`scripts/verify/capability.ts`) is the mechanical half: one row per
+external dependency, each one CALLING — `docker info`, `supabase --version`, `supabase projects
+list`, a TCP connect to both production endpoints, a real query against `LOCAL_DB_URL`. It gates
+nothing and exits 0 whatever it finds, because «no Docker» is a true state of a laptop and not a
+defect. It reports what the call returned, raw.
+
+**THE TWO FAILURES IT COMES FROM ARE DIFFERENT, AND THE SECOND IS WHY THE RULE EXISTS AS WELL AS THE
+SCRIPT.**
+
+- **The MCP row was reported from a session notice, with no call at all.** The connector had been
+  authorised the whole time; the first `list_projects` returned six projects, and every subsequent
+  read worked. **A probe catches this one** — there is nothing to get right except making the call.
+- **The Docker row WAS called.** `docker info` returned «Cannot connect to the Docker daemon at
+  unix:///var/run/docker.sock», which was ACCURATE, and it was reported as «Docker is unavailable».
+  `which dockerd` returned `/usr/bin/dockerd`; `dockerd &` brought it up in four seconds, with
+  eleven Supabase containers still attached to it. **A fact about a PROCESS'S RUN STATE was read as a
+  fact about the ENVIRONMENT.** «Not running» read as «not available».
+
+**No probe catches the second, and that is the point.** The call was made and the call was honest;
+what failed was the step after it. This is the same shape as *«the ledger cannot be diffed against
+filenames»* and as row 10's constant that is right somewhere else: **the thing measured was not the
+thing claimed.** So the script's output ends by saying so in its own words — a machine without Docker
+and a machine whose daemon is stopped print identically, and one of them is four seconds from
+working.
+
+**And the script is itself an enumeration, stated as one** (row 9, aimed at this file): its rows are
+the dependencies this project has actually hit, and the next thing assumed will not be among them.
+When that happens the remedy is the rule first and a row second — never the row alone, because a
+list of capabilities to test can only ever be as long as the last surprise.
+
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.
 
