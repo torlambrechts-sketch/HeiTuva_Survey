@@ -279,6 +279,35 @@ export const ROUTES: RouteSpec[] = [
           await page.getByText('NPS i dag, trend og kritikere som venter på svar.').waitFor()
         },
       },
+      /*
+       * Q125 — the quiz workspace, captured even though its picker option is
+       * HIDDEN. Two reasons, and the second is the one that makes this more
+       * than a screenshot.
+       *
+       * 1. Without it the quiz card has no photograph at all: it renders only
+       *    when `show.quiz` is on, and no capturable workspace switches that
+       *    module on but this one. A card nobody photographed is the shape
+       *    CLAUDE.md lists six times — green for something that structurally
+       *    could not be seen.
+       * 2. Reaching it by cookie IS the assertion that hiding governs the
+       *    PICKER and never the RESOLVER. `readWorkspace` resolves against
+       *    `all`; only `selectable` filters on `visible`. If a later change
+       *    ever moved the filter into resolution, this state would stop
+       *    rendering and say so here.
+       */
+      {
+        name: 'arbeidsflate-quiz',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.workspace', value: 'quiz', url: page.url() },
+          ])
+          await page.reload({ waitUntil: 'networkidle' })
+          // The card's own heading, rendered on no other screen and visible —
+          // not the workspace label, which resolves to a hidden <option> first
+          // (the W3 slip recorded on the cx state above).
+          await page.getByText('Start en quiz nå').waitFor()
+        },
+      },
       {
         // Every module off. `[]` rather than a missing cookie: an ABSENT
         // cookie means «nothing chosen» and falls back to the workspace's own

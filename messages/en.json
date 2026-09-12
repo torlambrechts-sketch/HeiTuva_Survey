@@ -96,7 +96,16 @@
     "wsLayoutOwn": "The dashboard keeps your own layout",
     "wsEmptyTitle": "No modules selected",
     "wsEmptyBody": "Switch on at least one module in the row above, or pick a ready-made workspace in the top menu.",
-    "wsReset": "Restore the default"
+    "wsReset": "Restore the default",
+    "quizKicker": "Quiz and events",
+    "quizTitle": "Start a quiz now",
+    "quizBody": "Answer options with colour and icon, a countdown and a leaderboard on the big screen. Participants use their phones, no app.",
+    "quizNew": "New quiz",
+    "quizTemplate": "Use a template",
+    "quizNextNone": "No quiz is scheduled.",
+    "quizBoards": "Latest leaderboards",
+    "quizBoardsEmpty": "No quiz has run yet.",
+    "quizBoardTeams": "{n} teams"
   },
   "wizard": {
     "overline": "Wizard",

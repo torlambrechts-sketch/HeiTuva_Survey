@@ -1,3 +1,19 @@
+/* GENERATED — do not hand-edit.
+ *
+ *   npx supabase gen types typescript --local > types/database.ts
+ *
+ * W1 carried "this file is hand-transcribed and unconfirmed" forward until a
+ * database was available. It was regenerated 2026-09-12 against a local stack
+ * at migration HEAD, and the measurement is worth keeping: the hand-written
+ * file was CORRECT — every table, column and function key matched — apart from
+ * `workspaces.visible`, added by M:0105 in the same session, and the
+ * graphql_public schema the generator emits and nothing here reads.
+ *
+ * So this replaces a file that was right, for the reason the carry existed:
+ * the next column is the one hand-maintenance gets wrong, and a generated file
+ * has no next column to miss. tests/db/workspaces.test.ts compares this file's
+ * Row keys against information_schema rather than trusting either.
+ */
 export type Json =
   | string
   | number
@@ -7,10 +23,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -1030,8 +1066,8 @@ export type Database = {
           privacy: Json
           retention_months: number
           timezone: string
-          workspace: string
           updated_at: string
+          workspace: string
         }
         Insert: {
           active_langs?: string[]
@@ -1055,8 +1091,8 @@ export type Database = {
           privacy?: Json
           retention_months?: number
           timezone?: string
-          workspace?: string
           updated_at?: string
+          workspace?: string
         }
         Update: {
           active_langs?: string[]
@@ -1080,8 +1116,8 @@ export type Database = {
           privacy?: Json
           retention_months?: number
           timezone?: string
-          workspace?: string
           updated_at?: string
+          workspace?: string
         }
         Relationships: [
           {
@@ -1089,6 +1125,13 @@ export type Database = {
             columns: ["brand_accent"]
             isOneToOne: false
             referencedRelation: "brand_accents"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "organizations_workspace_fkey"
+            columns: ["workspace"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["key"]
           },
         ]
@@ -1917,17 +1960,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "survey_comment_replies_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "survey_comments"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "survey_comment_replies_author_member_id_fkey"
             columns: ["author_member_id"]
             isOneToOne: false
             referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comment_replies_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "survey_comments"
             referencedColumns: ["id"]
           },
         ]
@@ -1968,17 +2011,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "survey_comments_round_id_fkey"
-            columns: ["round_id"]
+            foreignKeyName: "survey_comments_handled_by_fkey"
+            columns: ["handled_by"]
             isOneToOne: false
-            referencedRelation: "survey_rounds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "survey_comments_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "survey_questions"
+            referencedRelation: "org_members"
             referencedColumns: ["id"]
           },
           {
@@ -1989,10 +2025,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "survey_comments_handled_by_fkey"
-            columns: ["handled_by"]
+            foreignKeyName: "survey_comments_question_id_fkey"
+            columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "org_members"
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_comments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "survey_rounds"
             referencedColumns: ["id"]
           },
         ]
@@ -2720,102 +2763,6 @@ export type Database = {
           },
         ]
       }
-      workspace_module_links: {
-        Row: {
-          module_key: string
-          sort_order: number
-          workspace_key: string
-        }
-        Insert: {
-          module_key: string
-          sort_order?: number
-          workspace_key: string
-        }
-        Update: {
-          module_key?: string
-          sort_order?: number
-          workspace_key?: string
-        }
-        Relationships: []
-      }
-      workspace_use_case_lifts: {
-        Row: {
-          sort_order: number
-          use_case_key: string
-          workspace_key: string
-        }
-        Insert: {
-          sort_order?: number
-          use_case_key: string
-          workspace_key: string
-        }
-        Update: {
-          sort_order?: number
-          use_case_key?: string
-          workspace_key?: string
-        }
-        Relationships: []
-      }
-      workspace_modules: {
-        Row: {
-          key: string
-          label: string
-          sort_order: number
-        }
-        Insert: {
-          key: string
-          label: string
-          sort_order?: number
-        }
-        Update: {
-          key?: string
-          label?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
-      workspaces: {
-        Row: {
-          dot: string
-          hint: string
-          key: string
-          label: string
-          person: string
-          person_def: string
-          persons: string
-          preset_key: string | null
-          short: string
-          sort_order: number
-          tint: string
-        }
-        Insert: {
-          dot: string
-          hint: string
-          key: string
-          label: string
-          person: string
-          person_def: string
-          persons: string
-          preset_key?: string | null
-          short: string
-          sort_order?: number
-          tint: string
-        }
-        Update: {
-          dot?: string
-          hint?: string
-          key?: string
-          label?: string
-          person?: string
-          person_def?: string
-          persons?: string
-          preset_key?: string | null
-          short?: string
-          sort_order?: number
-          tint?: string
-        }
-        Relationships: []
-      }
       use_cases: {
         Row: {
           description: string
@@ -2847,6 +2794,143 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "use_cases_preset_key_fkey"
+            columns: ["preset_key"]
+            isOneToOne: false
+            referencedRelation: "dashboard_presets"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      workspace_module_links: {
+        Row: {
+          module_key: string
+          sort_order: number
+          workspace_key: string
+        }
+        Insert: {
+          module_key: string
+          sort_order?: number
+          workspace_key: string
+        }
+        Update: {
+          module_key?: string
+          sort_order?: number
+          workspace_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_module_links_module_key_fkey"
+            columns: ["module_key"]
+            isOneToOne: false
+            referencedRelation: "workspace_modules"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "workspace_module_links_workspace_key_fkey"
+            columns: ["workspace_key"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      workspace_modules: {
+        Row: {
+          key: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      workspace_use_case_lifts: {
+        Row: {
+          sort_order: number
+          use_case_key: string
+          workspace_key: string
+        }
+        Insert: {
+          sort_order?: number
+          use_case_key: string
+          workspace_key: string
+        }
+        Update: {
+          sort_order?: number
+          use_case_key?: string
+          workspace_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_use_case_lifts_use_case_key_fkey"
+            columns: ["use_case_key"]
+            isOneToOne: false
+            referencedRelation: "use_cases"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "workspace_use_case_lifts_workspace_key_fkey"
+            columns: ["workspace_key"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          dot: string
+          hint: string
+          key: string
+          label: string
+          person: string
+          person_def: string
+          persons: string
+          preset_key: string | null
+          short: string
+          sort_order: number
+          tint: string
+          visible: boolean
+        }
+        Insert: {
+          dot: string
+          hint: string
+          key: string
+          label: string
+          person: string
+          person_def: string
+          persons: string
+          preset_key?: string | null
+          short: string
+          sort_order?: number
+          tint: string
+          visible?: boolean
+        }
+        Update: {
+          dot?: string
+          hint?: string
+          key?: string
+          label?: string
+          person?: string
+          person_def?: string
+          persons?: string
+          preset_key?: string | null
+          short?: string
+          sort_order?: number
+          tint?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_preset_key_fkey"
             columns: ["preset_key"]
             isOneToOne: false
             referencedRelation: "dashboard_presets"
@@ -2897,6 +2981,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_comment_thread: { Args: { p_token: string }; Returns: Json }
       get_heatmap: {
         Args: {
           p_group?: string
@@ -2904,10 +2989,6 @@ export type Database = {
           p_rounds?: string[]
           p_surveys?: string[]
         }
-        Returns: Json
-      }
-      get_comment_thread: {
-        Args: { p_token: string }
         Returns: Json
       }
       get_peer_results: { Args: { p_token: string }; Returns: Json }
@@ -2980,6 +3061,10 @@ export type Database = {
         Returns: Json
       }
       redeem_live_voucher: { Args: { p_code: string }; Returns: Json }
+      reply_to_comment: {
+        Args: { p_body: string; p_comment: string }
+        Returns: Json
+      }
       report_for_share_token: { Args: { p_token: string }; Returns: string }
       request_demo: {
         Args: {
@@ -3014,18 +3099,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_comment_handled: {
+        Args: { p_comment: string; p_handled: boolean }
+        Returns: Json
+      }
       sign_duty: { Args: { p_duty: string; p_role_key: string }; Returns: Json }
       snapshot_report: { Args: { p_report: string }; Returns: Json }
       snapshot_results: {
         Args: { p_group?: string; p_round?: string; p_survey: string }
-        Returns: Json
-      }
-      reply_to_comment: {
-        Args: { p_body: string; p_comment: string }
-        Returns: Json
-      }
-      set_comment_handled: {
-        Args: { p_comment: string; p_handled: boolean }
         Returns: Json
       }
       submit_response: {
@@ -3174,7 +3255,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

@@ -115,7 +115,7 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
         {ws ? (
           <WorkspaceChip
             current={ws.current}
-            options={ws.all}
+            options={ws.selectable}
             label={t('workspace')}
             title={t('workspaceTitle')}
           />

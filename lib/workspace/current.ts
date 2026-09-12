@@ -38,13 +38,23 @@ export type Workspace = {
   person_def: string
   persons: string
   preset_key: string | null
+  /** Q125 — may a person CHOOSE this one? Never consulted when RESOLVING. */
+  visible: boolean
 }
 
 export type WorkspaceState = {
   /** The resolved workspace — never null: the registry always has a row. */
   current: Workspace
-  /** Every workspace, for the chip's own select. */
+  /** Every workspace, hidden ones included. Resolution reads this, because an
+   *  organisation already set to a hidden workspace must keep rendering it. */
   all: Workspace[]
+  /** Q125 — the rows a picker may OFFER: the visible ones, plus `current` when
+   *  `current` is hidden. That second clause is load-bearing rather than
+   *  courteous: a `<select>` whose value is absent from its options displays a
+   *  different row, and the next save writes THAT one — so omitting it would
+   *  silently reassign the organisation's workspace, which is precisely the
+   *  change Q125 says hiding must not make. */
+  selectable: Workspace[]
   /** True when the cookie chose it, false when it came from the organisation. */
   fromCookie: boolean
   /** The module keys actually in force, registry order. */
@@ -75,7 +85,7 @@ export type WorkspaceState = {
   empty: boolean
 }
 
-const COLUMNS = 'key, label, short, hint, tint, dot, person, person_def, persons, preset_key'
+const COLUMNS = 'key, label, short, hint, tint, dot, person, person_def, persons, preset_key, visible'
 
 export async function readWorkspace(orgId: string): Promise<WorkspaceState | null> {
   const supabase = await createClient()
@@ -127,6 +137,9 @@ export async function readWorkspace(orgId: string): Promise<WorkspaceState | nul
   return {
     current,
     all,
+    // One clause rather than a concat, so registry order survives: appending a
+    // hidden `current` would put it last, where its own workspace is not.
+    selectable: all.filter((w) => w.visible || w.key === current.key),
     fromCookie: Boolean(fromCookieRow),
     modules,
     allModules: mods ?? [],

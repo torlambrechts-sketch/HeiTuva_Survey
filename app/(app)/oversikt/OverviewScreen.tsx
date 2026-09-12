@@ -66,6 +66,8 @@ export async function OverviewScreen({
   complianceUrgent,
   activity,
   loop,
+  quizRecent,
+  quizNext,
   showOnboard,
   workspace,
 }: {
@@ -79,6 +81,13 @@ export async function OverviewScreen({
   complianceUrgent: number
   activity: Activity
   loop: { id: string; text: string; when: string | null; done: boolean }[]
+  /* V4:344-357. `top` is the LEADING TEAM, never a person: `quiz_leaderboard`
+     returns team aggregates only and has no branch that can name one (Q84,
+     V2-10). Null when the board is k-suppressed or disabled, and the chip is
+     then absent rather than showing a zero nobody earned. */
+  quizRecent: { id: string; title: string; meta: string; top: string | null }[]
+  /* V4:352. The next scheduled quiz, or null. Never a placeholder date. */
+  quizNext: string | null
   /* W2 · Q122. Null only if the registry has not been seeded — the strip is
      then absent rather than faked, and every module renders, which is the
      pre-W2 behaviour. Never fabricate: a strip naming a workspace that does
@@ -172,6 +181,75 @@ export async function OverviewScreen({
           Delivered as a CSS variable because Tailwind cannot take a runtime
           value in a class, and applied at `xl` only — below it the row is one
           column regardless, which is what it already was. */}
+      {/* Quiz og resultattavle — V4:333-360, the second of the two workspace-gated
+          rows. Placed before row A because that is the bundle's order.
+
+          WHAT IS NOT HERE, AND WHY. v4 draws an NPS row immediately above this
+          one (V4:296-332) and it is NOT built — Q126. Measured rather than
+          judged: `enps` exists as a question type and `results_summary` already
+          computes a k-gated eNPS from it, and there are ZERO enps questions in
+          any template pack or any seeded survey, so the card would be empty for
+          every organisation that exists. Its right-hand panel, «Kritikere uten
+          svar», is refused on stronger grounds than emptiness — see Q126.
+
+          The copy below drops the bundle's «Fire alternativer» (Q121): a module
+          label may not carry a count of the fixture in front of it, and
+          `quizzable` is choice | yesno | dropdown, of which yesno has two. */}
+      {show.quiz ? (
+      <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
+        <div className="flex flex-col gap-3 rounded-[18px] bg-ink px-7 py-[26px] text-sf">
+          <div className="text-[11px] uppercase tracking-[.1em] opacity-70">{t('quizKicker')}</div>
+          <h2 className="font-display text-[30px] font-medium leading-[1.15]">{t('quizTitle')}</h2>
+          <p className="text-[13.5px] leading-[1.55] opacity-80">{t('quizBody')}</p>
+          <div className="mt-1.5 flex flex-wrap gap-2.5">
+            {canEdit ? (
+              <Link
+                href="/undersokelser/ny"
+                className="flex min-h-[48px] items-center rounded-xl bg-ac px-[22px] py-[13px] text-[14.5px] font-bold text-ink"
+              >
+                {t('quizNew')}
+              </Link>
+            ) : null}
+            <Link
+              href="/bibliotek"
+              className="flex min-h-[48px] items-center rounded-xl border border-sf/30 px-5 py-[13px] text-[14px] font-semibold text-sf"
+            >
+              {t('quizTemplate')}
+            </Link>
+          </div>
+          {/* Never fabricate: no scheduled quiz renders the absence, not a date. */}
+          <div className="text-[12.5px] opacity-70">{quizNext ?? t('quizNextNone')}</div>
+        </div>
+
+        <div className={card}>
+          <h2 className="font-display text-[23px] font-medium">{t('quizBoards')}</h2>
+          {quizRecent.length === 0 ? (
+            <p className="mt-3 text-[13px] text-mut">{t('quizBoardsEmpty')}</p>
+          ) : (
+            quizRecent.map((q) => (
+              <div key={q.id} className="flex items-center gap-3.5 border-b border-line py-3.5 last:border-b-0">
+                <span
+                  aria-hidden
+                  className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-sbg text-[14px]"
+                >
+                  ★
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14.5px] font-semibold">{q.title}</span>
+                  <span className="mt-0.5 block text-[12.5px] text-mut">{q.meta}</span>
+                </span>
+                {q.top ? (
+                  <span className="whitespace-nowrap rounded-full bg-ac2 px-[11px] py-[5px] text-[11.5px] font-bold">
+                    {q.top}
+                  </span>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      ) : null}
+
       {show.rowA ? (
       <div
         className="mt-[26px] grid grid-cols-1 gap-[18px] xl:grid-cols-[var(--row-cols)]"

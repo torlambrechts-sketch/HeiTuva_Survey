@@ -96,7 +96,16 @@
     "wsLayoutOwn": "Dashboard beholder ditt eget oppsett",
     "wsEmptyTitle": "Ingen moduler er valgt",
     "wsEmptyBody": "Slå på minst én modul i raden over, eller bytt til en ferdig arbeidsflate i toppmenyen.",
-    "wsReset": "Sett tilbake standard"
+    "wsReset": "Sett tilbake standard",
+    "quizKicker": "Quiz og arrangement",
+    "quizTitle": "Start en quiz nå",
+    "quizBody": "Svaralternativer med farge og ikon, nedtelling og resultattavle på storskjerm. Deltakerne bruker mobilen, uten app.",
+    "quizNew": "Ny quiz",
+    "quizTemplate": "Bruk en mal",
+    "quizNextNone": "Ingen quiz er planlagt.",
+    "quizBoards": "Siste resultattavler",
+    "quizBoardsEmpty": "Ingen quiz er kjørt ennå.",
+    "quizBoardTeams": "{n} lag"
   },
   "wizard": {
     "overline": "Veiviser",

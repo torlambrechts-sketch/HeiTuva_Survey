@@ -43,9 +43,13 @@ export function MobileNav({
    *  3. Nothing is broken either way: `/undersokelser/ny` is reachable at every
    *     width from Oversikt (V4:268) and Undersøkelser (V4:1082), both built.
    *
-   * So this stays until someone decides what the slide-over should carry now
-   * that the header carries less — which is a RESPONSIVE.md question, and one
-   * a UI phase does not get to settle on its own.
+   * SETTLED (Q127, 2026-09-12): IT STAYS, and RESPONSIVE.md's sentence is now a
+   * PROPERTY rather than the list that made this ambiguous — «the panel carries
+   * every affordance the header drops at this width, including the primary
+   * create action». The deciding fact is the one reason 1-3 above do not state:
+   * below `md` the header has NO create affordance, so the panel is the only
+   * place one can live. Removing it would leave the product's primary action
+   * reachable at 390px only by first navigating to a page that offers it.
    */
   newSurveyHref: string
   newSurveyLabel: string

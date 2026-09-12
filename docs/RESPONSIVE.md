@@ -32,7 +32,22 @@ Tailwind: use `md:` (768) and `xl:` (1280). Do not introduce other breakpoints w
 ## Per-pattern rules
 
 **App shell / header (fixes D12)**
-Below `md`: logo + hamburger + user avatar only. Nav items move into a slide-over panel opened by the hamburger; the panel uses `--sf` surface, `--line` border, existing nav item styling at full width, 48px row height. "Ny undersøkelse" becomes the first item in the panel. Language switcher moves into the panel footer. The header must not wrap or overflow at 320px.
+Below `md`: logo + hamburger + user avatar only. Nav items move into a slide-over panel opened by the hamburger; the panel uses `--sf` surface, `--line` border, existing nav item styling at full width, 48px row height. Language switcher moves into the panel footer. The header must not wrap or overflow at 320px.
+
+**WHAT THE PANEL CARRIES IS A PROPERTY, NOT THE LIST BELOW (Q127, 2026-09-12).** The rule is:
+**the panel carries every affordance the header drops at this width, including the primary create
+action, whatever the desktop header happens to hold at the time.** It is written as a property
+because the previous sentence here — «the nav, the CTA and the language switcher» — was an
+enumeration of what the header contained the day it was written, and v4 moved the create CTA out of
+the header onto the pages. That made the list false and said nothing about what should happen here,
+which is row 5 of CLAUDE.md's table: a specification's worked example goes stale the moment a phase
+moves the example.
+
+Applied: «Ny undersøkelse» is the panel's first item and stays. Below `md` the header has no create
+affordance at all, so the panel is the only place one can live; removing it would leave the product's
+primary action reachable at 390px only by navigating to a page that offers it. v4's header change is
+not an instruction about this surface — **no bundle draws the slide-over**, and a bundle governs what
+it draws.
 
 **Three-pane Builder**
 Below `xl`: the right pane (Generelt / Add / Settings / Preview) becomes a full-screen sheet opened by a button row pinned under the header — **one button per tab**, using the existing tab chip styling, and the row **wraps** rather than shrinking. (It read «three buttons» until B2 added «Generelt» per V2:6472, and four `flex-1` tabs put every `bygg` state at scrollWidth 329 against 320px. **D129's failure a THIRD time in this file — which is now enough instances to state the rule about

@@ -19,8 +19,16 @@ export default async function CompanyTab() {
     // W0/Q122: the registry is the authority on which workspaces exist, so the
     // control is built from it. `workspaces` carries no org id and its select
     // policy is `using (true)` — the same shape as `use_cases`.
-    supabase.from('workspaces').select('key, label').order('sort_order'),
+    supabase.from('workspaces').select('key, label, visible').order('sort_order'),
   ])
+
+  /* Q125 — the option list is the VISIBLE rows, plus this organisation's own
+     row when that row is hidden. The second clause is not politeness: this is
+     a `<select name="workspace">` whose value is submitted, so an option list
+     missing the current value would display a different row and `saveCompany`
+     would write THAT one on the next save of any field on this form. Hiding
+     governs the picker; it must not reassign an organisation's workspace. */
+  const options = (workspaces ?? []).filter((w) => w.visible || w.key === (org?.workspace ?? 'hr'))
 
   return (
     <div className="mt-5 grid grid-cols-1 items-start gap-[18px] md:grid-cols-[1.2fr_.8fr]">
@@ -39,7 +47,7 @@ export default async function CompanyTab() {
           // default, so the fallback is that default and never a blank option.
           workspace: org?.workspace ?? 'hr',
         }}
-        workspaces={workspaces ?? []}
+        workspaces={options}
       />
 
       <aside className="rounded-[18px] border border-line bg-sbg p-6">

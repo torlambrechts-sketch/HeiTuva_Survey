@@ -170,10 +170,21 @@
      `py-[10px]` on the element instead applied it at every width and made two
      desktop selects 2px taller than the design — the exact regression a
      retrofit is supposed to avoid. */
+  /* 4px, NOT 3px, and the number is derived rather than chosen (2026-09-12).
+     `verify:responsive` measured 189x42 on Oppgaver's survey select at 390px
+     and 320px — two short of 44. The arithmetic, because the constant is only
+     correct relative to the control it wraps (CLAUDE.md row 10): the painted
+     box is the PADDING box, and it must stay exactly what the design paints —
+     here 9 + 18 + 9 = 36 for 12.5px text at `--field-pad-y:8px`. The hit box is
+     the border box, so reaching 44 means 4px of transparent border each side:
+     36 + 8 = 44. Raising `--field-pad-y` instead would have reached 44 by
+     making the control 2px TALLER than the design, which is the regression the
+     paragraph above is about. Painted height is unchanged for every existing
+     caller; only the invisible hit area grows. */
   .touch-44-field {
     border-color: transparent !important;
-    border-top-width: 3px;
-    border-bottom-width: 3px;
+    border-top-width: 4px;
+    border-bottom-width: 4px;
     padding-top: calc(var(--field-pad-y, 9px) + 1px);
     padding-bottom: calc(var(--field-pad-y, 9px) + 1px);
     background-clip: padding-box;

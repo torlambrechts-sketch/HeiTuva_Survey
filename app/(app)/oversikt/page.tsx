@@ -25,6 +25,7 @@ export default async function OverviewPage() {
     { data: duties },
     { data: loop },
     { data: counts },
+    { data: sessions },
   ] = await Promise.all([
     supabase.rpc('overview_activity', { p_org: viewer.orgId }),
     supabase
@@ -49,6 +50,19 @@ export default async function OverviewPage() {
       .order('created_at', { ascending: false })
       .limit(4),
     supabase.rpc('survey_response_counts', { p_org: viewer.orgId }),
+    /* Q125 · V4:352-358 — the most recent CLOSED quiz sessions. `live_sessions`
+       is org-scoped with RLS, so this is an ordinary member read; the board
+       itself is not, and comes from `quiz_leaderboard` below. Three rather than
+       all, because the card shows three and fetching more to throw away would
+       be a read nobody looks at. */
+    supabase
+      .from('live_sessions')
+      .select('id, survey_id, round_id, closed_at, surveys(title)')
+      .eq('org_id', viewer.orgId)
+      .eq('status', 'closed')
+      .not('closed_at', 'is', null)
+      .order('closed_at', { ascending: false })
+      .limit(3),
   ])
 
   // `survey_response_counts` returns responses per survey and nothing else, so
@@ -219,6 +233,48 @@ export default async function OverviewPage() {
 
   const activeSurveys = (surveys ?? []).filter((s) => s.status === 'aktiv').length
 
+  /* Q125 — the quiz card's two values.
+     `top` is the LEADING TEAM and never a person: `quiz_leaderboard` returns
+     team aggregates only (Q84/V2-10) and is k-gated, so a board below threshold
+     comes back as an error key and the chip is simply absent. Awaited in
+     sequence rather than in parallel because there are at most three, and one
+     round trip each is cheaper to read than a Promise.all nobody needs. */
+  const quizRecent: { id: string; title: string; meta: string; top: string | null }[] = []
+  for (const sess of sessions ?? []) {
+    const { data: board } = await supabase.rpc('quiz_leaderboard', {
+      p_survey: sess.survey_id,
+      p_round: sess.round_id,
+    })
+    const b = (board ?? {}) as { teams?: { team: string; score: number }[] }
+    quizRecent.push({
+      id: sess.id,
+      title: (sess.surveys as { title: string } | null)?.title ?? '',
+      meta: [sess.closed_at ? dateFmt(sess.closed_at) : null,
+             b.teams?.length ? t('quizBoardTeams', { n: b.teams.length }) : null]
+        .filter(Boolean).join(' · '),
+      top: b.teams?.[0]?.team ?? null,
+    })
+  }
+
+  /* The next scheduled quiz. `schedules` carries the recurrence and `surveys`
+     the run mode, so a quiz that is scheduled is the join of the two. Null when
+     there is none, and the card then says so rather than showing a date. */
+  const quizSurveyIds = (surveys ?? [])
+    .filter((s) => (s as { run_mode?: string }).run_mode === 'quiz')
+    .map((s) => s.id)
+  let quizNext: string | null = null
+  if (quizSurveyIds.length) {
+    const { data: next } = await supabase
+      .from('schedules')
+      .select('next_run_at')
+      .in('survey_id', quizSurveyIds)
+      .not('next_run_at', 'is', null)
+      .order('next_run_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    quizNext = next?.next_run_at ? dateFmt(next.next_run_at) : null
+  }
+
   return (
     <OverviewScreen
       workspace={await readWorkspace(viewer.orgId)}
@@ -231,6 +287,8 @@ export default async function OverviewPage() {
       compliance={compliance}
       complianceUrgent={complianceUrgent}
       activity={activity}
+      quizRecent={quizRecent}
+      quizNext={quizNext}
       loop={(loop ?? []).map((l) => ({
         id: l.id,
         text: l.title,
