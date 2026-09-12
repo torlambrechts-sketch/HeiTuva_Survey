@@ -5,6 +5,7 @@
  * Idempotent: drops and recreates the two demo orgs each run so captures are
  * reproducible. Auth users are reused, so their ids stay stable.
  */
+import { createHash } from 'node:crypto'
 import { config } from 'dotenv'
 import {
   createOrg,
@@ -805,6 +806,38 @@ async function main() {
     ])
     if (layoutError) throw new Error(`seed dashboard_layouts: ${layoutError.message}`)
   }
+
+  /* I1-2 — a SCIM connector, so the Integrasjoner screen has a state to render
+     and `verify:policy` has a row to refuse.
+
+     THE TOKEN IS A KNOWN DEV VALUE AND THAT IS WHY IT IS HERE RATHER THAN IN
+     `seed.sql`. seed.sql builds EVERY database including production; this script
+     refuses to run against a remote URL without ALLOW_REMOTE_SEED (line 46). A
+     credential with a published secret belongs only in a database that is
+     disposable by construction.
+
+     `scim_credentials` has RLS on and no policy, so without a row the policy is
+     never actually asked to refuse anything and 5a3 reports PROTECTED BUT
+     UNPROVEN — a green that means «nothing could be seen», which is the shape
+     this project has hit six times. */
+  const demoScimSecret = 'f'.repeat(64)
+  const { data: scimAdmin } = await svc
+    .from('org_members')
+    .select('id')
+    .eq('org_id', org.id)
+    .eq('email', PERSONAS.administrator.email)
+    .single()
+  const { error: scimError } = await svc.from('scim_credentials').upsert(
+    {
+      org_id: org.id,
+      token_prefix: 'deadbeef1234',
+      token_hash: createHash('sha256').update(demoScimSecret).digest('hex'),
+      created_by: scimAdmin?.id ?? null,
+      last_used_at: new Date(Date.now() - 36 * 3600_000).toISOString(),
+    },
+    { onConflict: 'org_id' },
+  )
+  if (scimError) throw new Error(`seed scim_credentials: ${scimError.message}`)
 
   // V2-4 · Q68 (DEFAULTED): `loop_actions` is superseded by `tasks` and dropped
   // (`M:0062`). The register replaces it, and it needs a row at EVERY one of the

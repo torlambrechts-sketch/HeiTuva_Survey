@@ -838,6 +838,10 @@ REGISTRY VALUE — «Kundeopplevelse» is three characters longer than «Arbeids
 semibold, and the measured overflow was 18px exactly. Row 10 one level out: the constant is a
 layout rule and the varying thing is a WORD.
 
+**I1-2 took the census to 1253 across 89 files** (`tests/db/scim-endpoint.test.ts`, 23 — the route handlers called as FUNCTIONS, so the bearer check, the Zod boundary and the tenancy scope run in the normal suite with no gate added and no server to go stale) and **5a3 to 79 of 109**: one new RLS table and seven new SECURITY DEFINER functions, **all eight CHECKED and none allowlisted**. The checked number moved up for the first time since V2-10.
+
+**AND THE THING THAT SUITE STRUCTURALLY CANNOT SEE IS D162.** All twenty-two of its tests passed while the endpoint was UNREACHABLE in production: calling handlers directly never meets the middleware, whose public-path list did not name `/api/scim/`, so an unauthenticated SCIM request got **a 307 to `/logg-inn`** — an HTML login page sent to a machine that speaks JSON. Found by READING the middleware. Test 23 guards the line as a proxy; only an HTTP request to a running server proves the route is served, and no gate makes one for an API route.
+
 **M:0109 took the census to 1227 across 88 files** (`tests/db/scim.test.ts`, 11 — all eleven proven RED first against functions that did not exist). **5a3 holds at 71 of 101**: both SCIM functions live in the `app` schema, which neither sweep enumerates — the same recorded limit as `M:0107`'s, and the correct reading rather than a gap.
 
 **M:0108 took the census to 1216 across 87 files** — `tests/db/deactivation.test.ts` 6 -> 14, and no other entry moved (the proof is the one-line diff, not the total). 5a3 holds at **71 of 101**: both new functions live in the `app` schema, which neither sweep enumerates. Green from a bare `supabase db reset` — with `npm run seed:i18n` and `npm run seed:help` after it, without which four `ui_messages`/`help_articles` tests fail for want of content rather than for a defect.

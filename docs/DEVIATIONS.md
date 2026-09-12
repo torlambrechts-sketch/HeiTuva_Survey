@@ -5101,3 +5101,48 @@ writer is «a later phase» is the shape this project has hit four times — ful
 green on every gate, reachable only from psql. `saveCompany` writes it, and
 `tests/db/workspaces.test.ts` asserts that the action exists, writes the column, and writes the
 *validated* value rather than a literal.
+
+
+## D162 — No gate makes an HTTP request to an API route, so reachability is guarded by a proxy
+
+**I1-2, 2026-09-12.**
+
+`tests/db/scim-endpoint.test.ts` calls the SCIM route handlers directly as functions. That is
+deliberate and good: the handlers are plain functions over `Request`, so the bearer check, the Zod
+boundary, the tenancy scope and the SCIM envelope are all in the normal suite on every run, with no
+gate added and no server to go stale — the failure that produced a 6464-finding scare on 2026-09-12.
+
+**It is also why all twenty-two of those tests passed while the endpoint was unreachable in
+production.** Next's middleware matcher catches `/api/scim/*`; the public-path list in
+`lib/supabase/middleware.ts` did not name it; so an unauthenticated SCIM request was answered with a
+**307 to `/logg-inn`** — an HTML login page, sent to a machine that speaks JSON. Entra would have
+reported it as an unintelligible failure and quarantined the connector.
+
+**Found by reading the middleware, not by any gate.** Fixed there, then measured against a real
+server built from this commit:
+
+```
+--- no auth ---              401 application/scim+json
+{"schemas":["urn:ietf:params:scim:api:messages:2.0:Error"],"status":"401",...}
+--- bad secret ---           401
+--- ServiceProviderConfig -- 200, bulk.supported=false, filter.maxResults=200
+--- Users?count=2 ---        total 6  page 2  first admin@nordiskstudio.test
+```
+
+**THE LIMIT.** Test 23 asserts the LINE exists, so deleting it fails. It does not prove the route is
+served: only an HTTP request to a running server is that, and **no gate in this repository makes one
+for an API route.** `verify:browser` drives a browser through the routes manifest, which is a
+manifest of SCREENS — a JSON endpoint has no screenshot and forcing one in would be the wrong shape.
+
+Recorded rather than closed because the apparatus is frozen: a check the gates cannot make is logged
+as a limit, not built mid-phase. The honest next step, when the freeze lifts, is one HTTP assertion
+inside a gate that already runs a server.
+
+**And the meta-finding, which is the useful half.** The measurement that caught the stale server was
+`curl` returning a 307 *with* a valid token — and the reason the first attempt measured nothing at
+all is that I started the server BY HAND with `next start` instead of through
+`scripts/verify/server.ts`, whose `servesOurBuild()` guard exists for exactly this and which I wrote
+two commits earlier. `EADDRINUSE` in a backgrounded log, two stale `next-server` processes (v16.2.11
+and v15.5.25) still holding port 3100, and a measurement of the OLD build reported as a measurement
+of the new one. **A guard you route around is not a guard**, and the thing that saved it was checking
+`_buildManifest.js` for our own BUILD_ID before believing the result.

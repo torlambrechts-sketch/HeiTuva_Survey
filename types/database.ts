@@ -1768,6 +1768,69 @@ export type Database = {
           },
         ]
       }
+      scim_credentials: {
+        Row: {
+          consecutive_errors: number
+          created_at: string
+          created_by: string | null
+          id: string
+          last_error: string | null
+          last_error_at: string | null
+          last_used_at: string | null
+          org_id: string
+          revoked_at: string | null
+          token_hash: string
+          token_prefix: string
+          window_count: number
+          window_started_at: string | null
+        }
+        Insert: {
+          consecutive_errors?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_used_at?: string | null
+          org_id: string
+          revoked_at?: string | null
+          token_hash: string
+          token_prefix: string
+          window_count?: number
+          window_started_at?: string | null
+        }
+        Update: {
+          consecutive_errors?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_used_at?: string | null
+          org_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+          token_prefix?: string
+          window_count?: number
+          window_started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_credentials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_credentials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segment_fields: {
         Row: {
           available: boolean
@@ -2974,6 +3037,7 @@ export type Database = {
         }
         Returns: Json
       }
+      create_scim_token: { Args: never; Returns: string }
       dashboard_summary: {
         Args: {
           p_group?: string
@@ -3090,6 +3154,48 @@ export type Database = {
       results_summary: {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
+      }
+      revoke_scim_token: { Args: never; Returns: boolean }
+      scim_connection_status: {
+        Args: never
+        Returns: {
+          configured: boolean
+          consecutive_errors: number
+          created_at: string
+          last_error: string
+          last_error_at: string
+          last_used_at: string
+          members_from_directory: number
+          revoked_at: string
+          token_prefix: string
+        }[]
+      }
+      scim_deprovision_user: {
+        Args: { p_external_id: string; p_org: string }
+        Returns: string
+      }
+      scim_lookup: {
+        Args: { p_prefix: string }
+        Returns: {
+          org_id: string
+          over_limit: boolean
+          revoked: boolean
+          token_hash: string
+        }[]
+      }
+      scim_provision_user: {
+        Args: {
+          p_active: boolean
+          p_email: string
+          p_external_id: string
+          p_name: string
+          p_org: string
+        }
+        Returns: string
+      }
+      scim_touch: {
+        Args: { p_error: string; p_org: string }
+        Returns: undefined
       }
       send_round: {
         Args: {

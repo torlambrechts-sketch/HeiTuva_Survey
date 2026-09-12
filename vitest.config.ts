@@ -7,7 +7,17 @@ export default defineConfig({
   // because they are erased before Vite sees them; a runtime import needs the
   // alias, so unit tests can import app modules the way the app does.
   resolve: {
-    alias: { '@': fileURLToPath(new URL('.', import.meta.url).href).replace(/\/$/, '') },
+    alias: {
+      '@': fileURLToPath(new URL('.', import.meta.url).href).replace(/\/$/, ''),
+      // `server-only` is a build-time assertion, not a runtime dependency: its
+      // package exports throw under any condition but React's server one, so
+      // importing a server module here fails with «cannot be imported from a
+      // Client Component». Vitest runs in Node and IS the server, so the guard
+      // is asserting something already true. Stubbed rather than removed from
+      // the modules — the guard is what keeps `createAdminClient` out of a
+      // browser bundle, and that is worth more than the convenience of testing.
+      'server-only': fileURLToPath(new URL('./tests/helpers/server-only-stub.ts', import.meta.url)),
+    },
   },
   test: {
     // The invariant suite shares one local database, so tests must not race.

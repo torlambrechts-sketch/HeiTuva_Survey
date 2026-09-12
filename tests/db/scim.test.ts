@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { serviceClient, type Client } from './clients'
 import { ORG_PRIMARY } from './personas'
@@ -83,6 +84,20 @@ beforeAll(async () => {
 afterAll(async () => {
   await svc.from('org_members').delete().eq('org_id', orgId).eq('name', MARK)
   await svc.from('org_members').delete().eq('org_id', orgId).like('email', 'scim-%@example.test')
+  /* Test 14 mints a real credential over the demo one. Put the demo row back
+     rather than leaving the database in a state the seed did not create: the
+     demo connector is what gives `verify:policy` a row to refuse and I1-3 a
+     state to render, and a suite that silently removes it makes the NEXT run of
+     5a3 report PROTECTED BUT UNPROVEN for a reason nobody would look for here. */
+  await svc.from('scim_credentials').upsert(
+    {
+      org_id: orgId,
+      token_prefix: 'deadbeef1234',
+      token_hash: createHash('sha256').update('f'.repeat(64)).digest('hex'),
+      last_used_at: new Date(Date.now() - 36 * 3600_000).toISOString(),
+    },
+    { onConflict: 'org_id' },
+  )
 })
 
 describe('I1-1b · property 3 — provisioning writes org_members and nothing else', () => {
@@ -292,4 +307,72 @@ describe('I1-1b · who writes these columns', () => {
       { encoding: 'utf8' })
     expect(src, 'setMemberStatus must write status_source').toMatch(/status_source/)
   })
+})
+
+/**
+ * THE THREE ADMINISTRATOR-FACING RPCs, DENIED FROM EVERY SIDE.
+ *
+ * `verify:policy` reported these as PROTECTED BUT UNGUARDED, which is the state
+ * this project has learned to distrust most: the grant is right and nothing
+ * proves it, so the day it stops being right nothing says so. Invariant 4 —
+ * `administrator` owns settings, `redaktor` creates and sends, `leser` reads
+ * aggregates — and a SCIM token writes membership for the whole organisation, so
+ * it is squarely a settings power.
+ */
+describe('I1-2 · minting a connector is an administrator power', () => {
+  const RPCS = ['create_scim_token', 'revoke_scim_token', 'scim_connection_status'] as const
+
+  it('12. anon cannot execute any of the three — read back from the catalogue', () => {
+    for (const fn of RPCS) {
+      const [anon] = one(
+        `select has_function_privilege('anon', p.oid, 'execute')::text
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = '${fn}' limit 1`)
+      expect(anon, `anon must not execute ${fn}`).toBe('false')
+    }
+  })
+
+  it('13. and a redaktor and a leser are refused at runtime, not merely by a grant', async () => {
+    /* The grant lets `authenticated` in — it has to, or no administrator could
+       call it either. The role check is INSIDE each function, so the only way to
+       know it is there is to sign in as someone who should be refused. */
+    const { redaktorClient, leserClient } = await import('./clients')
+    for (const make of [redaktorClient, leserClient]) {
+      const client = await make()
+      for (const fn of RPCS) {
+        const { error } = await client.rpc(fn)
+        expect(error?.message ?? '', `${fn} must refuse a non-administrator`).toContain('forbidden')
+      }
+    }
+  }, 60_000)
+
+  it('14. an administrator gets a token, and it is the only time it exists', async () => {
+    const { adminClient } = await import('./clients')
+    const client = await adminClient()
+    const { data, error } = await client.rpc('create_scim_token')
+    expect(error?.message ?? '').toBe('')
+    const token = String(data)
+    expect(token, 'the shape the endpoint parses').toMatch(/^hei_scim_[0-9a-f]{12}_[0-9a-f]{64}$/)
+
+    // Non-vacuity AND the invariant in one: the token must NOT be findable in
+    // the table. Only the prefix and a hash of the secret are stored.
+    const secret = token.split('_')[3]!
+    const [rows] = one(
+      `select count(*)::text from public.scim_credentials
+        where token_hash = '${secret}' or token_prefix = '${secret}'`)
+    expect(rows, 'the secret half is never stored').toBe('0')
+
+    const [prefix] = one(
+      `select token_prefix from public.scim_credentials where org_id = '${orgId}'`)
+    expect(token, 'and the prefix is — it is the public half').toContain(prefix!)
+
+    // The status RPC may see the prefix and must not see the hash: it has no
+    // column for one.
+    const { data: status } = await client.rpc('scim_connection_status')
+    const row = (status as Record<string, unknown>[])[0]!
+    expect(row.configured).toBe(true)
+    expect(row.token_prefix).toBe(prefix)
+    expect(Object.keys(row), 'no shape of this result carries the hash')
+      .not.toContain('token_hash')
+  }, 60_000)
 })

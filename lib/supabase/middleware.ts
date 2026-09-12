@@ -82,6 +82,20 @@ export async function updateSession(request: NextRequest) {
     // /bruksomrader as anon but the browser ended up on /logg-inn» — because the
     // manifest declares the visitor, not because anything checked the folder.
     path === '/bruksomrader' ||
+    // I1-2. The SCIM endpoint carries its OWN credential — a bearer token
+    // checked in `lib/scim/auth.ts` against a per-organisation hash — so a
+    // session redirect here is not a gate, it is a 302 to an HTML login page
+    // sent to a machine that speaks JSON. Entra would report it as an
+    // unintelligible failure and quarantine the connector.
+    //
+    // FOUND BY READING THIS FILE, NOT BY A TEST: the route handlers are plain
+    // functions and `tests/db/scim-endpoint.test.ts` calls them directly, so
+    // every authentication test in that suite passes with the endpoint
+    // unreachable in production. The V2-8 comment eight lines up says the same
+    // thing about a directory name; this is the API-route instance of it, and it
+    // is `verify:browser`'s manifest — the visitor, declared — that proves the
+    // path is actually served.
+    path.startsWith('/api/scim/') ||
     path.startsWith('/_next') ||
     path === '/favicon.ico'
 

@@ -479,6 +479,53 @@ PROVENANCE.**
 | **Q141** | The first sync at a real customer meets members who are already here, invited by hand. Match on the directory key, or on the address? | **DEFAULTED: the directory key first, the ADDRESS as the fallback when that key is unseen — adoption.** | Matching on `external_id` alone would insert a duplicate and hit `org_members_org_id_email_key`, so **the customer's very first sync would fail on almost every row and look like a broken connector.** Adoption stamps the existing row instead. The risk it carries is stated rather than hidden: an address is a weaker identity than a directory id, so adoption trusts the customer's own directory to be about their own people — which is the trust the whole connector rests on anyway. After the first sight the key takes over, and `external_id` is the immutable one: an address changes when someone marries or the company renames its domain. |
 | **Q142** | `status_source` — a column, or derivable from the audit log? | **DEFAULTED: a column, `local \| scim`, naming the SYSTEM and not the actor.** | **Derivable is not the same as reliably derivable.** The derivation would be «is there an audit row for `member.status` later than `synced_at`», and audit rows EXPIRE under the organisation's own retention setting (`setRetention`) — so the derivation would silently start returning «the directory wrote this» about a hand edit, which is precisely the sentence an administrator would be relying on. A derivation that becomes wrong without saying so is worse than none. It names the SYSTEM rather than the actor because the audit log already names the actor and the question this answers is different: **will a hand edit SURVIVE?** On a `source = 'scim'` row, `status_source = 'local'` means an administrator has overridden the directory and the next sync writes it back — which the Brukere screen must say out loud, or they watch their own change disappear with no explanation. **That warning is NOT built yet**: no bundle draws a directory marker on the Brukere row, so it is an unspecified state of an existing screen rather than something to invent mid-phase. Built in I1-3 with its deviation logged, and named here so it is not lost. |
 
+## Q143–Q148 — the connection itself (2026-09-12)
+
+`M:0110`, `M:0111`, `lib/scim/`, `app/api/scim/v2/[...path]/route.ts`. **The first authenticated
+inbound surface this product has ever had.** Everything else is a signed-in session under RLS, or a
+respondent token that can do exactly one thing; here a machine holding a long-lived credential
+writes membership for a whole organisation.
+
+**What that changes about how it is built.** Every handler authenticates FIRST and derives the
+organisation from the CREDENTIAL, never from the payload or the path — a connector is never asked to
+name a tenant, so it cannot name someone else's. Every read and every write carries that scope,
+including the lookup of `{id}`: an id is a uuid a caller may present, and without the scope a
+presented uuid reads another organisation's member.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q143** | `DELETE /Users/{id}` — honour it literally? | **DEFAULTED: DELETE DEACTIVATES. It returns 204, which is what the caller expects, and the effect is `active: false`.** | Q138's reasoning, reached through a different door: two FKs referencing `org_members` are `ON DELETE CASCADE`, so honouring a delete literally would make an HR event silently revoke survey-editor grants and throw away who created a statutory survey. Erasure is a REQUEST under art. 17 with its own path, not something a directory does on a Tuesday. Entra's own default is `active: false` anyway, so this is the uncommon path made safe rather than the common one made surprising. |
+| **Q144** | Which SCIM attribute is our `email` — `userName`, or `emails[]`? | **DEFAULTED: the primary work address, then any address, and `userName` only as a last resort.** Asserted live: a POST carrying `userName: someone@upn.example.test` and `emails[work]: live-…@example.test` stored the latter. | **Not cosmetic.** Entra's default mapping sends `userName` = userPrincipalName and `emails[work].value` = mail, and **at most real customers those differ** — a UPN is a sign-in name and often not a mailbox at all. Taking `userName` would address every invitation to something that does not receive, and **the failure would present as «the survey reached nobody»** rather than as a mapping error, because `sent_at` means ACCEPTED BY THE PROVIDER and not delivered (D133) and `bounced_at` has no writer at all. A silent, attributable-to-nothing failure is the worst kind this product can produce. |
+| **Q145** | The token: one opaque string, or two halves? | **DEFAULTED: `hei_scim_<prefix>_<secret>` — the prefix public and indexed, the secret hashed (SHA-256) and compared with `timingSafeEqual`.** | Invariant 4 asks for a constant-time comparison, and **with a single opaque token there is nothing to compare**: the only way to find the row is `where token_hash = $1`, an index equality nobody controls. Splitting it is what makes the requirement real — find the row by the public half, then compare the hashes in constant time. `app.resolve_token` does the hash-equality lookup and is correct for what it guards (one invitation, expiring, single use); this is a long-lived organisation-wide credential and gets the stronger shape. Every failure returns the same body: test 2 asserts a wrong secret and an unknown prefix are byte-identical responses, so a caller cannot enumerate prefixes. |
+| **Q146** | An unsupported SCIM filter — 400, or empty list? | **DEFAULTED: an empty list, 200.** | A service provider that errors on a filter it does not understand **makes Entra quarantine the connector** — the loud failure in the wrong place, and the customer's sync stops entirely over an expression nobody sends. An empty list makes Entra create the user, which is the recoverable answer. The one filter it actually sends — `userName eq "…"` — is parsed exactly; a general SCIM filter grammar for an expression set nobody uses would be inventing a feature. |
+| **Q147** | What happens when a sync fails halfway? | **DEFAULTED, and the answer is structural: there is no half-written MEMBER, only N applied and M not.** `/Bulk` is advertised as **unsupported** and is not implemented. | SCIM is one resource per request; each of ours is one RPC and one transaction. So a failed sync is «some members are stale», never «a member is half-written», and Entra retries the failures with backoff. **Advertising `/Bulk` would have made the connector fail at the moment it used it**, which is the worst time to find out — so `ServiceProviderConfig` says what is true rather than what is flattering. What remains is the failure the instruction names: a connector that silently stops looks identical to a customer with no staff changes. Four columns on the credential row (`last_used_at`, `last_error`, `last_error_at`, `consecutive_errors`) are the only thing that tells them apart, every request writes them, and I1-3 renders the difference. |
+| **Q148** | Rate limiting. | **DEFAULTED: a fixed 600-per-minute window per organisation, on the credential row, and named as what it is.** | It is **not** protection against an attacker — an attacker has no token, and the 429 is returned only AFTER the credential checks out so that an unauthenticated caller cannot learn an organisation's request volume by watching for it. It is protection against a MISCONFIGURED connector writing unbounded rows. The window advances even for a request it is about to refuse, because a limiter that stops counting when it starts refusing stops limiting exactly when it is needed. |
+
+**THREE THINGS THE GATES CAUGHT, ALL OF THEM RIGHT.**
+
+1. **`verify:policy`** reported `create_scim_token`, `revoke_scim_token` and `scim_connection_status`
+   as PROTECTED BUT UNGUARDED — the grant correct and nothing proving it. Denial tests written:
+   `anon` read back from the catalogue, and a `redaktor` and a `leser` refused at RUNTIME, because
+   the grant must let `authenticated` in or no administrator could call them either. **5a3 moved
+   71 of 101 → 79 of 109: all eight new surfaces CHECKED, none allowlisted.**
+2. **The FK-tenancy sweep** caught `scim_credentials.created_by` as a fourteenth single-column FK
+   between org-scoped tables. Fixed as a COMPOSITE key (`M:0111`) rather than an allowlist entry:
+   `created_by` is rendered as «opprettet av», so a foreign value would put **a name from outside the
+   tenant on a security screen**. `on delete set null` on the created_by half only — the connector
+   keeps working when the administrator who set it up leaves, which is the event this phase is about.
+3. **`verify:policy` also wanted a row to refuse.** The demo seed now carries a connector — which is
+   the same thing I1-3 needs to have a state to render. The token is a known dev value and that is
+   why it is in `scripts/seed-demo.ts` (which refuses a remote URL) and **not** in `seed.sql`, which
+   builds every database including production.
+
+**AND THE ONE NO GATE COULD CATCH — D162.** All twenty-two endpoint tests passed while the endpoint
+was **unreachable in production**. They call the route handlers as functions, which is what makes
+them fast and free of the stale-server failure; it also means they never meet the middleware. Next's
+matcher catches `/api/scim/*`, the public-path list did not name it, and an unauthenticated SCIM
+request was answered with **a 307 to `/logg-inn` — an HTML login page, sent to a machine that speaks
+JSON.** Found by reading the middleware. The file's own V2-8 comment says the same thing about a
+directory name eight lines above where the line was missing.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.
