@@ -5146,3 +5146,73 @@ two commits earlier. `EADDRINUSE` in a backgrounded log, two stale `next-server`
 and v15.5.25) still holding port 3100, and a measurement of the OLD build reported as a measurement
 of the new one. **A guard you route around is not a guard**, and the thing that saved it was checking
 `_buildManifest.js` for our own BUILD_ID before believing the result.
+
+
+## D163 — Integrasjoner is built to the bundle's layout and to the product's real capabilities
+
+**I1-3, 2026-09-12.** `HeiTuva.dc.html:2869-2926`.
+
+The instruction named the finding and the sweep confirmed it is larger than one line. The bundle's
+`intConnected` computes **«4 aktive tilkoblinger»** from a literal in its own fixture —
+`{ entra:1, hr:1, teams:1, brreg:1 }` — and **none of the four exists**. Every status chip on that
+screen is a mock's guess. A count is the easiest false claim to ship because it looks like
+arithmetic.
+
+**Four deviations, each with what it would otherwise have promised.**
+
+1. **The count and the Entra row are READ FROM THE CONNECTION** (`scim_connection_status`, which
+   reads the credential). If nothing is connected, the screen says so.
+
+2. **The other thirteen rows say «Ikke tilgjengelig» with the control disabled**, where the bundle
+   says «Ikke tilkoblet» with a live «Koble til». The rows stay because the screen's whole purpose
+   is the customer's question «what can this thing talk to», and the honest answer includes «not
+   yet» — but *«Ikke tilkoblet» beside a working button is a promise that you could connect this
+   today*. Same treatment as V2-3a's unavailable Målgrupper cards and D160's disabled «Lag oppgave».
+
+3. **A FOURTH STATE, «Feiler», which the bundle does not have.** Its three — Tilkoblet, Trenger
+   oppsett, Ikke tilkoblet — cannot say «this connector has been erroring since Tuesday», and that
+   is the exact failure I1-2 exists to make loud: a connector that silently stops looks identical to
+   a customer with no staff changes, and the first sign would be a survey that reaches nobody.
+   A token nobody has used yet is «Trenger oppsett» rather than «Tilkoblet», for the same reason:
+   «Tilkoblet» would be a claim about the other end of a connection this product has never heard
+   from.
+
+4. **The API-nøkkel and Webhooks cards are NOT BUILT AT ALL.** Q89 decided the public API and
+   webhooks are not built, and the bundle renders a fabricated key
+   (`ht_live_9f2c··············a41`) and a fabricated rotation date («Sist rotert 12. mars 2026»)
+   for a capability that does not exist. Rendering them disabled would still advertise them.
+
+**THE CLAIM-SET SWEEP OVER THIS SCREEN'S PROSE FOUND THREE MORE, INSIDE THE ROWS.** Copy is where
+nothing mechanical protects you, and a «Henter: …» line is a promise about what leaves the
+customer's systems:
+
+- Entra's row said **«Ansatte, grupper, ledernivå og sluttdato via SCIM»**. Three of those four are
+  false against what I1-1 built: `scim_upsert_member` deliberately writes neither `role` nor
+  `group_id` (Q139), and **there is no end-date column anywhere** — SCIM carries `active`, a
+  boolean, not a date. Rewritten to what the connector actually does.
+- The HR row promised **«kjønn»**. There is no gender column anywhere in this schema — the identical
+  false promise CLAUDE.md records «Kjønnsdelt rapport» making on a public page. Dropped.
+- `dataFlowNote` said **«Lønn hentes aggregert per stillingsgruppe, aldri per person»**, a promise
+  about handling salary data this product does not touch at all. A promise about data you never
+  receive is not a reassurance, it is a claim that you receive it. Dropped; the anonymity sentence,
+  which IS true, stays.
+
+**A fifth, small and worth naming: the connected row's CTA reads «Trekk tilbake», not the bundle's
+«Innstillinger».** «Innstillinger» promises a settings panel, and there is none — the only thing an
+administrator can do to a live connector is revoke its key. The control says what it does.
+
+**And a sixth: the card below the list is «Tilgangsnøkkel», not the bundle's «API-nøkkel».** It is a
+SCIM bearer credential, not an API key, and Q89 means there is no API for a key to open. Naming it
+«API-nøkkel» would advertise the thing Q151 declined to build, in one word.
+
+`tests/unit/integrations.test.ts` asserts all of it over the SHIPPED STRINGS in both languages —
+including that no line contains `kjønn`, `sluttdato`, `ledernivå` or `stillingsprosent`, and that
+every key the panel builds by concatenation actually resolves, since a missing one renders as a raw
+key on a customer's screen.
+
+**And Q142's debt, discharged on the Brukere row.** No bundle draws a directory marker there, so it
+is an unspecified STATE of an existing screen rather than an invented feature, and it takes the
+minimal consistent treatment: one 11px muted line under the status. Two facts, and only the second
+is a warning — «Styres av Entra ID» when `source = 'scim'`, and **«Endret her — Entra ID overskriver
+ved neste synkronisering»** when the status showing is a hand override the next sync will undo.
+Without the second, an administrator watches their own change disappear with no explanation.

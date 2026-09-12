@@ -14,6 +14,11 @@ export type AdminUser = {
   groupId: string | null
   role: MemberRole
   status: 'invited' | 'active' | 'inactive'
+  /** Q142 — is this row managed by a directory, and did a hand edit override it?
+   *  Without both, an administrator's change to a SCIM-managed member is written
+   *  back on the next sync and they watch it disappear with no explanation. */
+  fromDirectory: boolean
+  statusOverridden: boolean
   initials: string
 }
 
@@ -137,6 +142,17 @@ export function UsersPanel({
             style={{ color: u.status === 'inactive' ? 'var(--ac3)' : 'var(--mut)' }}
           >
             {statusLabel(u.status)}
+            {/* Q142. No bundle draws a directory marker on this row — it is an
+                unspecified STATE of an existing screen rather than an invented
+                feature, so it takes the minimal consistent treatment and is
+                logged as D163. Two separate facts, and only the second is a
+                warning: the row comes from a directory, and the status showing
+                here is NOT what that directory says. */}
+            {u.fromDirectory && (
+              <span className="mt-[3px] block text-[11px] leading-[1.4] text-mut">
+                {u.statusOverridden ? t('directoryOverridden') : t('directoryManaged')}
+              </span>
+            )}
           </span>
           <div className="flex flex-wrap items-center gap-3.5 md:contents">
           {/* S3/D129 — the writer org_members.group_id never had. No bundle

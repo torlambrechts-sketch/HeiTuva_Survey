@@ -526,6 +526,39 @@ request was answered with **a 307 to `/logg-inn` — an HTML login page, sent to
 JSON.** Found by reading the middleware. The file's own V2-8 comment says the same thing about a
 directory name eight lines above where the line was missing.
 
+## Q149–Q151 — the Integrasjoner screen (2026-09-12)
+
+`app/(app)/administrasjon/integrasjoner/`, `lib/scim/catalogue.ts`. Sixth admin tab, where the
+bundle puts it (`HeiTuva.dc.html:5195`). D163 carries the deviations; these are the decisions.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q149** | The bundle lists fourteen connectors and one is built. Render all fourteen, or only the one? | **DEFAULTED: all fourteen, with the thirteen marked «Ikke tilgjengelig» and their control DISABLED** — not «Ikke tilkoblet» with a live «Koble til». | Deleting the list would lose what the screen is FOR: the customer's question is «what can this thing talk to», and the honest answer includes «not yet». But **«Ikke tilkoblet» beside a working button is a promise that you could connect this today**, and thirteen such promises is a roadmap presented as a product. Same treatment V2-3a gave Målgrupper's unavailable cards and D160 gave «Lag oppgave»: draw the row, disable the control, say why. |
+| **Q150** | The bundle has three connector states. Is that enough? | **DEFAULTED: no — a fourth, «Feiler», and a token nobody has used is «Trenger oppsett» rather than «Tilkoblet».** | The bundle's three cannot say «this connector has been erroring since Tuesday», **which is the exact failure I1-2 exists to make loud**: a connector that silently stops looks identical to a customer with no staff changes, and the first sign would be a survey that reaches nobody. Four columns on the credential row carry that fact and this state is what renders it. And «Tilkoblet» on a token the customer has pasted nowhere would be a claim about the OTHER end of a connection this product has never heard from — the bundle's own mistake in miniature. |
+| **Q151** | The bundle draws an API-nøkkel card and a Webhooks card beside the list. | **DEFAULTED: neither is built, at all — not even disabled.** | Q89 decided the public API and webhooks are not built and the user reaffirmed it as out of scope. The bundle renders a **fabricated key** (`ht_live_9f2c··············a41`) and a **fabricated rotation date** («Sist rotert 12. mars 2026») for a capability that does not exist — «never fabricate data in the UI», twice, in one card. Rendering them disabled would still advertise them, which is the thing Q89 said not to do. |
+
+**THE CLAIM-SET SWEEP OVER THIS SCREEN'S PROSE FOUND THREE FALSE PROMISES INSIDE THE ROWS**, and
+they are the reason the sweep is a step and not a glance. A «Henter: …» line is a promise about what
+leaves the customer's systems.
+
+- Entra's row said **«Ansatte, grupper, ledernivå og sluttdato via SCIM»**. Three of the four are
+  false against what I1-1 built: Q139 decided a directory writes neither `role` nor `group_id`, and
+  **there is no end-date column anywhere in this schema** — SCIM carries `active`, a boolean, not a
+  date.
+- The HR row promised **«kjønn»**. No gender column exists anywhere — the identical false promise
+  CLAUDE.md records «Kjønnsdelt rapport» making on a public page.
+- `dataFlowNote` said **«Lønn hentes aggregert per stillingsgruppe, aldri per person»** — a
+  reassurance about handling salary data this product does not touch at all. **A promise about data
+  you never receive is not a reassurance; it is a claim that you receive it.**
+
+`tests/unit/integrations.test.ts` asserts no «Henter» line contains `kjønn`, `sluttdato` or
+`ledernivå`, so restoring the bundle's wording fails a test rather than shipping.
+
+**And Q142's debt is discharged**: the Brukere row now carries «Styres av Entra ID» when
+`source = 'scim'`, and **«Endret her — Entra ID overskriver ved neste synkronisering»** when the
+status showing is a hand override the next sync will undo. No bundle draws a directory marker, so it
+is an unspecified state of an existing screen taking the minimal consistent treatment (D163).
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.

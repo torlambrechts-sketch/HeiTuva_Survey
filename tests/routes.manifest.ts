@@ -596,6 +596,20 @@ export const ROUTES: RouteSpec[] = [
     states: [{ name: 'default' }],
   },
   {
+    /* I1-3 — Integrasjoner (V4:2869-2926), the sixth admin tab.
+       The demo seed carries a connector whose `last_used_at` is 36 hours old and
+       whose error count is zero, so `default` is the CONNECTED state — the one
+       the bundle's fixture claims four times over and which nothing in this
+       product could produce until I1-2. The other thirteen rows render
+       «Ikke tilgjengelig» with the control disabled (D163), which is the state
+       that would otherwise never be photographed. */
+    route: '/administrasjon/integrasjoner',
+    label: 'admin-integrasjoner',
+    as: 'administrator',
+    phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
+  {
     // V2-3a — Målgrupper (V2:2405-2658), the cards this phase builds.
     route: '/administrasjon/malgrupper',
     label: 'admin-malgrupper',

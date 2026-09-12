@@ -68,6 +68,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           // different questions: Grupper edits membership, Målgrupper composes
           // audiences a survey is sent to.
           { href: '/administrasjon/malgrupper', label: t('tabMalgrupper') },
+          /* The bundle puts Integrasjoner sixth, between Grupper and Personvern
+             (HeiTuva.dc.html:5195), and so does this. */
+          { href: '/administrasjon/integrasjoner', label: t('tabIntegrasjoner') },
           { href: '/administrasjon/personvern', label: t('tabPersonvern') },
           { href: '/administrasjon/valg', label: t('tabValg') },
           // A sixth tab the design does not draw (docs/DEVIATIONS.md D79):

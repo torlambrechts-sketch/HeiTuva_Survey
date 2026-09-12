@@ -796,3 +796,43 @@ export async function uploadLogo(formData: FormData): Promise<LogoResult> {
   revalidatePath('/administrasjon/profil')
   return { ok: true, url: signed?.signedUrl }
 }
+
+/**
+ * I1-3 — mint and revoke the organisation's SCIM bearer token.
+ *
+ * Thin, deliberately: `public.create_scim_token` resolves the administrator from
+ * `auth.uid()` and refuses anyone else, so the authority check is in the
+ * database and not here. This action exists to carry the result back to the
+ * screen and to revalidate, not to decide anything.
+ *
+ * THE TOKEN IS RETURNED TO THE BROWSER ONCE AND IS NEVER LOGGED. It is not
+ * stored whole — the database holds the public prefix and a SHA-256 of the
+ * secret half — so there is nothing to retrieve later and minting again is how
+ * rotation works. `audit` records THAT a token was minted and by whom; it must
+ * never record the token.
+ */
+export async function mintScimToken(): Promise<AdminResult & { token?: string }> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('create_scim_token')
+  if (error) return { ok: false, error: dbError(error) }
+
+  await audit(admin.orgId, 'scim.token_minted', admin.email ?? admin.orgId, {})
+  revalidatePath('/administrasjon/integrasjoner')
+  return { ok: true, token: String(data) }
+}
+
+export async function revokeScimToken(): Promise<AdminResult> {
+  const admin = await requireAdmin()
+  if (!admin) return { ok: false, error: 'forbidden' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('revoke_scim_token')
+  if (error) return { ok: false, error: dbError(error) }
+
+  await audit(admin.orgId, 'scim.token_revoked', admin.email ?? admin.orgId, {})
+  revalidatePath('/administrasjon/integrasjoner')
+  return { ok: true }
+}

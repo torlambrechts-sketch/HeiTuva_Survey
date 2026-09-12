@@ -15,7 +15,7 @@ export default async function UsersTab() {
   // an org with three of them.
   const { data, error } = await supabase
     .from('org_members')
-    .select('id, name, email, role, status, group_id, groups!org_members_group_id_fkey(name)')
+    .select('id, name, email, role, status, source, status_source, group_id, groups!org_members_group_id_fkey(name)')
     .eq('org_id', viewer.orgId)
     .order('created_at', { ascending: true })
   if (error) throw new Error(`org_members read failed: ${error.message}`)
@@ -40,6 +40,11 @@ export default async function UsersTab() {
       groupId: m.group_id,
       role: m.role as MemberRole,
       status: m.status as AdminUser['status'],
+      // Q142 — `source` says the row is the directory's; `status_source` says
+      // whether the status SHOWING is the directory's answer or a hand override
+      // the next sync will undo.
+      fromDirectory: m.source === 'scim',
+      statusOverridden: m.source === 'scim' && m.status_source !== 'scim',
       initials: initialsOf(name),
     }
   })
