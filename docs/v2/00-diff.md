@@ -899,8 +899,20 @@ rendered baselines those two surfaces have.
 | **Arbeidsliste** (was Oppgaver og tilbakemeldinger) | v3/C4 | **v5 governs it, and v5 REPLACES it** | the only surface in six handoffs where the new bundle removes the old model's keys rather than extending them. Eight keys gone; this is a redraw, not a fidelity delta. |
 | Everything else | as § 0.3 / § 0.3b / § 0.3c | **unchanged until a v5 phase touches it** | a screen is governed by the bundle a phase *built it from*. v5's file draws the whole app; drawing is not governance. |
 
-**THE PER-SURFACE ROWS FOR V5-1…V5-3 ARE DELIBERATELY NOT IN THIS TABLE YET**, for the reason
-§ 0.3c gives: speculative rows would put governance in the table for screens no phase has touched.
+**THE PER-SURFACE ROWS FOR V5-1…V5-3 ARE FILLED IN AS EACH PHASE TOUCHES ITS SCREEN**, for the
+reason § 0.3c gives: a speculative row puts governance in the table for a screen no phase has built.
+Three were added as they were built —
+
+| Surface | Governed before | Governed now | Because |
+|---|---|---|---|
+| **The shell** — footer on every page, subnav strip | v4 (header only) | **v5** | V5-1 built both from v5:160-234 and v5:5059-5160. The footer is new in this handoff and lands on every screen, so the shell's governance moves wholesale rather than per page. |
+| **Arbeidsliste** | v3/C4 | **v5, as a REPLACEMENT** | V5-2. The eight removed keys are C4's two-panel model; `WorklistPanel.tsx` replaces `TasksPanel.tsx` + `FeedbackList.tsx` (774 lines deleted). Three deliberate divergences, all logged as D165: a fifth bucket, a fifth board column, and no progress bar on a comment. |
+| **Integrasjoner → Entra (detail)** | did not exist | **v5** | V5-3, and it is one of the two states `__3_` adds over `__2_`. Built as the drawing over a PUSH integration where the drawing assumes a pull one — D166 has the section-by-section table. |
+| Integrasjoner (list) | v2/I1-3 | **stays v2/I1-3** | v5 does not redraw the list; V5-3 adds one link to a row and changes nothing else about it. A link is not a redraw. |
+
+**`lonn`, the second `intDetail` entry, is governed by nothing because it is not built** — Q88's
+class, confirmed out at V5-0 and still out at V5-3. `tests/unit/integrations.test.ts` asserts the
+route file does not exist, because a page that exists is a feature whatever its content.
 
 ### `uitest` IS ABSENT FROM THE PRODUCT, NOT FROM THE BUNDLE — and that is a different refusal
 

@@ -5311,3 +5311,192 @@ edit put the new key under `dash` where the screen reads `dashboard`, which `tsc
 which renders **a raw key**. Caught by grepping for the old string and finding it still present —
 not by a type check.
 
+
+## D165 — the Arbeidsliste: five buckets, five board columns, one date control and no bar on a comment
+
+**V5-2.** v5:3128-3374 replaces C4's screen. Four things are drawn one way and built another, and the
+first two are the same mistake twice — **four names used for five states, with the surplus state
+pushed into whichever name was nearest**. That is CLAUDE.md's own shape arriving in a layout instead
+of in a guard.
+
+**1. A FIFTH BUCKET, «Uten frist».** `bucketOf` (v5:6982) is
+`/om 7|i dag|sep/.test(it.due)` — a regex over a FORMATTED STRING, which is what a prototype with no
+dates does — and it files an unhandled comment under «Denne uken». A comment has no deadline: aml.
+§ 4-3 puts no clock on one, and `survey_comments` has no column that could hold one. «Denne uken»
+over such a row is a claim about when it is due, which is the never-fabricate rule with a date in
+place of a number. The bundle files a DATELESS TASK under «Senere», which is the same claim about the
+same absence, so both go to the one new bucket rather than one each.
+
+`tests/unit/worklist-rows.test.ts` asserts it as a property over the whole status enum rather than
+over the two cases I thought of: *no row without a deadline lands in a temporal bucket.*
+
+**2. A FIFTH BOARD COLUMN, «Effektvurdert».** `inboxColumn` (v5:6199) collapses six lifecycle states
+into four with `i === 3 ? 2 : 3`, which puts `effektvurdert` under «Lukket». **That is the one
+distinction Q69 exists to protect** — aml. § 3-1 and ldl. § 26 fjerde ledd are about the gap between
+«the effect is assessed» and «we are done» — and a board that closes it visually is a compliance
+record that misdescribes itself. No invented copy: `taskStepEffektvurdert` is already a message. The
+grid is `repeat(auto-fit,minmax(210px,1fr))`, so five columns need no layout change at all.
+
+`columnOf` THROWS on a status it has not been taught, rather than filing it under «Nytt» — the same
+shape as `app.member_blocks_invitation`'s else branch, so a seventh lifecycle step fails a test in
+the commit that adds it.
+
+**3. NO PROGRESS BAR ON A COMMENT ROW.** v5:3256 renders `handled ? 100 : 20`. **20 is an invented
+denominator over an unknown numerator**, which is the never-fabricate rule's own worked example. A
+comment has no progress, so it gets no bar; a task's bar is the step reached over the six the
+register defines, which is real.
+
+**4. THE DEADLINE IS `<input type="date">`, NOT FREE TEXT** — CLAUDE.md's control substitution, and
+the single allowed exception used as written. v5:3202 and v5:3292 take «om 14 dager» and «f.eks. 1.
+okt» as strings because the prototype has no database; `tasks.due_at` is a `date`. The same
+substitution applies to the bulk bar's deadline field. Styled as every other field on the screen is,
+and carrying `touch-44-field` rather than `touch-44` — a date input is a REPLACED element, on which
+`::after` renders nothing at all, which is the utility C4 got wrong on a `<select>` one phase ago.
+
+**AND ONE THING THE SCREEN KEEPS THAT THE BUNDLE DOES NOT DRAW.** Q97's close confirmation. `lukket`
+is terminal and the drawing has no such step; it stays, because closing is the only irreversible
+action on the register and the remedy for a mistake is a new task referencing the closed one
+(`corrects_task_id`, a real column).
+
+**WHAT IS NOT BUILT, AND WHY THE SENTENCE STAYS WHERE THE CONTROL WOULD BE.** «Lag tiltak»
+(v5:3316), unchanged from C4: what a task may CONTAIN when its source is a respondent's own words is
+Q72's question, on a register a `leser` reads in full — a decision about disclosure, not a wiring
+job. And «Lukk valgte» (v5:3232), on Tor's decision, for which see Q158; the measurement is that it
+could never have worked anyway — `guard_task_close` refuses `foreslatt -> lukket` as a skipped step
+and `gjennomfort -> effektvurdert` without an assessment row, so a bulk close would have failed on
+every selection that was not already at `effektvurdert`.
+
+**THE SUBNAV RAIL MOVED BACK INTO THE SHELL, WHICH CORRECTS D164.** V5-1 rendered «Alt · Oppgaver ·
+Tilbakemeldinger» nowhere and said V5-2 would put it in the screen, because the filter was client
+state and the shell is a server component. V5-2 put the filter in the URL instead — `?type=` — which
+both halves can read, so the rail is where v5:6331 draws it and the screen holds no second copy. The
+`aria-current` comparison had to change with it: all three pills share a path, so `pathname === href`
+would have marked all three as current; it compares the parameter the screen actually filters on, and
+resolves an absent value to «alle» exactly as the page does.
+
+## D166 — the Entra detail page: a pull drawing over a push integration
+
+**V5-3.** v5:3819-3902 is the first of the two states `__3_` adds over `__2_`, and it is built as the
+drawing with every value read from a connection that exists. Six sections; **four of them change,
+and all four change for one reason.**
+
+**THE MEASUREMENT FIRST, because the reason is a fact and not a reading of the drawing.**
+
+```
+grep -rln 'graph.microsoft.com\|User.Read.All\|client_credentials' app lib supabase scripts
+→ (nothing)
+```
+
+No Microsoft Graph client, no client id, no consent flow, no scheduler. What exists is SCIM 2.0:
+**Entra POSTs to `/api/scim/v2/Users`** with a bearer token the customer pastes into Entra. The
+bundle's page describes HeiTuva reaching into Graph on a schedule. Every difference below follows
+from that.
+
+| Section | v5 draws | What is built |
+|---|---|---|
+| Header | tenant `nordiskstudio.onmicrosoft.com` · protocol · status | **The protocol alone.** SCIM hands us a bearer token, not a directory identity; there is no tenant id in the schema. Status is `scim_connection_status`. |
+| Header | «Sist synkronisert — I dag kl. 06:00» | `last_used_at` — the last time Entra actually called us, which is the one sync fact this side knows. |
+| Header | «Neste synk — I morgen kl. 06:00» | **«Bestemmes i Entra».** Push: the provisioning cycle is configured in Entra and we are never told it. A test asserts the string contains no time pattern. |
+| «Felter vi henter» (8) | eight attributes, all as though read | **«Felter vi mottar»** — we receive, we fetch nothing. Three land in a column (`displayName`, `userName`, `active`) plus `externalId`; five render their refusal. Q159–Q161. |
+| «Tillatelser» (3 Graph scopes) | `User.Read.All`, `Group.Read.All`, `Directory.Read.All` | **What the token can do, in the direction it runs**: `GET /Users`, `POST · PUT · PATCH /Users`, and «Ingen tilgang til katalogen» — the strongest form of the bundle's own «HeiTuva skriver aldri tilbake». |
+| «Grupper i synk» (4 rows) | Produktteamet 34, Design 11, … | **None, and why.** `ResourceTypes` declares one resource, `User`; every other path 404s. `groups.source` and `groups.synced_at` exist (V2-3a) and are null on every row. |
+| «Slik kobler dere til» | 4 steps, incl. «Gi samtykke» and «Kjør første synk» | 4 steps for the push flow. No consent screen and no run button exist. **The one section that is content rather than state**, so it renders before a connection does — the bundle's own observation, and it holds. |
+| «Synklogg» (4 rows) | «4 nye, 1 deaktivert» etc. | **The latest outcome, one row, saying so.** Q162: a log table is not built, and the reason is in the copy — a per-sync record of who arrived and who was deactivated is personal data about staff and needs a purpose and a retention period before it needs a schema. |
+
+**THE FIELD LIST RENDERS ITS REFUSALS RATHER THAN DROPPING ROWS, and that is the point of the
+section.** «Ingenting utover dette leses fra katalogen» is only checkable if the list says what it
+does NOT read. Five rows carry a reason:
+
+* `manager`, `employeeHireDate`, `employeeLeaveDateTime` — **one reason, shared**, on Tor's
+  decision: *a directory field describes a person; it does not decide what the product does to her.*
+  The test asserts they share a single refusal KEY, so three near-identical sentences cannot drift.
+* `department` — the columns exist and nothing writes them; no `/Groups` resource.
+* `jobTitle` — `profiles.job_title` exists and is **what the person wrote about her own job**.
+  Having the column is exactly what makes writing it from a directory wrong.
+
+**ONE TEST WAS RESTATED RATHER THAN WIDENED, and the restatement is worth recording.**
+`tests/unit/integrations.test.ts` test 8 forbade five words across every `integrations.*` value. This
+page names «Sluttdato» **on purpose, in order to refuse it**, so the test went red on correct code.
+The property is not «the word never appears» but «the word appears only where the page also says it
+is not read» — and the exemption is DERIVED from `DIRECTORY_FIELDS`, not from a list of keys: a field
+moved from refused to built loses its exemption automatically and would then have to be true of the
+schema. `kjønn`/`gender` remain absolutely forbidden and are not exemptible, because they belong to
+`lonn`.
+
+**`lonn` IS A ROUTE THAT DOES NOT EXIST**, and the test asserts the absence of the file rather than
+the presence of a notice. A page that exists is a feature whatever its content.
+
+**ONE LINK, ON ONE ROW.** The list screen's Entra row gets «Åpne detaljer»; the other thirteen do
+not, because a link from a row whose status is «Ikke tilgjengelig» would open a page describing a
+connection that cannot exist.
+
+## D167 — five 320px blockers on the report sheet: a real focus escape, made visible by V5-1's footer
+
+**V5-2/V5-3's verification pass. THE FIRST VERSION OF THIS ENTRY WAS WRONG AND IS REPLACED RATHER
+THAN AMENDED**, because the wrong version is the more instructive half.
+
+**What I first concluded.** `verify:responsive` reported **eight blockers on
+`rapport-editor/filter` @320px**, each pairing a survey-filter row against a FOOTER link:
+
+```
+[blocker] rapport-editor/filter @320px — hit areas overlap by 9768px²:
+          "Send-biennial-1789233008141-40mqfaktiv · 0" / "Brukere og grupper"
+```
+
+`select count(*) from public.surveys` returned **465** against a demo seed that makes eight — the
+rest timestamped rows left by repeated runs of `verify:send`, `verify:roundtrip` and
+`verify:interaction`. A reset to eight surveys produced **zero findings**. So I wrote this up as
+fixture pollution.
+
+**WHY THAT WAS WRONG.** Re-measured in `verify:all`'s own order — reset, demo seed, full test suite,
+then the gate — the database holds **103** surveys and the gate reports **five of the eight
+blockers, same route, same pairing.** One db-suite run is enough. The count of 465 was true and it
+was not the cause; **the thing measured was not the thing claimed**, for the fourth time in one day
+after the Docker daemon, the stale `next-server` and the production catch-all.
+
+**THE ACTUAL CAUSE, AND IT IS A REAL DEFECT.** `ReportSidePanel.tsx:146` renders the mobile sheet as
+`fixed inset-0 z-[70] … bg-bg` — an opaque full-screen overlay **inside the page subtree**. A tap at
+320px reaches the sheet, so the overlap is not a tap conflict. **Focus is a separate axis:** with the
+layer beneath not inerted, Tab from inside the open sheet walks into the app header and — since
+V5-1 — into the footer's twelve links behind it.
+
+Three things make this worth the entry rather than a line in a list:
+
+* **The gate had written the answer down.** `scripts/verify/responsive.ts:87-96`: *«Focus is a
+  separate axis and is not fixed by this: a control that cannot be tapped can still be reached with
+  Tab, which is why the dialogs mark the layer beneath them `inert` rather than relying on paint
+  order.»* And its element filter skips `el.closest('[inert]')` for exactly that reason.
+* **The remedy already exists and this one panel does not use it.** `components/ModalLayer.tsx`
+  portals an overlay to `document.body` and inerts every other body child; its own header says *«An
+  `aria-modal` dialog whose background is still reachable with Tab is not modal»*. The wizard
+  (`Wizard.tsx`) and the Builder's sheet (`Builder.tsx`) both use it. `ReportSidePanel` does not.
+* **It needed the footer to become visible.** Before V5-1 there was nothing below the page for the
+  sheet to overlap, and the survey list had to be long enough for its rows to reach that far down —
+  which is why 8 surveys hides it and 103 shows it. A defect that needs two unrelated changes to
+  surface is the kind that sits for phases.
+
+**NOT FIXED IN THIS TRANCHE, AND THAT IS THE ONE-PASS RULE APPLIED RATHER THAN AVOIDED.** The panel
+is 528 lines of V1-era code neither V5-2 nor V5-3 touched, and the fix is not a class change: at `xl`
+the same node is the in-layout panel (`xl:static xl:bg-transparent`), so portalling it
+unconditionally would lift the desktop panel out of its grid cell. It needs the portal to be
+conditional on width as well as on `sheetOpen`, which is a restructure of the component's render.
+
+**The half-fixes were considered and refused**, because CLAUDE.md already records what they cost:
+`inert` on just the header and footer would silence the gate and leave the editor's own content
+behind the sheet focusable — *«a fix that relocates a leak instead of closing it is not a fix»*, and
+this is the third time that paragraph has applied to a focus escape. Logged for the next phase with
+the diagnosis and the mechanism named, so it starts from here rather than from a gate line.
+
+**The two findings in the same run that WERE this tranche's are fixed** (D165, D166) and reproduce on
+neither fixture afterwards: the five touch defects on the Arbeidsliste's row button — a comment row
+paints 38px tall because it has no progress bar — and the 320px horizontal overflow on the Entra
+page, caused by a `whitespace-nowrap` monospace key beside a `flex-1` label with no `min-w-0`.
+
+**AND THE MIRROR IMAGE, ON THE SAME GATE, WHICH IS A FIXTURE FACT AND NOT A DEFECT.** On a bare reset
+`resultater/bransje-valgt` reports **HARNESS FAILURE: 2 combination(s) were never measured** — the
+state clicks a benchmark link named «Teknologi og IT», and `supabase/seed.sql:164-166` says in as
+many words that benchmarks are **deliberately not seeded** («real benchmarks arrive the day there is
+a source»). The only writer of that row is `tests/invariants/k-surface.test.ts`, so the state is
+reachable only after the db suite — which is `verify:all`'s order, and why it is green there and only
+there. Same shape as the six-tables-unproven note CLAUDE.md carries for Gate 5a3: **run order
+changes what a gate can prove, not the number.**

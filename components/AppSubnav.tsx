@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 /**
  * The subnav — v5's shell addition (V5:227-234).
@@ -16,9 +16,11 @@ import { usePathname } from 'next/navigation'
  * `reports`. It ships on THREE, and each exclusion is a measurement rather than
  * a preference (D164):
  *
- *   * `uitest` is «Tabellvarianter», a table-variant playground. It is 23 of
- *     v5's 45 new states and no phase builds it, so there is no screen for a
- *     subnav to sit on.
+ *   * `uitest` is «Tabellvarianter», a table-variant playground. It is 28 of
+ *     v5's 45 new states — re-measured in V5-2, because the first count split
+ *     the set by NAME PREFIX and `hasSubtools` and the five `col*` toggles
+ *     carry none; a prefix is not a location — and no phase builds it, so there
+ *     is no screen for a subnav to sit on.
  *   * `admin` ALREADY HAS THIS NAVIGATION IN-PAGE. `AdminTabs` renders nine
  *     tabs; the bundle's subnav list for admin has SIX — it is missing Profil
  *     og avsender, Målgrupper and Språk. The bundle draws BOTH rails on that
@@ -45,9 +47,18 @@ type Item = { label: string; href: string }
 export function AppSubnav({
   labels,
 }: {
-  labels: { insight: string; dashboard: string; reports: string; tasks: string }
+  labels: {
+    insight: string
+    dashboard: string
+    reports: string
+    tasks: string
+    all: string
+    onlyTasks: string
+    feedback: string
+  }
 }) {
   const pathname = usePathname()
+  const params = useSearchParams()
 
   let label: string | null = null
   let items: Item[] = []
@@ -60,11 +71,38 @@ export function AppSubnav({
     ]
   }
 
-  // The Arbeidsliste's own Alt/Oppgaver/Tilbakemeldinger rail belongs to that
-  // screen's filter state, not to the shell, so V5-2 renders it inside the
-  // screen where the filter lives. The label is declared here so the shell owns
-  // the vocabulary in one place.
+  /* The Arbeidsliste's «Alt · Oppgaver · Tilbakemeldinger» rail (v5:6331-6335).
+     V5-1 left it to the screen because the filter was client state and a server
+     component cannot read one. V5-2 put the filter in the URL instead, which
+     both halves can read — so the rail is where the bundle draws it, and the
+     screen holds no second copy of it. The scope rail («Alle · Mine · Over
+     frist · Lovpålagt · Ubehandlet», v5:3179) stays inside the card, which is
+     also where the bundle draws that one. */
+  if (pathname === '/oppgaver') {
+    label = labels.tasks
+    items = [
+      { label: labels.all, href: '/oppgaver' },
+      { label: labels.onlyTasks, href: '/oppgaver?type=oppgaver' },
+      { label: labels.feedback, href: '/oppgaver?type=tilbakemeldinger' },
+    ]
+  }
+
   if (label === null) return null
+
+  /* `aria-current` on a query-string rail cannot be `pathname === href`: all
+     three pills share the path and would all read as current. The comparison is
+     over the parameter the screen actually filters on, and the absent value is
+     «alle» — the same resolution `WorklistPage` does, so the pill that looks
+     selected is the one that is. */
+  const type = params.get('type') ?? 'alle'
+  const currentHref =
+    pathname === '/oppgaver'
+      ? type === 'oppgaver'
+        ? '/oppgaver?type=oppgaver'
+        : type === 'tilbakemeldinger'
+          ? '/oppgaver?type=tilbakemeldinger'
+          : '/oppgaver'
+      : pathname
 
   return (
     <nav
@@ -85,7 +123,7 @@ export function AppSubnav({
           {label}
         </span>
         {items.map((it) => {
-          const on = pathname === it.href
+          const on = currentHref === it.href
           return (
             <Link
               key={it.href}

@@ -855,7 +855,17 @@ async function main() {
     kind: string
     status: 'foreslatt' | 'besluttet' | 'pagar' | 'gjennomfort' | 'effektvurdert' | 'lukket'
     law?: string
-    due: string
+    /** V5-2: `null` is a real state — an open tiltak nobody has dated — and the
+     *  Arbeidsliste groups by deadline, so «Uten frist» needs a row in it.
+     *
+     *  MEASURED RATHER THAN ASSUMED, and the first version of this comment was
+     *  wrong: it said this was the only way that bucket becomes reachable.
+     *  `app.generate_blind_spot_tasks` already produces two dateless tasks on
+     *  this fixture (`select count(*) filter (where due_at is null)` returns
+     *  3 of 10). What the row below adds is the COMBINATION the generated ones
+     *  do not have — no deadline, no hjemmel, kind `tiltak` — which is the
+     *  ordinary manual case. */
+    due: string | null
   }[] = [
     // NOTE the sources: none of these names a group, a question or a score.
     // Q72 decided what a task may contain, and the bundle's own fixture
@@ -872,6 +882,9 @@ async function main() {
     // Over frist — a past due date on an open task is the only way the «over
     // frist» tile is reachable.
     { title: 'Undersøkelse etter varsel', kind: 'undersokelsesplikt', status: 'pagar', law: 'trakassering', due: '2026-08-20' },
+    // V5-2 — no deadline, so «Uten frist» has a task in it. An open tiltak
+    // nobody has dated is an ordinary state of a register, not an error.
+    { title: 'Rydde i tilgangene til rapportene', kind: 'tiltak', status: 'foreslatt', due: null },
   ]
 
   for (const t of taskSeed) {
@@ -886,7 +899,7 @@ async function main() {
         kind: t.kind,
         law_ref: t.law ?? null,
         owner_member_id: ownerMember?.id ?? null,
-        due_at: t.due,
+        due_at: t.due,  // null where the fixture has no deadline (V5-2)
         status: t.status,
       })
       .select('id')
@@ -901,6 +914,44 @@ async function main() {
         note: 'Effekten er vurdert i neste runde.',
       })
     }
+  }
+
+  /*
+    V5-2 — «Interne notater» (M:0113), one on each half of the Arbeidsliste.
+
+    Two rows, not one, because `hasNotes` renders on a task row AND on a comment
+    row and the two go through different halves of `worklist_notes_sel`: the
+    task branch is `is_org_member`, the comment branch defers to the comment's
+    own policy. A fixture with only a task note would leave the comment branch
+    unproven on a bare reset, and Gate 5a3 counts a surface as proven only when
+    there was a real row for the policy to refuse.
+
+    The text is deliberately ordinary internal bookkeeping. A note is the one
+    place on this screen where a colleague writes freely NEXT TO a respondent's
+    words, so the fixture must not model guessing who wrote a comment — a demo
+    that shows the habit teaches it.
+  */
+  const { data: noteTask } = await svc
+    .from('tasks')
+    .select('id')
+    .eq('org_id', org.id)
+    .eq('title', 'Revisjon hos leverandør')
+    .maybeSingle()
+  if (noteTask) {
+    const { error: noteError } = await asAdmin.from('worklist_notes').insert({
+      task_id: noteTask.id,
+      body: 'Avtalt oppstartsmøte med innkjøp i uke 41. Sjekklisten ligger i mappen.',
+      author_member_id: ownerMember?.id ?? null,
+    })
+    if (noteError) throw new Error(`seed worklist_notes(task): ${noteError.message}`)
+  }
+  if (firstComment) {
+    const { error: noteError } = await asAdmin.from('worklist_notes').insert({
+      comment_id: firstComment.id,
+      body: 'Tatt opp i ledermøtet 10. september. Verneombudet følger opp.',
+      author_member_id: ownerMember?.id ?? null,
+    })
+    if (noteError) throw new Error(`seed worklist_notes(comment): ${noteError.message}`)
   }
 
   // import_jobs and notifications have no producer that a seed can call

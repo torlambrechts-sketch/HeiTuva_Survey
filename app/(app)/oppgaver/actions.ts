@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
-import { TASK_STEPS } from '@/lib/tasks/lifecycle'
+import { WORKLIST_COOKIE, WORKLIST_VIEWS } from '@/lib/worklist/view'
+import { TASK_STEPS, nextStep, type TaskStatus } from '@/lib/tasks/lifecycle'
 
 /**
  * V2-4 — advancing a task, and recording an effect assessment.
@@ -240,6 +242,289 @@ export async function replyToComment(
   }
   if ((data as { error?: string } | null)?.error) return { ok: false, error: 'failed' }
 
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V5-2 — the Arbeidsliste's writers.
+
+   v5 replaces C4's two panels with ONE list over tasks and comments together,
+   and it draws four controls C4 had no writer for: a note on any row, a new
+   task, per-row assignment and deadline, and a bulk bar. Each one is an action
+   here; none of them is a table write the screen does after the fact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * «Interne notater» (v5:3324-3348) — the writer M:0113's table comment names.
+ *
+ * One action for both halves of the list, because a note is one concept: the
+ * subject is whichever of the two ids arrives, and the database's
+ * `worklist_notes_one_subject` refuses both or neither rather than this
+ * function deciding it twice.
+ *
+ * The body is team-written and may well discuss a respondent's comment, so it
+ * never reaches a log — the same rule as `replyToComment`, for the same reason.
+ */
+const NoteInput = z
+  .object({
+    taskId: z.string().uuid().optional(),
+    commentId: z.string().uuid().optional(),
+    body: z.string().trim().min(1).max(2000),
+  })
+  .refine((v) => (v.taskId === undefined) !== (v.commentId === undefined), {
+    // The same exclusive-or the CHECK holds. Stated here so a malformed call is
+    // `invalid` rather than a database error the user reads as a save failure.
+    message: 'exactly one subject',
+  })
+
+export async function addWorklistNote(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = NoteInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data: member } = await supabase
+    .from('org_members')
+    .select('id')
+    .eq('org_id', viewer.orgId)
+    .eq('user_id', viewer.userId)
+    .maybeSingle()
+
+  const { error } = await supabase.from('worklist_notes').insert({
+    task_id: parsed.data.taskId ?? null,
+    comment_id: parsed.data.commentId ?? null,
+    body: parsed.data.body,
+    author_member_id: member?.id ?? null,
+  })
+  if (error) {
+    // The note's own text is not in the message we keep, but the message could
+    // quote a constraint's failing row, so only the code is logged.
+    console.error(`worklist note insert failed: ${error.code ?? 'unknown'}`)
+    return { ok: false, error: 'save_failed' }
+  }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}
+
+/**
+ * «Ny oppgave» (v5:3195-3216).
+ *
+ * The bundle's form has five controls; four of them land in a column and the
+ * fifth does not. `ntSource` offers «Uten kobling til undersøkelse» or a survey
+ * TITLE, and a title is not a key — the option value carries the survey's id
+ * here, because `tasks.source_ref` is a real FK to `public.surveys` and a task
+ * cannot reference another organisation's row even by mistake (M:0062's own
+ * comment).
+ *
+ * `law_ref` is NOT in this form, and that is Q70 rather than an omission: the
+ * hjemmel references `duty_definitions`, and a manually created tiltak has none
+ * until a duty is what produced it. Letting an operator pick a paragraph from a
+ * dropdown is how a task ends up filed under a law it has nothing to do with.
+ */
+const NewTask = z.object({
+  title: z.string().trim().min(1).max(200),
+  kind: z.string().trim().min(1).max(60),
+  ownerMemberId: z.string().uuid().nullable().optional(),
+  dueAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  surveyId: z.string().uuid().nullable().optional(),
+})
+
+export async function createWorklistTask(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = NewTask.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const surveyId = parsed.data.surveyId ?? null
+  const { error } = await supabase.from('tasks').insert({
+    org_id: viewer.orgId,
+    title: parsed.data.title,
+    kind: parsed.data.kind,
+    // `tasks_source_ref_needs_kind`: the two move together or the row is
+    // refused, so they are derived from one value rather than passed in two.
+    source_kind: surveyId ? 'survey' : 'manuell',
+    source_ref: surveyId,
+    owner_member_id: parsed.data.ownerMemberId ?? null,
+    due_at: parsed.data.dueAt ?? null,
+  })
+  if (error) return { ok: false, error: fromDatabase(error.message) }
+
+  revalidatePath('/oppgaver')
+  revalidatePath('/oversikt')
+  return { ok: true }
+}
+
+/**
+ * Per-row assignment and deadline (v5:3285-3295).
+ *
+ * `app.guard_task_close` fires only on a status change — «anything that is not
+ * a status change passes through» in its own words — so these are plain
+ * updates and the guard is not in their way.
+ */
+const Assign = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  ownerMemberId: z.string().uuid().nullable(),
+})
+
+export async function assignTasks(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = Assign.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('tasks')
+    .update({ owner_member_id: parsed.data.ownerMemberId })
+    .in('id', parsed.data.ids)
+    .eq('org_id', viewer.orgId)
+  if (error) return { ok: false, error: fromDatabase(error.message) }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}
+
+const SetDue = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  dueAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+})
+
+export async function setTaskDue(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = SetDue.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('tasks')
+    .update({ due_at: parsed.data.dueAt })
+    .in('id', parsed.data.ids)
+    .eq('org_id', viewer.orgId)
+  if (error) return { ok: false, error: fromDatabase(error.message) }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}
+
+/**
+ * «Flytt ett steg» (v5:3230) — the bulk bar's one lifecycle action, and the
+ * only one of the bundle's three that survives.
+ *
+ * ── WHY IT REFUSES THE STEP INTO `lukket`, WHICH IS NOT WHAT THE BUNDLE DRAWS
+ *
+ * Tor's decision on «Lukk valgte» was that a bulk button closing a selection is
+ * Q69's rule — a task cannot close before its effect is assessed, under aml.
+ * § 3-1 and ldl. § 26 fjerde ledd — bypassed for n rows at once, and worse than
+ * bypassing it once because it makes the bypass the fast path. That button is
+ * not built.
+ *
+ * **The same reasoning applies one step down and it is the thing I would
+ * otherwise have got wrong.** A task sitting at `effektvurdert` has its
+ * assessment, so the database WOULD allow «Flytt ett steg» to close it — and
+ * closing would then have happened in bulk, without Q97's terminal-state
+ * confirmation, through the button that was kept. So this action advances every
+ * selected task by one step EXCEPT into `lukket`, and reports how many it left
+ * alone. Closing stays per task, with its confirmation and its assessment.
+ *
+ * ── PARTIAL FAILURE IS REPORTED, NOT SWALLOWED ─────────────────────────────
+ *
+ * The rows in a selection are at different steps, and `app.guard_task_close`
+ * refuses `gjennomfort -> effektvurdert` without an assessment row. So this
+ * cannot be one UPDATE: it is one per task, and the result says how many moved,
+ * how many need an assessment first, and how many were at the end already.
+ * A catch-all counting them as «done» is the shape CLAUDE.md's catch-all rule
+ * is about — the class that lands inside is the one the operator needed to
+ * know.
+ */
+export type BulkAdvanceResult =
+  | { ok: true; moved: number; needsAssessment: number; atClose: number; failed: number }
+  | { ok: false; error: TaskError }
+
+const BulkAdvance = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) })
+
+export async function advanceTasks(input: unknown): Promise<BulkAdvanceResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = BulkAdvance.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { data: rows, error: readError } = await supabase
+    .from('tasks')
+    .select('id, status')
+    .in('id', parsed.data.ids)
+    .eq('org_id', viewer.orgId)
+  if (readError) return { ok: false, error: 'save_failed' }
+
+  let moved = 0
+  let needsAssessment = 0
+  let atClose = 0
+  let failed = 0
+
+  for (const row of rows ?? []) {
+    const to = nextStep(row.status as TaskStatus)
+    if (to === null || to === 'lukket') {
+      atClose += 1
+      continue
+    }
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: to })
+      .eq('id', row.id)
+      .eq('org_id', viewer.orgId)
+    if (!error) moved += 1
+    else if (fromDatabase(error.message) === 'needs_effect_assessment') needsAssessment += 1
+    else failed += 1
+  }
+
+  revalidatePath('/oppgaver')
+  revalidatePath('/oversikt')
+  return { ok: true, moved, needsAssessment, atClose, failed }
+}
+
+/**
+ * The view mode (v5:3183-3188), per person.
+ *
+ * Q152: a cookie plus a column, the mechanism Q122 settled for the workspace —
+ * the per-person choice in the cookie, the organisation's default in
+ * `organizations.worklist_view`. The cookie is written HERE because the screen
+ * is a server component and cannot set one during render.
+ *
+ * No database write: choosing «Tavle» for yourself is not a change to the
+ * organisation's default, and the two are stored apart precisely so that one
+ * person's preference cannot become everybody's.
+ */
+const ViewInput = z.object({ view: z.enum(WORKLIST_VIEWS) })
+
+export async function setWorklistView(input: unknown): Promise<{ ok: boolean }> {
+  await requireViewer()
+  const parsed = ViewInput.safeParse(input)
+  if (!parsed.success) return { ok: false }
+
+  const store = await cookies()
+  store.set(WORKLIST_COOKIE, parsed.data.view, {
+    path: '/',
+    sameSite: 'lax',
+    httpOnly: false,
+    maxAge: 60 * 60 * 24 * 365,
+  })
   revalidatePath('/oppgaver')
   return { ok: true }
 }

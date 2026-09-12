@@ -346,7 +346,9 @@ describe('W0 · the standing constraint — no per-organisation value on a respo
        told to add «Ansatte». */
     const SITES: [component: string, prop: string][] = [
       ['app/(app)/undersokelser/[id]/bygg/PreviewPane.tsx', 'personDef'],
-      ['app/(app)/oppgaver/TasksPanel.tsx', 'persons'],
+      // V5-2 replaced TasksPanel with WorklistPanel (v5 removes C4's
+      // two-panel model outright). Same site, same prop, new file.
+      ['app/(app)/oppgaver/WorklistPanel.tsx', 'persons'],
       ['app/(app)/administrasjon/OptionsPanel.tsx', 'persons'],
     ]
     for (const [file, prop] of SITES) {

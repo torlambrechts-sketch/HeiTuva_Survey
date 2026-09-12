@@ -1,10 +1,13 @@
+import { cookies } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { readWorkspace } from '@/lib/workspace/current'
 import { DEFAULT_VOCABULARY } from '@/lib/workspace/modules'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { type TaskStatus } from '@/lib/tasks/lifecycle'
-import { TasksPanel, type FeedbackRow, type TaskRow } from './TasksPanel'
+import { WORKLIST_COOKIE, resolveWorklistView } from '@/lib/worklist/view'
+import { WORKLIST_TYPES, type WorklistType } from '@/lib/worklist/rows'
+import { WorklistPanel, type WorklistItem } from './WorklistPanel'
 
 const KIND_KEY: Record<string, string> = {
   tiltak: 'taskKindTiltak',
@@ -15,29 +18,58 @@ const KIND_KEY: Record<string, string> = {
 }
 
 /**
- * Oppgaver — V2:2152–2214, the statutory task register.
+ * Arbeidsliste — v5:3128-3374. **This REPLACES C4's screen rather than
+ * extending it**, which is the phase's largest fact and the bundle's own: the
+ * eight states v5 removes (`showTasks`, `showFeedback`, `fb.hasQuestion`,
+ * `fb.hasReplies`, `fb.replyOpen`, `t2.hasLaw`, `t2.isLate`, `t2.needsEffect`)
+ * are C4's two-panel model, and they are gone because one list with
+ * `r.isTask` / `r.isFb` cannot be assembled out of two panels. The buckets, the
+ * select-all checkbox and the board columns are properties of the COMBINED
+ * list.
  *
- * **What a row may say is Q72's decision and this is where it is honoured.** The
- * bundle's own fixture (V2:4168) ships a task whose source reads «Psykososial
- * kartlegging · under terskel» with `law: "aml. § 4-3 (3)"` — a task naming a
- * survey, a sub-threshold condition and a hjemmel, which discloses that a
- * specific small group scored badly. **This screen renders the survey's TITLE
- * and nothing else about it**: no group, no question, no score, no condition.
- * The schema helps rather than relying on the renderer — `tasks` has no column
- * that could hold any of them, asserted in `tests/db/tasks.test.ts`.
+ * ── WHAT A ROW MAY SAY IS STILL Q72, AND STILL HONOURED HERE ───────────────
+ *
+ * A task renders the survey's TITLE and nothing else about it: no group, no
+ * question, no score, no condition. `tasks` has no column that could hold one,
+ * asserted in `tests/db/tasks.test.ts`, so the schema carries the rule rather
+ * than this renderer.
+ *
+ * **And the bundle's lead sentence is Q72's REJECTED TRIGGER, in the copy
+ * again.** v5:3151 reads «Hvert funn under terskel blir et tiltak med ansvarlig
+ * og frist» — which is a task fired by a FINDING falling below threshold, and
+ * that is the trigger Q72 refused because it would put «this small group scored
+ * badly» in a register a `leser` reads in full. What actually fires a task is
+ * `app.generate_blind_spot_tasks`: a survey has a group that will never receive
+ * its own results, which is a count of PEOPLE. `wlLead` says that. Corrected,
+ * not implemented — the same instruction the phase was given.
+ *
+ * ── THE TYPE RAIL IS A SEARCH PARAM, AND THAT IS WHY IT CAN BE IN THE SHELL ─
+ *
+ * v5 puts «Alt · Oppgaver · Tilbakemeldinger» in the subnav strip
+ * (v5:6331-6335), which is shell. V5-1 could not render it there because the
+ * filter was client state and the shell is a server component; a URL parameter
+ * is readable by both, so the rail goes where it is drawn and the screen holds
+ * no second copy of it. The scope rail («Alle · Mine · Over frist · Lovpålagt ·
+ * Ubehandlet», v5:3179) stays inside the card, where the bundle draws it.
  */
-export default async function TasksPage() {
+export default async function WorklistPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>
+}) {
   const viewer = await requireViewer()
-  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the
-     choice is a cookie and only a server render can read it. The fallback
-     is Tilpasset's own set, which is also the copy this screen shipped
-     before W3 — an unseeded registry renders yesterday's sentence rather
-     than a key or an invented word. */
+  const params = await searchParams
+  const type: WorklistType =
+    WORKLIST_TYPES.find((v) => v === params.type) ?? 'alle'
+
+  /* W3 · Q122 — the workspace's vocabulary, resolved HERE because the choice
+     is a cookie and only a server render can read it. */
   const vocab = (await readWorkspace(viewer.orgId))?.vocabulary ?? DEFAULT_VOCABULARY
   const t = await getTranslations('tasks')
   const supabase = await createClient()
+  const store = await cookies()
 
-  const [{ data: rows }, { data: me }] = await Promise.all([
+  const [{ data: rows }, { data: me }, { data: org }] = await Promise.all([
     supabase
       .from('tasks')
       .select(
@@ -51,14 +83,20 @@ export default async function TasksPage() {
       .eq('org_id', viewer.orgId)
       .eq('user_id', viewer.userId)
       .maybeSingle(),
+    supabase.from('organizations').select('worklist_view').eq('id', viewer.orgId).maybeSingle(),
   ])
+
+  /* Q152 — the per-person choice, then the organisation's default, then the
+     registry's first entry. Three steps in `resolveWorklistView`, not a chain
+     of `??`, because each fallback is a different fact. */
+  const view = resolveWorklistView(store.get(WORKLIST_COOKIE)?.value, org?.worklist_view)
 
   const list = rows ?? []
   const ownerIds = [...new Set(list.map((r) => r.owner_member_id).filter(Boolean))] as string[]
   const surveyIds = [...new Set(list.map((r) => r.source_ref).filter(Boolean))] as string[]
   const dutyKeys = [...new Set(list.map((r) => r.law_ref).filter(Boolean))] as string[]
 
-  const [{ data: owners }, { data: surveys }, { data: duties }] = await Promise.all([
+  const [{ data: owners }, { data: taskSurveys }, { data: duties }] = await Promise.all([
     ownerIds.length
       ? supabase.from('org_members').select('id, name, email').in('id', ownerIds)
       : Promise.resolve({ data: [] as { id: string; name: string | null; email: string }[] }),
@@ -71,62 +109,22 @@ export default async function TasksPage() {
   ])
 
   const ownerBy = new Map((owners ?? []).map((o) => [o.id, o.name || o.email]))
-  const surveyBy = new Map((surveys ?? []).map((s) => [s.id, s.title]))
+  const surveyBy = new Map((taskSurveys ?? []).map((s) => [s.id, s.title]))
   // Q70: the citation comes from the registry, never from a string on the task.
   const lawBy = new Map((duties ?? []).map((d) => [d.key, d.law]))
 
   const fmt = (iso: string | null) =>
     iso ? new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : null
 
-  const tasks: TaskRow[] = list.map((r) => ({
-    id: r.id,
-    title: r.title,
-    kind: r.kind,
-    kindLabel: t(KIND_KEY[r.kind] ?? 'taskKindTiltak'),
-    law: r.law_ref ? (lawBy.get(r.law_ref) ?? null) : null,
-    source:
-      r.source_kind === 'survey' && r.source_ref
-        ? t('taskSourceSurvey', { title: surveyBy.get(r.source_ref) ?? '—' })
-        : t('taskSourceManual'),
-    owner: r.owner_member_id ? (ownerBy.get(r.owner_member_id) ?? null) : null,
-    dueAt: r.due_at,
-    dueLabel: fmt(r.due_at),
-    status: r.status as TaskStatus,
-    mine: r.owner_member_id !== null && r.owner_member_id === (me?.id ?? null),
-    // Whether the effect row already exists, so the button is not offered for
-    // an assessment that has been recorded — the guard would allow a second,
-    // and a compliance record with two assessments of one action is a record
-    // nobody can read.
-    assessed: false,
-    // Q97: the closed task this one corrects, by title, so the register reads
-    // as a chain rather than as two unrelated rows.
-    corrects: r.corrects_task_id
-      ? (list.find((x) => x.id === r.corrects_task_id)?.title ?? null)
-      : null,
-  }))
-
-  const { data: assessed } = await supabase
-    .from('task_effect_assessments')
-    .select('task_id')
-    .in('task_id', tasks.map((x) => x.id).length ? tasks.map((x) => x.id) : ['00000000-0000-0000-0000-000000000000'])
-  const assessedSet = new Set((assessed ?? []).map((a) => a.task_id))
-  for (const task of tasks) task.assessed = assessedSet.has(task.id)
-
   /*
-    C4 — the comments, on the same surface as the tasks (V3:2168-2300).
+    The comments, on the same list as the tasks.
 
-    ── WHAT THE ROLE DOES HERE, AND WHY THE QUERY DOES NOT SAY IT ────────────
-
-    There is no `.eq('is_anonymous', true)` for a leser. The SELECT policy on
-    `survey_comments` already decides it (Q115): any member reads the anonymous
-    ones, and only an administrator or redaktør reads a NAMED one, because
-    CLAUDE.md invariant 4 gives a leser no named free text anywhere. Repeating
-    the rule here would be a second copy that can drift from the first, and the
-    one that matters is the one the database enforces.
-
-    The org scope is the same: RLS does it. `.eq('org_id', …)` is not available
-    anyway — the table has no org_id and is scoped through its round, which is
-    deliberate (one source of truth for tenancy on a table reachable by token).
+    There is no `.eq('is_anonymous', true)` for a leser: the SELECT policy on
+    `survey_comments` decides it (Q115) — any member reads the anonymous ones,
+    and only an administrator or redaktør reads a NAMED one, because CLAUDE.md
+    invariant 4 gives a leser no named free text anywhere. Repeating the rule
+    here would be a second copy that can drift, and the one that matters is the
+    one the database enforces.
   */
   const { data: commentRows } = await supabase
     .from('survey_comments')
@@ -151,7 +149,9 @@ export default async function TasksPage() {
           .select('id, comment_id, body, created_at')
           .in('comment_id', cList.map((c) => c.id))
           .order('created_at')
-      : Promise.resolve({ data: [] as { id: string; comment_id: string; body: string; created_at: string }[] }),
+      : Promise.resolve({
+          data: [] as { id: string; comment_id: string; body: string; created_at: string }[],
+        }),
   ])
 
   const roundSurvey = new Map((cRounds ?? []).map((r) => [r.id, r.survey_id]))
@@ -164,64 +164,169 @@ export default async function TasksPage() {
 
   const repliesBy = new Map<string, { text: string; dateLabel: string }[]>()
   for (const r of replies ?? []) {
-    const list = repliesBy.get(r.comment_id) ?? []
-    list.push({ text: r.body, dateLabel: fmt(r.created_at) ?? '' })
-    repliesBy.set(r.comment_id, list)
+    const bucket = repliesBy.get(r.comment_id) ?? []
+    bucket.push({ text: r.body, dateLabel: fmt(r.created_at) ?? '' })
+    repliesBy.set(r.comment_id, bucket)
   }
 
-  const feedback: FeedbackRow[] = cList.map((c) => {
+  /*
+    «Interne notater» (M:0113), for both halves of the list in one read.
+
+    Two `.in()` filters rather than a join, because the table has no org_id and
+    is reachable only through its parent — which is deliberate, and means RLS
+    already decided what comes back. A note on a comment a `leser` may not read
+    is not in this result at all.
+  */
+  const noteTaskIds = list.map((r) => r.id)
+  const noteCommentIds = cList.map((c) => c.id)
+  const { data: noteRows } = await supabase
+    .from('worklist_notes')
+    .select('id, task_id, comment_id, body, author_member_id, created_at')
+    .or(
+      [
+        noteTaskIds.length ? `task_id.in.(${noteTaskIds.join(',')})` : null,
+        noteCommentIds.length ? `comment_id.in.(${noteCommentIds.join(',')})` : null,
+      ]
+        .filter(Boolean)
+        .join(',') || 'id.is.null',
+    )
+    .order('created_at')
+
+  const noteAuthorIds = [
+    ...new Set((noteRows ?? []).map((n) => n.author_member_id).filter(Boolean)),
+  ] as string[]
+  const { data: noteAuthors } = noteAuthorIds.length
+    ? await supabase.from('org_members').select('id, name, email').in('id', noteAuthorIds)
+    : { data: [] as { id: string; name: string | null; email: string }[] }
+  const authorBy = new Map((noteAuthors ?? []).map((o) => [o.id, o.name || o.email]))
+
+  const notesFor = (key: 'task_id' | 'comment_id', id: string) =>
+    (noteRows ?? [])
+      .filter((n) => n[key] === id)
+      .map((n) => ({
+        id: n.id,
+        text: n.body,
+        // A departed colleague's note keeps its text and loses its name —
+        // `author_member_id` is ON DELETE SET NULL, so `null` is a real state.
+        who: n.author_member_id ? (authorBy.get(n.author_member_id) ?? null) : null,
+        dateLabel: fmt(n.created_at) ?? '',
+      }))
+
+  const { data: assessed } = await supabase
+    .from('task_effect_assessments')
+    .select('task_id')
+    .in(
+      'task_id',
+      noteTaskIds.length ? noteTaskIds : ['00000000-0000-0000-0000-000000000000'],
+    )
+  const assessedSet = new Set((assessed ?? []).map((a) => a.task_id))
+
+  const taskItems: WorklistItem[] = list.map((r) => ({
+    key: `t|${r.id}`,
+    id: r.id,
+    kind: 'task',
+    title: r.title,
+    typeLabel: t(KIND_KEY[r.kind] ?? 'taskKindTiltak'),
+    law: r.law_ref ? (lawBy.get(r.law_ref) ?? null) : null,
+    source:
+      r.source_kind === 'survey' && r.source_ref
+        ? t('taskSourceSurvey', { title: surveyBy.get(r.source_ref) ?? '—' })
+        : t('taskSourceManual'),
+    owner: r.owner_member_id ? (ownerBy.get(r.owner_member_id) ?? null) : null,
+    ownerMemberId: r.owner_member_id,
+    dueAt: r.due_at,
+    dueLabel: fmt(r.due_at),
+    status: r.status as TaskStatus,
+    mine: r.owner_member_id !== null && r.owner_member_id === (me?.id ?? null),
+    assessed: assessedSet.has(r.id),
+    handled: false,
+    anonymous: false,
+    hasThread: false,
+    question: null,
+    replies: [],
+    notes: notesFor('task_id', r.id),
+    // Q97: the closed task this one corrects, by title, so the register reads
+    // as a chain rather than as two unrelated rows.
+    corrects: r.corrects_task_id
+      ? (list.find((x) => x.id === r.corrects_task_id)?.title ?? null)
+      : null,
+  }))
+
+  const commentItems: WorklistItem[] = cList.map((c) => {
     const surveyId = roundSurvey.get(c.round_id) ?? null
     return {
+      key: `c|${c.id}`,
       id: c.id,
-      text: c.body,
+      kind: 'comment',
+      title: c.body,
+      typeLabel: t('wlTypeFeedback'),
+      law: null,
+      source: surveyId ? (cSurveyTitle.get(surveyId) ?? '—') : '—',
+      // A comment has no owner. The bundle sets `owner: f.who` and titles the
+      // chip panel «Avsendere» when the list is feedback-only (v5:6933); Q155
+      // declines that — see WorklistPanel.
+      owner: null,
+      ownerMemberId: null,
+      dueAt: null,
+      dueLabel: null,
+      status: null,
+      mine: false,
+      assessed: false,
+      handled: c.handled_at !== null,
+      anonymous: c.is_anonymous,
+      /*
+        C5 — whether a reply can reach anybody. A comment written through a
+        share link has no invitation, because every holder of that link is the
+        same principal and «her own thread» has no referent. The id itself is
+        read as a boolean and discarded: `invitation_id` scopes a thread and is
+        not a handle on a person (M:0099's comment).
+      */
+      hasThread: c.invitation_id !== null,
       // The question the comment is ABOUT. Null is the end-of-survey box, which
       // is a real state and not a missing value.
       question: c.question_id ? (questionText.get(c.question_id) ?? null) : null,
-      surveyId,
-      survey: surveyId ? (cSurveyTitle.get(surveyId) ?? '—') : '—',
-      dateLabel: fmt(c.created_at) ?? '',
-      /*
-        Q116 — DERIVED, not stored. The bundle tags a row with one of six values
-        and only «Ny» has a writer in the bundle itself; the other five are
-        seeded strings. Two of the six ARE derivable and these are they:
-        «ubehandlet» is handled_at being null, «samtale» is having replies. The
-        four topical ones (Resultater, Ros, Spørsmålene, Utsending) are NOT
-        built: nothing in this product classifies a comment by topic, and a
-        `tag` column would have been a fifth instance of the standing question.
-      */
-      handled: c.handled_at !== null,
-      anonymous: c.is_anonymous,
       replies: repliesBy.get(c.id) ?? [],
-      /*
-        C5 — whether a reply can reach anybody.
-
-        `invitation_id` is what `get_comment_thread` matches on. A comment
-        written through a share link has none, because every holder of that link
-        is the same principal and «her own thread» has no referent. So a reply to
-        it would be stored and never delivered, which is the shape of a control
-        that writes into nowhere.
-
-        NOTE THAT THIS IS THE ONLY THING THE SCREEN LEARNS FROM THE COLUMN. The
-        id itself is not rendered, not passed to the client, and not used to
-        group rows: it is read as a boolean and discarded. `invitation_id`
-        scopes a thread and is not a handle on a person (M:0099's comment).
-      */
-      hasThread: c.invitation_id !== null,
+      notes: notesFor('comment_id', c.id),
+      corrects: null,
     }
   })
 
-  // A filter over surveys that actually have a comment. Offering every survey
-  // would list options that can only ever produce an empty table.
-  const surveyOptions = [...new Set(feedback.map((f) => f.surveyId).filter(Boolean))]
-    .map((id) => ({ id: id as string, title: cSurveyTitle.get(id as string) ?? '—' }))
-    .sort((a, b) => a.title.localeCompare(b.title, 'nb'))
+  /* The «Ny oppgave» form's option sets, read rather than typed: `ntKinds`
+     (v5:6875) is a literal array of six strings in the bundle, and five of the
+     six are `task_kinds` rows. The sixth is «Tilbakemelding», which is not a
+     kind of task at all — it is the OTHER half of this list. */
+  const [{ data: kinds }, { data: allSurveys }, { data: members }] = await Promise.all([
+    supabase.from('task_kinds').select('key').order('sort_order'),
+    supabase
+      .from('surveys')
+      .select('id, title')
+      .eq('org_id', viewer.orgId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('org_members')
+      .select('id, name, email, status')
+      .eq('org_id', viewer.orgId)
+      .order('name'),
+  ])
 
   return (
-    <TasksPanel
+    <WorklistPanel
       persons={vocab.persons}
-      tasks={tasks}
-      feedback={feedback}
-      surveyOptions={surveyOptions}
+      type={type}
+      view={view}
+      items={[...taskItems, ...commentItems]}
+      kindOptions={(kinds ?? []).map((k) => ({
+        key: k.key,
+        label: t(KIND_KEY[k.key] ?? 'taskKindTiltak'),
+      }))}
+      surveyOptions={(allSurveys ?? []).map((s) => ({ id: s.id, title: s.title }))}
+      /* A deactivated member is not offered as an owner: assigning a duty to
+         somebody the organisation has said no longer works here is a register
+         entry that cannot be actioned. Existing rows keep their owner — the
+         column is `on delete set null` and nothing here rewrites it. */
+      memberOptions={(members ?? [])
+        .filter((m) => m.status === 'active')
+        .map((m) => ({ id: m.id, name: m.name || m.email }))}
       canEdit={viewer.role !== 'leser'}
     />
   )

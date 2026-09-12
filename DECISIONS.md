@@ -714,6 +714,100 @@ one step anyway. **A button that fails on almost every selection is worse than n
 is a stronger argument than the one the decision needed. `ivHasChecked` stays and the bar keeps
 assign, set-a-deadline and advance-one-step; closing stays per task with its assessment.
 
+## V5-2 — the Arbeidsliste (Q155–Q158)
+
+**THE SCREEN IS REPLACED, NOT EXTENDED, AND THAT IS THE BUNDLE'S OWN DECISION.** The eight states v5
+removes — `showTasks`, `showFeedback`, `fb.hasQuestion`, `fb.hasReplies`, `fb.replyOpen`,
+`t2.hasLaw`, `t2.isLate`, `t2.needsEffect` — are C4's two-panel model, and they are gone because one
+list carrying `r.isTask` / `r.isFb` cannot be assembled out of two panels: the buckets, the
+select-all checkbox and the board columns are all properties of the COMBINED list.
+`app/(app)/oppgaver/{TasksPanel,FeedbackList}.tsx` (774 lines) are deleted and `WorklistPanel.tsx`
+replaces them.
+
+**TWO PLACES THE DRAWING IS NOT TRUE OF OUR DATA, AND THEY ARE THE SAME MISTAKE TWICE: FOUR NAMES
+USED FOR FIVE STATES, with the surplus state pushed into whichever name was nearest.** This is
+CLAUDE.md's own shape — an enumeration mistaken for a property — arriving in a layout rather than in
+a guard, so it is recorded here and not in that table.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q155** | Does the owner panel become «Avsendere» when the list is feedback-only, counting rows per respondent? | **NO. It is «Eiere» in every view and it counts task owners.** | v5:6933 flips the title and `ivOwners` (v5:6924) then groups by `f.who`. **A count per respondent is a statistic about a person**, and this product does not produce those — k-anonymity exists so that no aggregate describes an individual, and «Kari — 4» on a manager's screen is exactly such an aggregate, assembled out of the one place named free text is legitimately readable. The individual named comment stays readable because an administrator was TOLD who wrote it; that is not the same as a ranking of who complains most. And it would have misrepresented the volume anyway: most comments are anonymous by design (Q115), so the panel would have counted the named minority. Not brought to Tor: it changes nothing a respondent sees and weakens no invariant — it declines to build something. |
+| **Q156** | The buckets: v5 groups a mixed list under «Over frist · Denne uken · Senere · Lukket». | **FIVE buckets. «Uten frist» is added, and it holds every row that genuinely has no deadline — an unhandled comment, and a task whose `due_at` is null.** | `bucketOf` (v5:6982) tests `/om 7\|i dag\|sep/` against a FORMATTED STRING, which is what a prototype with no dates does, and it files an unhandled comment under «Denne uken». **A comment has no deadline** — aml. § 4-3 puts no clock on one — so «Denne uken» over it is a claim about when it is due, which is the never-fabricate rule with a date in place of a number. The bundle files a dateless TASK under «Senere», which is the same claim; both go to the same new bucket rather than one each, because it is the same fact about both. `tests/unit/worklist-rows.test.ts` asserts the property over the whole status enum: no row without a deadline lands in a temporal bucket. |
+| **Q157** | The board: v5 maps six lifecycle states onto four columns. | **FIVE columns. `effektvurdert` gets its own, carrying the lifecycle's own word.** | `inboxColumn` (v5:6199) is `i === 3 ? 2 : 3`, which puts `effektvurdert` under «Lukket». **That is the one distinction Q69 exists to protect**: aml. § 3-1 and ldl. § 26 fjerde ledd are about the gap between «we assessed the effect» and «we are done», and a board that closes the gap visually is a compliance record that misdescribes itself. No invented copy — `taskStepEffektvurdert` already exists — and the grid is `repeat(auto-fit,minmax(210px,1fr))`, which renders five as readily as four. `columnOf` THROWS on a status it was not taught, so a seventh step fails a test in the commit that adds it rather than being filed under «Nytt». |
+| **Q158** | «Flytt ett steg» in bulk, now that «Lukk valgte» is refused. | **It advances every selected task by one step EXCEPT into `lukket`, and reports how many it left alone.** | Tor's reason for refusing «Lukk valgte» applies one step down, and **this is the thing I would otherwise have got wrong.** A task sitting at `effektvurdert` has its assessment, so the database WOULD let «Flytt ett steg» close it — and closing would then have happened in bulk, without Q97's terminal-state confirmation, through the button that was kept. So the kept button refuses that one transition. Partial failure is REPORTED and not swallowed: the rows in a selection sit at different steps and `app.guard_task_close` refuses `gjennomfort -> effektvurdert` without an assessment row, so the action is one update per task and the sentence names each class it left alone («3 flyttet ett steg. 1 står i Gjennomført og må effektvurderes først.»). A count that called them all «done» is the catch-all rule with arithmetic instead of an exception handler. |
+
+**THE PROGRESS BAR IS THE THIRD, AND IT IS SMALLER BUT THE SAME RULE.** v5:3256 renders
+`handled ? 100 : 20` on a comment row. **20 is an invented denominator over an unknown numerator** —
+the never-fabricate rule's own example — so a comment gets no bar at all, and a task's bar is the
+step reached over the six the register defines.
+
+**AND ONE CONTROL SUBSTITUTION, LOGGED AS THE EXCEPTION IT IS.** v5:3202 takes «om 14 dager» as free
+text because the prototype has no dates; `tasks.due_at` is a `date`, so the deadline control is
+`<input type="date">` throughout. CLAUDE.md's single allowed exception — the prototype's control
+cannot express a real schema constraint — and it is D165.
+
+**«Lag tiltak» (v5:3316) STAYS UNBUILT, unchanged from C4.** What a task may CONTAIN when its source
+is a respondent's own words is Q72's question, on a register a `leser` reads in full. That is a
+decision about disclosure rather than a wiring job, and the sentence says so where the control would
+be, because a control that vanishes teaches nothing.
+
+**THE LEAD SENTENCE IS Q72's REJECTED TRIGGER, IN THE COPY AGAIN.** v5:3151 reads «Hvert funn under
+terskel blir et tiltak med ansvarlig og frist» — a task fired by a finding falling below threshold,
+which Q72 refused because it would put «this small group scored badly» in that register. What
+actually fires one is `app.generate_blind_spot_tasks`: a survey has a group that will never receive
+its own results, a count of PEOPLE. `wlLead` says that, and a test asserts the phrase «under
+terskel» is not in it. Corrected, not implemented — the third bundle in a row to carry this sentence.
+
+**«Interne notater» IS THE PHASE'S DATABASE HALF (M:0113).** One table, two nullable parents, a CHECK
+that exactly one is set. Both parent FKs are `on delete cascade` **and that is the V2-9 question
+answered in the migration that adds the constraint**: a cascade deletes the note and can never null a
+column the CHECK reads. `author_member_id` IS `on delete set null` — a colleague leaving must not
+delete the team's record of what was discussed — and is deliberately outside the predicate. The
+writer is `addWorklistNote`, in the same commit, and a catalogue-derived test asserts it is the only
+writer in `app/` or `lib/`.
+
+## V5-3 — the Entra detail page (Q159–Q162)
+
+**THE PAGE IS DRAWN FOR A PULL INTEGRATION AND WHAT EXISTS IS A PUSH ONE. That one fact decides four
+of its six sections**, and it is measured rather than inferred:
+`grep -rln 'graph.microsoft.com\|User.Read.All\|client_credentials' app lib supabase scripts`
+returns **nothing**. There is no Microsoft Graph client, no client id, no consent flow and no
+scheduler. What I1-2 built is SCIM 2.0 — Entra POSTs to `/api/scim/v2/Users` with a bearer token the
+customer pastes into Entra.
+
+The bundle's model is the opposite: «Sist synkronisert i dag kl. 06:00», «Neste synk i morgen kl.
+06:00», three Graph READ scopes, and a step «Kjør første synk» that takes «ett til to minutter for
+500 brukere». Every one of those is a sentence about an integration running the other way.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q159** | Which of the bundle's eight directory fields are read? | **THREE, plus `externalId`, which the bundle does not draw.** `displayName → org_members.name`, `userName → email`, `active → status`, `externalId → external_id`. The other five render their REFUSAL rather than being dropped from the list. | «Ingenting utover dette leses fra katalogen» (v5:3840) is the promise the page makes, and **it is only checkable if the list is complete** — a row quietly dropped is the same defect as a row quietly implemented. Measured against `information_schema`: `org_members` has no department, no job title, no manager and no hire or leave date. The instruction said four of six have no column; the list has EIGHT and **five** have none, which is the count re-derived rather than carried. |
+| **Q160** | `manager`, `employeeHireDate`, `employeeLeaveDateTime`. | **REFUSED, with ONE reason, because it is one reason: a directory field DESCRIBES a person; it does not decide what the product does to her.** | Tor's decision, verbatim, and the test asserts the three share a single refusal KEY so that three near-identical sentences cannot drift apart. `manager` «Gir leder tilgang til egen enhet» is Q139 under another field name — authority derived from a directory attribute. `employeeHireDate` and `employeeLeaveDateTime` are a NEW SEND PATH with an external trigger: a change in the customer's directory would send a survey to a human with no editor acting, bypassing every place in this product where somebody decides WHETHER to ask. |
+| **Q161** | `department` and `jobTitle` — the other two. | **Each refused for its own reason, and neither reason is «no column».** `department`: the columns EXIST (`groups.source`, `groups.synced_at`, added by V2-3a) and are null on every row, and the endpoint serves no `/Groups` resource — so «not built», said plainly. `jobTitle`: `profiles.job_title` exists and is **what the person wrote about her own job** on Profil; a directory write would overwrite it. | «No column» would have been false for both, which is why the reasons are separate. The `jobTitle` case is the more interesting one: having the column is exactly what makes writing it wrong. |
+| **Q162** | «Synklogg» — four rows in the drawing, and nothing stores a history. | **No log table. The section renders the latest outcome and says that is all there is.** | `scim_credentials` holds `last_used_at`, `last_error`, `last_error_at` and `consecutive_errors` — the LATEST call, not a history — and no `scim_*` function writes `audit_events` (checked against `pg_proc`, all nine). Building a table because a drawing has four rows is building a feature from a mock, **and this particular feature has a question attached before it has a schema: a per-sync record of who arrived and who was deactivated is personal data about a customer's staff, and it needs a purpose and a retention period first.** The page says that to the reader rather than leaving an absence. |
+
+**«Tillatelser» IS BUILT, ANSWERED ABOUT THE TOKEN THAT EXISTS.** The question «what may this thing
+see» is the right question on this page; the bundle just answers it about Graph scopes we do not
+hold. Three rows now: `GET /Users`, `POST · PUT · PATCH /Users`, and **«Ingen tilgang til katalogen»**
+— because the strongest form of «HeiTuva skriver aldri tilbake til katalogen» is that we hold no
+credential that could.
+
+**«Grupper i synk» AND «Neste synk» RENDER THEIR ABSENCE.** `ResourceTypes` declares one resource,
+`User`; every other path is a 404, so no group ever arrives, and the section says the groups are set
+on the Grupper tab. «Neste synk» reads «Bestemmes i Entra» — not a clock, and a test asserts no time
+pattern is in that string, because this is the never-fabricate rule with hours instead of a number.
+
+**NO TENANT IS RENDERED AT ALL.** v5:3826 draws `{tenant} · {protocol}` with
+`nordiskstudio.onmicrosoft.com`. **SCIM hands us a bearer token, not a directory identity** — there
+is no tenant id anywhere in the schema — so the line is the protocol alone, which is a fact about
+this endpoint. The test forbids `onmicrosoft` and `tenant` in the route's source.
+
+**`lonn` IS CONFIRMED OUT, and it is a route that does not exist rather than a page with a notice.**
+The second `intDetail` entry reads `gender` and `salaryBand`; Q88 decided sykefravær is not a product
+feature and lønn is the same class. «Kjønnsdelt rapport etter ldl. § 26» is the claim V2-8's sweep
+already found false against the schema, and `field_gender` would be the second time it shipped. A
+page that exists is a feature whatever its content, so the test asserts the absence of the file.
+
 ## Standing invariants (not decisions — never violated)
 1. No client ever selects from `responses`/`answers`. Reads only via SECURITY DEFINER aggregate RPCs enforcing the survey's threshold per cell — `app.k_for` (default 5, floor **2** for natural persons since **Q91** — 3 from Q17 until 2026-09-07 — none for organisation respondents), never a client-supplied value.
 2. Anonymous responses can never reference an invitation, user, IP, or precise timestamp. DB CHECK constraint + RPC design.

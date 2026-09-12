@@ -612,6 +612,32 @@ to. **The gate that would have caught it existed, was scheduled, and had been ca
 running.** It had earned its place once before, in S2, by failing within one run of first being
 scheduled.
 
+## A REFUSAL NAMED IN A COMMENT IS FOUND BY A GREP OVER THAT COMMENT
+
+**Added 2026-09-12, after V5-2 and V5-3 hit it in the same session.** This file already records the
+production instance — an ad-hoc catch-all sweep matched `when others` inside a comment explaining
+why that handler is narrow, and the real gate strips `--` comments first. It happened twice more,
+in TypeScript, and the general form is worth a heading:
+
+> **A file that documents its own refusals contains the words it refuses.** A source-grepping test
+> aimed at «this string must not appear» will find it in the paragraph saying it must not appear.
+
+- `tests/unit/worklist-rows.test.ts` asserts the bulk bar has no «Lukk valgte» and that the owner
+  panel never becomes «Avsendere». Both went red on correct code: the doc comments above those very
+  controls name what is refused and why.
+- `tests/unit/integrations.test.ts` test 8 forbade «Sluttdato» across the `integrations`
+  namespace — and V5-3's detail page names that field **on purpose, in order to refuse it.**
+
+**The two fixes are different, and the difference is the lesson.** The first is mechanical: strip
+comments and measure the CODE, which is what the migration gate already does. The second is not —
+the string genuinely ships now, so the property had to be RESTATED rather than widened: *the word
+appears only where the page also says it is not read*, with the exemption DERIVED from the registry
+so that a field moved from refused to built loses it automatically.
+
+**Widening would have been the easy move and the wrong one.** Dropping «Sluttdato» from the
+forbidden list buys a green test and loses the guard; deriving the exemption keeps both. This is the
+same choice as «fix the column, not the predicate» one level up.
+
 ## A catch-all is a decision, not a safety measure
 **A catch-all is not a safety measure, it is a decision to make one class of failure
 invisible, and it is only sound if you know which class.** You will know it as one thing;
@@ -867,6 +893,25 @@ layout rule and the varying thing is a WORD.
 **M:0109 took the census to 1227 across 88 files** (`tests/db/scim.test.ts`, 11 — all eleven proven RED first against functions that did not exist). **5a3 holds at 71 of 101**: both SCIM functions live in the `app` schema, which neither sweep enumerates — the same recorded limit as `M:0107`'s, and the correct reading rather than a gap.
 
 **M:0108 took the census to 1216 across 87 files** — `tests/db/deactivation.test.ts` 6 -> 14, and no other entry moved (the proof is the one-line diff, not the total). 5a3 holds at **71 of 101**: both new functions live in the `app` schema, which neither sweep enumerates. Green from a bare `supabase db reset` — with `npm run seed:i18n` and `npm run seed:help` after it, without which four `ui_messages`/`help_articles` tests fail for want of content rather than for a defect.
+
+**V5-2 AND V5-3 TOOK THE CENSUS TO 1325 ACROSS 94 FILES AND 5a3 TO 80 OF 110.** V5-2's two files
+carry 37 (`tests/db/worklist-notes.test.ts` 16, `tests/unit/worklist-rows.test.ts` 21) and V5-3 took
+`tests/unit/integrations.test.ts` from 10 to 19; the diff against the previous manifest is **two
+added lines and one raised**, which is the proof rather than the total. The 1316 written down
+mid-phase was the count BEFORE V5-3's nine — corrected by re-running `CENSUS_WRITE=1` rather than by
+adjusting the sentence, because **the census asserts a FLOOR, so an understated entry is a silently
+weakened guard for that one file** and `integrations.test.ts` would have been left at 10. 5a3's denominator rose
+109 -> 110 with `M:0113`'s `worklist_notes` and the CHECKED number rose 79 -> 80: the table is
+CHECKED rather than allowlisted, and PROVEN on a bare reset because the demo seed carries two notes
+— one on a task and one on a comment, because the two go through different halves of the select
+policy and a fixture with only the first would leave the second unproven.
+
+**AND TWO REGISTRIES ARE NOT REACHED BY `supabase db reset` + `seed-demo`, WHICH IS A FACT ABOUT
+THE RUN ORDER AND WORTH WRITING DOWN ONCE.** A bare reset leaves `help_articles` at 0 and
+`ui_messages` at 52, so `tests/db/help.test.ts` (3 tests) and `tests/invariants/invariants.test.ts`
+(1) fail for a reason that is not a defect: `npm run seed:help` and `npm run seed:i18n -- --local`
+are separate scripts. Same shape as the six-tables-unproven note below — «run order changes what a
+gate can prove, not the number» — and the remedy is the same: run them, then measure.
 
 **M:0107 took the census to 1208 across 87 files** (`tests/db/deactivation.test.ts`, 6 — two
 proven RED first, two controls asserting an external address is untouched, one asserting the

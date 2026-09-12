@@ -2879,6 +2879,55 @@ export type Database = {
           },
         ]
       }
+      worklist_notes: {
+        Row: {
+          author_member_id: string | null
+          body: string
+          comment_id: string | null
+          created_at: string
+          id: string
+          task_id: string | null
+        }
+        Insert: {
+          author_member_id?: string | null
+          body: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          task_id?: string | null
+        }
+        Update: {
+          author_member_id?: string | null
+          body?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worklist_notes_author_member_id_fkey"
+            columns: ["author_member_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worklist_notes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "survey_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worklist_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_module_links: {
         Row: {
           module_key: string

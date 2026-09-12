@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { mintScimToken, revokeScimToken } from './actions'
@@ -131,6 +132,18 @@ export function IntegrationsPanel({
                 >
                   {chip.label}
                 </span>
+                {/* V5-3 — the way into the detail page (v5:3819). Only the
+                    built row has one: a link from a row whose status is «Ikke
+                    tilgjengelig» would open a page describing a connection that
+                    cannot exist. */}
+                {live ? (
+                  <Link
+                    href="/administrasjon/integrasjoner/entra"
+                    className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-4 py-[10px] text-[12.5px] font-semibold text-ink no-underline"
+                  >
+                    {t('detailLink')}
+                  </Link>
+                ) : null}
                 {live ? (
                   <button
                     type="button"

@@ -171,6 +171,9 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           dashboard: t('subnavDashboard'),
           reports: t('subnavReports'),
           tasks: t('subnavTasks'),
+          all: t('subnavAll'),
+          onlyTasks: t('subnavOnlyTasks'),
+          feedback: t('subnavFeedback'),
         }}
       />
     </div>

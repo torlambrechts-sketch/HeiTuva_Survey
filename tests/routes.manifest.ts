@@ -340,13 +340,63 @@ export const ROUTES: RouteSpec[] = [
     states: [
       { name: 'default' },
       {
-        // The «Lovpålagt» filter, because the stat tiles and the filter must
+        // The «Lovpålagt» scope, because the buckets and the scope rail must
         // agree about what «med hjemmel» counts and the default state cannot
         // show that.
         name: 'lovpalagt',
         setup: async (page) => {
           await page.getByRole('button', { name: /^(Lovpålagt|Statutory)$/ }).click()
           await page.waitForTimeout(400)
+        },
+      },
+      {
+        /* V5-2 — the board (v5:3356). A COOKIE state, like the workspace
+           modules: `heituva.worklist` is per-person and a seed cannot reach it,
+           so the state is created the way a person creates it and then read
+           back from the rendered page. Five columns, not the bundle's four —
+           `effektvurdert` has its own, because filing it under «Lukket» is the
+           one distinction Q69 exists to protect. */
+        name: 'tavle',
+        setup: async (page) => {
+          await page.context().addCookies([
+            { name: 'heituva.worklist', value: 'board', url: page.url() },
+          ])
+          await page.reload({ waitUntil: 'networkidle' })
+          await page.getByText(/^(Til effektvurdering|Awaiting effect assessment)$/).waitFor()
+        },
+        teardown: async (page) => {
+          // The cookie PERSISTS, and a view mode that outlives its own state
+          // would photograph every later /oppgaver capture as a board. Put it
+          // back to the value the resolver would have produced anyway.
+          await page.context().addCookies([
+            { name: 'heituva.worklist', value: 'list', url: page.url() },
+          ])
+        },
+      },
+      {
+        /* The empty view (v5:3247). Reached by combining a type with a scope
+           that cannot both hold: «Tilbakemeldinger» with «Lovpålagt» — a
+           comment has no hjemmel, and `matchesScope` excludes it rather than
+           passing it through, so the list is genuinely empty rather than
+           filtered to nothing by accident. */
+        name: 'tom',
+        setup: async (page) => {
+          await page.goto(`${new URL(page.url()).origin}/oppgaver?type=tilbakemeldinger`, {
+            waitUntil: 'networkidle',
+          })
+          await page.getByRole('button', { name: /^(Lovpålagt|Statutory)$/ }).click()
+          await page.getByText(/^(Ingenting i denne visningen|Nothing in this view)$/).waitFor()
+        },
+      },
+      {
+        /* An expanded row, because «Interne notater» (M:0113), the six step
+           chips and the reply box render only there — three quarters of what
+           this phase built is behind one click. The seeded note on «Revisjon
+           hos leverandør» is what makes `hasNotes` reachable. */
+        name: 'rad-apen',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /Revisjon hos leverandør/ }).first().click()
+          await page.getByText(/^(Interne notater|Internal notes)$/).first().waitFor()
         },
       },
     ],
@@ -607,6 +657,27 @@ export const ROUTES: RouteSpec[] = [
     label: 'admin-integrasjoner',
     as: 'administrator',
     phase: 'phase-1',
+    states: [{ name: 'default' }],
+  },
+  {
+    /* V5-3 — the Entra detail page (v5:3819-3902), the first of the two states
+       __3_ adds over __2_.
+
+       ITS OWN ROUTE rather than a state of the tab, because the bundle's
+       `intOpen` is a screen and not a panel: six sections, a back link and a
+       full-width header card. Deep-linked here, which is also how the capture
+       proves the 404 for a non-administrator is the only other outcome.
+
+       The demo seed carries a SCIM credential, so the default state is a real
+       connection — «needs_setup» until Entra has actually called, which is the
+       honest state of a token nobody has pasted anywhere yet. The four
+       fabrications the page refuses (tenant, next-sync time, four groups, a
+       four-row log) are asserted in tests/unit/integrations.test.ts rather than
+       here: a screenshot cannot show the absence of a claim. */
+    route: '/administrasjon/integrasjoner/entra',
+    label: 'admin-entra',
+    as: 'administrator',
+    phase: 'phase-6',
     states: [{ name: 'default' }],
   },
   {
