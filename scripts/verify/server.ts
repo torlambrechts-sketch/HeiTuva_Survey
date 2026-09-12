@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { readFile, rm, stat } from 'node:fs/promises'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -98,7 +98,70 @@ async function buildLocal(): Promise<void> {
  * against a production build so captures show what actually ships — dev-mode
  * overlays and unminified layout shifts would poison a pixel comparison.
  */
+/**
+ * The build id the RUNNING SERVER is actually serving, or null.
+ *
+ * WHY THIS EXISTS, and it is the third instance in one day of «the thing
+ * measured was not the thing claimed». `buildTargetsLocal()` and
+ * `buildIsStale()` both inspect OUR `.next` directory. That is an excellent
+ * proxy for «the running server is correct» — and only while the running server
+ * is the one we started. Neither can see the server at all.
+ *
+ * So a `next-server` left behind by an earlier session, on a different Next
+ * MAJOR, serving an entirely different working copy, passed both guards and was
+ * reused. One `verify:responsive` run against it reported 6464 findings and 277
+ * blockers on a two-pixel CSS change, and the CSS was fine. The guards were not
+ * wrong; they were answering a different question.
+ *
+ * Next serves its assets under `/_next/static/<buildId>/`, so the id is in the
+ * HTML of any page. Comparing it against `.next/BUILD_ID` asks the server what
+ * it is, rather than asking our directory what it ought to be.
+ */
+async function serverBuildId(): Promise<string | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/logg-inn`, { cache: 'no-store' })
+    const html = await res.text()
+    return /\/_next\/static\/([^/"']+)\//.exec(html)?.[1] ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Kill whatever holds the harness port. Used only when the server answering it
+ *  is provably not ours — never on a server we are about to legitimately
+ *  reuse, because a developer's `next dev` on the same port is a valid case the
+ *  build-id check already distinguishes. */
+function killPort(port: string) {
+  for (const cmd of [['fuser', '-k', `${port}/tcp`], ['pkill', '-9', '-f', `next start -p ${port}`]]) {
+    try {
+      spawnSync(cmd[0]!, cmd.slice(1), { stdio: 'ignore' })
+    } catch {
+      // Best effort: the next isUp() check is what decides, not this.
+    }
+  }
+}
+
 export async function ensureServer(): Promise<{ stop: () => void; started: boolean }> {
+  const port = new URL(BASE_URL).port || '3100'
+
+  if (await isUp(`${BASE_URL}/logg-inn`)) {
+    // ASK THE SERVER, NOT OUR DIRECTORY. A stale process from an earlier run —
+    // or an earlier session, on another Next major — answers this port exactly
+    // like ours does, and every other check here would pass. Killed at the
+    // START of the run rather than discovered after a scare.
+    const [serving, ours] = await Promise.all([
+      serverBuildId(),
+      readFile('.next/BUILD_ID', 'utf8').then((t) => t.trim()).catch(() => null),
+    ])
+    if (ours && serving !== ours) {
+      console.log(
+        `  server: ${BASE_URL} is serving build ${serving ?? 'unknown'}, not ours (${ours}) — killing it`,
+      )
+      killPort(port)
+      await new Promise((r) => setTimeout(r, 1500))
+    }
+  }
+
   if (await isUp(`${BASE_URL}/logg-inn`)) {
     // A server started elsewhere is serving some build this script did not
     // make. Under --local, refuse it unless that build is wired to the local
@@ -130,7 +193,6 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
   await rm('.next/cache/fetch-cache', { recursive: true, force: true })
 
   console.log(`  server: starting on ${BASE_URL}${LOCAL ? ' (local Supabase)' : ''}`)
-  const port = new URL(BASE_URL).port || '3100'
   const child: ChildProcess = spawn('npx', ['next', 'start', '-p', port], {
     stdio: 'ignore',
     // Under --local these must be set on the child: Next loads .env.local

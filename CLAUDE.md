@@ -361,7 +361,7 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Eleven instances now.** The ninth is a REPEAT of the third — which is itself a finding — the
+**Twelve instances now** — the command above returns 13 and therefore twelve. The ninth is a REPEAT of the third — which is itself a finding — the
 tenth is the subtlest of all of them, and the eleventh was caught by a SWEEP OVER PROSE rather than
 by a gate or a measurement, which is a third way of finding them. Ten different constructs, one
 shape:
@@ -379,6 +379,7 @@ shape:
 | **`revoke … from public` AGAIN** (C4/C5, `M:0101`/`M:0102`) | the PUBLIC pseudo-role — **the same enumeration row 3 already names** | **«A GRANT IS A FACT ABOUT THE CATALOGUE AND MUST BE READ BACK FROM THE CATALOGUE.»** `from public, anon` is the fix; `has_function_privilege('anon', …)` is the rule. |
 | **`gap-y-[13px]` carried to a smaller chip** (C4, `verify:responsive`) | 13px, measured against the `py-2` (40px) rail it was copied FROM | **«A CONSTANT COPIED FROM A WORKING CONTEXT CARRIES ITS CONTEXT'S ASSUMPTIONS INVISIBLY.»** The number belongs to the CONTROL, not to the pattern. |
 | **«Fire alternativer»** as a module label (V4-0 sweep, Q121) | four, counted off the bundle's fixture quiz | **«A DESCRIPTION OF A CLASS MAY NOT CARRY A COUNT OF THE INSTANCE IN FRONT OF YOU.»** `quizzable` is `choice \| yesno \| dropdown`; `yesno` has two. |
+| **`verify:i18n`'s Norwegian detector** (Q129, 2026-09-12) | the strings it already knows — the `no` message set — used as the definition of «Norwegian» | **«A DETECTOR THAT IDENTIFIES A DEFECT BY MATCHING KNOWN STRINGS CAN ONLY REPORT THE DEFECTS THAT COLLIDE WITH ONE.»** Not a gate looking in the wrong place: a gate that can only see what collides with something it already holds. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -494,6 +495,32 @@ Three things make it the sharpest entry in this table:
   fires before trusting it: a synthetic `./packs.json` gives exit 1 naming file and specifier.
   «Prefer the fix that is robust against the construct nobody has thought of» applied to a
   transcription tool.
+
+**THE TWELFTH IS A DIFFERENT KIND, AND IT IS THE FIRST ONE WHERE THE ENUMERATION IS THE
+DETECTOR'S OWN VOCABULARY** (Tor, 2026-09-12, after Q129).
+
+`verify:i18n` decides «this English page is showing Norwegian» by matching the rendered text against
+the `no` message set. That set is an enumeration — of the strings the product happens to have as UI
+MESSAGES — and it was silently doing duty as the definition of the Norwegian language.
+
+`workspaces.label` for `cx` is «Kunder og service». It had been in the DOM of **every English page
+since W1**, and it is not a message, so the gate had nothing to name it with and said the page was
+clean. The defect became visible only when `M:0106` made the `quiz` row selectable and its label
+«Quiz og arrangement» turned out to be character-for-character a message added hours earlier —
+`dash.quizKicker`. The gate then reported 28 routes and blamed the message.
+
+**The proof is the sequence: 28 -> 4 -> 2 -> 0.** Each fix uncovered a SEPARATE untranslated registry
+standing behind the previous one — the workspace chip, then Oversikt's strip and the Firma tab, then
+`use_cases` in the library, whose `hr` row carries the same Norwegian string a third time. A gate
+that could see «Norwegian» rather than «a string I have on file» would have reported all of it at
+once, on the first run, two phases earlier.
+
+**Why it is worth its own row rather than a note under row 5.** Every earlier instance is a list
+somebody WROTE — three imports, one pseudo-role, two constructs, the controls a row had that day. A
+reader can at least ask «is this all of them?» **This one nobody wrote: it is the detector's corpus,
+and it is invisible as an enumeration precisely because it looks like a capability.** The question to
+ask of any matcher is therefore not «is the list complete» but **«what is this list standing in for,
+and what else belongs to that thing?»**
 
 **Two consequences, and the second is the one that pays.**
 - A test, an allowlist reason or a guard should be stated as the property, and where it cannot
@@ -631,6 +658,29 @@ filenames»* and as row 10's constant that is right somewhere else: **the thing 
 thing claimed.** So the script's output ends by saying so in its own words — a machine without Docker
 and a machine whose daemon is stopped print identically, and one of them is four seconds from
 working.
+
+**THREE IN ONE DAY, AND THE RATE IS THE FINDING** (Tor, 2026-09-12). «The thing measured was not
+the thing claimed» is not an occasional slip; on 2026-09-12 it happened three times before noon, in
+three different materials:
+
+1. **The Docker daemon.** `docker info` returned «Cannot connect» — accurate about the daemon,
+   reported as a fact about the environment. `dockerd &` fixed it in four seconds.
+2. **The stale `next-server` processes.** `buildTargetsLocal()` and `buildIsStale()` both inspect
+   OUR `.next` directory, which is a perfect proxy for «the running server is right» and only while
+   the running server is ours. A leftover process on a different Next MAJOR passed both and was
+   reused; one `verify:responsive` run against it reported 6464 findings and 277 blockers on a
+   two-pixel CSS change. Fixed by asking the SERVER what build it is serving
+   (`scripts/verify/server.ts`, `serverBuildId()`), and the guard was proven to fire against a
+   synthetic foreign build before being trusted.
+3. **An ad-hoc catch-all query against production.** It reported `when others` in `send_round`. The
+   match was inside a COMMENT explaining why that handler is narrow; the real gate strips `--`
+   comments first and the one-off did not. A manufactured defect on prod, cleared only by reading
+   the lines.
+
+**None of the three was a missing measurement.** Every one of them measured something, accurately,
+and then answered a question the measurement had not been asked. That is why the rule is «the call
+beside the claim» and not «make more calls»: the call is necessary and it is not sufficient, and
+what closes the gap is naming, in the sentence, WHICH object was interrogated.
 
 **And the script is itself an enumeration, stated as one** (row 9, aimed at this file): its rows are
 the dependencies this project has actually hit, and the next thing assumed will not be among them.
