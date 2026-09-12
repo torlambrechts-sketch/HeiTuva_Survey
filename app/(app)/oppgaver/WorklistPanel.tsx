@@ -107,13 +107,34 @@ export type WorklistItem = {
 const blockedOnAssessment = (r: WorklistItem): boolean =>
   r.status === 'gjennomfort' && !r.assessed
 
-/** v5:3243-3250 — the list's column widths, verbatim. */
+/**
+ * v5:3243-3250 — the list's column widths, verbatim, AND SCOPED TO `md`.
+ *
+ * The widths are a fact about the DESKTOP table. Below `md` they are what broke
+ * the row: 18 + 118 + 96 + 108 fixed pixels plus four 16px gaps do not fit 346,
+ * so the flex line packed what it could and the title — `flex-[2.4_1_0]` with
+ * `min-w-0` — absorbed the whole shortfall and painted about 24px wide. Its
+ * `touch-44` overlay then grew to 44 and collided with the checkbox's, which
+ * is what `verify:responsive` reported 28 times at 390px.
+ *
+ * RESPONSIVE.md § Data tables says that row becomes a CARD, and the comment on
+ * the column header below has claimed since this screen was written that it
+ * does. **It did not** — the header was hidden and the row left as a squeezed
+ * flex line. This is the layout the comment describes: below `md` the checkbox
+ * and the title own the first line, and the four meta fields wrap under it in
+ * a cluster, each sized to its content. `md:contents` puts them back as direct
+ * children of the row above `md`, so the desktop table is byte-identical.
+ *
+ * Only at 390px, not at 320px: at 320 the line packed differently and the title
+ * came out wide enough that nothing collided. **A layout defect that appears at
+ * ONE of two measured widths is why the gate measures both.**
+ */
 const COL = {
-  task: 'flex-[2.4_1_0] min-w-0',
-  type: 'w-[118px] flex-none',
-  due: 'w-24 flex-none',
-  status: 'w-[108px] flex-none',
-  owner: 'flex-[1.3_1_0] min-w-0',
+  task: 'min-w-0 flex-1 md:flex-[2.4_1_0]',
+  type: 'flex-none md:w-[118px]',
+  due: 'flex-none md:w-24',
+  status: 'flex-none md:w-[108px]',
+  owner: 'min-w-0 flex-none md:flex-[1.3_1_0]',
   chev: 'w-[34px] flex-none',
 } as const
 
@@ -563,8 +584,9 @@ export function WorklistPanel({
 
             {/* v5:3236-3242 — the column header. Hidden below md: five labelled
                 columns do not fit a 390px row, and RESPONSIVE.md § Data tables
-                says the row becomes a card there. The row below carries the
-                same fields as stacked lines, each with its own label. */}
+                says the row becomes a card there. The row below is that card —
+                see the comment on `COL`, which carries the arithmetic and the
+                reason this comment was false for one commit. */}
             <div className="hidden items-center gap-4 border-y border-line bg-bg px-[22px] py-[11px] md:flex">
               <button
                 type="button"
@@ -621,7 +643,14 @@ export function WorklistPanel({
                     </div>
                   ) : null}
 
-                  <div className="flex min-w-0 flex-wrap items-center gap-4 px-[22px] py-3.5 md:flex-nowrap">
+                  <div className="flex min-w-0 flex-col gap-2.5 px-[22px] py-3.5 md:flex-row md:flex-nowrap md:items-center md:gap-4">
+                    {/* THE FIRST LINE BELOW `md`, and a pair of ordinary flex
+                        children above it. `md:contents` dissolves this box at
+                        desktop so the checkbox and the title are direct children
+                        of the row again and the drawn table is unchanged; below
+                        `md` it is what gives the title the full width instead of
+                        whatever four fixed columns leave over. */}
+                    <div className="flex w-full min-w-0 items-center gap-4 md:contents">
                     {canEdit ? (
                       <button
                         type="button"
@@ -672,6 +701,16 @@ export function WorklistPanel({
                         </span>
                       ) : null}
                     </button>
+                    </div>
+
+                    {/* THE META CLUSTER. Below `md` it wraps under the title and
+                        each field sizes to its content; `md:contents` makes it
+                        vanish at desktop so these four are direct children of
+                        the row with their drawn widths. `touch-cluster` keeps
+                        the 44px areas of the chips apart when they wrap —
+                        globals.css has that arithmetic and it is the same
+                        control class as every other chip rail on this screen. */}
+                    <div className="touch-cluster flex flex-wrap items-center gap-x-3 gap-y-2 md:contents">
                     <span className={COL.type}>
                       <span className="rounded-full px-2.5 py-1 text-[11px] font-bold md:whitespace-nowrap"
                         style={{ background: r.kind === 'task' ? 'var(--sf2)' : 'var(--ac2)' }}
@@ -683,6 +722,13 @@ export function WorklistPanel({
                       ) : null}
                     </span>
                     <span className={`${COL.due} text-[12.5px] text-mut md:whitespace-nowrap`}>
+                      {/* The label travels with the value below `md`. Out of a
+                          labelled column, «12. sep» or «—» on its own says
+                          nothing — which is the half of RESPONSIVE.md's card
+                          pattern that is about meaning rather than geometry. */}
+                      <span className="uppercase tracking-[.09em] md:hidden">
+                        {t('wlColDue')}{' '}
+                      </span>
                       {r.dueLabel ?? t('wlNoDue')}
                     </span>
                     <span className={COL.status}>
@@ -725,6 +771,7 @@ export function WorklistPanel({
                         </span>
                       )}
                     </span>
+                    </div>
                     <span className={`${COL.chev} hidden justify-end text-mut md:flex`}>
                       <svg
                         width="14"
