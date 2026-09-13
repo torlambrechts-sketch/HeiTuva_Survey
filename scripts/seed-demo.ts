@@ -170,21 +170,95 @@ async function main() {
   // Categories are spread, because `pickCats`/`bankCats` are BUILT from the
   // distinct categories present (V2:6204, V2:6343) — with one category the chip
   // row is a single chip and proves nothing about filtering.
-  await svc.from('question_bank').insert([
+  const { error: bankError } = await svc.from('question_bank').insert([
+    /*
+      **EVERY ROW CARRIES `config`, AND THE OMISSION WAS A SILENT FAILURE.**
+
+      `question_bank.config` is `not null default '{}'`, so a row without the
+      key should take the default — and would, inserted alone. PostgREST
+      UNIONS THE KEYS ACROSS A BULK INSERT: the one row below that sets
+      `config` gave every other row `config: null`, which the NOT NULL then
+      refused. The whole five-row insert failed, the error was never read, and
+      the seed shipped an empty «Egne» chip and no shared bank rows on every
+      reset. Found by making the insert speak (Q175), not by any gate.
+
+      The lesson is the column default's: a default only applies to a key the
+      statement does not mention, and in a bulk insert «mentioned» is decided
+      by the widest row.
+    */
     { org_id: null, text: 'Jeg har det jeg trenger for å gjøre jobben min godt',
-      type: 'scale', category: 'Arbeidsmiljø', used_count: 4 },
+      type: 'scale', category: 'Arbeidsmiljø', used_count: 4, config: {} },
     { org_id: null, text: 'Hvor sannsynlig er det at du vil anbefale oss som arbeidsgiver?',
-      type: 'enps', category: 'Engasjement', used_count: 9 },
+      type: 'enps', category: 'Engasjement', used_count: 9, config: {} },
     { org_id: null, text: 'Har du opplevd eller sett trakassering de siste tolv månedene?',
-      type: 'yesno', category: 'Lovpålagt', used_count: 2 },
+      type: 'yesno', category: 'Lovpålagt', used_count: 2, config: {} },
     { org_id: org.id, text: 'Hva bør vi slutte å gjøre?',
-      type: 'text', category: 'Egne', used_count: 1,
+      type: 'text', category: 'Egne', used_count: 1, config: {},
       author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
     { org_id: org.id, text: 'Hvilken samling vil du ha mer av?',
       type: 'choice', category: 'Egne', used_count: 0,
       config: { options: ['Fagdag', 'Workshop', 'Allmøte'] },
       author_member_id: org.members.find((m) => m.role === 'redaktor')?.memberId ?? null },
   ])
+  // Q175: CHECKED. This insert had no error check and the rows had stopped
+  // landing — `question_bank` held zero org-owned rows and the «Egne» chip was
+  // empty on every reset, silently. An insert whose failure nobody reads is
+  // the seed's own version of a swallowed exception.
+  if (bankError) throw new Error(`seed question_bank: ${bankError.message}`)
+
+  /*
+    ── Q175 · «Firmaets maler»: two templates this organisation owns ────────
+
+    THE SEED HAS NEVER SHIPPED ONE, and `tests/routes.manifest.ts` said so in
+    its own comment — the `bibliotek-firmaets-maler` state produces one by
+    driving the Builder's «Lagre som mal», deliberately, so that the capture
+    proves the BUTTON works. That proof is untouched: the state still clicks it
+    and still waits for «Lagret som mal ✓». What changes is that the section
+    exists on a bare reset, so every other capture of the library sees the
+    screen a real organisation has rather than an empty one.
+
+    One private and one shared, because `TemplateCard`'s eyebrow reads
+    «Privat mal» or «Firmaets mal · {owner}» and a fixture with one of them
+    leaves the other branch undrawn.
+
+    `use_case` is null on both: the wizard does not tag an organisation's own
+    templates, so tagging them here would model a state the product cannot
+    produce — and `annet` is the chip that exists for exactly this.
+  */
+  const redaktorMember = org.members.find((m) => m.role === 'redaktor')
+  const { error: packError } = await svc.from('template_packs').insert([
+    {
+      org_id: org.id,
+      key: `egen-onboarding-${org.id.slice(0, 8)}`,
+      // `template_packs.category` is CHECK-constrained to Ansatte/Kunder/
+      // Lovpålagt/Annet — «Egne» is the BANK's category vocabulary and is not
+      // this column's. Both of these are employee-facing, so «Ansatte» is the
+      // true one; the customer-facing axis is `use_case`, which an
+      // organisation's own templates do not carry (Q45).
+      category: 'Ansatte',
+      use_case: null,
+      title: 'Onboarding uke 1',
+      audience: 'Nyansatte',
+      private: false,
+      author_member_id: redaktorMember?.memberId ?? null,
+      questions: [
+        { type: 'scale', text: 'Hvor godt forberedt følte du deg første dag?' },
+        { type: 'text', text: 'Hva manglet i introduksjonen?' },
+      ],
+    },
+    {
+      org_id: org.id,
+      key: `egen-ledergruppe-${org.id.slice(0, 8)}`,
+      category: 'Ansatte',
+      use_case: null,
+      title: 'Temperaturmåling ledergruppen',
+      audience: 'Ledergruppen',
+      private: true,
+      author_member_id: redaktorMember?.memberId ?? null,
+      questions: [{ type: 'likert', text: 'Vi tar beslutninger raskt nok' }],
+    },
+  ])
+  if (packError) throw new Error(`seed template_packs: ${packError.message}`)
 
   // V2-6: one support message, for the same reason the objection above exists —
   // `verify:policy` reports a table PROTECTED BUT UNPROVEN when it is empty,
@@ -733,6 +807,159 @@ async function main() {
     if (replyError) throw new Error(`seed survey_comment_replies: ${replyError.message}`)
   }
 
+  /*
+    ── Q175 · the seven question types no seed had ever reached ────────────
+
+    Walk finding W-12: the registry declares THIRTEEN types and the seed
+    produced six — `scale`, `yesno`, `text`, `enps`, `choice`, `likert`. The
+    other seven had no row anywhere, so seven renderers were unreachable by any
+    browser gate, and «all thirteen types render» was a claim nobody could check
+    without hand-building a survey.
+
+    **THE VALUES ARE THE SHAPES THE RENDERERS ACTUALLY EMIT**, read off
+    `QuestionInput.tsx` rather than guessed: smiley/dropdown/image are indices
+    (smiley 1-based, the other two 0-based), slider a number inside its own
+    min/max, ranking an ORDER of option indices, matrix one number per
+    statement. A fixture in the wrong shape would render — and would be showing
+    the product data it can never produce.
+
+    `field` is NOT here. It is the one type the registry marks
+    `breaksAnonymity`, and the Builder refuses to call a survey ready while an
+    anonymous one carries it. Nothing in the DATABASE enforces that, so a seed
+    could quietly create the state the product forbids; it goes in the named
+    survey below instead, where a name-and-e-post question is what the type is
+    for.
+  */
+  const types = await createSurvey(
+    org.id,
+    // **THE TITLE MAKES NO CLAIM, DELIBERATELY.** It read «alle spørsmålstyper»
+    // first, and that was false in the row itself: `field` cannot be here (see
+    // below), so the survey could never carry all thirteen and the title
+    // promised a completeness the data did not have. Between this survey and
+    // «Påmelding til fagdag» every type is reachable; neither title says so.
+    'Medarbeiderpuls høst',
+    [
+      { type: 'smiley', text: 'Hvordan er stemningen i teamet denne måneden?' },
+      {
+        type: 'slider',
+        text: 'Hvor stor del av uken går til avbrudd?',
+        config: { min: 0, max: 100, low_label: 'Ingenting', high_label: 'All tiden' },
+      },
+      {
+        type: 'dropdown',
+        text: 'Hvilket fagområde jobber du mest med?',
+        config: { options: ['Produkt', 'Design', 'Utvikling', 'Ledelse', 'Annet'] },
+      },
+      {
+        type: 'image',
+        text: 'Hvor jobber du best?',
+        config: { options: ['På kontoret', 'Hjemme', 'Blandet'] },
+      },
+      {
+        type: 'ranking',
+        text: 'Ranger godene etter hva som betyr mest for deg',
+        config: { options: ['Fleksitid', 'Hjemmekontor', 'Kompetansebudsjett', 'Ekstra fridager'] },
+      },
+      {
+        type: 'matrix',
+        text: 'Hvor godt stemmer disse for deg?',
+        config: {
+          statements: ['Jeg får tydelige mål', 'Jeg har tid nok', 'Jeg får hjelp når jeg trenger det'],
+        },
+      },
+      // The six that were already reachable, gathered here too, so ONE survey
+      // renders every type an anonymous survey may carry. `enps` in particular
+      // existed only as a bank row — a type with a renderer, a bank entry and
+      // no question anywhere.
+      { type: 'enps', text: 'Hvor sannsynlig er det at du vil anbefale oss som arbeidsgiver?' },
+      { type: 'scale', text: 'Hvor godt fungerer samarbeidet på tvers?' },
+      { type: 'likert', text: 'Jeg vet hva som forventes av meg' },
+      {
+        type: 'choice',
+        text: 'Hva vil du ha mer av?',
+        config: { options: ['Fagtid', 'Sosialt', 'Opplæring'], multi: false, randomize: false },
+      },
+      { type: 'yesno', text: 'Har du hatt en samtale om utvikling i høst?' },
+      { type: 'text', text: 'Hva er det viktigste vi kan endre?' },
+    ],
+    { audience: 'Hele selskapet', langs: ['no'] },
+  )
+  const typesRound = await createRound(types, 9, { groupId: org.groupId })
+  await submitResponses(
+    typesRound.tokens,
+    (i) => ({
+      [types.questions[0]!.id]: { value: 3 + (i % 3) },
+      [types.questions[1]!.id]: { value: 20 + i * 9 },
+      [types.questions[2]!.id]: { value: i % 5 },
+      [types.questions[3]!.id]: { value: i % 3 },
+      // An ORDER, not a score: each respondent ranks the same four options
+      // differently, rotated so no option is always first.
+      [types.questions[4]!.id]: { value: [0, 1, 2, 3].map((k) => (k + i) % 4) },
+      [types.questions[5]!.id]: { value: [3 + (i % 3), 2 + (i % 4), 4 - (i % 3)] },
+      // enps is 0-10; the mix gives detractors, passives and promoters so the
+      // score is a real calculation rather than one bucket.
+      [types.questions[6]!.id]: { value: [9, 6, 10, 3, 8, 9, 7][i] ?? 8 },
+      [types.questions[7]!.id]: { value: 3 + (i % 3) },
+      [types.questions[8]!.id]: { value: 2 + (i % 4) },
+      [types.questions[9]!.id]: { value: i % 3 },
+      [types.questions[10]!.id]: { value: i % 2 === 0 },
+      [types.questions[11]!.id]: {
+        value:
+          [
+            'Vi trenger færre parallelle prosjekter',
+            'Mer tid til fagarbeid',
+            'Tydeligere prioritering fra ledelsen',
+            'Bedre onboarding for nye',
+            'Mindre kontekstbytte i uken',
+            'Flere faglige samlinger',
+            'Raskere beslutninger',
+          ][i] ?? 'Mer tid til fagarbeid',
+      },
+    }),
+    7, // > k = 5, so every one of these renders a real aggregate rather than a gate
+  )
+
+  /*
+    ── Q175 · `field`, where it belongs ─────────────────────────────────────
+
+    A named sign-up. `field` collects a name, an address and a date, which is
+    precisely why it may not sit in an anonymous survey — and precisely what an
+    event registration is. `anonymity: 'named'` says so in the row rather than
+    leaving it to the fixture's good manners.
+  */
+  const signup = await createSurvey(
+    org.id,
+    'Påmelding til fagdag',
+    [
+      {
+        type: 'field',
+        text: 'Meld deg på',
+        config: { fields: [['Navn', 'text'], ['E-post', 'email'], ['Dato du kan', 'date']] },
+      },
+      {
+        type: 'choice',
+        text: 'Hvilken bolk vil du delta på?',
+        config: { options: ['Formiddag', 'Ettermiddag', 'Begge'], multi: false, randomize: false },
+      },
+    ],
+    { audience: 'Alle som vil delta', anonymity: 'named', langs: ['no'] },
+  )
+  const signupRound = await createRound(signup, 6, { groupId: org.groupId })
+  await submitResponses(
+    signupRound.tokens,
+    (i) => ({
+      [signup.questions[0]!.id]: {
+        value: {
+          Navn: ['Ida Moen', 'Jonas Berg', 'Sara Lind', 'Tom Aas', 'Nora Vik'][i] ?? 'Kari Nordmann',
+          'E-post': `deltaker${i + 1}@nordiskstudio.test`,
+          'Dato du kan': '2026-10-22',
+        },
+      },
+      [signup.questions[1]!.id]: { value: i % 3 },
+    }),
+    5,
+  )
+
   // dsr_requests has no producer yet, so this is a direct row — and it is made
   // UNMISTAKABLY SYNTHETIC on purpose. A realistic-looking data-subject request
   // is the row that later gets counted in a compliance report or answered by
@@ -875,6 +1102,10 @@ async function main() {
      *  do not have — no deadline, no hjemmel, kind `tiltak` — which is the
      *  ordinary manual case. */
     due: string | null
+    /** Whose task it is. Absent means the default owner, as every row did
+     *  before Q175 — kept as the default so the eight rows above read
+     *  unchanged. */
+    owner?: 'redaktor'
   }[] = [
     // NOTE the sources: none of these names a group, a question or a score.
     // Q72 decided what a task may contain, and the bundle's own fixture
@@ -894,6 +1125,18 @@ async function main() {
     // V5-2 — no deadline, so «Uten frist» has a task in it. An open tiltak
     // nobody has dated is an ordinary state of a register, not an error.
     { title: 'Rydde i tilgangene til rapportene', kind: 'tiltak', status: 'foreslatt', due: null },
+    /*
+      Q175 — TWO OWNERS, BECAUSE ONE IS NOT A PANEL.
+
+      Every row above takes `ownerMember`, so «Eiere» rendered a single chip
+      and its count line read «1» on a register of ten tasks. The panel exists
+      to show how the work is distributed; with one owner it cannot be wrong
+      and cannot be informative either. These two are the redaktør's, so the
+      chip row has two initials, two counts, and a «Mine» filter that actually
+      excludes something when the administrator is signed in.
+    */
+    { title: 'Oppdatere personvernerklæringen', kind: 'tiltak', status: 'besluttet', owner: 'redaktor', due: '2026-10-20' },
+    { title: 'Gjennomgang av varslingsrutinen', kind: 'risikovurdering', status: 'pagar', law: 'trakassering', owner: 'redaktor', due: '2026-11-14' },
   ]
 
   for (const t of taskSeed) {
@@ -907,7 +1150,10 @@ async function main() {
         title: t.title,
         kind: t.kind,
         law_ref: t.law ?? null,
-        owner_member_id: ownerMember?.id ?? null,
+        owner_member_id:
+          t.owner === 'redaktor'
+            ? (org.members.find((m) => m.role === 'redaktor')?.memberId ?? null)
+            : (ownerMember?.id ?? null),
         due_at: t.due,  // null where the fixture has no deadline (V5-2)
         status: t.status,
       })

@@ -5703,3 +5703,37 @@ rather than left to recall.
 **The bank's rail is untouched.** It carries thirteen chips — a worse row than the one this
 fixes — and the instruction named mal-kategorier. Logged rather than widened; the same
 `splitRail` would serve it with a count of questions per category.
+
+## D173 — the seed's bank insert had been failing silently, and a bulk insert defeats a column default
+
+**Q175, 2026-09-13.** Asked for demo data, found a defect that had been shipping in the
+fixture for weeks.
+
+**THE WHOLE `question_bank` INSERT WAS FAILING, ALL FIVE ROWS, AND NOBODY COULD SEE IT.**
+`await svc.from('question_bank').insert([...])` discarded its error. The column
+`question_bank.config` is `not null default '{}'::jsonb`, and four of the five rows omitted
+the key — which, alone, would have taken the default.
+
+**PostgREST UNIONS THE KEYS ACROSS A BULK INSERT.** The one row that set `config` caused the
+other four to be sent as `config: null`, and NOT NULL refused the statement. So the failure
+was introduced by ADDING a row, not by changing any of the rows that then failed — and the
+seed had since been shipping an empty «Egne» bank chip and no shared bank rows at all on
+every reset. The twelve rows a reset did show come from a migration, not from this script.
+
+**The lesson is the default's, and it is worth stating as a property:** a column default
+applies only to a key the statement does not mention, and in a bulk insert «mentioned» is
+decided by the WIDEST row. Every row now carries `config` explicitly.
+
+**And the reason it survived is the reason CLAUDE.md gives for catch-alls:** an insert whose
+error nobody reads is a swallowed exception with different syntax. Both inserts now throw,
+which is how the next two mistakes — mine — were caught in seconds rather than shipped:
+`created_by` where the column is `author_member_id`, and category `Egne` where the CHECK
+allows only Ansatte/Kunder/Lovpålagt/Annet.
+
+**W-12'S PREDICTED COST DID NOT MATERIALISE, AND THAT IS ALSO A MEASUREMENT.** The walk
+logged that extending the seed «moves every capture that lists surveys, so verify:visual and
+verify:responsive's 206 combinations need re-baselining in the same commit». Only six app
+screenshots are committed — `logg-inn`, `logg-inn-feil` and `veiviser-formal`, each at two
+viewports — and none of them lists a survey; `verify:responsive` measures a live page and
+holds no baseline at all. `verify:visual` passed unchanged and `verify:responsive` reported
+206 of 206 with 0 findings. The cost was real to expect and did not apply here.

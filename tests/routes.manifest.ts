@@ -1111,10 +1111,15 @@ export const ROUTES: RouteSpec[] = [
       {
         // "Firmaets maler" — the design's own-templates section
         // (HeiTuva.dc.html:1570-1590), with its own four-colour tint cycle and
-        // the "Delt med firmaet" chip. The seed ships no org templates, so the
-        // section only exists once one has been SAVED. Producing it through
-        // the Builder's own "Lagre som mal" is the point: a state faked by
-        // inserting a row would not prove the button works.
+        // the "Delt med firmaet" chip.
+        //
+        // **«The seed ships no org templates» WAS TRUE UNTIL Q175 AND IS NOT
+        // ANY MORE.** The seed now carries two — one private, one shared — so
+        // the section exists on a bare reset and every other capture of the
+        // library sees the screen a real organisation has. What this state
+        // still proves is the part that matters and the part a row cannot
+        // fake: the Builder's own "Lagre som mal" BUTTON works, asserted by
+        // waiting for "Lagret som mal ✓" below.
         name: 'default',
         setup: async (page) => {
           const base = page.url().replace(/\/undersokelser.*$/, '')
@@ -1161,10 +1166,16 @@ export const ROUTES: RouteSpec[] = [
       {
         // The bank's own-question state (HeiTuva.dc.html:1666-1680): the grey
         // "Egen" badge instead of the teal "Validert", the author in the meta
-        // line, and the × that only an org's own question carries. The seed
-        // ships twelve validated questions and no own ones, so the state has
-        // to be produced — through the Builder's "Lagre til banken", which is
-        // also the only way a user produces it.
+        // line, and the × that only an org's own question carries.
+        //
+        // **«no own ones» WAS FALSE IN BOTH DIRECTIONS BEFORE Q175.** The seed
+        // declared two own bank rows AND three shared ones, and the whole
+        // insert had been failing silently on a NOT NULL — so the bank held
+        // only the migration's rows and the «Egne» chip was empty on every
+        // reset. Fixed there; the count here is no longer a number this
+        // comment should carry, since the seed owns it.
+        // The state is kept because the Builder's "Lagre til banken" button is
+        // what it proves, which no seeded row can.
         name: 'default',
         setup: async (page) => {
           const base = page.url().replace(/\/undersokelser.*$/, '')

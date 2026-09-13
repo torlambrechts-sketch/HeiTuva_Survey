@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import type { Database } from '@/types/database'
 import { anonClient, serviceClient, type Client } from './clients'
 
 /** Mirrors app.hash_token — invitation tokens are only ever stored hashed. */
@@ -6,8 +7,18 @@ export const hashToken = (raw: string) => createHash('sha256').update(raw).diges
 
 export type MemberSpec = { email: string; role: 'administrator' | 'redaktor' | 'leser'; name?: string }
 
+/**
+ * A question for a fixture.
+ *
+ * **THE TYPE IS DERIVED FROM THE DATABASE, NOT LISTED.** It used to name eight
+ * types — an enumeration of the ones the fixtures happened to need, which read
+ * as the set of types that exist. The registry has thirteen, and the five it
+ * omitted (`dropdown`, `image`, `ranking`, `matrix`, `field`) were exactly the
+ * ones no seed could reach, which is half of walk finding W-12. Derived, a
+ * fourteenth type is usable here the moment the column accepts it.
+ */
 export type QuestionSpec = {
-  type: 'scale' | 'likert' | 'text' | 'choice' | 'yesno' | 'enps' | 'smiley' | 'slider'
+  type: Database['public']['Tables']['survey_questions']['Row']['type']
   text: string
   config?: Record<string, unknown>
 }
