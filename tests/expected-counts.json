@@ -6,7 +6,7 @@
   "tests/db/branding.test.ts": 19,
   "tests/db/catalogue-invariants.test.ts": 7,
   "tests/db/comment-thread.test.ts": 11,
-  "tests/db/comments.test.ts": 30,
+  "tests/db/comments.test.ts": 31,
   "tests/db/dashboard-layouts.test.ts": 22,
   "tests/db/deactivation.test.ts": 14,
   "tests/db/entra-credential.test.ts": 25,

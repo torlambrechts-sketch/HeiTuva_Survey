@@ -195,15 +195,65 @@ describe('C1 — survey_comments exists, outside the answers vault', () => {
       'set_comment_handled',  // C4, the handled_at writer
       'reply_to_comment',     // C5, the reply writer
     ])
+    // COMMENTS ARE STRIPPED BEFORE MATCHING, AND THE THIRD INSTANCE OF THAT RULE
+    // IS WHAT ADDED THIS LINE. CLAUDE.md: «a file that documents its own
+    // refusals contains the words it refuses.» `M:0119` added `has_thread` to
+    // `get_survey_for_token` and explained, in a `--` comment in the body, that
+    // a share-link comment has `survey_comments.invitation_id = NULL`. The
+    // function does not read that table; the sentence saying why merely names
+    // it. This sweep failed on the explanation.
+    //
+    // Stripping `--` comments does not widen the guard by one inch — it makes it
+    // measure what it claims to, which is what a function READS. The migration
+    // gate already does exactly this, and the proof that the guard still bites
+    // is the next test.
     const readers = psql(`
       select n.nspname || '.' || p.proname
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where p.prosecdef
          and n.nspname in ('app','public')
-         and pg_get_functiondef(p.oid) ~ 'survey_comments'`)
+         and regexp_replace(pg_get_functiondef(p.oid), '--[^\n]*', '', 'g') ~ 'survey_comments'`)
       .map(([f]) => f!)
       .filter((f) => !ALLOWED.has(f!.split('.')[1]!))
     expect(readers, 'an aggregate path reached the comment table').toEqual([])
+  })
+
+  it('3b. and the sweep still catches a function that genuinely reads it', () => {
+    // Proving the guard fires after comments were stripped from it. A sweep that
+    // can be satisfied by a rewrite of its own matcher is worth nothing, and
+    // this project's rule is to prove the assertion fires before trusting it.
+    const probe = `zz_walk_probe_${Date.now()}`
+    try {
+      psql(`create function public.${probe}() returns int language sql stable security definer as $$
+              select count(*)::int from public.survey_comments $$`)
+      const caught = psql(`
+        select n.nspname || '.' || p.proname
+          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where p.prosecdef
+           and n.nspname in ('app','public')
+           and regexp_replace(pg_get_functiondef(p.oid), '--[^\n]*', '', 'g') ~ 'survey_comments'`)
+        .map(([f]) => f!)
+      expect(caught).toContain(`public.${probe}`)
+    } finally {
+      psql(`drop function if exists public.${probe}()`)
+    }
+    // and a function whose only mention is in a comment is NOT caught
+    const inert = `zz_walk_inert_${Date.now()}`
+    try {
+      psql(`create function public.${inert}() returns int language sql stable security definer as $$
+              -- says survey_comments and reads nothing
+              select 1 $$`)
+      const caught = psql(`
+        select n.nspname || '.' || p.proname
+          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where p.prosecdef
+           and n.nspname in ('app','public')
+           and regexp_replace(pg_get_functiondef(p.oid), '--[^\n]*', '', 'g') ~ 'survey_comments'`)
+        .map(([f]) => f!)
+      expect(caught).not.toContain(`public.${inert}`)
+    } finally {
+      psql(`drop function if exists public.${inert}()`)
+    }
   })
 
   it('4. the aggregate RPCs do not name it — asserted separately, by name, because these are the ones that matter', () => {
