@@ -420,24 +420,28 @@ async function TemplatesTab({
       />
       <LibraryCard
         heading={t(TAB_HEADING_KEY.maler as 'tabTemplates')}
+        /* Q173 — the Arbeidsliste's scope rail (v5:3179), same paint. */
         filter={
-          /* RESPONSIVE.md § Tab rails: wraps below md, chips keep their design
-             size, 8px row gap so the 44px hit areas stay apart. Unchanged from
-             where these chips used to sit — only the container moved. */
-          <span className="flex flex-wrap gap-2">
+          <span className="touch-cluster flex flex-wrap gap-[3px] rounded-[11px] bg-sf2 p-1">
             {chips.map((c) => (
-              <ChipLink key={c.key} href={href({ kategori: c.key })} active={category === c.key}>
+              <ChipLink
+                key={c.key}
+                href={href({ kategori: c.key })}
+                active={category === c.key}
+                variant="rail"
+              >
                 {c.label}
               </ChipLink>
             ))}
           </span>
         }
+        /* Q173 — Liste/Tavle's shape (v5:3184), in Kort/Liste's position. */
         tools={
-          <span className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
-            <ChipLink href={href({ visning: 'kort' })} active={view === 'kort'} variant="segment">
+          <span className="touch-cluster flex flex-wrap gap-0.5 rounded-[10px] bg-sf2 p-[3px]">
+            <ChipLink href={href({ visning: 'kort' })} active={view === 'kort'} variant="toggle">
               {t('viewCards')}
             </ChipLink>
-            <ChipLink href={href({ visning: 'liste' })} active={view === 'liste'} variant="segment">
+            <ChipLink href={href({ visning: 'liste' })} active={view === 'liste'} variant="toggle">
               {t('viewList')}
             </ChipLink>
           </span>
@@ -720,10 +724,16 @@ async function BankTab({
       />
       <LibraryCard
         heading={t(TAB_HEADING_KEY.bank as 'tabBank')}
+        /* Q173 — the same rail as Maler's and as the Arbeidsliste's. */
         filter={
-          <span className="flex flex-wrap gap-2">
+          <span className="touch-cluster flex flex-wrap gap-[3px] rounded-[11px] bg-sf2 p-1">
             {categories.map((c) => (
-              <ChipLink key={c} href={href({ kategori: c })} active={category === c}>
+              <ChipLink
+                key={c}
+                href={href({ kategori: c })}
+                active={category === c}
+                variant="rail"
+              >
                 {c === 'Alle' ? t('bankAll') : c === 'Egne' ? t('bankOwn') : c}
               </ChipLink>
             ))}

@@ -5621,3 +5621,40 @@ library's is the bundle's own outline chips. Only the container moved. Substitut
 control for another is restyling and is forbidden outright, and the gate that would have
 caught the consequence — `verify:responsive`, which measured this exact rail at 8px gaps —
 had already proven the chips as they are.
+
+## D171 — the library's filter took the Arbeidsliste's paint, and its spacing rule with it
+
+**Q173, Tor, 2026-09-13**, with the Arbeidsliste card header in front of him: «this style for
+heading, filter and under bibliotek».
+
+**D170 SAID «THE CHIPS WERE NOT RESTYLED» AND THAT IS NOW SUPERSEDED, DELIBERATELY.** The
+earlier refusal was correct at the time — CLAUDE.md forbids substituting a control for
+convenience, and choosing that one screen's chips should look like another's is not a
+call I get to make. Asked for, it is a decision. Recorded as a reversal rather than edited
+into looking like the plan, because a refusal that silently becomes its opposite is how a
+rule stops being believed.
+
+**What actually changed is narrower than the instruction reads.** The card heading already
+used `WorklistPanel`'s exact classes — `whitespace-nowrap font-display text-[22px]
+font-medium` — so Q172 had it right and nothing moved there. The filter became the dark-pill
+rail (`--ink` on `--sf2`, v5:3179) and Kort/Liste took the Liste/Tavle toggle's shape
+(v5:3184).
+
+**THE CONTROLS ARE STILL LINKS, AND THAT IS THE LINE BETWEEN COPYING PAINT AND SUBSTITUTING
+A CONTROL.** The Arbeidsliste's scope is component state, so its chips are `<button>`. The
+library's filters live in the URL — `ChipLink`'s own header says why: a filtered view is
+shareable and survives a reload, which no local state can express. Rendering `<button>` to
+match would have quietly taken that away, so the `rail` and `toggle` variants are `<Link>`
+carrying the same paint, and a test asserts `ChipLink` contains no `<button>` at all.
+
+**AND THE COPIED CONTROL BROUGHT ITS SPACING RULE, WHICH IS THE HALF THAT BITES.**
+`py-[7px]` is 30px painted; a 44px hit area overflows (44−30)/2 = 7px each side; adjacent
+chips therefore need 14px between painted edges, which is what `touch-cluster` is for.
+**This is CLAUDE.md row 10 and it has already fired on this exact control** — C4 copied
+`gap-y-[13px]` onto a 30px chip from a 40px one and `verify:responsive` blocked with four
+overlaps at 320px. So the rule is asserted (`tests/unit/library-tabs.test.ts`: every
+`rounded-[11px] bg-sf2` and `rounded-[10px] bg-sf2` container must carry `touch-cluster`)
+rather than remembered.
+
+Measured after: `verify:responsive` 206 of 206 combinations, **0 findings, 0 blockers** —
+with thirteen rail chips on the bank tab at 320px, the widest case this screen has.

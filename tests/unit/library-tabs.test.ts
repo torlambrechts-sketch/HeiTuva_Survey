@@ -131,6 +131,45 @@ describe('Q172 — the tab set is one registry, read by both renderers', () => {
     expect((body.match(/<LibraryCard/g) ?? []).length).toBe(2)
   })
 
+  it('Q173 — the filter rail is the Arbeidsliste\'s, and carries its spacing rule', () => {
+    /*
+      The rail's chips are `py-[7px]` — 30px painted — so a 44px hit area
+      overflows 7px each side and adjacent chips need 14px between painted
+      edges. `touch-cluster` is where globals.css keeps that arithmetic.
+
+      **THIS IS CLAUDE.md ROW 10, AND IT HAS ALREADY FIRED ON THIS EXACT
+      CONTROL** — C4 copied `gap-y-[13px]` onto a 30px chip from a 40px one and
+      `verify:responsive` blocked with four overlaps at 320px. Copying the paint
+      without the spacing rule is the whole failure mode of copying a control,
+      so it is asserted rather than remembered.
+    */
+    const worklist = readFileSync('app/(app)/oppgaver/WorklistPanel.tsx', 'utf8')
+    const chip = readFileSync('app/(app)/bibliotek/ChipLink.tsx', 'utf8')
+    const body = code(page)
+    // The geometry is the same control's, character for character.
+    expect(code(chip)).toContain('px-3.5 py-[7px]')
+    expect(code(worklist)).toContain('px-3.5 py-[7px]')
+    // Every rail container in the library carries the spacing utility.
+    const rails = body.match(/rounded-\[11px\] bg-sf2/g) ?? []
+    expect(rails.length, 'two rails: Maler and Spørsmålsbank').toBe(2)
+    for (const m of body.matchAll(/className="([^"]*rounded-\[11px\] bg-sf2[^"]*)"/g)) {
+      expect(m[1], 'rail without touch-cluster').toContain('touch-cluster')
+    }
+    // …and so does the view toggle, whose chips are the same 30px.
+    for (const m of body.matchAll(/className="([^"]*rounded-\[10px\] bg-sf2[^"]*)"/g)) {
+      expect(m[1], 'toggle without touch-cluster').toContain('touch-cluster')
+    }
+  })
+
+  it('Q173 — the filters stay LINKS, so a filtered library is still shareable', () => {
+    // The Arbeidsliste's scope is component state and its chips are buttons.
+    // Only the paint was copied: turning these into buttons to match would
+    // substitute a control and lose the URL, which is why ChipLink exists.
+    const chip = readFileSync('app/(app)/bibliotek/ChipLink.tsx', 'utf8')
+    expect(code(chip)).not.toMatch(/<button/)
+    expect((code(chip).match(/<Link/g) ?? []).length).toBeGreaterThanOrEqual(4)
+  })
+
   it('the lead promises only things the product does', () => {
     // The claim-set discipline, applied to copy of our own rather than a
     // bundle's: the bank adds into A DRAFT (D26 — the org's most recent one),
