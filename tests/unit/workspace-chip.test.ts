@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import no from '../../messages/no.json'
 import en from '../../messages/en.json'
+import { TYPE_TITLE_KEY, WORKLIST_TYPES } from '../../lib/worklist/rows'
 
 /**
  * W1 — the three things this phase owes, written as tests over the shipped
@@ -42,19 +43,55 @@ describe('W1 · Q119 — the tooltip promises two clauses, not three', () => {
   })
 })
 
-describe('W1 · Q123 — the nav label is not reverted', () => {
+describe('Q171 — the nav label is «Handlinger», and still true of both halves', () => {
   /**
-   * v4:5095 shortens it to «Oppgaver». NOT adopted (Q123): the surface is
-   * tasks AND feedback in one list, so «Oppgaver» is untrue of half its
-   * content, and shortening it solves a space problem by promising less than
-   * the page does. If space is the problem, W1 solves the space.
+   * v4:5095 shortened it to «Oppgaver». NOT adopted (Q123): the surface is tasks
+   * AND feedback in one list, so «Oppgaver» is untrue of half its content, and
+   * shortening it solved a space problem by promising less than the page does.
+   *
+   * Tor renamed it «Handlinger» on 2026-09-13, which is SHORT AND STILL TRUE —
+   * it covers a statutory task and a comment from an employee equally, which is
+   * precisely what «Oppgaver» could not. So Q123's REASONING stands and is what
+   * this test now checks; only the string it happened to be attached to moved.
+   *
+   * The assertion is therefore the property: the label must not be the name of
+   * one half of the list. «Oppgaver» and «Tilbakemeldinger» are both heading
+   * values now (TYPE_TITLE_KEY) and neither may become the label of the whole.
    */
-  it('no: stays «Oppgaver og tilbakemeldinger»', () => {
-    expect(no.nav.tasks).toBe('Oppgaver og tilbakemeldinger')
+  it('no: the label is «Handlinger»', () => {
+    expect(no.nav.tasks).toBe('Handlinger')
   })
 
-  it('the nav item and the page title agree', () => {
+  it('and is not the name of either half', () => {
+    expect(no.nav.tasks).not.toBe(no.tasks.wlTitleTasks)
+    expect(no.nav.tasks).not.toBe(no.tasks.wlTitleFeedback)
+  })
+
+  it('the nav item, the page title, the breadcrumb and the footer link agree', () => {
+    // Four places name this surface. They drifted apart once already — C4 shipped
+    // copy v4 then reverted — so the agreement is asserted rather than assumed.
     expect(no.nav.tasks).toBe(no.tasks.title)
+    expect(no.nav.tasks).toBe(no.tasks.wlCrumbHere)
+    expect(no.nav.tasks).toBe(no.footer.linkTasks)
+  })
+
+  it('the heading follows the type filter, in both languages', () => {
+    // «Handlinger» under «Alt», «Tilbakemeldinger» under «Tilbakemeldinger».
+    expect(no.tasks.wlTitleAll).toBe('Handlinger')
+    expect(no.tasks.wlTitleFeedback).toBe(no.tasks.tfFeedback)
+    expect(no.tasks.wlTitleTasks).toBe(no.tasks.tfTasks)
+    expect(en.tasks.wlTitleAll).toBe('Actions')
+    expect(en.tasks.wlTitleFeedback).toBe(en.tasks.tfFeedback)
+    expect(en.tasks.wlTitleTasks).toBe(en.tasks.tfTasks)
+  })
+
+  it('every WorklistType has a heading, so a fourth cannot arrive without one', () => {
+    for (const type of WORKLIST_TYPES) {
+      const key = TYPE_TITLE_KEY[type]
+      expect(key, type).toBeTruthy()
+      expect((no.tasks as Record<string, string>)[key], `no.tasks.${key}`).toBeTruthy()
+      expect((en.tasks as Record<string, string>)[key], `en.tasks.${key}`).toBeTruthy()
+    }
   })
 })
 

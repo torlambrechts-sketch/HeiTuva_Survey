@@ -37,7 +37,7 @@
     "subnavReports": "Reports",
     "subnavTasks": "Work list",
     "surveys": "Surveys",
-    "tasks": "Tasks and feedback",
+    "tasks": "Actions",
     "ucLabel_hr": "HR and work environment",
     "ucLabel_intern": "Internal service",
     "ucLabel_kunder": "Customers",
@@ -410,7 +410,7 @@
     "runModeQuizDesc": "Training and certification",
     "runModeNamedSurvey": "Live requires anonymous answers. The QR gives each device a one-time link, and the system does not know who the device belongs to.",
     "feedbackTitle": "Comments and conversation per question",
-    "feedbackDesc": "Respondents can add a comment to each question and start a conversation. You reply without seeing who wrote it, if the comment is anonymous. Everything is collected under Tasks and feedback.",
+    "feedbackDesc": "Respondents can add a comment to each question and start a conversation. You reply without seeing who wrote it, if the comment is anonymous. Everything is collected under Actions.",
     "feedbackOff": "Off",
     "feedbackOffDesc": "No comment field on the questions",
     "feedbackAnonymous": "Anonymous",
@@ -1889,7 +1889,7 @@
     "label_trend": "Development over time"
   },
   "tasks": {
-    "title": "Tasks and feedback",
+    "title": "Actions",
     "taskStepForeslatt": "Proposed",
     "taskStepBesluttet": "Decided",
     "taskStepPagar": "In progress",
@@ -1973,8 +1973,10 @@
     "fbReplyFailed": "Could not send the reply. Try again.",
     "fbMakeTask": "Create task",
     "wlCrumbRoot": "Overview",
-    "wlCrumbHere": "Tasks and feedback",
-    "wlTitle": "Tasks",
+    "wlCrumbHere": "Actions",
+    "wlTitleAll": "Actions",
+    "wlTitleTasks": "Tasks",
+    "wlTitleFeedback": "Feedback",
     "wlCount": "{n} in the list",
     "wlScopeLineAll": "Actions and feedback",
     "wlScopeLineTasks": "Actions",
@@ -2505,7 +2507,7 @@
     "linkPrivacy": "Privacy and GDPR",
     "linkProfile": "My profile",
     "linkSurveys": "Surveys",
-    "linkTasks": "Tasks and feedback",
+    "linkTasks": "Actions",
     "linkUsers": "People and groups",
     "pitch": "Ask your people. Get honest answers. Data is stored in the EEA, and anonymity is governed by the threshold you set."
   }

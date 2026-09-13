@@ -16,8 +16,13 @@ export type NavItem = { href: string; key: string; label: string }
  * alone, and a `--sf2` hover the flat labels never had.
  *
  * `white-space:nowrap` per item is the bundle's, and it is load-bearing rather
- * than decorative: «Oppgaver og tilbakemeldinger» broken across two lines
- * inside a pill is a different control from the one v4 draws.
+ * than decorative: a label broken across two lines inside a pill is a different
+ * control from the one v4 draws. The item that made this acute was «Oppgaver og
+ * tilbakemeldinger», three words in a pill; Tor renamed it «Handlinger» on
+ * 2026-09-13 and the longest item is now «Undersøkelser». The rule stays because
+ * it is the bundle's and because the next long label would wrap the same way —
+ * but it is no longer carrying the weight it was written for, and saying so is
+ * cheaper than leaving a comment that argues from a string nobody will find.
  *
  * Weight and opacity are KEPT alongside the pill (`700/1` on, `500/.64` off,
  * V4:172) — the background is added to them, not substituted for them, so the

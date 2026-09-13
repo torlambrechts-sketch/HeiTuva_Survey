@@ -199,6 +199,26 @@ export const TYPE_KEY: Record<WorklistType, string> = {
   tilbakemeldinger: 'tfFeedback',
 }
 
+/**
+ * The screen's own heading, which follows the type filter.
+ *
+ * Tor, 2026-09-13: the surface is «Handlinger», and the heading says which part
+ * of it you are looking at — «Handlinger» under «Alt», «Tilbakemeldinger» under
+ * «Tilbakemeldinger», «Oppgaver» under «Oppgaver». A heading that stays
+ * «Oppgaver» while the list shows comments is the same untruth Q123 refused
+ * when v4 wanted to shorten the nav label: it promises less than the page
+ * delivers, on the half of the content that is not a task.
+ *
+ * A `Record<WorklistType, …>` rather than a ternary at the call site, so a
+ * fourth type cannot be added without tsc demanding a heading for it — the same
+ * reason `TYPE_KEY` above is a record.
+ */
+export const TYPE_TITLE_KEY: Record<WorklistType, string> = {
+  alle: 'wlTitleAll',
+  oppgaver: 'wlTitleTasks',
+  tilbakemeldinger: 'wlTitleFeedback',
+}
+
 export function matchesType(r: WorklistFacts, type: WorklistType): boolean {
   return type === 'alle' ? true : type === 'oppgaver' ? r.kind === 'task' : r.kind === 'comment'
 }

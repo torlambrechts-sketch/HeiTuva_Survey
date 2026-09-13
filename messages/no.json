@@ -37,7 +37,7 @@
     "subnavReports": "Rapporter",
     "subnavTasks": "Arbeidsliste",
     "surveys": "Undersøkelser",
-    "tasks": "Oppgaver og tilbakemeldinger",
+    "tasks": "Handlinger",
     "ucLabel_hr": "HR og arbeidsmiljø",
     "ucLabel_intern": "Intern tjeneste",
     "ucLabel_kunder": "Kunder",
@@ -410,7 +410,7 @@
     "runModeQuizDesc": "Opplæring og sertifisering",
     "runModeNamedSurvey": "Live krever anonyme svar. QR-koden gir hver enhet en engangslenke, og systemet vet ikke hvem enheten tilhører.",
     "feedbackTitle": "Kommentar og samtale per spørsmål",
-    "feedbackDesc": "Respondenten kan legge en kommentar på hvert spørsmål og starte en samtale. Lederen svarer uten å se hvem som skrev, hvis kommentaren er anonym. Alt samles under Oppgaver og tilbakemeldinger.",
+    "feedbackDesc": "Respondenten kan legge en kommentar på hvert spørsmål og starte en samtale. Lederen svarer uten å se hvem som skrev, hvis kommentaren er anonym. Alt samles under Handlinger.",
     "feedbackOff": "Av",
     "feedbackOffDesc": "Ingen kommentarfelt på spørsmålene",
     "feedbackAnonymous": "Anonym",
@@ -1889,7 +1889,7 @@
     "label_trend": "Utvikling over tid"
   },
   "tasks": {
-    "title": "Oppgaver og tilbakemeldinger",
+    "title": "Handlinger",
     "taskStepForeslatt": "Foreslått",
     "taskStepBesluttet": "Besluttet",
     "taskStepPagar": "Pågår",
@@ -1973,8 +1973,10 @@
     "fbReplyFailed": "Kunne ikke sende svaret. Prøv igjen.",
     "fbMakeTask": "Lag oppgave",
     "wlCrumbRoot": "Oversikt",
-    "wlCrumbHere": "Oppgaver og tilbakemeldinger",
-    "wlTitle": "Oppgaver",
+    "wlCrumbHere": "Handlinger",
+    "wlTitleAll": "Handlinger",
+    "wlTitleTasks": "Oppgaver",
+    "wlTitleFeedback": "Tilbakemeldinger",
     "wlCount": "{n} i listen",
     "wlScopeLineAll": "Tiltak og tilbakemeldinger",
     "wlScopeLineTasks": "Tiltak",
@@ -2505,7 +2507,7 @@
     "linkPrivacy": "Personvern og GDPR",
     "linkProfile": "Min profil",
     "linkSurveys": "Undersøkelser",
-    "linkTasks": "Oppgaver og tilbakemeldinger",
+    "linkTasks": "Handlinger",
     "linkUsers": "Brukere og grupper",
     "pitch": "Spør folkene dine. Få ærlige svar. Data lagres i EØS, og anonymiteten styres av terskelen dere setter."
   }

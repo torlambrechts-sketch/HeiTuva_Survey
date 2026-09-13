@@ -9,6 +9,7 @@ import {
   COLUMN_KEY,
   COLUMN_TINT,
   SCOPE_KEY,
+  TYPE_TITLE_KEY,
   WORKLIST_COLUMNS,
   WORKLIST_SCOPES,
   bucketOf,
@@ -269,7 +270,11 @@ export function WorklistPanel({
               </svg>
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-[30px] font-semibold leading-[1.1]">{t('wlTitle')}</h1>
+              {/* The heading follows the type filter (TYPE_TITLE_KEY): «Handlinger»
+                  under «Alt», «Tilbakemeldinger» under «Tilbakemeldinger». */}
+              <h1 className="font-display text-[30px] font-semibold leading-[1.1]">
+                {t(TYPE_TITLE_KEY[type])}
+              </h1>
               <div className="mt-1 text-[13px] text-mut">
                 {t('wlCount', { n: shown.length })} &nbsp;|&nbsp; {t(scopeLineKey)}
               </div>
