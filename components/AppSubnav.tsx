@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { LIBRARY_TABS, libraryTabHref, resolveLibraryTab } from '@/lib/library/tabs'
 
 /**
  * The subnav — v5's shell addition (V5:227-234).
@@ -36,6 +37,15 @@ import { usePathname, useSearchParams } from 'next/navigation'
  * CROSS-SCREEN navigation between two routes that today are only reachable from
  * the header. That is new, and it is the reason to build the thing at all.
  *
+ * ── AND A FOURTH THE BUNDLE DOES NOT PUT HERE (Q172) ───────────────────────
+ *
+ * `bibliotek` is drawn by v5 as an IN-PAGE pill rail (`libTabs`, v5:4082),
+ * sitting beside the 28px «Bibliotek» heading; `subnavLabel` (v5:6320) has no
+ * library branch. It is in this strip because Tor asked for it, which makes it
+ * a decision rather than a reading of the handoff — recorded as Q172 and in
+ * DEVIATIONS. The condition the `admin` paragraph above sets is met: the page
+ * keeps NO second copy of the rail, so there is one control, not two.
+ *
  * ── `subnavLabel` HAS FOUR BRANCHES FOR FIVE SCREENS ───────────────────────
  * `uitest` -> «Tabellvarianter», `tasks` -> «Arbeidsliste», `admin` ->
  * «Administrasjon», and everything ELSE -> «Innsikt», so `dashboard` and
@@ -55,6 +65,10 @@ export function AppSubnav({
     all: string
     onlyTasks: string
     feedback: string
+    library: string
+    /* Keyed by the registry rather than spelled out, so a fourth tab is a
+       compile error here and not a pill that silently never renders. */
+    libraryTabs: Record<(typeof LIBRARY_TABS)[number], string>
   }
 }) {
   const pathname = usePathname()
@@ -62,6 +76,12 @@ export function AppSubnav({
 
   let label: string | null = null
   let items: Item[] = []
+  /* Which pill reads as current. Set by the branch that owns the screen rather
+     than derived afterwards: `/dashboard` and `/rapporter` are told apart by
+     their PATH, `/oppgaver` and `/bibliotek` by a search parameter, and a
+     single expression covering both kinds is where the third screen goes
+     wrong. */
+  let currentHref = pathname
 
   if (pathname === '/dashboard' || pathname === '/rapporter') {
     label = labels.insight
@@ -85,24 +105,38 @@ export function AppSubnav({
       { label: labels.onlyTasks, href: '/oppgaver?type=oppgaver' },
       { label: labels.feedback, href: '/oppgaver?type=tilbakemeldinger' },
     ]
-  }
-
-  if (label === null) return null
-
-  /* `aria-current` on a query-string rail cannot be `pathname === href`: all
-     three pills share the path and would all read as current. The comparison is
-     over the parameter the screen actually filters on, and the absent value is
-     «alle» — the same resolution `WorklistPage` does, so the pill that looks
-     selected is the one that is. */
-  const type = params.get('type') ?? 'alle'
-  const currentHref =
-    pathname === '/oppgaver'
-      ? type === 'oppgaver'
+    /* `aria-current` on a query-string rail cannot be `pathname === href`: all
+       three pills share the path and would all read as current. The comparison
+       is over the parameter the screen actually filters on, and the absent
+       value is «alle» — the same resolution `WorklistPage` does, so the pill
+       that looks selected is the one that is. */
+    const type = params.get('type') ?? 'alle'
+    currentHref =
+      type === 'oppgaver'
         ? '/oppgaver?type=oppgaver'
         : type === 'tilbakemeldinger'
           ? '/oppgaver?type=tilbakemeldinger'
           : '/oppgaver'
-      : pathname
+  }
+
+  /* Bibliotek — Q172. The bundle draws this rail IN-PAGE (v5:4082), beside the
+     «Bibliotek» heading, and its subnav has no library branch at all. Tor moved
+     it here so the library reads like the Arbeidsliste: the tab set in the
+     shell, the filter inside the card. A departure from the handoff, decided
+     rather than inferred, and the screen holds no second copy of the rail —
+     which is the condition `AppSubnav`'s own header sets for `admin`. */
+  if (pathname === '/bibliotek') {
+    label = labels.library
+    items = LIBRARY_TABS.map((tab) => ({
+      label: labels.libraryTabs[tab],
+      href: libraryTabHref(tab),
+    }))
+    // Same shape as the tasks rail, and the resolver is the page's own, so the
+    // default tab cannot be spelled two ways.
+    currentHref = libraryTabHref(resolveLibraryTab(params.get('fane')))
+  }
+
+  if (label === null) return null
 
   return (
     <nav

@@ -64,7 +64,11 @@
     "wsShort_quiz": "Quiz",
     "subnavAll": "Everything",
     "subnavOnlyTasks": "Tasks",
-    "subnavFeedback": "Feedback"
+    "subnavFeedback": "Feedback",
+    "subnavLibrary": "Library",
+    "subnavUseCases": "Use cases",
+    "subnavTemplates": "Templates",
+    "subnavBank": "Question bank"
   },
   "dash": {
     "actionDraft": "“{title}” is still a draft",
@@ -1266,7 +1270,16 @@
     "useCaseLive": "{count, plural, one {# survey} other {# surveys}} at your organisation",
     "useCaseNone": "No surveys yet",
     "useCaseTemplates": "See templates",
-    "useCaseDashboard": "Dashboard"
+    "useCaseDashboard": "Dashboard",
+    "crumbRoot": "Overview",
+    "crumbHere": "Library",
+    "lead": "Templates are ready-made surveys you can edit, the question bank holds single questions you can add straight into a draft, and the use cases show what HeiTuva is used for.",
+    "countTemplates": "{count, plural, one {# template} other {# templates}}",
+    "countBank": "{count, plural, one {# question} other {# questions}}",
+    "countUseCases": "{count, plural, one {# use case} other {# use cases}}",
+    "scopeLineTemplates": "Standard templates and the company’s own",
+    "scopeLineBank": "Own and validated questions",
+    "scopeLineUseCases": "Templates and a dashboard preset per area"
   },
   "auth": {
     "signInTitle": "Sign in",

@@ -64,7 +64,11 @@
     "wsShort_quiz": "Quiz",
     "subnavAll": "Alt",
     "subnavOnlyTasks": "Oppgaver",
-    "subnavFeedback": "Tilbakemeldinger"
+    "subnavFeedback": "Tilbakemeldinger",
+    "subnavLibrary": "Bibliotek",
+    "subnavUseCases": "Bruksområder",
+    "subnavTemplates": "Maler",
+    "subnavBank": "Spørsmålsbank"
   },
   "dash": {
     "actionDraft": "«{title}» er fortsatt et utkast",
@@ -1266,7 +1270,16 @@
     "useCaseLive": "{count, plural, one {# undersøkelse} other {# undersøkelser}} hos dere",
     "useCaseNone": "Ingen undersøkelser ennå",
     "useCaseTemplates": "Se maler",
-    "useCaseDashboard": "Dashboard"
+    "useCaseDashboard": "Dashboard",
+    "crumbRoot": "Oversikt",
+    "crumbHere": "Bibliotek",
+    "lead": "Maler er ferdige undersøkelser dere kan endre, spørsmålsbanken er enkeltspørsmål dere kan legge rett inn i et utkast, og bruksområdene viser hva HeiTuva brukes til.",
+    "countTemplates": "{count, plural, one {# mal} other {# maler}}",
+    "countBank": "{count, plural, one {# spørsmål} other {# spørsmål}}",
+    "countUseCases": "{count, plural, one {# bruksområde} other {# bruksområder}}",
+    "scopeLineTemplates": "Standardmaler og firmaets egne",
+    "scopeLineBank": "Egne og validerte spørsmål",
+    "scopeLineUseCases": "Maler og dashboard-oppsett per område"
   },
   "auth": {
     "signInTitle": "Logg inn",

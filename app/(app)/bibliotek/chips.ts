@@ -33,9 +33,10 @@ export type PackCategory = string
 export const PACK_VIEWS = ['kort', 'liste'] as const
 export type PackView = (typeof PACK_VIEWS)[number]
 
-/** Q24: «Bruksområder» joins the rail and leads it (NEW:4460). */
-export const LIBRARY_TABS = ['bruksomrader', 'maler', 'bank'] as const
-export type LibraryTab = (typeof LIBRARY_TABS)[number]
+/* Q24's «Bruksområder» leads the rail (NEW:4460), and the rail itself moved to
+   the shell in Q172 — so the tab registry lives in `lib/library/tabs.ts`, which
+   both the subnav and this screen read. It is not re-exported from here: two
+   spellings of one list is the thing that file exists to prevent. */
 
 /** Message keys for the category chips; the design's own labels. */
 /** Only two categories carry a note in the design (L:3729). */

@@ -6,15 +6,19 @@ import { requireViewer } from '@/lib/auth/session'
 import {
   CATEGORY_NOTE_KEY,
   FIXED_PACK_CHIPS,
-  LIBRARY_TABS,
   PACK_VIEWS,
   estimateMinutes,
   ownTint,
   packTint,
-  type LibraryTab,
   type PackCategory,
   type PackView,
 } from './chips'
+import {
+  DEFAULT_LIBRARY_TAB,
+  TAB_HEADING_KEY,
+  resolveLibraryTab,
+  type LibraryTab,
+} from '@/lib/library/tabs'
 import { ChipLink } from './ChipLink'
 import { TemplateCard, type TemplatePack } from './TemplateCard'
 import { UsePackButton } from './UsePackButton'
@@ -34,6 +38,30 @@ type Search = { fane?: string; visning?: string; kategori?: string; sok?: string
  *
  * Everything on this screen comes from `template_packs` and `question_bank`,
  * per CLAUDE.md's data-not-code rule — adding a pack is a row, not a component.
+ *
+ * ── Q172: THE ARBEIDSLISTE'S FRAME, AND THE TAB RAIL IN THE SHELL ──────────
+ *
+ * Tor, 2026-09-13: the library gets Handlinger's submenu and Handlinger's
+ * layout. So «Bruksområder · Maler · Spørsmålsbank» moved from the in-page rail
+ * the bundle draws (v5:4082) into `AppSubnav`, and Maler and Spørsmålsbank are
+ * wrapped in the Arbeidsliste's card — the box, a heading, and the filter in
+ * its header (v5:3174-3182).
+ *
+ * **THE RAIL IS NOT DUPLICATED, WHICH IS THE WHOLE CONDITION.** `AppSubnav`'s
+ * own header refuses the subnav on `admin` precisely because that screen would
+ * then carry two controls doing one job, one of them three tabs out of date. So
+ * the in-page pill rail is GONE from this file rather than hidden, and the tab
+ * set has exactly one definition, in `lib/library/tabs.ts`.
+ *
+ * The heading is «Bibliotek» in every tab and the CARD heading is the tab's own
+ * name — the same split Handlinger has, where the h1 says «Handlinger» and the
+ * card says «Arbeidsliste». The count line follows the filter, as that screen's
+ * does: it counts what is SHOWN, not what exists.
+ *
+ * Bruksområder keeps its card grid and gets no wrapper box: it is already a
+ * grid of cards, and a box around boxes is furniture rather than structure.
+ * That is also the literal scope of the instruction — «wrap maler and
+ * spørsmålsbank».
  */
 export default async function LibraryPage({
   searchParams,
@@ -49,9 +77,9 @@ export default async function LibraryPage({
   const t = await getTranslations('library')
   const tQ = await getTranslations('qtype')
 
-  const tab: LibraryTab = LIBRARY_TABS.includes(sp.fane as LibraryTab)
-    ? (sp.fane as LibraryTab)
-    : 'maler'
+  /* Q172 — the same resolver `AppSubnav` uses, so the pill that looks selected
+     is the one this screen is showing. */
+  const tab: LibraryTab = resolveLibraryTab(sp.fane)
   const view: PackView = PACK_VIEWS.includes(sp.visning as PackView)
     ? (sp.visning as PackView)
     : 'kort'
@@ -94,7 +122,11 @@ export default async function LibraryPage({
   const href = (next: Partial<Search>) => {
     const params = new URLSearchParams()
     const merged = { fane: tab, visning: view, kategori: category, sok: query, ...next }
-    if (merged.fane && merged.fane !== 'maler') params.set('fane', merged.fane)
+    /* The default tab carries no parameter — the same asymmetry
+       `libraryTabHref` encodes, read from the registry rather than spelled
+       again here. Two spellings of «which tab is the default» is precisely how
+       the subnav's `aria-current` and this screen's content come apart. */
+    if (merged.fane && merged.fane !== DEFAULT_LIBRARY_TAB) params.set('fane', merged.fane)
     if (merged.visning && merged.visning !== 'kort') params.set('visning', merged.visning)
     if (merged.kategori && merged.kategori !== 'Alle') params.set('kategori', merged.kategori)
     if (merged.sok) params.set('sok', merged.sok)
@@ -103,26 +135,12 @@ export default async function LibraryPage({
   }
 
   return (
-    <main className="animate-enter pt-[34px]">
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
-        {/* Chip rail — RESPONSIVE.md § Tab rails: wraps below md, chips keep
-            their design size, 8px row gap so 44px hit areas stay apart. */}
-        <div className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
-          <ChipLink
-            href={href({ fane: 'bruksomrader' })}
-            active={tab === 'bruksomrader'}
-            variant="segment"
-          >
-            {t('tabUseCases')}
-          </ChipLink>
-          <ChipLink href={href({ fane: 'maler' })} active={tab === 'maler'} variant="segment">
-            {t('tabTemplates')}
-          </ChipLink>
-          <ChipLink href={href({ fane: 'bank' })} active={tab === 'bank'} variant="segment">
-            {t('tabBank')}
-          </ChipLink>
-        </div>
+    <main className="animate-enter pt-[26px]">
+      {/* The breadcrumb, as on the Arbeidsliste (v5:3130-3132). */}
+      <div className="flex items-center gap-[9px] text-[12.5px] text-mut">
+        <span>{t('crumbRoot')}</span>
+        <span className="opacity-50">→</span>
+        <span className="font-semibold text-ink">{t('crumbHere')}</span>
       </div>
 
       {tab === 'bruksomrader' ? (
@@ -162,6 +180,97 @@ export default async function LibraryPage({
         />
       )}
     </main>
+  )
+}
+
+/**
+ * The hero — Handlinger's, carried here by Q172 (v5:3134-3153).
+ *
+ * The heading is «Bibliotek» in every tab; what varies is the COUNT LINE, which
+ * counts what the filter is showing rather than what exists, exactly as
+ * `WorklistPanel`'s does.
+ *
+ * **THE ICON IS OURS AND IS LOGGED AS A DEVIATION.** v5 draws no hero icon on
+ * the library at all — it draws a 28px heading and a rail — so bringing the
+ * Handlinger frame across needs a mark the bundle never made. It is built from
+ * the same primitive that screen's icon is (rounded rects, `rx=1.6`,
+ * `fill: var(--ink)`, in the 62px `--ac` square), arranged as three spines so
+ * it cannot be read as the rising bars that mean «tasks».
+ */
+function LibraryHero({
+  title,
+  countLine,
+  scopeLine,
+  lead,
+}: {
+  title: string
+  countLine: string
+  scopeLine: string
+  lead: string
+}) {
+  return (
+    <div className="mt-4 min-w-0">
+      <div className="flex items-start gap-4">
+        <span className="flex h-[62px] w-[62px] flex-none items-center justify-center rounded-[16px] bg-ac">
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="6" y="6" width="4.4" height="20" rx="1.6" fill="var(--ink)" />
+            <rect x="13.8" y="6" width="4.4" height="20" rx="1.6" fill="var(--ink)" />
+            <rect x="21.6" y="9" width="4.4" height="17" rx="1.6" fill="var(--ink)" />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          {/* `text-[23px] md:text-[30px]`, the same as the Arbeidsliste's — see
+              the measurement in `WorklistPanel`. «Bibliotek» is nine characters
+              and fits at 30px in the 202px available at 320px, so this is not
+              load-bearing here; it is the same control at the same size, which
+              is the point of copying the frame. */}
+          <h1 className="font-display text-[23px] font-semibold leading-[1.1] md:text-[30px]">
+            {title}
+          </h1>
+          <div className="mt-1 text-[13px] text-mut">
+            {countLine} &nbsp;|&nbsp; {scopeLine}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3.5 max-w-[460px] text-sm leading-[1.6] text-mut [text-wrap:pretty]">
+        {lead}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * The card Maler and Spørsmålsbank sit in — the Arbeidsliste's box
+ * (v5:3174-3184): a heading and the filter rail on the left of its header, the
+ * view control on the right, and the content below a rule.
+ *
+ * The chips inside it are the library's OWN controls, unchanged. Q172 moved
+ * where the filter sits; restyling it into the Arbeidsliste's segmented rail
+ * would be substituting one control for another, which CLAUDE.md forbids
+ * outright.
+ */
+function LibraryCard({
+  heading,
+  filter,
+  tools,
+  children,
+}: {
+  heading: string
+  filter?: React.ReactNode
+  tools?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mt-[18px] min-w-0 rounded-[20px] border border-line bg-sf">
+      <div className="flex flex-wrap items-center justify-between gap-3.5 px-[22px] py-[18px]">
+        <div className="flex min-w-0 flex-wrap items-center gap-4">
+          <span className="whitespace-nowrap font-display text-[22px] font-medium">{heading}</span>
+          {filter}
+        </div>
+        {tools ? <div className="flex flex-wrap items-center gap-[9px]">{tools}</div> : null}
+      </div>
+      <div className="min-w-0 border-t border-line px-[22px] py-[18px]">{children}</div>
+    </div>
   )
 }
 
@@ -299,13 +408,48 @@ async function TemplatesTab({
 
   return (
     <>
+      <LibraryHero
+        title={t('title')}
+        /* What the filter is SHOWING: the organisation's own templates are
+           always listed, the standard ones only when the category admits them.
+           Handlinger counts `shown.length` for the same reason — a count beside
+           a filter that ignores the filter is a number nobody can check. */
+        countLine={t('countTemplates', { count: mine.length + standard.length })}
+        scopeLine={t('scopeLineTemplates')}
+        lead={t('lead')}
+      />
+      <LibraryCard
+        heading={t(TAB_HEADING_KEY.maler as 'tabTemplates')}
+        filter={
+          /* RESPONSIVE.md § Tab rails: wraps below md, chips keep their design
+             size, 8px row gap so the 44px hit areas stay apart. Unchanged from
+             where these chips used to sit — only the container moved. */
+          <span className="flex flex-wrap gap-2">
+            {chips.map((c) => (
+              <ChipLink key={c.key} href={href({ kategori: c.key })} active={category === c.key}>
+                {c.label}
+              </ChipLink>
+            ))}
+          </span>
+        }
+        tools={
+          <span className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
+            <ChipLink href={href({ visning: 'kort' })} active={view === 'kort'} variant="segment">
+              {t('viewCards')}
+            </ChipLink>
+            <ChipLink href={href({ visning: 'liste' })} active={view === 'liste'} variant="segment">
+              {t('viewList')}
+            </ChipLink>
+          </span>
+        }
+      >
       {readOnlyNote ? (
-        <p className="mt-[18px] rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
+        <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
           {readOnlyNote}
         </p>
       ) : null}
       {mine.length ? (
-        <section className="mt-[22px]">
+        <section>
           <h2 className="text-[11px] uppercase tracking-[.1em] text-mut">{t('ownTemplates')}</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {mine.map((p, i) => (
@@ -326,22 +470,6 @@ async function TemplatesTab({
           </h2>
         </section>
       ) : null}
-
-      <div className="mt-[18px] flex flex-wrap items-center gap-2">
-        <span className="mr-1.5 flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
-          <ChipLink href={href({ visning: 'kort' })} active={view === 'kort'} variant="segment">
-            {t('viewCards')}
-          </ChipLink>
-          <ChipLink href={href({ visning: 'liste' })} active={view === 'liste'} variant="segment">
-            {t('viewList')}
-          </ChipLink>
-        </span>
-        {chips.map((c) => (
-          <ChipLink key={c.key} href={href({ kategori: c.key })} active={category === c.key}>
-            {c.label}
-          </ChipLink>
-        ))}
-      </div>
 
       {/* Q24: a use-case chip's note is its registry DESCRIPTION — data, not
           copy. «Lovpålagt» keeps its hand-written one, because a statutory
@@ -418,6 +546,7 @@ async function TemplatesTab({
           ))}
         </div>
       )}
+      </LibraryCard>
     </>
   )
 }
@@ -471,6 +600,14 @@ async function UseCasesTab({
 
   return (
     <>
+      <LibraryHero
+        title={t('title')}
+        countLine={t('countUseCases', { count: uses.length })}
+        scopeLine={t('scopeLineUseCases')}
+        lead={t('lead')}
+      />
+      {/* No wrapper card: this tab IS a grid of cards, and Q172's instruction
+          names Maler and Spørsmålsbank. A box around boxes is furniture. */}
       <p className="mt-[18px] max-w-[680px] text-[13.5px] leading-[1.6] text-mut">
         {t('useCasesNote')}
       </p>
@@ -575,14 +712,39 @@ async function BankTab({
 
   return (
     <BankNoteProvider>
-    <section className="mt-[22px] rounded-[18px] border border-line bg-sf p-[22px]">
+      <LibraryHero
+        title={t('title')}
+        countLine={t('countBank', { count: filtered.length })}
+        scopeLine={t('scopeLineBank')}
+        lead={t('lead')}
+      />
+      <LibraryCard
+        heading={t(TAB_HEADING_KEY.bank as 'tabBank')}
+        filter={
+          <span className="flex flex-wrap gap-2">
+            {categories.map((c) => (
+              <ChipLink key={c} href={href({ kategori: c })} active={category === c}>
+                {c === 'Alle' ? t('bankAll') : c === 'Egne' ? t('bankOwn') : c}
+              </ChipLink>
+            ))}
+          </span>
+        }
+        /* The search is this card's right-hand control — the position the
+           Arbeidsliste gives Liste/Tavle. `min-w` rather than `w-full`, because
+           `BankSearch` is `flex-1` and an unconstrained flex child in a wrapping
+           header collapses to its placeholder at narrow widths. */
+        tools={
+          <span className="flex min-w-[190px] flex-1 items-center">
+            <BankSearch placeholder={t('bankSearch')} initial={query} />
+          </span>
+        }
+      >
       {readOnlyNote ? (
         <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
           {readOnlyNote}
         </p>
       ) : null}
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <BankSearch placeholder={t('bankSearch')} initial={query} />
         <span className="text-[13px] text-mut">
           {t('bankCounts', {
             own: rows.filter((r) => r.isOwn).length,
@@ -600,14 +762,6 @@ async function BankTab({
           {t('bankNoDraft')}
         </p>
       ) : null}
-
-      <div className="mt-3.5 flex flex-wrap gap-2">
-        {categories.map((c) => (
-          <ChipLink key={c} href={href({ kategori: c })} active={category === c}>
-            {c === 'Alle' ? t('bankAll') : c === 'Egne' ? t('bankOwn') : c}
-          </ChipLink>
-        ))}
-      </div>
 
       {filtered.length === 0 ? (
         <p className="mt-4 text-[13px] text-mut">{t('bankEmpty')}</p>
@@ -638,7 +792,7 @@ async function BankTab({
           />
         ))
       )}
-    </section>
+      </LibraryCard>
     </BankNoteProvider>
   )
 }

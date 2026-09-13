@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Logo, Wordmark } from '@/components/Logo'
 import { AppNav } from '@/components/AppNav'
 import { AppSubnav } from '@/components/AppSubnav'
+import { LIBRARY_TABS, TAB_NAV_KEY, type LibraryTab } from '@/lib/library/tabs'
 import { LangPicker } from '@/components/LangPicker'
 import { UserMenu } from '@/components/UserMenu'
 import { MobileNav } from '@/components/MobileNav'
@@ -174,6 +175,14 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           all: t('subnavAll'),
           onlyTasks: t('subnavOnlyTasks'),
           feedback: t('subnavFeedback'),
+          library: t('subnavLibrary'),
+          /* Built FROM the registry rather than spelled out: a fourth library
+             tab then arrives with its label already wired, and cannot be added
+             with none. `TAB_NAV_KEY` is a `Record<LibraryTab, string>`, so the
+             cast is only next-intl's literal-key typing, not a widening. */
+          libraryTabs: Object.fromEntries(
+            LIBRARY_TABS.map((tab) => [tab, t(TAB_NAV_KEY[tab] as 'subnavTemplates')]),
+          ) as Record<LibraryTab, string>,
         }}
       />
     </div>

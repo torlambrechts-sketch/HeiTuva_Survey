@@ -5573,3 +5573,51 @@ not.
 The children are the same subtree in both branches, and every piece of state they read lives in
 `ReportSidePanel` — so moving them between parents cannot lose the half-typed value in the Del panel,
 which is what the old `hidden`-rather-than-unmounted comment was protecting.
+
+## D170 — the library's tab rail moved to the shell, and the hero icon is ours
+
+**Q172, Tor, 2026-09-13.** «Implement the same sub menu style as handlinger to library
+(bibliotek) making Maler and Spørsmålsbank sub menu items. Also wrap maler and spørsmålsbank
+into the same layout as handlinger with the box, heading and filter.»
+
+**THE BUNDLE DRAWS THIS RAIL IN-PAGE, AND THAT IS MEASURED RATHER THAN ASSUMED.** v5's
+`libTabs` (v5:8324) renders at v5:4082 — a pill rail beside the 28px «Bibliotek» heading,
+inside the page — and `subnavLabel` (v5:6320) has four branches, none of them the library.
+So the subnav is a DEPARTURE from the handoff on this screen, decided by Tor, not a reading
+of it. `AppSubnav`'s header records the same fact in the place a future phase will look.
+
+**The condition the move rests on is met and is asserted, not asserted-to-be-met.**
+`AppSubnav` refuses the subnav on `admin` precisely because that screen would then carry two
+controls doing one job, one of them three tabs out of date. The library only gets to have it
+because the in-page rail is GONE — so `tests/unit/library-tabs.test.ts` asserts the page
+builds no tab set of its own and links to a strict subset of the tabs.
+
+**The first version of that assertion was wrong, and the correction is the useful part.** It
+forbade any link that changes tab, and failed on `UseCaseCard`'s «Se maler» — which is a card
+ACTION (one use case, one destination), not a rail. *A rail is the whole set rendered
+together*, so that is what the test now measures. The same shape as every other enumeration
+in CLAUDE.md's table: the property, not the instance that provoked it.
+
+**WHAT IS NOT THE BUNDLE'S, ITEMISED, BECAUSE A LAYOUT BORROWED FROM ANOTHER SCREEN CARRIES
+PARTS THAT SCREEN HAS AND THIS ONE NEVER DREW:**
+
+- **The hero icon.** v5 draws none on the library. It is built from the Arbeidsliste icon's
+  own primitive — rounded rects, `rx=1.6`, `fill: var(--ink)`, in the 62px `--ac` square —
+  arranged as three equal spines so it cannot be read as the rising bars that mean «tasks».
+- **The breadcrumb and the lead paragraph.** Both are Handlinger's frame; the library had
+  neither. The lead is new copy and is therefore a CLAIM: it says the bank's questions go
+  «rett inn i et utkast», which is D26's behaviour (the org's most recently touched draft),
+  and a test refuses any wording that promises a running survey instead.
+- **No right-hand panel.** Handlinger's "Eiere" box counts task owners and offers «Ny
+  oppgave». The library has no equivalent entity and no create action outside the Builder, so
+  a panel here would have to invent its content — CLAUDE.md's never-fabricate rule. The hero
+  is one column instead. **If the instruction's «the box» meant that panel rather than the
+  card, this is the half to correct.**
+- **Bruksområder gets no wrapper card.** It is already a grid of cards, and the instruction
+  names Maler and Spørsmålsbank.
+
+**The chips were NOT restyled.** Handlinger's filter is a segmented `--ink` rail; the
+library's is the bundle's own outline chips. Only the container moved. Substituting one
+control for another is restyling and is forbidden outright, and the gate that would have
+caught the consequence — `verify:responsive`, which measured this exact rail at 8px gaps —
+had already proven the chips as they are.
