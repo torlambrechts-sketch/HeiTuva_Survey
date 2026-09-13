@@ -271,8 +271,27 @@ export function WorklistPanel({
             </span>
             <div className="min-w-0 flex-1">
               {/* The heading follows the type filter (TYPE_TITLE_KEY): «Handlinger»
-                  under «Alt», «Tilbakemeldinger» under «Tilbakemeldinger». */}
-              <h1 className="font-display text-[30px] font-semibold leading-[1.1]">
+                  under «Alt», «Tilbakemeldinger» under «Tilbakemeldinger».
+
+                  AND THE SIZE STEPS, BECAUSE THE HEADING IS NOW A VARYING WORD
+                  RATHER THAN A FIXED ONE. `verify:responsive` blocked on
+                  `oppgaver/tom` @320px the moment this became dynamic, and the
+                  measurement is the whole argument: at 30px «Tilbakemeldinger»
+                  needs 247px and its box is 202px — the 62px icon and the 16px
+                  gap take 78 of the 280 available — so it overran by 45px and
+                  every ancestor carried exactly that. «Oppgaver» never did,
+                  which is why the old constant was safe and this one is not:
+                  CLAUDE.md's W3 lesson, where the layout rule is the constant
+                  and the varying thing is a WORD.
+
+                  It cannot wrap — «Tilbakemeldinger» is one word — so the size
+                  steps instead, which RESPONSIVE.md rule 22 permits («only
+                  layout, spacing scale, and font size may step down»). 23px
+                  gives 189px against 202px available, and the idiom is
+                  mobile-first with the step UP at the breakpoint, matching
+                  `OverviewScreen`'s h1 and `SharedReport`'s. Desktop is
+                  untouched at 30px, so nothing the design specifies moves. */}
+              <h1 className="font-display text-[23px] font-semibold leading-[1.1] md:text-[30px]">
                 {t(TYPE_TITLE_KEY[type])}
               </h1>
               <div className="mt-1 text-[13px] text-mut">
