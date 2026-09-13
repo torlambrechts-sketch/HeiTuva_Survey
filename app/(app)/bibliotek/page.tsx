@@ -19,7 +19,9 @@ import {
   resolveLibraryTab,
   type LibraryTab,
 } from '@/lib/library/tabs'
+import { splitRail } from '@/lib/library/rail'
 import { ChipLink } from './ChipLink'
+import { CategorySelect } from './CategorySelect'
 import { TemplateCard, type TemplatePack } from './TemplateCard'
 import { UsePackButton } from './UsePackButton'
 import { BankRow } from './BankRow'
@@ -368,6 +370,26 @@ async function TemplatesTab({
             : p.useCase === category,
     )
 
+  /*
+    Q174 — «det blir for mange på raden». Ten chips became four plus a
+    dropdown, ranked by how many templates each one would actually show.
+
+    Counted over the STANDARD packs, because that is the grid the chip filters:
+    an organisation's own templates are listed in their own section above and
+    are not affected by the category at all. `annet` is therefore 0 — every
+    shipped pack maps to a use case (a total function, asserted in
+    tests/db/use-cases.test.ts) — and sorts last, which is true rather than
+    unfortunate.
+  */
+  const nonOwn = all.filter((p) => !p.isOwn)
+  const countFor = (key: string) =>
+    key === 'Lovpålagt'
+      ? nonOwn.filter((p) => p.category === 'Lovpålagt').length
+      : key === 'annet'
+        ? nonOwn.filter((p) => !p.useCase).length
+        : nonOwn.filter((p) => p.useCase === key).length
+  const { rail, overflow } = splitRail({ chips, count: countFor, active: category })
+
   const noteKey = CATEGORY_NOTE_KEY[category]
   const meta = (p: (typeof all)[number]) =>
     [
@@ -420,19 +442,33 @@ async function TemplatesTab({
       />
       <LibraryCard
         heading={t(TAB_HEADING_KEY.maler as 'tabTemplates')}
-        /* Q173 — the Arbeidsliste's scope rail (v5:3179), same paint. */
+        /* Q173 — the Arbeidsliste's scope rail (v5:3179), same paint.
+           Q174 — carrying four categories plus «Alle», with the rest in the
+           dropdown beside it. The active one is promoted onto the rail rather
+           than hidden inside the dropdown, so no filter is ever in force with
+           nothing on screen lit. */
         filter={
-          <span className="touch-cluster flex flex-wrap gap-[3px] rounded-[11px] bg-sf2 p-1">
-            {chips.map((c) => (
-              <ChipLink
-                key={c.key}
-                href={href({ kategori: c.key })}
-                active={category === c.key}
-                variant="rail"
-              >
-                {c.label}
-              </ChipLink>
-            ))}
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="touch-cluster flex flex-wrap gap-[3px] rounded-[11px] bg-sf2 p-1">
+              {rail.map((c) => (
+                <ChipLink
+                  key={c.key}
+                  href={href({ kategori: c.key })}
+                  active={category === c.key}
+                  variant="rail"
+                >
+                  {c.label}
+                </ChipLink>
+              ))}
+            </span>
+            <CategorySelect
+              label={t('moreCategories')}
+              options={overflow.map((c) => ({
+                key: c.key,
+                label: c.label,
+                href: href({ kategori: c.key }),
+              }))}
+            />
           </span>
         }
         /* Q173 — Liste/Tavle's shape (v5:3184), in Kort/Liste's position. */

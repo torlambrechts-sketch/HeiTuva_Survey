@@ -1279,7 +1279,8 @@
     "countUseCases": "{count, plural, one {# use case} other {# use cases}}",
     "scopeLineTemplates": "Standard templates and the company’s own",
     "scopeLineBank": "Own and validated questions",
-    "scopeLineUseCases": "Templates and a dashboard preset per area"
+    "scopeLineUseCases": "Templates and a dashboard preset per area",
+    "moreCategories": "More categories"
   },
   "auth": {
     "signInTitle": "Sign in",

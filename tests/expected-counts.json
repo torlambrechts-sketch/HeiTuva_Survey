@@ -68,6 +68,7 @@
   "tests/unit/icon-is-the-logo.test.ts": 6,
   "tests/unit/import.test.ts": 20,
   "tests/unit/integrations.test.ts": 20,
+  "tests/unit/library-rail.test.ts": 8,
   "tests/unit/library-tabs.test.ts": 10,
   "tests/unit/live-step.test.ts": 6,
   "tests/unit/mail-env.test.ts": 7,

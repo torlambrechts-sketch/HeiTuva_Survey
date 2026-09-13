@@ -5658,3 +5658,48 @@ rather than remembered.
 
 Measured after: `verify:responsive` 206 of 206 combinations, **0 findings, 0 blockers** —
 with thirteen rail chips on the bank tab at 320px, the widest case this screen has.
+
+## D172 — the category rail is four chips and a dropdown, and the dropdown was 43.98px
+
+**Q174, Tor, 2026-09-13:** «det blir veldig mange mal kategorier; slik at det blir for mange
+på raden — kan vi vise de fire med flest maler og nedtrekksliste etter det?»
+
+**THE BUNDLE DRAWS ALL OF THEM** (v5's `packCats` is «Alle» + every use case + «Lovpålagt» +
+«Annet»), so a rail that hides some is a departure — decided, and recorded here with Q174.
+The bundle was drawn against a registry that had fewer rows; the row is a count of the
+categories that existed when it was drawn, which is CLAUDE.md's own shape.
+
+**WHAT «FLEST MALER» COUNTS.** The standard packs the chip filters to — not every row with
+that use case. An organisation's own templates render in their own section and no category
+touches them, so including them would rank by a number the grid does not show.
+
+**THE TIE-BREAK IS THE WHOLE CORRECTNESS PROBLEM, AND THE SEEDED DATA ALREADY CONTAINS ONE.**
+«Medlem og frivillig» and «Offentlig sektor» both have 2 templates. Ranking by count is not
+a total order, so `splitRail` breaks ties on the editorial position explicitly rather than
+relying on `Array.sort` stability — a rail that reshuffles between organisations moves the
+chip while somebody is reaching for it. Tested at the BOUNDARY (limit 2), where the tie
+decides membership rather than order.
+
+**THE DROPDOWN'S HIT AREA TOOK THREE ATTEMPTS AND EVERY CORRECTION CAME FROM A
+MEASUREMENT.**
+
+1. `py-[7px]` with `[--field-pad-y:7px]`, chosen to match the painted height of the chips
+   beside it. Rendered **42px**. `touch-44-field` adds two 4px transparent borders and
+   `--field-pad-y + 1` of padding, so a 7px field cannot reach 44 however honestly the
+   variable is set.
+2. `py-2` with `[--field-pad-y:8px]` — the pairing every other field in the app uses.
+   Rendered **43.98px**. My own driver printed «44» because it rounded, and
+   `verify:responsive` filters on the unrounded hit box while REPORTING the rounded painted
+   one — so its finding read «touch area 153x44 (<44)», which looks like a contradiction and
+   is not.
+3. `py-[9px]`, which is the utility's own default `--field-pad-y`, so no override is set at
+   all. **46.00px**, measured with two decimals.
+
+**A ROUNDED MEASUREMENT IS NOT THE MEASUREMENT** — the project's rule one level down, and
+the driver prints two decimals now. It is also the second time in this tranche that a
+`<select>` was the control at fault; `touch-44` versus `touch-44-field` is asserted by a test
+rather than left to recall.
+
+**The bank's rail is untouched.** It carries thirteen chips — a worse row than the one this
+fixes — and the instruction named mal-kategorier. Logged rather than widened; the same
+`splitRail` would serve it with a count of questions per category.

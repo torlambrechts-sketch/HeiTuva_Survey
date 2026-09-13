@@ -1279,7 +1279,8 @@
     "countUseCases": "{count, plural, one {# bruksområde} other {# bruksområder}}",
     "scopeLineTemplates": "Standardmaler og firmaets egne",
     "scopeLineBank": "Egne og validerte spørsmål",
-    "scopeLineUseCases": "Maler og dashboard-oppsett per område"
+    "scopeLineUseCases": "Maler og dashboard-oppsett per område",
+    "moreCategories": "Flere kategorier"
   },
   "auth": {
     "signInTitle": "Logg inn",
