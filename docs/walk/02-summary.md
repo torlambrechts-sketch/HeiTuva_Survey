@@ -5,29 +5,39 @@ the product's screens were completely dead.** That is the whole finding; everyth
 
 ## Priorities
 
-### Fixed in this run (three)
+### Fixed (eight)
 
 | # | Severity | What |
 |---|---|---|
 | W-01 | BLOCKER | Live entirely unusable — `export { Code }` from a `'use server'` file killed all three presenter actions |
 | W-02 | BLOCKER | Arbeidsliste entirely unusable — `export const TASK_ERROR_KEY`, same mechanism, eleven actions |
+| W-03 | MAJOR | The respondent was promised a reply that cannot be delivered on a share link or QR (`M:0119` + `qcNoReply`) |
 | W-04 | MAJOR | «Ord minst 0 personer har skrevet» on the presenter screen, from a `?? 0` over an absent key |
+| W-05 | MAJOR | A permanently impossible group delete said «Prøv igjen»; now `group_in_use`, named |
+| W-06 | MINOR | A typed-but-unsaved comment was discarded silently; the draft now survives and submits |
+| W-07 | MINOR | No `<main>` landmark on the Live page or `/rapporter`; three roots now open one |
+| W-14 | LIMITATION | Every gate discarded the server log; the child's output is captured and printed on failure |
 
-### Act on next, in this order
+### Withdrawn (two) — wrong, and mine
 
-| # | Severity | What | Why it is first |
-|---|---|---|---|
-| W-03 | MAJOR | The respondent is promised «Lederen kan svare…» on share-link and QR surveys, where the manager is told there is no thread | It is a promise to a respondent that the product cannot keep, on the surface whose credibility everything else rests on |
-| W-05 | MAJOR | «Kunne ikke lagre. Prøv igjen.» for a group delete that can never succeed | Sends an administrator in a loop and hides a constraint explainable in one sentence |
-| W-13 | LIMITATION | No seeded survey on which quiz mode can be switched on | Blocks driving `setRunMode`/`setQuizSettings` at all; one fixture survey closes it and unblocks the untested half of Quiz |
-| W-12 | LIMITATION | Eight of thirteen question types absent from the seed | Any respondent-path gate exercises 5 of 13 renderers and looks complete |
-| W-06 | MINOR | A typed-but-unsaved comment vanishes with no warning | Cheap to fix, and it is respondent-entered text |
-| W-09 | LIMITATION | A quiz respondent is never told anything, including that it was a quiz | Needs a decision, not code |
-| W-11 | LIMITATION | «6 svar» is one question's `n`, not the participants | Needs a decision about what the presenter's number means |
-| W-07 | MINOR | No `<main>` on the Live page and on `/rapporter` | Two elements |
-| W-08 | LIMITATION | Firma saves on blur, invisible pending state | Affects one form |
-| W-10 | LIMITATION | Quiz guards enforced by hiding the control, unexplained | Affects discoverability, not correctness |
-| W-14 | LIMITATION | Every gate discards the server log | Apparatus change — see below |
+| # | What I claimed | What is true |
+|---|---|---|
+| W-10 | Both quiz guards enforced by hiding the control, unexplained | The Quiz card is on the **Generelt** tab, always rendered, and says «Malen låser kjøremodus.» or switches the survey to «Med navn» and tells you |
+| W-13 | No seeded survey can reach quiz mode | `Utkast uten svar` reaches it in one click — the product switches anonymity for you |
+
+Three stacked locator errors produced both: a regex that could not match a card named «Quiz» +
+«Opplæring og sertifisering»; a `.first()` that clicked the hidden mobile copy of «Innstillinger»;
+and then the wrong pane entirely. **A control reported missing is a claim about a SCREEN, and it is
+only as good as the pane you were looking at.**
+
+### Standing, decided rather than built (four)
+
+| # | Severity | Decision |
+|---|---|---|
+| W-09 | LIMITATION | A quiz respondent is never shown a score. **Not built** — it is a feature with a real question behind it (should a person be shown they answered wrong, and who else sees it), and Q84 already narrowed this area once |
+| W-12 | LIMITATION | Eight of thirteen question types absent from the seed. **Not changed** — extending `seed-demo` moves every capture that lists surveys, so `verify:visual` and `verify:responsive`'s 206 combinations need re-baselining in the same commit. A phase's job, not a walk's |
+| W-11 | LIMITATION | «6 svar» is the first scale question's `n`. **Left** — both numbers are right and the k-gate reads the same place; the honest improvement is a label, and presenter labels are the bundle's to decide |
+| W-08 | LIMITATION | Firma saves on blur. **Left** — every ordinary path saves, including a nav-link click; only a hard navigation with focus still inside discards, as any unsaved form does |
 
 ---
 
@@ -66,9 +76,12 @@ shell loop over all 21 modules and it found both violations in under a second. T
 not something I built: the apparatus is frozen.
 
 The deeper lesson is the one this repository keeps paying for. **`tsc` and `eslint` were both green
-on the broken code, and they are right to be** — `export { Code }` is valid TypeScript and valid
-lint. The constraint is Next's, enforced at module registration, and nothing in the gate set speaks
-that language. The same gap produced D162 two days ago: twenty-two SCIM tests passed while the
+on the broken code, and they are right to be. That is not a gap in either of them and must not be
+written up as one** — `export { Code }` is valid TypeScript and valid lint, and a type checker that
+started refusing it would be wrong about the language it checks. The constraint is Next's, enforced
+at module registration, and nothing in the gate set speaks that language. The honest statement is
+that the product has a rule no existing gate is even the right KIND of tool to enforce, which is why
+the remedy above is a source-level property test rather than a stricter compiler setting. The same gap produced D162 two days ago: twenty-two SCIM tests passed while the
 endpoint was unreachable, because calling a handler as a function never meets the middleware.
 **Both are the same shape — a boundary the test harness steps over.**
 
@@ -113,7 +126,9 @@ entry is a state nobody is looking at. Logged for the next phase.
    quiz-offerable state and a below-k live screen are all unreachable from it, and every gate that
    walks the seeded path reports complete coverage of a subset.
 3. **A discarded log is a discarded diagnosis.** The one line naming both BLOCKERs was written by
-   the server on every failed click and thrown away by the harness that provoked it.
+   the server on every failed click and thrown away by the harness that provoked it. **Fixed
+   2026-09-13** — `stdio: ['ignore', log, log]` and `serverLogTail()` — and it earned itself on the
+   first run, diagnosing a stopped Supabase stack that had presented only as a sign-in timeout.
 
 ## Numbers, with the command beside them
 
@@ -129,5 +144,8 @@ entry is a state nobody is looking at. Logged for the next phase.
 | Violations of the export property | 2 before, **0 after** | same loop |
 | Question types in the registry / in the seed | 13 / 5 | `lib/questions/registry.ts`, `select type … group by type` |
 | Question types driven at 400px | 13 | `scripts/walk/w3-thirteen.ts` |
-| Findings | 14 (2 BLOCKER, 3 MAJOR, 2 MINOR, 7 LIMITATION) | `01-findings.md` |
-| Fixed in this run | 3 | W-01, W-02, W-04 |
+| Findings logged | 14 (2 BLOCKER, 3 MAJOR, 2 MINOR, 7 LIMITATION) | `01-findings.md` |
+| **Withdrawn as wrong** | **2** | W-10, W-13 — three stacked locator errors, all mine |
+| Findings standing | 12 | 14 − 2 |
+| **Fixed** | **8** | W-01, W-02, W-03, W-04, W-05, W-06, W-07, W-14 — `grep -c '· FIXED' docs/walk/01-findings.md` |
+| Decided, not built | 4 | W-08, W-09, W-11, W-12 |

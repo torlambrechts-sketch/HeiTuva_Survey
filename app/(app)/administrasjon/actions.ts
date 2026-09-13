@@ -628,7 +628,15 @@ export async function deleteGroup(groupId: string): Promise<AdminResult> {
 
   const supabase = await createClient()
   const { error } = await supabase.from('groups').delete().eq('id', groupId).eq('org_id', admin.orgId)
-  if (error) return { ok: false, error: 'save_failed' }
+  if (error) {
+    // 23503 is the deferred FK from V2-3b firing at COMMIT: the row deletes at
+    // statement time and the constraint refuses it when the transaction closes,
+    // because a sent round still points at this group. A decided rule, so it is
+    // reported as itself rather than collapsed into `save_failed` — the collapse
+    // this file's own header warns about, found live by the walk (W-05).
+    if (error.code === '23503') return { ok: false, error: 'group_in_use' }
+    return { ok: false, error: 'save_failed' }
+  }
 
   revalidatePath('/administrasjon')
   return { ok: true }

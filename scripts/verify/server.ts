@@ -1,10 +1,13 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
-import { readFile, rm, stat } from 'node:fs/promises'
-import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdir, readFile, rm, stat } from 'node:fs/promises'
+import { closeSync, openSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { LOCAL_SUPABASE } from './local-env'
 
 export const BASE_URL = process.env.HEITUVA_BASE_URL ?? 'http://127.0.0.1:3100'
+
+/** Where the server the harness starts writes its stdout and stderr. */
+export const SERVER_LOG = process.env.HEITUVA_SERVER_LOG ?? 'artifacts/server.log'
 
 const LOCAL = process.argv.includes('--local')
 
@@ -196,8 +199,26 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
   await rm('.next/cache/fetch-cache', { recursive: true, force: true })
 
   console.log(`  server: starting on ${BASE_URL}${LOCAL ? ' (local Supabase)' : ''}`)
+
+  // THE CHILD'S OUTPUT IS KEPT, NOT DISCARDED. This was `stdio: 'ignore'`, and
+  // the walk of 2026-09-12 is what it cost: two screens were completely dead —
+  // every server action on Live and on the Arbeidsliste returning HTTP 500 —
+  // and the cause was ONE LINE the server wrote on every failed click:
+  //
+  //   ⨯ Error: A "use server" file can only export async functions, found object.
+  //
+  // In production Next sends the browser only a digest, by design, so that line
+  // is the entire diagnosis and the harness that provoked it threw it away.
+  // Not a blind spot: evidence produced and then dropped on the floor.
+  //
+  // A FILE RATHER THAN 'inherit': piping to our stdout would interleave Next's
+  // request log into every gate's output and bury the gate's own findings, which
+  // is why it was silenced in the first place. This keeps it and stays quiet —
+  // and `serverLogTail()` below is what a gate prints when something fails.
+  await mkdir(dirname(SERVER_LOG), { recursive: true })
+  const log = openSync(SERVER_LOG, 'w')
   const child: ChildProcess = spawn('npx', ['next', 'start', '-p', port], {
-    stdio: 'ignore',
+    stdio: ['ignore', log, log],
     // Under --local these must be set on the child: Next loads .env.local
     // itself, and .env.local points at the remote project. process.env wins.
     env: LOCAL ? { ...process.env, ...LOCAL_SUPABASE } : process.env,
@@ -207,7 +228,17 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
   const deadline = Date.now() + 90_000
   while (Date.now() < deadline) {
     if (await isUp(`${BASE_URL}/logg-inn`)) {
-      return { stop: () => child.kill('SIGTERM'), started: true }
+      return {
+        stop: () => {
+          child.kill('SIGTERM')
+          try {
+            closeSync(log)
+          } catch {
+            // already closed by the exiting child; nothing to report
+          }
+        },
+        started: true,
+      }
     }
     await new Promise((r) => setTimeout(r, 1000))
   }
@@ -215,6 +246,29 @@ export async function ensureServer(): Promise<{ stop: () => void; started: boole
   child.kill('SIGTERM')
   throw new Error(
     `Server did not become ready at ${BASE_URL} within 90s. ` +
-      `Run "npx next build" first — the harness starts a production build, not dev.`,
+      `Run "npx next build" first — the harness starts a production build, not dev.` +
+      serverLogTail(),
   )
+}
+
+/**
+ * The interesting end of the server log, for a gate to print when it fails.
+ *
+ * Returns '' when there is nothing worth showing, so a caller can append it
+ * unconditionally. Only lines Next itself marks as a problem, plus their
+ * stack frames — a full tail would be mostly request logging.
+ */
+export function serverLogTail(maxLines = 40): string {
+  let text: string
+  try {
+    text = readFileSync(SERVER_LOG, 'utf8')
+  } catch {
+    return ''
+  }
+  const lines = text.split('\n')
+  const first = lines.findIndex((l) => /^\s*[⨯✕]|\bError\b|\bTypeError\b|unhandledRejection/.test(l))
+  if (first === -1) return ''
+  const slice = lines.slice(first, first + maxLines).filter((l) => l.trim().length)
+  if (!slice.length) return ''
+  return `\n\n  the server said (${SERVER_LOG}):\n${slice.map((l) => `    ${l}`).join('\n')}`
 }

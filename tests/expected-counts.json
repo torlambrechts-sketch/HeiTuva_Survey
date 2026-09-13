@@ -36,6 +36,7 @@
   "tests/db/test-mode.test.ts": 9,
   "tests/db/use-cases-page.test.ts": 6,
   "tests/db/use-cases.test.ts": 9,
+  "tests/db/walk-fixes.test.ts": 7,
   "tests/db/worklist-notes.test.ts": 16,
   "tests/db/workspaces.test.ts": 41,
   "tests/invariants/attributed-results.test.ts": 23,

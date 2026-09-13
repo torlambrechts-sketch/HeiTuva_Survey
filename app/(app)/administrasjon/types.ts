@@ -15,6 +15,13 @@ export type AdminError =
   | 'save_failed'
   | 'duplicate'
   | 'last_admin'
+  /** The group is referenced by a round that was already sent. V2-3b made
+   *  `survey_invitations.group_id` NO ACTION DEFERRABLE INITIALLY DEFERRED on
+   *  purpose — erasing the organisation still works, deleting one group a round
+   *  reached does not — so this is a decided rule and not a failure. It gets its
+   *  own result because «Kunne ikke lagre. Prøv igjen.» sends an administrator
+   *  round a loop that can never succeed (the walk of 2026-09-12, W-05). */
+  | 'group_in_use'
   /** Entra ID is not configured in Auth, so nobody could sign in once it was required. */
   | 'sso_unavailable'
   /** The administrator is not themselves signed in through Entra — the next request would sign them out. */
@@ -33,6 +40,7 @@ export const ADMIN_ERROR_KEY: Record<AdminError, string> = {
   save_failed: 'saveFailed',
   duplicate: 'errDuplicate',
   last_admin: 'errLastAdmin',
+  group_in_use: 'errGroupInUse',
   sso_unavailable: 'errSsoUnavailable',
   sso_self_lockout: 'errSsoSelf',
   sso_no_break_glass: 'errSsoNoBreakGlass',

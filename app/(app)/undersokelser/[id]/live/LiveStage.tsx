@@ -131,8 +131,13 @@ export function LiveStage({
     })
   }
 
+  // WALK 2026-09-12 (W-07): a <main>, not a <div>. Every control on this screen
+  // sat outside any landmark, so a screen-reader user navigating by landmark
+  // could not reach it — and the definition of done names keyboard and
+  // focus-visible explicitly. Every other screen in the product has one. The
+  // classes are unchanged, so nothing moves a pixel.
   return (
-    <div className="animate-enter pt-[34px]">
+    <main className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-display text-[28px] font-medium">{s.heading}</h1>
@@ -316,6 +321,6 @@ export function LiveStage({
         <Unavailable title={s.closingTitle} body={s.closingUnavailable} />
         <Unavailable title={s.fullscreenTitle} body={s.fullscreenUnavailable} />
       </div>
-    </div>
+    </main>
   )
 }

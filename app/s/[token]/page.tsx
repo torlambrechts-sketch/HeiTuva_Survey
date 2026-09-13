@@ -36,6 +36,9 @@ type TokenSurvey = {
   anonymity: 'anonymous' | 'named' | 'optional'
   /** C3 — carried by `get_survey_for_token` since M:0100. */
   feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
+  /** M:0119 — whether a reply can reach the holder of THIS token. False for a
+   *  share link or QR voucher: no invitation exists to attach an answer to. */
+  has_thread?: boolean | null
   /** V2-10: `standard` | `live` | `quiz`. Chrome only — a quiz draws tiles. */
   run_mode?: string
   k_threshold?: number
@@ -135,6 +138,11 @@ export default async function RespondentPage({
            `off` is the safe reading of a missing value: it renders no control,
            which is the state every existing survey was backfilled to anyway. */
         feedbackMode={survey.feedback_mode ?? 'off'}
+        /* A payload from a database without M:0119 omits it, and `false` is the
+           safe reading: the box then promises no reply, which is true of a share
+           link and merely understated for an invitation. The opposite default
+           would promise an answer that cannot arrive — the defect this closes. */
+        hasThread={survey.has_thread === true}
         quizMode={survey.run_mode === 'quiz'}
         kThreshold={typeof survey.k_threshold === 'number' ? survey.k_threshold : 5}
         respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}

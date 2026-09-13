@@ -47,8 +47,13 @@ export async function ReportEditor({
     ? (options.groups.find((g) => g.id === report.filters.group)?.name ?? t('docFilterAllGroups'))
     : t('docFilterAllGroups')
 
+  // WALK 2026-09-12 (W-07): a <main>, not a <div>. Every control on this screen
+  // sat outside any landmark, so a screen-reader user navigating by landmark
+  // could not reach it — and the definition of done names keyboard and
+  // focus-visible explicitly. Every other screen in the product has one. The
+  // classes are unchanged, so nothing moves a pixel.
   return (
-    <div className="animate-enter pt-[34px]">
+    <main className="animate-enter pt-[34px]">
       {/* The design keeps the screen's own header while editing and puts the
           back control top-right as a bordered button (HeiTuva.dc.html:1065). */}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -201,6 +206,6 @@ export async function ReportEditor({
           }}
         />
       </div>
-    </div>
+    </main>
   )
 }

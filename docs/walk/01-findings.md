@@ -1,7 +1,10 @@
 # Walk — findings
 
-**2026-09-12.** Fourteen findings. Three fixed (two BLOCKERs and one MAJOR, all one-file and
-unambiguous); eleven logged. Severity per the instruction's rubric:
+**2026-09-12**, with a fix pass and two WITHDRAWALS on **2026-09-13**.
+
+Fourteen findings were logged. **Twelve stand; two were wrong and are withdrawn below** — W-10 and
+W-13, both manufactured by the same mistake in my own driving. Eight are now fixed. Severity per the
+instruction's rubric:
 
 - **BLOCKER** — a user cannot complete something the product promises, or data is lost
 - **MAJOR** — it works but does the wrong thing, or a control does not control what it claims
@@ -77,7 +80,7 @@ After: zero.
 
 ---
 
-## W-03 · MAJOR · The respondent is promised a reply that cannot be delivered
+## W-03 · MAJOR · The respondent is promised a reply that cannot be delivered · FIXED
 
 **What I did.** Opened `/s/<share-link token>` at 400px and opened the per-question comment box.
 Then did the same through an invitation token. Then read the manager's side.
@@ -99,8 +102,25 @@ Measured: the promise string is present on both surfaces, `true` for the share l
 is the claim-set class CLAUDE.md says nothing mechanical protects, on the one surface where the
 product's credibility is load-bearing. QR and splash respondents are in the same position.
 
-**Not fixed.** The respondent page knows whether the token is an invitation or a share link, so the
-fix is a conditional plus a second message key — more than one file, and a copy decision.
+**FIXED 2026-09-13**, on Tor's decision: *«The respondent text is the one that must change, because
+the false half is the one she reads, and in the worst direction: she writes something she otherwise
+would not, trusting a reply that never comes.»* The manager's sentence was already correct and stays.
+
+The page could not previously tell the two apart — `get_survey_for_token` resolved
+`v_res.invitation_id` and did not return it, and every available proxy (a null `invitation_lang`,
+say) is an enumeration standing in for the property. So **`M:0119` returns the fact**: `has_thread`,
+deliberately the same word the manager's side already uses, because it is the same fact about the
+same comment and two names for one fact is how the two sides drift apart again.
+
+`respondent.qcNoReply` — «Kommentaren leses, men du kan ikke få svar på denne lenken.» /
+«Your comment is read, but you cannot receive a reply on this link.» — in `messages/*.json` **and
+seeded into `ui_messages`**, because the file alone is a correction nobody receives.
+
+Carried through test mode too (`loadTestSurvey` → `TestRunner`), since that preview exists to
+exercise the respondent's real path rather than a default chosen for it.
+
+**Driven, both kinds:** share link shows the no-reply sentence and NOT the promise; an invitation
+shows the promise and NOT the no-reply sentence.
 
 ---
 
@@ -128,7 +148,7 @@ un-gated branch, where the value is real.
 
 ---
 
-## W-05 · MAJOR · A permanently impossible delete says «Prøv igjen»
+## W-05 · MAJOR · A permanently impossible delete says «Prøv igjen» · FIXED
 
 **What I did.** Clicked «Slett gruppe: Ledelse» — a group with 1 member that **36 invitations**
 reference.
@@ -147,11 +167,16 @@ succeed, and hides a constraint that is explainable in one sentence. `deleteGrou
 named refusal" that `administrasjon/types.ts` already warns about in its own comment for the
 `forbidden` case.
 
-**Not fixed.** Needs a named error in the action plus a message key.
+**FIXED 2026-09-13.** Measured first: the delete succeeds at statement time and the **deferred**
+constraint fires at COMMIT with `foreign_key_violation` (23503) naming
+`survey_invitations_group_id_fkey` — V2-3b's design working exactly as intended. `deleteGroup` now
+reports that as its own result, `group_in_use`, with `admin.errGroupInUse` in both languages:
+«Gruppen er brukt i en utsendt runde, så den kan ikke slettes.» Every other database error still
+collapses to `save_failed`, which is the honest reading of an error nobody has named.
 
 ---
 
-## W-06 · MINOR · A typed-but-unsaved comment is discarded silently
+## W-06 · MINOR · A typed-but-unsaved comment is discarded silently · FIXED
 
 **What I did.** Opened the per-question comment box, typed, then (a) navigated to the next question
 and back, and (b) pressed «Send inn svar» without pressing «Lagre».
@@ -168,9 +193,18 @@ lifts it into the parent via `onSave`. Pressed properly, it works: `survey_comme
 **Why it is still a finding.** A respondent who types a sentence and presses the screen's primary
 button loses it with no indication. The submit is not refused and nothing says anything.
 
+**FIXED 2026-09-13.** The draft moved one level up, into `Respondent`, so navigating between
+questions cannot destroy it, and a non-empty draft is submitted with the rest. That is **not** a
+second write path — the note above rules one out and it still holds: one `submit_response`, one
+transaction, one more item in the same array. «Avbryt» still discards, because there the respondent
+asked.
+
+**Driven:** typed on Q1 without pressing «Lagre», went forward and back — the box reopens with the
+text intact — then submitted: `survey_comments` 4 → 5, written with its `question_id`.
+
 ---
 
-## W-07 · MINOR · Two screens have no `<main>` landmark
+## W-07 · MINOR · Two screens have no `<main>` landmark · FIXED
 
 **What I did.** Scoped a locator to `main` on the Live presenter page and on `/rapporter`.
 
@@ -180,6 +214,10 @@ on the live page returns **0**.
 
 **Why it matters.** Screen-reader users navigate by landmark, and the definition of done names
 keyboard and focus-visible explicitly. Every other screen I drove has one.
+
+**FIXED 2026-09-13.** `LiveStage`, `ReportsScreen` and `ReportEditor` open a `<main>` instead of a
+`<div>` — three roots, because `/rapporter` renders two different components depending on whether a
+report is open. The class lists are untouched, so nothing moves a pixel.
 
 ---
 
@@ -212,16 +250,30 @@ learns nothing is a quiz in name only, and the decision is not written down anyw
 
 ---
 
-## W-10 · LIMITATION · Both quiz guards are enforced by hiding the control, with no explanation
+## W-10 · ~~LIMITATION~~ · WITHDRAWN 2026-09-13 — the walk looked in the wrong pane
 
-`app.guard_quiz_policy` refuses `run_mode='quiz'` on an anonymous survey (`quiz_requires_named`) and
-on a statutory pack (`quiz_not_on_statutory_pack`), both with good hints. From the UI the «Quiz»
-control is simply **absent** in both states — measured 0 matches on an anonymous survey and 0 on
-`Aktsomhetsvurdering leverandør` — and the screen says nothing about why.
+**What I claimed.** That both quiz guards are enforced by the «Quiz» control being *absent*, with no
+explanation on screen.
 
-The database guard is sound and is what actually protects the rule. But an administrator looking for
-quiz mode on a statutory survey gets no sentence, and the two hints that explain it are only
-reachable by provoking the error in SQL.
+**What is actually true, measured by driving it.** «Kjøremodus» is on the **Generelt** tab, not
+Innstillinger (`Builder.tsx:401`), and the walk opened Innstillinger. The Quiz card is rendered on
+every survey, with `locked: false`, and pressing it says exactly what happens:
+
+| Survey | Card | Effect | Sentence shown |
+|---|---|---|---|
+| anonymous (`Utkast uten svar`) | present, enabled | `standard/anonymous` → **`quiz/named`** | «Undersøkelsen er satt til «Med navn».» |
+| statutory pack (`Aktsomhetsvurdering leverandør`) | present, enabled | **refused**, unchanged | «Malen låser kjøremodus.» |
+| live (`Arbeidsmiljø — månedlig`) | present, enabled | `live/anonymous` → **`quiz/named`** | — |
+
+`RunModePanel`'s own header already records that it once told customers quiz did not exist and that
+this was D135; the panel now carries `quizPackLocked`, `namedSurvey` and `quizSwitchedToNamed`, and
+all three reach the screen.
+
+**Three locator errors stacked to produce this**, and the third is the one worth keeping: `/^Quiz$/`
+could not match a card whose accessible name is «Quiz» + «Opplæring og sertifisering»; there are TWO
+«Innstillinger» buttons and the first is the mobile tab row, hidden at 1440px, so `.first()` clicked
+nothing; and the pane I finally opened was not the pane the control is in. **A control reported
+missing is a claim about a SCREEN, and it is only as good as the pane you were looking at.**
 
 ---
 
@@ -247,23 +299,76 @@ seeded respondent path exercises 5 of 13 renderers and looks complete.
 
 ---
 
-## W-13 · LIMITATION · No survey exists on which quiz mode can be switched on
+## W-13 · ~~LIMITATION~~ · WITHDRAWN 2026-09-13 — the state is reachable, and the product helps
 
-Quiz requires `named` and refuses a statutory pack. The seed's only `named` + `standard` survey is
-`Aktsomhetsvurdering leverandør`, which carries `leverandor-apenhetsloven`. So the state where the
-«Quiz» control is offered **cannot be reached from a fresh seed at all**, and `setRunMode('quiz')`
-is undrivable from the UI. A third fixture survey — named, non-statutory — would close this.
+**What I claimed.** That no seeded survey exists on which quiz mode can be switched on, because quiz
+requires `named` and the only `named` + `standard` survey carries a statutory pack.
+
+**What is actually true.** The premise was right and the conclusion wrong. Quiz **does** require
+`named` — and `setRunMode` switches the survey to `named` for you and says so, which is the whole
+point of `quizSwitchedToNamed`. So `Utkast uten svar` (anonymous, no pack) reaches quiz mode in one
+click, measured above. The state is reachable from a bare seed; I inferred it was not from a control
+I had failed to find.
 
 ---
 
-## W-14 · LIMITATION · Every gate discards the server log
+## W-14 · LIMITATION · Every gate discards the server log · FIXED
 
 `scripts/verify/server.ts:202` spawns Next with `stdio: 'ignore'`. W-01's cause was a single line in
 that stream; in production the browser gets only a digest, by design. So the class "a server action
 throws" is visible to no gate: the page still renders, the click still returns, and the only
 evidence is thrown away at the source.
 
-Logged rather than changed — the verification apparatus is frozen, and this is a change to it.
+**FIXED 2026-09-13**, on Tor's instruction: *«The last is not a blind spot — it is evidence produced
+and then thrown away. Fix that one: capture the child's output. It costs nothing and it is the only
+one of the three that was already telling you.»*
+
+`stdio: ['ignore', log, log]` to `artifacts/server.log` (gitignored), and `serverLogTail()` prints
+the interesting end of it — the first line Next marks as a problem, plus its stack — which
+`ensureServer`'s timeout and `verify:browser`'s failure path now append. A FILE rather than
+`'inherit'`, because piping Next's request log into every gate's stdout would bury the gate's own
+findings, which is presumably why it was silenced in the first place.
+
+**Both halves proven before being trusted.** Extraction: against a synthetic log carrying a real
+Next `⨯` block, it skips the request-log noise and returns the error with its stack and digest.
+Capture: the very first run against a live server produced `ui_messages read failed for no; serving
+the bundled set: TypeError: fetch failed` — which diagnosed, in one line, a stopped Supabase stack
+that had until then presented only as an unexplained sign-in timeout.
+
+---
+
+## The four LIMITATIONs that stand, and what was decided about each
+
+**2026-09-13.** Decided and recorded rather than built, per the standing rule.
+
+**W-08 — the Firma form saves on blur.** *Left as it is.* Every ordinary path saves: Tab out of the
+card, press Enter, or click a nav link (measured — the soft navigation saves on the way out). Only a
+hard navigation with focus still inside the card discards, which is what any unsaved form does. A
+`beforeunload` prompt is a worse trade — it fires on every deliberate exit too. Worth revisiting only
+if the design gains a visible save control; the bundle does not draw one.
+
+**W-09 — a quiz respondent is never told anything.** *Not built; it needs a decision, not code.*
+After submitting, the respondent sees the generic thank-you: no score, no right/wrong, and the entry
+screen never says it was a quiz. The anonymity half is correct (a quiz is named and promises no
+anonymity). But a score screen is a FEATURE with a real question behind it — whether a person should
+be shown they answered wrong, and who else can see that — and Q84 already narrowed this area once by
+removing the per-person attempt table. Building it silently would be building something that might
+want to be unbuilt.
+
+**W-11 — «6 svar» is one question's `n`.** *Left as it is, with the reason recorded.* `answered`
+comes from `aggregate_results` for the first scale question, so a respondent who skips that question
+is invisible to the counter. Both numbers are right and the k-gate reads from the same place, which
+is what makes the gating trustworthy. Changing the number would mean either a second denominator on
+screen or a count that no longer matches the chart beside it. The honest improvement is a label, and
+labels on the presenter screen are the bundle's to decide.
+
+**W-12 — eight of thirteen question types are absent from the seed.** *Not changed, and the cost is
+the reason.* Extending `seed-demo` would give every browser gate more to see — and it would also move
+`/undersokelser`, `/bygg` and every capture that lists surveys, so `verify:visual`'s snapshots and
+`verify:responsive`'s 206 combinations would all have to be re-baselined in the same commit. That is
+a change to what every gate is measured against, which is not a walk's business. Logged for a phase
+that can re-baseline deliberately; the walk reached all thirteen by building a survey from the
+registry's own `defaultConfig`, which is the cheap way to measure them meanwhile.
 
 ---
 

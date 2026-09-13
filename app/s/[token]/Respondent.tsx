@@ -46,6 +46,7 @@ export function Respondent({
   title,
   anonymity,
   feedbackMode,
+  hasThread,
   kThreshold,
   respondentKind,
   engage,
@@ -62,6 +63,9 @@ export function Respondent({
   anonymity: 'anonymous' | 'named' | 'optional'
   /** C2/C3 — `surveys.feedback_mode`. `off` renders no comment control at all. */
   feedbackMode: 'off' | 'anonymous' | 'named' | 'optional'
+  /** M:0119. A comment from a share link or QR has no invitation to answer
+   *  into, so the box must not offer a reply it cannot deliver. */
+  hasThread: boolean
   /** V2-10: draw `choice` as quiz tiles. Chrome only — the value is the same index. */
   quizMode: boolean
   kThreshold: number
@@ -169,9 +173,17 @@ export function Respondent({
         answers: payload,
         anonChoice: choiceGoverns ? anonChoice : null,
         dryRun: testMode,
-        comments: Object.entries(comments).map(([questionId, c]) => ({
+        // Saved comments first, then any box left open with text in it. A
+        // draft on a question that also has a saved comment is the respondent
+        // editing it, so the draft wins — it is the newer of the two.
+        comments: Object.entries({
+          ...Object.fromEntries(Object.entries(comments).map(([k, c]) => [k, c.text])),
+          ...Object.fromEntries(
+            Object.entries(drafts).filter(([, t]) => t.trim().length > 0).map(([k, t]) => [k, t.trim()]),
+          ),
+        }).map(([questionId, text]) => ({
           questionId: questionId === SURVEY_LEVEL ? null : questionId,
-          text: c.text,
+          text,
         })),
       })
       if (result.ok) setDone(true)
@@ -200,6 +212,22 @@ export function Respondent({
     is one.
   */
   const [comments, setComments] = useState<Record<string, { text: string; anon: boolean }>>({})
+
+  /**
+   * WALK 2026-09-12 (W-06) — TEXT TYPED AND NOT YET «LAGRE»d, HELD HERE.
+   *
+   * `QuestionComment` kept its draft in its own state, and the card unmounts
+   * when the respondent moves to the next question. So typing a sentence and
+   * pressing «Neste» destroyed it, silently, and typing one and pressing «Send
+   * inn svar» destroyed it too: nothing was written, nothing was said, and the
+   * respondent had every reason to believe her comment went with the answers.
+   *
+   * The draft lives one level up so navigation cannot take it, and a non-empty
+   * draft is submitted with the rest — see the payload below. That does NOT
+   * make this a second write path, which the note above rules out: it is still
+   * exactly one `submit_response`, in one transaction, carrying one more item.
+   */
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
 
   /*
     ONE CHOICE (Q113). Where either the survey's anonymity OR its feedback mode
@@ -439,15 +467,25 @@ export function Respondent({
                 saved={comments[q.id] ?? null}
                 anonymous={commentAnon}
                 chooseNote={feedbackMode === 'optional' ? t('fbChooseNote') : null}
-                onSave={(text) =>
+                draft={drafts[q.id] ?? ''}
+                onDraft={(text) => setDrafts((d) => ({ ...d, [q.id]: text }))}
+                onSave={(text) => {
                   setComments((c) => ({ ...c, [q.id]: { text, anon: commentAnon } }))
-                }
+                  setDrafts((d) => ({ ...d, [q.id]: '' }))
+                }}
                 strings={{
                   promise: t('qcPromise'),
                   openLabel: t('qcOpenLabel'),
                   hint: t('qcHint'),
-                  replyAnonymous: t('qcReplyAnonymous'),
-                  replyNamed: t('qcReplyNamed'),
+                  /* THE SENTENCE IS CHOSEN BY WHETHER A REPLY CAN ARRIVE, not
+                     by the anonymity mode alone. Before M:0119 both branches
+                     promised one, and on a share link or QR the manager's side
+                     was simultaneously telling the truth — «det finnes ingen
+                     tråd å svare i». The false half was the one the respondent
+                     read, and in the worst direction: she writes something she
+                     otherwise would not, trusting an answer that never comes. */
+                  replyAnonymous: hasThread ? t('qcReplyAnonymous') : t('qcNoReply'),
+                  replyNamed: hasThread ? t('qcReplyNamed') : t('qcNoReply'),
                   placeholder: t('qcPlaceholder'),
                   save: t('qcSave'),
                   cancel: t('qcCancel'),

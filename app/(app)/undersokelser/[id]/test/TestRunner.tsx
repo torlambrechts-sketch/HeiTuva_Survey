@@ -45,6 +45,9 @@ export function TestRunner({
     engage: Record<string, unknown>
     questions: RespondentQuestion[]
     feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
+    /** M:0119 — carried so the preview tells the tester exactly what a real
+     *  respondent on this token would be told about a reply. */
+    hasThread: boolean
     locale: Locale
     offeredLocales: Locale[]
   } | null>(null)
@@ -98,6 +101,7 @@ export function TestRunner({
       locale={survey.locale}
       offeredLocales={survey.offeredLocales}
       orgName={survey.orgName}
+      hasThread={survey.hasThread}
       title={survey.title}
       /* The preview renders the SAME component, so it renders the comment
          control too — and `submit_response`'s dry run returns before the write,

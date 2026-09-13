@@ -58,8 +58,13 @@ export async function ReportsScreen({
   const t = await getTranslations('reports')
   const tNav = await getTranslations('nav')
 
+  // WALK 2026-09-12 (W-07): a <main>, not a <div>. Every control on this screen
+  // sat outside any landmark, so a screen-reader user navigating by landmark
+  // could not reach it — and the definition of done names keyboard and
+  // focus-visible explicitly. Every other screen in the product has one. The
+  // classes are unchanged, so nothing moves a pixel.
   return (
-    <div className="animate-enter pt-[34px]">
+    <main className="animate-enter pt-[34px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           {/* Same merged heading as Dashboard (HeiTuva.dc.html:1205-1214): one
@@ -293,6 +298,6 @@ export async function ReportsScreen({
           )}
         </div>
       ) : null}
-    </div>
+    </main>
   )
 }

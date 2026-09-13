@@ -22,6 +22,10 @@ export type LoadResult =
       anonymity: 'anonymous' | 'named' | 'optional'
       /** V2-10: the preview draws the same chrome a respondent gets. */
       run_mode: string | null
+      /** M:0119, and carried for the same reason as `run_mode`: the preview
+       *  must say what a REAL respondent on this token would be told about a
+       *  reply, not a default chosen here. */
+      hasThread: boolean
       kThreshold: number
       respondentKind: 'person' | 'organisation'
       engage: Record<string, unknown>
@@ -53,6 +57,7 @@ export async function loadTestSurvey(token: string): Promise<LoadResult> {
     // same chrome a respondent gets — Q76's «all logikk kjører som for en ekte
     // respondent», applied to the tiles.
     run_mode?: string
+    has_thread?: boolean
     k_threshold?: number
     respondent_kind?: string
     engage: Record<string, unknown> | null
@@ -71,6 +76,7 @@ export async function loadTestSurvey(token: string): Promise<LoadResult> {
       orgName: s.org_name ?? '',
       anonymity: s.anonymity,
       run_mode: s.run_mode ?? null,
+      hasThread: s.has_thread === true,
       kThreshold: s.k_threshold ?? 5,
       respondentKind: (s.respondent_kind === 'organisation' ? 'organisation' : 'person'),
       engage: s.engage ?? {},

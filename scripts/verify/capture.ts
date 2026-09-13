@@ -13,7 +13,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { chromium, devices, type Browser, type Page } from '@playwright/test'
 import { config } from 'dotenv'
-import { BASE_URL, ensureServer } from './server'
+import { BASE_URL, ensureServer, serverLogTail } from './server'
 import { LOCAL_SUPABASE } from './local-env'
 import { ROUTES, PENDING_ROUTES, isPendingRoute } from '../../tests/routes.manifest'
 import { gotoRoute, signIn } from '../../tests/helpers/session'
@@ -278,6 +278,11 @@ async function main() {
   }
 
   console.log(`\ncaptured ${captured}, failed ${failures} -> ${OUT}/`)
+  // A failed capture usually has its reason in the SERVER's log rather than in
+  // the browser's: in production Next sends the page a digest and keeps the
+  // message. The harness used to discard that stream entirely — see the comment
+  // on the spawn in server.ts, and the walk that paid for it.
+  if (failures) console.log(serverLogTail())
   process.exit(failures ? 1 : 0)
 }
 

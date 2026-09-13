@@ -34,6 +34,8 @@ export function QuestionComment({
   saved,
   anonymous,
   chooseNote,
+  draft,
+  onDraft,
   onSave,
   strings: s,
 }: {
@@ -47,6 +49,11 @@ export function QuestionComment({
   /** Rendered where the one choice lives elsewhere on the page, so the reader
    *  can see what governs this box. Null when there is no choice to make. */
   chooseNote: string | null
+  /** WALK 2026-09-12 (W-06): text typed but not yet saved, held by the parent
+   *  so moving to the next question cannot destroy it. It used to live in this
+   *  component's own state, and the card unmounts on navigation. */
+  draft: string
+  onDraft: (text: string) => void
   onSave: (text: string) => void
   strings: {
     promise: string
@@ -62,8 +69,11 @@ export function QuestionComment({
     savedNamed: string
   }
 }) {
-  const [open, setOpen] = useState(false)
-  const [text, setText] = useState(saved?.text ?? '')
+  // Open when there is anything to show: a saved comment being edited, or a
+  // draft the respondent typed before navigating away and has now come back to.
+  const [open, setOpen] = useState(draft.trim().length > 0)
+  const text = draft.length > 0 ? draft : (saved?.text ?? '')
+  const setText = onDraft
 
   if (!open) {
     if (saved) {
@@ -129,7 +139,8 @@ export function QuestionComment({
         <button
           type="button"
           onClick={() => {
-            setText(saved?.text ?? '')
+            // Cancel discards the draft deliberately — the respondent asked.
+            setText('')
             setOpen(false)
           }}
           className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-3.5 py-[9px] text-[12.5px] font-semibold text-ink"
