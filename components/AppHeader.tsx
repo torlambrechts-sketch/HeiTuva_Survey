@@ -15,6 +15,7 @@ import { MobileNav } from '@/components/MobileNav'
 import { WideToggle } from '@/components/WideToggle'
 import { WorkspaceChip } from '@/components/WorkspaceChip'
 import { readWorkspace } from '@/lib/workspace/current'
+import { FILTERS, FILTER_KEY } from '@/app/(app)/undersokelser/keys'
 import { initialsOf, type Viewer } from '@/lib/auth/session'
 import type { Locale } from '@/lib/i18n/locales'
 
@@ -46,6 +47,8 @@ const NAV = [
 
 export async function AppHeader({ viewer }: { viewer: Viewer }) {
   const t = await getTranslations('nav')
+  const tReports = await getTranslations('reports')
+  const tSurveys = await getTranslations('surveys')
 
   const ws = await readWorkspace(viewer.orgId)
 
@@ -176,6 +179,11 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           insight: t('subnavInsight'),
           dashboard: t('subnavDashboard'),
           reports: t('subnavReports'),
+          /* F3 — the three Innsikt pills the app was missing. The labels are
+             the Rapporter screen's own (`reports.tab*`), moved with the control
+             rather than rewritten beside it. */
+          statutory: tReports('tabLov'),
+          templates: tReports('tabStandard'),
           tasks: t('subnavTasks'),
           all: t('subnavAll'),
           onlyTasks: t('subnavOnlyTasks'),
@@ -188,6 +196,13 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           libraryTabs: Object.fromEntries(
             LIBRARY_TABS.map((tab) => [tab, t(TAB_NAV_KEY[tab] as 'subnavTemplates')]),
           ) as Record<LibraryTab, string>,
+          surveys: t('subnavSurveys'),
+          /* Built FROM the filter registry, so a fifth status arrives with its
+             label wired or not at all — the same derivation the library and
+             survey rails already use. */
+          surveyFilters: Object.fromEntries(
+            FILTERS.map((f) => [f, tSurveys(FILTER_KEY[f] as 'filterAll')]),
+          ),
           survey: t('subnavSurvey'),
           /* Same derivation, same reason — V6-2. The survey rail grows one tab
              per phase (Metodikk, the four narrowings, Historikk), and each one

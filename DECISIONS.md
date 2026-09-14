@@ -897,3 +897,38 @@ promise a screen we decided against.
 `ui_messages` still holds the 36 `tuva.*` rows. Removing them is a bulk delete on the remote project,
 which CLAUDE.md sends to a human. They are inert — nothing reads them — and they go with the next
 reseed.
+
+## Q191–Q195 — F3: the shared surfaces (2026-09-14)
+
+The audit's cheapest class and its largest count: four surfaces the drawing puts on several
+screens, each built on some of them and none of them owned. **A shared surface has no owner
+when phases are per-screen**, so it gets built wherever the phase happened to be standing —
+and the two copies then drift, because nothing binds them.
+
+Every one of these is therefore a REGISTRY or a COMPONENT plus a derivation, so that a
+fifth screen inherits the surface by gaining a row rather than by someone remembering.
+
+| # | Subject | Decision | Why |
+|---|---|---|---|
+| **Q191** | The breadcrumb: drawn on five screens, built on two, as two hand-rolled copies with different message keys (`library.crumbRoot`, `tasks.wlCrumbRoot`) | **`lib/shell/crumbs.ts` is the registry and `app/(app)/layout.tsx` renders it once.** A route with no row gets nothing. The two copies are DELETED, not left beside it, and both key pairs are gone from `messages/*.json`. | The condition `AppSubnav` already sets for `admin` and Q172 set for the library: two controls doing one job is worse than one, and three would be worse still. `crumbFor` matches EXACT paths, not prefixes — `/undersokelser` is the list and `/undersokelser/<id>/…` is the detail, where v6:1155 draws a back BUTTON instead; a prefix match would have put the list's crumb on all eight survey tabs. **Measured FIVE, not the six the audit said**: the sixth is that back button, a different control, left to F5. |
+| **Q192** | «Oversikt →» is a bare `<span>` in the drawing — a breadcrumb that cannot be clicked | **The root is a link to `/oversikt`; the leaf stays a `<span>`.** | The one thing a reader expects of the control, and the only reason it is not purely decorative. A link to the page you are already on is noise. Logged as a deviation (D181) rather than treated as fidelity. |
+| **Q193** | The «På tvers» card computes `sum(responses) / sum(target ǀǀ 30)` in the bundle, twice (`crossStats` v6:9131, `insStats` v6:8238) | **NOT reproduced. `rateOf` forms every ratio, and a screen hands the card ROWS — `{ measured, total }` — never a percentage. There is no `pct` prop for a caller to pass.** | An invented denominator of thirty for a survey with no recipient count is the never-fabricate rule broken inside the arithmetic rather than in the copy. Four screens were about to be built from those two lines, which would have re-opened F1's defect on three more surfaces the week it was closed. **The component picks the LABEL too** (`participationLabelKey`): «svarprosent» when every row counted and «svarprosent i N med mottakertall» when they did not, because a component free to pick the shorter label is free to overstate. |
+| **Q194** | «snitt av 5,0», the card's second chip on both Innsikt screens | **NOT BUILT, on the population rather than on the gate.** | The only average either screen has is `summary.avg`, which is over the SELECTED surveys and the chosen period — and the Dashboard already draws it four rows down as `statAvg`. Putting that number inside a card headed «På tvers» would state a selection's figure over the organisation, which is F1's defect in the card built to carry F1's rule. An org-wide average would need an aggregate nothing computes, and computing one here is what CLAUDE.md forbids. |
+| **Q195** | The subnav's Innsikt rail: v6:8619 draws FIVE pills and the app drew two; Undersøkelser's four status filters are drawn in the shell and the app had three of them inside the page | **The rails move to the shell and the pages keep NO copy. «Lukket» is the fourth filter and it now exists.** The fifth Innsikt pill, «Bygger», is **not** drawn. | `repTabs` (v6:8027) is defined in v6's script and rendered NOWHERE in its markup — the bundle stating the re-parent by leaving a dead key behind. The shell may absorb an in-page rail only when its list is COMPLETE, which is this file's own test for `admin`; four of four and five of five are. **«Bygger» opens the editor on a fresh draft, and in this app the editor is `?rapport=<id>` of a report that exists** — a deep link resolves or it is not drawn (V6-5), and «＋ Ny rapport» in the card is already that affordance. |
+
+**Three things F3 measured that correct something previously written down:**
+
+- **27 sub-tabs, not 28.** `docs/fidelity/01-per-screen.md` said 28 in its sentence and 27 in
+  its own table (2+3+6+3+7+3+3). Corrected by counting, not by adjusting the sentence, and the
+  command stands beside the number now. A carried sum nobody re-derived — the same shape as
+  «61 of 83», in a document three days old.
+- **The row response rate had FOUR definitions**, and the one with no caller was cited twice in
+  prose as «the treatment every row gets». `responsePct` (dead) is deleted; `pctOf` in
+  `page.tsx` and the inline arithmetic in `SurveyRow.tsx` — the bar the reader actually sees —
+  both go through `rowRate` now. The three that shipped happened to agree; nothing made them.
+- **Bibliotek's card has NO participation chip, and my own test asserted that it did.**
+  `libStats` (v6:9573) is `maler · lovpålagte · spørsmål i banken · egne maler`: a template
+  library has no respondents. «All four screens place the rate» was an enumeration of the three
+  that do, read as a property of the band — in the phase whose subject is that shape, inside a
+  test written to guard it. The test now states it in both directions, so a later phase cannot
+  invent a percentage over template packs by copying the screen beside it.

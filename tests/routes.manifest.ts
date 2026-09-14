@@ -1385,9 +1385,16 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        /* F3 — the rail these five states click is the SHELL's now, so they
+           ask for the subnav by its label («Innsikt») rather than for the
+           in-page «Rapportfaner» that no longer exists. The rail moved because
+           v6 draws the Rapporter tabs in the subnav and leaves `repTabs`
+           (v6:8027) defined-and-unrendered in its own script; the manifest is
+           the LAST place that still named the old one, and `verify:responsive`
+           is what found it. */
         name: 'standardmaler',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Maler' }).click()
+          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Maler' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'standard')
           await page.waitForLoadState('load')
         },
@@ -1395,7 +1402,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'mine-rapporter',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.waitForLoadState('load')
         },
@@ -1414,7 +1421,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'innhold',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('button', { name: 'Ny rapport' }).click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
@@ -1424,7 +1431,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'filter',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
@@ -1435,7 +1442,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'del',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Rapportfaner' }).getByRole('link', { name: 'Rapporter' }).click()
+          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))

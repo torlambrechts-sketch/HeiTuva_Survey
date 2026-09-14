@@ -67,6 +67,18 @@ export function AppSubnav({
     insight: string
     dashboard: string
     reports: string
+    /* F3 — v6:8619 draws FIVE Innsikt pills, and the app drew two. The three
+       that were missing are the Rapporter screen's own tabs, which the drawing
+       carries here rather than in the page — `repTabs` (v6:8027) is defined in
+       v6's script and rendered NOWHERE in its markup, which is the bundle
+       stating the re-parent by leaving a dead key behind. */
+    statutory: string
+    templates: string
+    /* The fifth, «Bygger», is NOT drawn: it opens the editor on a fresh draft,
+       and in this app the editor is `?rapport=<id>` of a report that exists. A
+       deep link resolves or it is not drawn (V6-5's standing rule) — and the
+       affordance is already the «＋ Ny rapport» button in the «På tvers» card,
+       so drawing it would be two controls for one action as well. */
     tasks: string
     all: string
     onlyTasks: string
@@ -77,6 +89,10 @@ export function AppSubnav({
     libraryTabs: Record<(typeof LIBRARY_TABS)[number], string>
     survey: string
     surveyTabs: Record<SurveyTab, string>
+    /* F3 — the survey LIST's status rail. v6:8634 puts it in the shell and the
+       app had it as chips inside the page; there is one copy, here. */
+    surveys: string
+    surveyFilters: Record<string, string>
   }
 }) {
   const pathname = usePathname()
@@ -95,8 +111,47 @@ export function AppSubnav({
     label = labels.insight
     items = [
       { label: labels.dashboard, href: '/dashboard' },
-      { label: labels.reports, href: '/rapporter' },
+      { label: labels.reports, href: '/rapporter?fane=mine' },
+      { label: labels.statutory, href: '/rapporter?fane=lov' },
+      { label: labels.templates, href: '/rapporter?fane=standard' },
     ]
+    /* `/rapporter` with no `fane` IS `fane=lov` — `page.tsx` resolves an absent
+       or unknown value to 'lov', so the pill that looks current has to resolve
+       it the same way or the default tab reads as nothing selected. Same
+       failure the tasks rail needed a comment about, and the same fix: ask the
+       page's own resolver, not the raw parameter. */
+    if (pathname === '/rapporter') {
+      const fane = params.get('fane')
+      currentHref = `/rapporter?fane=${fane === 'standard' || fane === 'mine' ? fane : 'lov'}`
+    }
+  }
+
+  /* F3 — Undersøkelser. v6:8634 draws the four status filters HERE, and the app
+     had three of them (no «Lukket») as chips inside the page. They are the
+     shell's now and the page keeps no copy: the condition this file already
+     sets for `admin` is that a shell rail may absorb an in-page one only when
+     its list is COMPLETE, and four of four is.
+
+     The search and the sort ride along, because losing a search by clicking a
+     status filter is a regression the drawing has no opinion about. */
+  if (pathname === '/undersokelser') {
+    label = labels.surveys
+    const carry = (f: string) => {
+      const next = new URLSearchParams()
+      if (f !== 'alle') next.set('filter', f)
+      const sok = params.get('sok')
+      const sorter = params.get('sorter')
+      if (sok) next.set('sok', sok)
+      if (sorter) next.set('sorter', sorter)
+      const qs = next.toString()
+      return qs ? `/undersokelser?${qs}` : '/undersokelser'
+    }
+    items = Object.keys(labels.surveyFilters).map((f) => ({
+      label: labels.surveyFilters[f]!,
+      href: carry(f),
+    }))
+    const f = params.get('filter') ?? 'alle'
+    currentHref = carry(f in labels.surveyFilters ? f : 'alle')
   }
 
   /* The Arbeidsliste's «Alt · Oppgaver · Tilbakemeldinger» rail (v5:6331-6335).

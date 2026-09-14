@@ -77,7 +77,8 @@
     "subnavSurveyComments": "Kommentarer",
     "subnavSurveyTasks": "Tiltak",
     "subnavSurveyHistory": "Historikk",
-    "subnavSurveyAudience": "Målgruppe"
+    "subnavSurveyAudience": "Målgruppe",
+    "subnavSurveys": "Undersøkelser"
   },
   "dash": {
     "actionDraft": "«{title}» er fortsatt et utkast",
@@ -762,7 +763,6 @@
     "leaderScopeNote": "Ledere som får lenken ser bare sitt eget team. Alle ansatte ser samlet uten nedbryting.",
     "tabLov": "Lovpålagte",
     "tabStandard": "Maler",
-    "tabMine": "Rapporter",
     "counts": "{lov} lovpålagte · {maler} standardmaler · {mine} lagrede",
     "dutyThreshold": "Lovpålagte rapporter bygges på de samme svarene som resten av HeiTuva — med samme terskel som undersøkelsene de bygger på: virksomhetens egen terskel, aldri under to for personer. Ingen plikt kan dokumenteres med tall som kan spores tilbake til en enkeltperson.",
     "statusMissing": "Mangler",
@@ -884,7 +884,6 @@
     "noLinkedSurveysHint": "Start én for å få tall inn i rapporten",
     "linkedStartCta": "Start",
     "summaryEmpty": "Ingen hovedfunn ennå — de skrives når det er nok svar til å si noe.",
-    "tabsLabel": "Rapportfaner",
     "strictestK": "Strengeste terskel blant valgte undersøkelser: {k}",
     "strictestNone": "Ingen terskel — alle valgte undersøkelser har organisasjonsrespondenter",
     "sourceLowerK": "Undersøkelsen «{title}» har terskel {k}, men rapporten bruker {docK}.",
@@ -893,7 +892,10 @@
     "sectionUnavailable": "Ikke tilgjengelig i denne rapporten",
     "unavailablePersonSources": "Bare tilgjengelig når alle kildene er organisasjonsundersøkelser.",
     "perVirksomhetPending": "Tabellen kommer med den attribuerte resultatvisningen. Radene er komponert og eksporteres når visningen er tegnet.",
-    "frozenShared": "Fryste og delte rapporter"
+    "frozenShared": "Fryste og delte rapporter",
+    "insightLead": "Dashbordet er levende tall. En rapport er et frosset øyeblikksbilde med dato, versjon og mottakere — samme data, men til å arkivere og dele.",
+    "chipReports": "rapporter",
+    "chipStatutory": "lovpålagte"
   },
   "admin": {
     "accentFersken": "Fersken",
@@ -1280,8 +1282,6 @@
     "useCaseNone": "Ingen undersøkelser ennå",
     "useCaseTemplates": "Se maler",
     "useCaseDashboard": "Dashboard",
-    "crumbRoot": "Oversikt",
-    "crumbHere": "Bibliotek",
     "lead": "Maler er ferdige undersøkelser dere kan endre, spørsmålsbanken er enkeltspørsmål dere kan legge rett inn i et utkast, og bruksområdene viser hva HeiTuva brukes til.",
     "countTemplates": "{count, plural, one {# mal} other {# maler}}",
     "countBank": "{count, plural, one {# spørsmål} other {# spørsmål}}",
@@ -1289,7 +1289,11 @@
     "scopeLineTemplates": "Standardmaler og firmaets egne",
     "scopeLineBank": "Egne og validerte spørsmål",
     "scopeLineUseCases": "Maler og dashboard-oppsett per område",
-    "moreCategories": "Flere kategorier"
+    "moreCategories": "Flere kategorier",
+    "chipPacks": "maler",
+    "chipLegal": "lovpålagte",
+    "chipBank": "spørsmål i banken",
+    "chipOwn": "egne maler"
   },
   "auth": {
     "signInTitle": "Logg inn",
@@ -1525,7 +1529,15 @@
     "scopeLeadDescAttributed": "Ledere ser bare sitt eget team.",
     "menuPause": "Pause gjentakelsen",
     "menuResume": "Fortsett gjentakelsen",
-    "menuStopRecurrence": "Stopp gjentakelsen"
+    "menuStopRecurrence": "Stopp gjentakelsen",
+    "lead": "Velg en undersøkelse i listen for å se svar, status og neste steg. Utkast åpner i byggeren, aktive åpner i resultatene.",
+    "scopeLine": "{status} · {shown} av {total}",
+    "scopeAll": "Alle statuser",
+    "crossResponses": "{n, plural, one {# svar} other {# svar}}",
+    "chipActive": "aktive nå",
+    "chipQuestions": "spørsmål",
+    "chipDrafts": "utkast",
+    "filterClosed": "Lukket"
   },
   "dashboard": {
     "allGroups": "alle grupper",
@@ -1632,7 +1644,11 @@
     "title": "Dashboard",
     "unavailable": "Tallene kunne ikke hentes akkurat nå. Prøv igjen om litt.",
     "updatedNow": "oppdatert nå",
-    "useSetup": "Bruk dette oppsettet"
+    "useSetup": "Bruk dette oppsettet",
+    "bandPanels": "{n, plural, one {# panel på skjermen} other {# paneler på skjermen}}",
+    "bandNoPanels": "Ingen paneler valgt ennå",
+    "chipReports": "rapporter",
+    "chipPanels": "paneler i bruk"
   },
   "splash": {
     "langLabel": "Velg språk",
@@ -2017,8 +2033,6 @@
     "fbReplyNoThread": "Denne kommentaren kom fra en delt lenke, så det finnes ingen tråd å svare i. Du kan markere den som behandlet.",
     "fbReplyFailed": "Kunne ikke sende svaret. Prøv igjen.",
     "fbMakeTask": "Lag oppgave",
-    "wlCrumbRoot": "Oversikt",
-    "wlCrumbHere": "Handlinger",
     "wlTitleAll": "Handlinger",
     "wlTitleTasks": "Oppgaver",
     "wlTitleFeedback": "Tilbakemeldinger",
@@ -2633,5 +2647,19 @@
     "tipBelowThreshold": "Denne undersøkelsen har grupper som ikke får egne resultater. Plikten til å kartlegge og følge opp gjelder likevel.",
     "tipBelowThresholdAction": "Se målgruppen",
     "lowest": "«{title}» ligger lavest på {pct} %."
+  },
+  "crumb": {
+    "label": "Brødsmulesti",
+    "root": "Oversikt",
+    "surveys": "Undersøkelser",
+    "insight": "Innsikt",
+    "tasks": "Handlinger",
+    "library": "Bibliotek"
+  },
+  "pageHeader": {
+    "cross": "På tvers",
+    "crossLabel": "Nøkkeltall på tvers av undersøkelsene",
+    "rateAll": "svarprosent",
+    "rateSome": "svarprosent i {m} med mottakertall"
   }
 }

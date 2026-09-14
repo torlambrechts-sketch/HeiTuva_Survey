@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { DutyCard } from './DutyCard'
 import { DeleteReportButton, NewReportButton, ShareReportButton } from './ReportRowActions'
+import { PageHeader, PARTICIPATION } from '@/components/PageHeader'
+import type { Measured } from '@/lib/surveys/participation'
 import type { DutyCardData, ReportTemplate, SavedReport } from './types'
 
 /**
@@ -16,12 +18,6 @@ const STATUS_PILL: Record<string, { bg: string; fg: string; key: string }> = {
   utkast: { bg: 'var(--sf2)', fg: 'var(--ink)', key: 'statusUtkast' },
 }
 
-const TAB_KEYS = [
-  ['lov', 'tabLov'],
-  ['standard', 'tabStandard'],
-  ['mine', 'tabMine'],
-] as const
-
 /** Rapporter — HeiTuva.dc.html:911-1330. */
 export async function ReportsScreen({
   tab,
@@ -32,6 +28,7 @@ export async function ReportsScreen({
   members,
   reports,
   counts,
+  cross,
   thresholdNote,
   sectionLabels,
 }: {
@@ -43,6 +40,11 @@ export async function ReportsScreen({
   members: { id: string; name: string }[]
   reports: SavedReport[]
   counts: { lov: number; maler: number; mine: number }
+  /** F3 — the «På tvers» card's figures. The RATE arrives as `rateOf`'s result
+   *  and the number of rows it was computed over; there is no percentage for
+   *  this screen to pass, which is what keeps F1's rule unbreakable per
+   *  surface. */
+  cross: { measured: Measured | null; surveyTotal: number }
   thresholdNote: string
   /**
    * Section names come from `report_section_types`, not from next-intl.
@@ -64,60 +66,50 @@ export async function ReportsScreen({
   // focus-visible explicitly. Every other screen in the product has one. The
   // classes are unchanged, so nothing moves a pixel.
   return (
-    <main className="animate-enter pt-[34px]">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          {/* Same merged heading as Dashboard (HeiTuva.dc.html:1205-1214): one
-              "Innsikt", the rail choosing which half of it you are on. */}
-          {/* V5-1 — THE RAIL MOVED INTO THE SHELL. v5 draws the same two items
-              in the subnav under the header (v5:227) AND keeps this in-page copy
-              (v5:1321) — as it does on admin, and on tasks. A mock accumulates;
-              a product should not carry two controls doing one job.
-              The subnav replaces this one because its list is COMPLETE — exactly
-              the two screens that exist. On admin the same subnav lists six of
-              nine tabs, so there it cannot replace anything and AdminTabs stays.
-              That is the test for whether a shell rail may absorb an in-page
-              one, and it is measurable rather than a preference. */}
-          <div className="flex flex-wrap items-center gap-[14px]">
-            <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
-          </div>
-          <p className="mt-[6px] text-[13px] text-mut">
-            {t('frozenShared')} · {t('counts', counts)}
-          </p>
-        </div>
-        {/* RESPONSIVE.md § Tab rails: wraps below md, chips keep their size. */}
-        {/* The rail wraps below md (RESPONSIVE.md § Tab rails). Wrapping puts
-            two ~31px chips on top of each other, so the row gap has to carry
-            the 44px hit areas apart — 13px is the minimum that does it. The
-            horizontal gap stays the bundle's 3px, and so does the row gap at
-            xl, where the rail never wraps. */}
-        {/* Named, because two of the three tabs now share their text with the
-            top navigation ("Rapporter") and with a Bibliotek tab ("Maler").
-            The rail is a navigation landmark either way; giving it a name is
-            what lets a screen reader — and a test — say WHICH "Rapporter". */}
-        <nav
-          aria-label={t('tabsLabel')}
-          className="flex flex-wrap gap-x-[3px] gap-y-[13px] rounded-full bg-sf2 p-1 xl:gap-y-[3px]"
-        >
-          {TAB_KEYS.map(([key, label]) => {
-            const active = key === tab
-            return (
-              <Link
-                key={key}
-                href={key === 'lov' ? '/rapporter' : `/rapporter?fane=${key}`}
-                aria-current={active ? 'page' : undefined}
-                className="touch-44 cursor-pointer rounded-full px-5 py-[9px] text-[12.5px] font-semibold text-ink no-underline"
-                style={{
-                  background: active ? 'var(--sf)' : 'transparent',
-                  boxShadow: active ? '0 1px 3px rgba(25,21,16,.14)' : 'none',
-                }}
-              >
-                {t(label)}
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
+    <main className="animate-enter">
+      {/* F3 — the two-column band (v6:2800) and the «På tvers» card. The
+          heading stays «Innsikt», merged as before.
+
+          AND THE IN-PAGE RAIL IS GONE. This file already wrote down the test
+          for when a shell rail may absorb one: only when the shell's list is
+          COMPLETE. v5's subnav listed two of the five screens, so it could not
+          absorb these three. **v6's lists all five** — and its `repTabs`
+          (v6:8027) is defined in the script and rendered NOWHERE in its markup,
+          which is the bundle stating the same re-parent by leaving a dead key
+          behind. So the condition is met, the rail moved to `AppSubnav`, and
+          the page keeps no copy. (Four of the five pills ship; «Bygger» opens
+          the editor on a draft that does not exist yet, and that affordance is
+          the «＋ Ny rapport» button below.) */}
+      <PageHeader
+        title={tNav('insight')}
+        counts={t('counts', counts)}
+        scope={t('frozenShared')}
+        lead={t('insightLead')}
+        cross={{
+          /* v6:2809's «＋ Ny rapport», with the card's own button chrome
+             (v6:2809: 8px 15px, radius 10px, 1px --line, transparent). */
+          action: canEdit ? (
+            <NewReportButton
+              label={t('newReport')}
+              title={t('newReport')}
+              baseTemplate={null}
+              sections={['summary']}
+              className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-[15px] py-2 text-[12.5px] font-semibold text-ink"
+            />
+          ) : undefined,
+          /* v6:8238's order puts the rate first. «snitt av 5,0» is NOT built:
+             it is a svar-derived value and this card has no gated path to one,
+             while the dashboard's own `statAvg` already shows it through the
+             aggregate RPC. A second, ungated copy of an average is the one
+             thing Q28 forbids. */
+          chips: [
+            PARTICIPATION,
+            { value: String(counts.mine), label: t('chipReports') },
+            { value: String(counts.lov), label: t('chipStatutory') },
+          ],
+          participation: { measured: cross.measured, total: cross.surveyTotal },
+        }}
+      />
 
       {tab === 'lov' ? (
         <div className="mt-5">

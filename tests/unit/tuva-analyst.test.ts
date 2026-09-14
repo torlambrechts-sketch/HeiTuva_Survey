@@ -205,7 +205,7 @@ describe('F1-1 — a ratio comes from one population', () => {
 
   it('a rate never exceeds 100 %, because the row it sits above does not', () => {
     // A link or QR survey can be answered by more people than were invited.
-    // `responsePct` on each row clamps; the headline must agree with the rows.
+    // `rowRate` on each row clamps; the headline must agree with the rows.
     const a = analyse([s({ id: 'x', responses: 18, target: 8 })])
     expect(a.measured?.pct).toBe(100)
   })

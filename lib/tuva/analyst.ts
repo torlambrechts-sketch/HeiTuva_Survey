@@ -59,14 +59,16 @@
  * permitted by Q28. The task carries no group name, no question, no rating and
  * no survey-level derived value.
  */
-export type AnalystSurvey = {
-  id: string
+import { rateOf, rowRate, hasTarget, type Measured, type RateRow } from '@/lib/surveys/participation'
+
+/** Re-exported so the one consumer that had both from here keeps one import,
+ *  and so `tests/unit/tuva-analyst.test.ts` still re-derives against the same
+ *  function the card uses. */
+export { rateOf, type Measured }
+
+export type AnalystSurvey = RateRow & {
   title: string
   status: string
-  /** Replies so far — a count of people, never a rating. */
-  responses: number
-  /** Recipients, or null when the survey has no recipient count. */
-  target: number | null
   /** The sizes of the audience groups this survey went to. Sizes only — no
    *  names, because Q72's task carries none and nothing else here needs one. */
   groupSizes: number[]
@@ -78,23 +80,6 @@ export type AnalystTip =
   | { kind: 'low_response'; surveyId: string; title: string; missing: number }
   | { kind: 'draft'; surveyId: string; title: string }
   | { kind: 'below_threshold_group'; surveyId: string; title: string }
-
-/**
- * A rate and the population it was computed over, inseparably.
- *
- * `ids` is not decoration: it is the claim the module makes about which rows
- * both halves came from, and it is what the property test re-derives against.
- */
-export type Measured = {
-  ids: string[]
-  responses: number
-  target: number
-  /** Whole percent, capped at 100 — the same treatment `responsePct` gives
-   *  every row of this list, so the headline cannot disagree with the rows it
-   *  sits above. A link or QR survey can be answered by more people than were
-   *  invited. */
-  pct: number
-}
 
 export type Analyst = {
   /** Active surveys in the filter the reader can see. */
@@ -108,34 +93,6 @@ export type Analyst = {
   lowest: { title: string; pct: number } | null
   tips: AnalystTip[]
 }
-
-const hasTarget = (s: AnalystSurvey): s is AnalystSurvey & { target: number } =>
-  typeof s.target === 'number' && s.target > 0
-
-/**
- * THE ONLY PLACE A RATIO IS FORMED IN THIS MODULE.
- *
- * It reduces over the SAME array twice and returns that array's ids with the
- * result, so a later edit that widens one half cannot widen it silently — the
- * returned `ids` stop describing what was actually summed, and the property
- * test says so.
- */
-export function rateOf(population: AnalystSurvey[]): Measured | null {
-  const rows = population.filter(hasTarget)
-  if (rows.length === 0) return null
-  const responses = rows.reduce((a, s) => a + s.responses, 0)
-  const target = rows.reduce((a, s) => a + s.target, 0)
-  return {
-    ids: rows.map((s) => s.id),
-    responses,
-    target,
-    pct: Math.min(100, Math.round((responses / target) * 100)),
-  }
-}
-
-/** One survey's own rate, capped exactly as `rateOf` and the row both cap. */
-const rowRate = (s: AnalystSurvey & { target: number }): number =>
-  Math.min(1, s.responses / s.target)
 
 /**
  * `surveys` is whatever the list is currently showing, so the sentence matches

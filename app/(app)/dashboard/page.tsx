@@ -13,6 +13,7 @@ import {
 } from '@/lib/dashboard/layout'
 import { readAttributed } from '@/lib/results/read'
 import { registerStats, dutyRows } from '@/lib/dashboard/panels'
+import { rateOf } from '@/lib/surveys/participation'
 
 /**
  * Dashboard — HeiTuva.dc.html:808-901.
@@ -325,6 +326,38 @@ export default async function DashboardPage({
         })
       : null
 
+  /* F3 — the «På tvers» card's rate. ORG-WIDE, which is what the words mean,
+     and deliberately NOT `available` above: that set excludes drafts and is
+     narrowed by the period, so reusing it would give Innsikt a different «på
+     tvers» percentage from Undersøkelser's and Rapporter's for the same
+     organisation. Two cards with the same title showing two numbers is the
+     population defect F1 closed, wearing a layout's clothes.
+
+     `rateOf` forms the ratio, so the drawing's own `sum(target || 30)`
+     (v6:8238) — an invented denominator of thirty per survey with no recipient
+     count — is not reproduced. */
+  const [{ data: crossRows }, { data: crossCounts }, { count: reportCount }] = await Promise.all([
+    supabase
+      .from('surveys')
+      .select('id, target')
+      .eq('org_id', viewer.orgId)
+      .is('deleted_at', null),
+    supabase.rpc('survey_response_counts', { p_org: viewer.orgId }),
+    supabase
+      .from('reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', viewer.orgId)
+      .is('deleted_at', null),
+  ])
+  const crossResponses = new Map((crossCounts ?? []).map((c) => [c.survey_id, Number(c.responses)]))
+  const crossRate = rateOf(
+    (crossRows ?? []).map((r) => ({
+      id: r.id,
+      target: r.target,
+      responses: crossResponses.get(r.id) ?? 0,
+    })),
+  )
+
   const duties = wants.has('duties')
     ? await (async () => {
         const [{ data: defs }, { data: rows }] = await Promise.all([
@@ -368,6 +401,7 @@ export default async function DashboardPage({
       register={register}
       registerHref={orgSurvey ? `/undersokelser/${orgSurvey.id}/resultater` : null}
       duties={duties}
+      cross={{ measured: crossRate, surveyTotal: (crossRows ?? []).length, reports: reportCount ?? 0 }}
     />
   )
 }

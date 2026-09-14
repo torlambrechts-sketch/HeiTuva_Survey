@@ -309,7 +309,18 @@ hodet er `v6:1155-1252`. De er to flater, og beslutningen gjelder den nederste.
 
 ### D.1 Underfane-railene — `v6:7139-7151` — **FORENKLING**
 
-Sju av elleve faner har en egen underrail, til sammen **28 underfaner**:
+Sju av elleve faner har en egen underrail, til sammen **27 underfaner**.
+
+> **RETTET 2026-09-14, i F3.** Denne linjen sa **28**. Tabellen under den har alltid vært
+> riktig — 2 + 3 + 6 + 3 + 7 + 3 + 3 = 27 — så feilen var i summen, ikke i listen. Rettet
+> ved å telle på nytt, ikke ved å justere setningen, og feilen blir stående skrevet her
+> fordi CLAUDE.md sier at et tall ingen re-utleder er nettopp slik et galt tall overlever
+> («61 of 83»). Kommandoen står ved siden av tallet nå:
+>
+> ```
+> sed -n '7139,7145p' design-reference-v6/heituva-survey-app-design/project/HeiTuva.dc.html \
+>   | grep -o '\["[a-z]*","[^"]*"\]' | wc -l     # -> 27
+> ```
 
 | fane | underfaner |
 |---|---|

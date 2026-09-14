@@ -482,7 +482,13 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Fifteen instances now** — the command above returns 16 and therefore fifteen; the fifteenth was added 2026-09-14 and is the reachability row at the bottom, whose own section is below. The ninth is a REPEAT of the third — which is itself a finding — the
+**Seventeen instances now** — the command above returns 18 and therefore seventeen; the sixteenth
+and seventeenth were added 2026-09-14 by F3, and they are the two worth reading together. **One of
+them is a guard written to enforce this very table that committed the shape in the same sentence**
+(«all four screens place the participation chip» — three do, and the fourth may not), and the other
+is a rule that had ONE NAME and FOUR implementations, with the only dead one quoted twice in prose as
+the authoritative one. The fifteenth is the reachability row at the bottom, whose own section is
+below. The ninth is a REPEAT of the third — which is itself a finding — the
 tenth is the subtlest of all of them, and the eleventh was caught by a SWEEP OVER PROSE rather than
 by a gate or a measurement, which is a third way of finding them. Ten different constructs, one
 shape:
@@ -503,6 +509,8 @@ shape:
 | **`M:0107`'s own invitation derivation** (Q137, I1-1) | the FUNCTIONS that insert invitations — and then, one level out, the ROWS that reach a person | **«WHAT REACHES A PERSON IS NOT A ROW, IT IS A `pgmq.send`.»** Four functions hold five insertion points (`send_round` has two), so a body-wide read let the group loop's guard stand in for the named loop's. And `app.enqueue_reminders` inserts nothing at all and reaches them anyway. |
 | **`before insert or update` as a guard scope** (Q137, `M:0108`) | every UPDATE — which is the operation the author was thinking about, not the rule | **«A GUARD'S SCOPE IS THE COLUMN THE RULE IS ABOUT.»** `update of email` re-checks a re-pointed invitation; every-UPDATE also refused token rotation and the worker's `sent_at`, so **objecting caused repeated mail to the person who objected.** |
 | **`verify:i18n`'s Norwegian detector** (Q129, 2026-09-12) | the strings it already knows — the `no` message set — used as the definition of «Norwegian» | **«A DETECTOR THAT IDENTIFIES A DEFECT BY MATCHING KNOWN STRINGS CAN ONLY REPORT THE DEFECTS THAT COLLIDE WITH ONE.»** Not a gate looking in the wrong place: a gate that can only see what collides with something it already holds. |
+| **«all four screens place the participation chip»** in F3's own guard (2026-09-14) | the THREE screens whose card shows a rate — the band's four minus Bibliotek | **«A PROPERTY OF A SHARED SURFACE IS NOT A PROPERTY OF EVERY SCREEN IT SITS ON.»** `libStats` (v6:9573) has no rate: a template library has no respondents. Written into a test, in the phase about this shape, by the author of this table. |
+| **`responsePct` cited as «the treatment every row gets»** (F3) | one of FOUR definitions of the row rate, and the only one with no caller | **«A RULE WITH ONE NAME MAY STILL HAVE FOUR IMPLEMENTATIONS.»** The three that shipped agreed by luck; the sweep that proves there is one now is over `app/`, `components/` and `lib/`, not over the two files that were known. |
 | **«the prod host is IPv6-only»** as a reachability diagnosis (2026-09-14) | the ONE hostname a lookup was run against — accurate about it, and silent about the container | **«A ROUTE IS A PROPERTY OF THE EGRESS, NOT OF A HOSTNAME.»** Both IPv4 poolers time out too: TCP 5432 does not leave a Claude Code container at all. The plausible repair the true fact suggests — «use the pooler» — is the trap, and it was walked ~10 times. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
@@ -1123,6 +1131,37 @@ document on `about:blank`, from which a `file://` subresource cannot load. **The
 find that class of failure committed one**, and what caught it was opening the output — not the run.
 The guard is now an assertion that both images decoded (`naturalWidth > 0`), proved to fire against a
 synthetic bad path before being trusted, exactly as `edge-bundle.ts`'s extension check was (D180).
+
+**F3 TOOK IT TO 1466 ACROSS 110 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** Two added lines —
+`tests/unit/crumbs.test.ts: 5` and `tests/unit/page-header.test.ts: 9` — and **no other entry moved
+in either direction**, which is the proof rather than the total; the diff against the previous
+manifest is two `+` lines and nothing else. F3 adds no table and no SECURITY DEFINER function: a
+registry, a component and a shell mount are not catalogue surfaces, which is the correct reading
+rather than a gap. The commands:
+`npm run census:write` for the first pair and
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for
+`81 of 112` (65 RLS tables + 47 definer functions, 81 checked, 31 allowlisted, zero unproven).
+
+**AND F3's OWN TEST COMMITTED THE SHAPE F3 EXISTS TO CLOSE, WHICH IS WHY IT IS RECORDED HERE.** The
+test asserting the «På tvers» card is on the four screens v6 draws it on also asserted that all four
+place the participation chip. **Bibliotek does not and may not**: `libStats` (v6:9573) is
+`maler · lovpålagte · spørsmål i banken · egne maler`, because a template library has no
+respondents. «All four» was an enumeration of the three that do, read as a property of the band —
+written into a guard, in the phase whose subject is that shape, by the person who had just written
+the table above. The test states it in both directions now, so the property is «three place it and
+the fourth must not» rather than a count.
+
+**Two other numbers F3 re-derived, both previously written down wrong:**
+- **27 sub-tabs on the survey detail, not 28.** `docs/fidelity/01-per-screen.md` said 28 in prose
+  and listed 27 in its own table two lines below (2+3+6+3+7+3+3). Corrected by counting, with the
+  command beside it:
+  `sed -n '7139,7145p' <v6 bundle> | grep -o '\["[a-z]*","[^"]*"\]' | wc -l` -> 27.
+- **The row response rate had FOUR definitions**, one of them dead and cited twice in prose as the
+  authoritative one. `responsePct` in `app/(app)/undersokelser/keys.ts` had no caller at all;
+  `pctOf` in `page.tsx` and the inline arithmetic in `SurveyRow.tsx` — the bar the reader actually
+  sees — were two more. All three go through `rowRate` now, and a sweep over `app/`, `components/`
+  and `lib/` asserts nothing outside `lib/surveys/participation.ts` divides responses by target.
+  **The three that shipped happened to agree; nothing made them.**
 
 **V5-2 AND V5-3 TOOK THE CENSUS TO 1325 ACROSS 94 FILES AND 5a3 TO 80 OF 110.** V5-2's two files
 carry 37 (`tests/db/worklist-notes.test.ts` 16, `tests/unit/worklist-rows.test.ts` 21) and V5-3 took

@@ -48,8 +48,10 @@ describe('Q172 — the tab set is one registry, read by both renderers', () => {
       for (const key of [
         'title',
         'lead',
-        'crumbRoot',
-        'crumbHere',
+        /* F3 — `crumbRoot`/`crumbHere` are NOT in this list any more, and
+           their absence is asserted in `tests/unit/crumbs.test.ts`. The
+           breadcrumb is the shell's, rendered from `lib/shell/crumbs.ts`, so
+           the library holds no copy of its copy. */
         'countTemplates',
         'countBank',
         'countUseCases',

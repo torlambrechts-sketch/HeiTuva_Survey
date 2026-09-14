@@ -77,7 +77,8 @@
     "subnavSurveyComments": "Comments",
     "subnavSurveyTasks": "Actions",
     "subnavSurveyHistory": "History",
-    "subnavSurveyAudience": "Audience"
+    "subnavSurveyAudience": "Audience",
+    "subnavSurveys": "Surveys"
   },
   "dash": {
     "actionDraft": "“{title}” is still a draft",
@@ -762,7 +763,6 @@
     "leaderScopeNote": "Managers who get the link only see their own team. All employees see totals with no breakdowns.",
     "tabLov": "Statutory",
     "tabStandard": "Templates",
-    "tabMine": "Reports",
     "counts": "{lov} statutory · {maler} standard templates · {mine} saved",
     "dutyThreshold": "Statutory reports are built from the same answers as the rest of HeiTuva — with the same threshold as the surveys they draw on: the organisation's own threshold, never below two for persons. No duty can be documented with figures that could be traced back to an individual.",
     "statusMissing": "Missing",
@@ -884,7 +884,6 @@
     "noLinkedSurveysHint": "Start one to get figures into the report",
     "linkedStartCta": "Start",
     "summaryEmpty": "No key findings yet — they are written once there are enough answers to say something.",
-    "tabsLabel": "Report tabs",
     "strictestK": "Strictest threshold among the selected surveys: {k}",
     "strictestNone": "No threshold — every selected survey has organisation respondents",
     "sourceLowerK": "The survey “{title}” has threshold {k}, but the report uses {docK}.",
@@ -893,7 +892,10 @@
     "sectionUnavailable": "Not available in this report",
     "unavailablePersonSources": "Only available when every source is an organisation survey.",
     "perVirksomhetPending": "The table arrives with the attributed results view. The rows are composed and will export once the view is drawn.",
-    "frozenShared": "Frozen and shared reports"
+    "frozenShared": "Frozen and shared reports",
+    "insightLead": "The dashboard is live numbers. A report is a frozen snapshot with a date, a version and recipients — the same data, but to archive and share.",
+    "chipReports": "reports",
+    "chipStatutory": "statutory"
   },
   "admin": {
     "accentFersken": "Peach",
@@ -1280,8 +1282,6 @@
     "useCaseNone": "No surveys yet",
     "useCaseTemplates": "See templates",
     "useCaseDashboard": "Dashboard",
-    "crumbRoot": "Overview",
-    "crumbHere": "Library",
     "lead": "Templates are ready-made surveys you can edit, the question bank holds single questions you can add straight into a draft, and the use cases show what HeiTuva is used for.",
     "countTemplates": "{count, plural, one {# template} other {# templates}}",
     "countBank": "{count, plural, one {# question} other {# questions}}",
@@ -1289,7 +1289,11 @@
     "scopeLineTemplates": "Standard templates and the company’s own",
     "scopeLineBank": "Own and validated questions",
     "scopeLineUseCases": "Templates and a dashboard preset per area",
-    "moreCategories": "More categories"
+    "moreCategories": "More categories",
+    "chipPacks": "templates",
+    "chipLegal": "statutory",
+    "chipBank": "questions in the bank",
+    "chipOwn": "own templates"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -1525,7 +1529,15 @@
     "scopeLeadDescAttributed": "Leaders see only their own team.",
     "menuPause": "Pause the recurrence",
     "menuResume": "Resume the recurrence",
-    "menuStopRecurrence": "Stop the recurrence"
+    "menuStopRecurrence": "Stop the recurrence",
+    "lead": "Pick a survey in the list to see answers, status and the next step. A draft opens in the builder, an active one in the results.",
+    "scopeLine": "{status} · {shown} of {total}",
+    "scopeAll": "All statuses",
+    "crossResponses": "{n, plural, one {# answer} other {# answers}}",
+    "chipActive": "active now",
+    "chipQuestions": "questions",
+    "chipDrafts": "drafts",
+    "filterClosed": "Closed"
   },
   "dashboard": {
     "allGroups": "all groups",
@@ -1632,7 +1644,11 @@
     "title": "Dashboard",
     "unavailable": "The figures could not be loaded right now. Try again in a moment.",
     "updatedNow": "updated now",
-    "useSetup": "Use this setup"
+    "useSetup": "Use this setup",
+    "bandPanels": "{n, plural, one {# panel on screen} other {# panels on screen}}",
+    "bandNoPanels": "No panels chosen yet",
+    "chipReports": "reports",
+    "chipPanels": "panels in use"
   },
   "splash": {
     "langLabel": "Choose language",
@@ -2017,8 +2033,6 @@
     "fbReplyNoThread": "This comment came from a shared link, so there is no thread to reply in. You can mark it as handled.",
     "fbReplyFailed": "Could not send the reply. Try again.",
     "fbMakeTask": "Create task",
-    "wlCrumbRoot": "Overview",
-    "wlCrumbHere": "Actions",
     "wlTitleAll": "Actions",
     "wlTitleTasks": "Tasks",
     "wlTitleFeedback": "Feedback",
@@ -2633,5 +2647,19 @@
     "tipBelowThreshold": "This survey has groups that will not receive their own results. The duty to survey and follow up applies all the same.",
     "tipBelowThresholdAction": "See the audience",
     "lowest": "«{title}» is lowest at {pct} %."
+  },
+  "crumb": {
+    "label": "Breadcrumb",
+    "root": "Overview",
+    "surveys": "Surveys",
+    "insight": "Insight",
+    "tasks": "Actions",
+    "library": "Library"
+  },
+  "pageHeader": {
+    "cross": "Across",
+    "crossLabel": "Key figures across the surveys",
+    "rateAll": "response rate",
+    "rateSome": "response rate in {m} with a recipient count"
   }
 }

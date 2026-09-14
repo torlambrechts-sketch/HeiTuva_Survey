@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { DELETE_FG, PRIMARY_ACTION, STATUS_COLORS, type ShareScope, type SurveyStatus } from './keys'
 import { closeSurvey, copyAsNewRound, deleteSurvey } from './actions'
+import { hasTarget, rowRate } from '@/lib/surveys/participation'
 import { setSchedulePaused, stopSchedule } from './[id]/send/actions'
 
 export type SurveyListItem = {
@@ -124,10 +125,14 @@ export function SurveyRow({
    * "6 svar" is the honest shape — the row still looks like every other row,
    * and nothing claims a proportion nobody knows.
    */
-  const hasTarget = Boolean(survey.target && survey.target > 0)
-  const pct = hasTarget
-    ? Math.min(100, Math.round((survey.responseCount / survey.target!) * 100))
-    : null
+  /* F3 — through `rowRate`, which is where the cap and the rounding live.
+     This was the FOURTH definition of a row's response rate: `responsePct` in
+     keys.ts (no caller), `pctOf` in page.tsx (the sort and the status pill),
+     this one (the bar the reader actually sees) and `rowRate` itself. The
+     three that shipped happened to agree; nothing made them. */
+  const row = { id: survey.id, responses: survey.responseCount, target: survey.target }
+  const measurable = hasTarget(row)
+  const pct = measurable ? Math.round(rowRate(row) * 100) : null
 
   function run(action: () => Promise<{ ok: boolean }>) {
     setOpen(false)

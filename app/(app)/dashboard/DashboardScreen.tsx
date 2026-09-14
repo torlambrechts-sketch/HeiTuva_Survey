@@ -11,6 +11,8 @@ import { PanelControls } from './PanelControls'
 import { PresetChooser } from './PresetChooser'
 import { CustomizeToggle } from './CustomizeToggle'
 import { thresholdLine as thresholdLineOf } from '@/lib/dashboard/threshold-line'
+import { PageHeader, PARTICIPATION } from '@/components/PageHeader'
+import type { Measured } from '@/lib/surveys/participation'
 import type { LayoutFilters, PanelEntry } from '@/lib/dashboard/layout'
 import type { DutyRow, RegisterStat } from '@/lib/dashboard/panels'
 
@@ -38,6 +40,7 @@ export async function DashboardScreen({
   register,
   registerHref,
   duties,
+  cross,
 }: {
   surveys: { id: string; title: string; status: string }[]
   selected: string[]
@@ -78,10 +81,15 @@ export async function DashboardScreen({
   register: RegisterStat[] | null
   registerHref: string | null
   duties: DutyRow[]
+  /** F3 — the «På tvers» card's figures. The RATE arrives as `rateOf`'s result
+   *  and the number of rows it was formed over, never as a percentage: a screen
+   *  free to pass a number is a screen free to pass the wrong one. */
+  cross: { measured: Measured | null; surveyTotal: number; reports: number }
 }) {
   const t = await getTranslations('dashboard')
   const tr = await getTranslations('results')
   const tNav = await getTranslations('nav')
+  const tReports = await getTranslations('reports')
   const locale = await getLocale()
   // The strictest threshold across the selected surveys, as the RPCs applied
   // it (Q17). Null only when there is nothing to show — then no cell is gated.
@@ -326,57 +334,77 @@ export async function DashboardScreen({
 
 
   return (
-    <div className="animate-enter pt-[34px]">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          {/* The v1 bundle merges Dashboard and Rapporter under one heading
-              with a rail between them (HeiTuva.dc.html:918-928). */}
-          {/* V5-1 — THE RAIL MOVED INTO THE SHELL. v5 draws the same two items
-              in the subnav under the header (v5:227) AND keeps this in-page copy
-              (v5:1321) — as it does on admin, and on tasks. A mock accumulates;
-              a product should not carry two controls doing one job.
-              The subnav replaces this one because its list is COMPLETE — exactly
-              the two screens that exist. On admin the same subnav lists six of
-              nine tabs, so there it cannot replace anything and AdminTabs stays.
-              That is the test for whether a shell rail may absorb an in-page
-              one, and it is measurable rather than a preference. */}
-          <div className="flex flex-wrap items-center gap-[14px]">
-            <h1 className="font-display text-[28px] font-medium">{tNav('insight')}</h1>
-          </div>
-          {/* "Levende tall · {utvalg} · {terskel}". The threshold is the one
-              the RPCs actually applied to the panels on this screen — the k
-              they returned for this selection, never a figure computed here
-              (DECISIONS Q42's default; CLAUDE.md forbids a number the gate did
-              not produce). It is omitted when there is nothing to gate. */}
-          <p className="mt-[6px] text-[13px] text-mut">
-            {unavailable
-              ? t('unavailable')
-              : [t('liveNumbers'), filterLine, trendK === null ? null : thresholdText]
-                  .filter(Boolean)
-                  .join(' · ')}
-          </p>
-        </div>
+    <div className="animate-enter">
+      {/* F3 — the two-column band, the fourth of the four screens v6 draws it
+          on (v6:2476-2497). The breadcrumb above it is the shell's now, which
+          is why the `pt-[34px]` this screen carried is gone: `Breadcrumb`
+          holds v6:2467's `padding-top:26px` once, for every screen that has
+          one. */}
+      <PageHeader
+        title={tNav('insight')}
+        /* v6:8244 — `n ? n + " paneler på skjermen" : "Ingen paneler valgt ennå"`. */
+        counts={panels.length ? t('bandPanels', { n: panels.length }) : t('bandNoPanels')}
+        /* v6:8247 is «periode · gruppe». Ours is longer because this screen
+           has more to say about its own scope than the mock did, and every
+           clause of it already shipped: the selection, the group, and — Q42 —
+           the threshold the RPCs ACTUALLY applied. The band moved the sentence;
+           it did not shorten it. */
+        scope={
+          unavailable
+            ? t('unavailable')
+            : [t('liveNumbers'), filterLine, trendK === null ? null : thresholdText]
+                .filter(Boolean)
+                .join(' · ')
+        }
+        /* One key, read by both Innsikt screens, because v6 has one `insLead`
+           (v6:8249) rendered at 2480 and again at 2804. Two copies of a
+           sentence under one nav item is how the two drift. */
+        lead={tReports('insightLead')}
+        cross={{
+          /* v6:2485 gates «Frys som rapport» on `dashReady`, which is
+             `!!(layout && layout.length)` (v6:8254) — the same condition this
+             button already had, so it moves into the card's action slot
+             unchanged rather than gaining a second rule. */
+          action: panels.length ? (
+            <FreezeButton
+              label={t('freeze')}
+              title={t('frozenReportTitle', {
+                date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+              })}
+            />
+          ) : undefined,
+          /* v6:8238's order, minus its second chip. «snitt av 5,0» is NOT
+             built here, and the reason is the population rather than the gate:
+             the only average this screen has is `summary.avg`, which is over
+             the SELECTED surveys and the chosen period, and it is already
+             drawn four rows down as `statAvg`. Putting that number inside a
+             card headed «På tvers» would state a selection's figure over the
+             organisation — F1's defect exactly, in a card built to carry F1's
+             rule. An org-wide average would need an aggregate nothing
+             computes, and computing one here is what CLAUDE.md forbids. */
+          chips: [
+            PARTICIPATION,
+            { value: String(cross.reports), label: t('chipReports') },
+            { value: String(panels.length), label: t('chipPanels') },
+          ],
+          participation: { measured: cross.measured, total: cross.surveyTotal },
+        }}
+      />
+
+      {/* v6:2500 draws a full control bar under the band — «Tilpass», the
+          filter line as a button, the threshold as a pill and a transient
+          note. Two of those are sentences this screen already shows in the
+          band's scope line, so what is placed here is the two CONTROLS we
+          have; the bar itself is the Innsikt screen's surface and not the
+          shared band's, and it stays in the audit rather than being built
+          inside a layout phase. */}
+      <div className="mt-[18px] flex flex-wrap items-center justify-end gap-[10px]">
         {/* Q46: the period and group selects have LEFT the header — they are
-            the first tab of the «Tilpass» card now (NEW:948-996). What stays
-            beside the heading is the card's own toggle and, per Q29, the
-            opener the new bundle dropped from its markup while keeping the
-            pins that feed it. Removing a working consumer to match a bundle
-            that forgot it would leave pins storing a fact nobody can use. */}
-        <div className="flex flex-wrap items-center gap-[10px]">
-        <CustomizeToggle label={t('customize')} open={customizeOpen} />
-        {/* Q29's other control. «Frys som rapport» reads the LAYOUT — the
+            the first tab of the «Tilpass» card now (NEW:948-996). Q29's other
+            control stays beside it: «Frys som rapport» reads the LAYOUT — the
             board as arranged — while «Åpne rapport (n)» reads the PINS. Two
-            questions, two buttons, as the bundle draws (NEW:940). Only shown
-            once a layout exists: freezing an unchosen board is freezing
-            nothing. */}
-        {panels.length ? (
-          <FreezeButton
-            label={t('freeze')}
-            title={t('frozenReportTitle', {
-              date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
-            })}
-          />
-        ) : null}
+            questions, two buttons, as the bundle draws (NEW:940). */}
+        <CustomizeToggle label={t('customize')} open={customizeOpen} />
         <OpenPinnedButton
           count={pinned.length}
           label={t('openPinned')}
@@ -384,7 +412,6 @@ export async function DashboardScreen({
             date: new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
           })}
         />
-        </div>
       </div>
 
       <CustomizeCard

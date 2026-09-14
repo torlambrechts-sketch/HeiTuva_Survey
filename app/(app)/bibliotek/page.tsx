@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { PageHeader } from '@/components/PageHeader'
 import { localiseRegistryNames, readWorkspace } from '@/lib/workspace/current'
 import { liftOrder } from '@/lib/workspace/modules'
 import { createClient } from '@/lib/supabase/server'
@@ -77,6 +79,7 @@ export default async function LibraryPage({
   const lifts = (await readWorkspace(viewer.orgId))?.lifts ?? []
   const sp = await searchParams
   const t = await getTranslations('library')
+  const tNav = await getTranslations('nav')
   const tQ = await getTranslations('qtype')
 
   /* Q172 — the same resolver `AppSubnav` uses, so the pill that looks selected
@@ -136,17 +139,46 @@ export default async function LibraryPage({
     return qs ? `/bibliotek?${qs}` : '/bibliotek'
   }
 
+  /* F3 — the «På tvers» card's four counts (v6:9573), computed ONCE here and
+     passed to whichever tab renders. Per tab they would each be a different
+     number under a heading that says «across», which is the opposite of what
+     the card is for.
+
+     `count: 'exact'` with `head: true` returns the number without the rows —
+     four counts, no payload. */
+  const [packAll, packLegal, bankAll, packMine] = await Promise.all([
+    supabase.from('template_packs').select('key', { count: 'exact', head: true }),
+    supabase
+      .from('template_packs')
+      .select('key', { count: 'exact', head: true })
+      .eq('category', 'Lovpålagt'),
+    supabase.from('question_bank').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('template_packs')
+      .select('key', { count: 'exact', head: true })
+      .eq('org_id', viewer.orgId),
+  ])
+  const cross = {
+    chips: [
+      { value: String(packAll.count ?? 0), label: t('chipPacks') },
+      { value: String(packLegal.count ?? 0), label: t('chipLegal') },
+      { value: String(bankAll.count ?? 0), label: t('chipBank') },
+      { value: String(packMine.count ?? 0), label: t('chipOwn') },
+    ],
+  }
+
   return (
-    <main className="animate-enter pt-[26px]">
-      {/* The breadcrumb, as on the Arbeidsliste (v5:3130-3132). */}
-      <div className="flex items-center gap-[9px] text-[12.5px] text-mut">
-        <span>{t('crumbRoot')}</span>
-        <span className="opacity-50">→</span>
-        <span className="font-semibold text-ink">{t('crumbHere')}</span>
-      </div>
+    /* F3 — the breadcrumb moved to the SHELL (`components/Breadcrumb.tsx`,
+       driven by `lib/shell/crumbs.ts`). It was drawn on five screens and built
+       here and on Handlinger, as two hand-rolled copies with two different key
+       pairs. The shell carries the `pt-[26px]` the crumb sits in; this starts at
+       the drawing's 14px gap below it (v6:2130). */
+    <main className="animate-enter mt-[14px]">
 
       {tab === 'bruksomrader' ? (
         <UseCasesTab
+          cross={cross}
+          newLabel={tNav('newSurvey')}
           uses={uses}
           orgId={viewer.orgId}
           href={href}
@@ -155,6 +187,8 @@ export default async function LibraryPage({
         />
       ) : tab === 'maler' ? (
         <TemplatesTab
+          cross={cross}
+          newLabel={tNav('newSurvey')}
           lifts={lifts}
           orgId={viewer.orgId}
           useLabel={useLabel}
@@ -171,6 +205,8 @@ export default async function LibraryPage({
         />
       ) : (
         <BankTab
+          cross={cross}
+          newLabel={tNav('newSurvey')}
           orgId={viewer.orgId}
           category={category}
           query={query}
@@ -204,15 +240,31 @@ function LibraryHero({
   countLine,
   scopeLine,
   lead,
+  cross,
+  newLabel,
 }: {
   title: string
   countLine: string
   scopeLine: string
   lead: string
+  /** F3 — the «På tvers» card's four counts (v6:9573: maler, lovpålagte,
+   *  spørsmål i banken, egne maler). Computed once in `LibraryPage` and passed
+   *  down, because the three tabs each hold a different slice of the data and a
+   *  per-tab count would make the card say something different depending on
+   *  which tab you were on — «på tvers» means the opposite of that. */
+  cross: { chips: { value: string; label: string }[] }
+  newLabel: string
 }) {
   return (
-    <div className="mt-4 min-w-0">
-      <div className="flex items-start gap-4">
+    /* F3 — the band. The hero, the count line and the lead are Q172's
+       (Handlinger's frame, v5:3134-3153) and they are the drawing's LEFT COLUMN
+       (v6:4619-4623); what was missing is the right one. The 62px icon is ours
+       and stays logged (D170): v6 draws no icon on this screen and one on
+       Handlinger, so it is a deviation either way and removing it here would
+       undo Q172's «the same frame» rather than serve it. */
+    <PageHeader
+      title={title}
+      icon={
         <span className="flex h-[62px] w-[62px] flex-none items-center justify-center rounded-[16px] bg-ac">
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <rect x="6" y="6" width="4.4" height="20" rx="1.6" fill="var(--ink)" />
@@ -220,24 +272,28 @@ function LibraryHero({
             <rect x="21.6" y="9" width="4.4" height="17" rx="1.6" fill="var(--ink)" />
           </svg>
         </span>
-        <div className="min-w-0 flex-1">
-          {/* `text-[23px] md:text-[30px]`, the same as the Arbeidsliste's — see
-              the measurement in `WorklistPanel`. «Bibliotek» is nine characters
-              and fits at 30px in the 202px available at 320px, so this is not
-              load-bearing here; it is the same control at the same size, which
-              is the point of copying the frame. */}
-          <h1 className="font-display text-[23px] font-semibold leading-[1.1] md:text-[30px]">
-            {title}
-          </h1>
-          <div className="mt-1 text-[13px] text-mut">
-            {countLine} &nbsp;|&nbsp; {scopeLine}
-          </div>
-        </div>
-      </div>
-      <p className="mt-3.5 max-w-[460px] text-sm leading-[1.6] text-mut [text-wrap:pretty]">
-        {lead}
-      </p>
-    </div>
+      }
+      counts={countLine}
+      scope={scopeLine}
+      lead={lead}
+      cross={{
+        /* v6:4629 — «＋ Ny», the wizard. The library has no create-a-template
+           action, and the drawing's own button opens the SURVEY wizard from
+           here; that destination exists. */
+        action: (
+          <Link
+            href="/undersokelser/ny"
+            className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border border-line bg-transparent px-[15px] py-2 text-[12.5px] font-semibold text-ink no-underline"
+          >
+            {newLabel}
+          </Link>
+        ),
+        /* No participation chip: v6:9573's four are all library counts, and a
+           response rate on the library would be a number about a different
+           thing sitting under a heading that says «across». */
+        chips: cross.chips,
+      }}
+    />
   )
 }
 
@@ -301,6 +357,8 @@ type T = Awaited<ReturnType<typeof getTranslations<'library'>>>
 type TQ = Awaited<ReturnType<typeof getTranslations<'qtype'>>>
 
 async function TemplatesTab({
+  cross,
+  newLabel,
   lifts,
   orgId,
   useLabel,
@@ -315,6 +373,8 @@ async function TemplatesTab({
   tQ,
   supabase,
 }: {
+  cross: { chips: { value: string; label: string }[] }
+  newLabel: string
   orgId: string
   /** Registry key → label, for the card eyebrow (NEW:4484). */
   useLabel: Map<string, string>
@@ -515,6 +575,8 @@ async function TemplatesTab({
   return (
     <>
       <LibraryHero
+        cross={cross}
+        newLabel={newLabel}
         title={t('title')}
         /* What the filter is SHOWING: the organisation's own templates are
            always listed, the standard ones only when the category admits them.
@@ -638,12 +700,16 @@ async function TemplatesTab({
  * added.
  */
 async function UseCasesTab({
+  cross,
+  newLabel,
   uses,
   orgId,
   href,
   t,
   supabase,
 }: {
+  cross: { chips: { value: string; label: string }[] }
+  newLabel: string
   uses: {
     key: string
     label: string
@@ -678,6 +744,8 @@ async function UseCasesTab({
   return (
     <>
       <LibraryHero
+        cross={cross}
+        newLabel={newLabel}
         title={t('title')}
         countLine={t('countUseCases', { count: uses.length })}
         scopeLine={t('scopeLineUseCases')}
@@ -724,6 +792,8 @@ async function UseCasesTab({
 }
 
 async function BankTab({
+  cross,
+  newLabel,
   orgId,
   category,
   query,
@@ -733,6 +803,8 @@ async function BankTab({
   tQ,
   supabase,
 }: {
+  cross: { chips: { value: string; label: string }[] }
+  newLabel: string
   orgId: string
   category: PackCategory | string
   query: string
@@ -790,6 +862,8 @@ async function BankTab({
   return (
     <BankNoteProvider>
       <LibraryHero
+        cross={cross}
+        newLabel={newLabel}
         title={t('title')}
         countLine={t('countBank', { count: filtered.length })}
         scopeLine={t('scopeLineBank')}

@@ -12,13 +12,26 @@ import type { Database } from '@/types/database'
 export type SurveyStatus = Database['public']['Tables']['surveys']['Row']['status']
 export type ShareScope = Database['public']['Tables']['surveys']['Row']['results_scope']
 
-/** The three filter chips, in the design's order (HeiTuva.dc.html:3008). */
-export const FILTERS = ['alle', 'aktiv', 'utkast'] as const
+/**
+ * The status filters, in the drawing's order — **FOUR since F3** (v6:8634:
+ * `Alle · Aktive · Utkast · Lukket`).
+ *
+ * «Lukket» was missing, and it is the fourth row of CLAUDE.md's table: three
+ * was a count of the chips that existed when the line was written, not a
+ * property of the status set. `surveys.status` has had `lukket` since Phase 0
+ * and the list could not be filtered to it.
+ *
+ * They render in the SHELL now, not in the page — v6 draws them in the subnav
+ * strip and `AppSubnav` builds its pills from this registry, so a fifth status
+ * arrives with its label wired or not at all.
+ */
+export const FILTERS = ['alle', 'aktiv', 'utkast', 'lukket'] as const
 export type Filter = (typeof FILTERS)[number]
 export const FILTER_KEY: Record<Filter, string> = {
   alle: 'filterAll',
   aktiv: 'filterActive',
   utkast: 'filterDraft',
+  lukket: 'filterClosed',
 }
 
 /** The filter chips name statuses in Norwegian; `alle` matches everything. */
@@ -26,6 +39,7 @@ export const FILTER_STATUS: Record<Filter, SurveyStatus | null> = {
   alle: null,
   aktiv: 'aktiv',
   utkast: 'utkast',
+  lukket: 'lukket',
 }
 
 /** Sort options, in the design's order (HeiTuva.dc.html:752). */
@@ -76,11 +90,16 @@ export const PRIMARY_ACTION: Record<SurveyStatus, { key: string; path: string }>
   lukket: { key: 'primaryClosed', path: 'rapport' },
 }
 
-/** Response percentage, clamped, against the expected respondent count. */
-export function responsePct(responses: number, target: number | null): number {
-  if (!target || target <= 0) return 0
-  return Math.min(100, Math.round((responses / target) * 100))
-}
+/* F3 — `responsePct` LIVED HERE AND HAD NO CALLER, while two comments cited
+   it as «the treatment every row gets». Measured:
+   `grep -rn responsePct . --include=*.ts --include=*.tsx` returned its own
+   definition and two mentions of it in prose, and nothing else.
+
+   That is the same shape as F1 one level down — a rule believed to have one
+   definition, having two live ones (this and `pctOf` in page.tsx) and a third
+   nobody called. The row rate is `rowRate` in `lib/surveys/participation.ts`
+   now, beside `rateOf`, so the row and the headline above it cannot round or
+   cap differently. */
 
 /**
  * RETIRED by DECISIONS Q44 (V1-5). The wizard offered six hand-picked pack

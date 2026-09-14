@@ -6033,3 +6033,54 @@ is built and undeclared, or the screen does not exist — and only the second is
 **The composites are not committed.** They are derived from two sets that already are, and there are
 28 large PNGs; `artifacts/fidelity/00-report.md` is committed because the durable finding is the list
 above.
+
+## D181 — F3: the breadcrumb root is a LINK, which the drawing's is not
+
+v6 draws both breadcrumb segments as bare `<span>`s on all five screens
+(`v6:2120-2126`, `2467-2472`, `2791-2796`, `3663-3669`, `4611-4617`): «Oversikt → Innsikt»,
+inert. `components/Breadcrumb.tsx:101` makes the root a `<Link href="/oversikt">`.
+
+The leaf stays a `<span>` — it is the page you are on, and a link to here is noise.
+
+Minimal consistent option under CLAUDE.md's «when ambiguous» rule: a breadcrumb whose root
+cannot be clicked is a picture of a breadcrumb, and the mock had no router behind it to make
+the difference visible. The two already-shipped copies (Bibliotek Q172, Handlinger V5-2) had
+both made the same call independently, which is the evidence it is the obvious one.
+
+## D182 — F3: the Innsikt control bar under the band is NOT built
+
+`v6:2500-2517` draws a full-width card under the Innsikt band holding four things: «Tilpass»
+(gated on `dashReady`), the filter line as a BUTTON that opens the same card, the threshold as
+a `--sf2` pill, and a transient `dutyNote`.
+
+Built: the two controls the app already has — `CustomizeToggle` and `OpenPinnedButton` — in a
+right-aligned row in that position. Not built: the bar's chrome, the filter line as a button,
+and the threshold as a pill.
+
+**Why not, and it is not «later».** Two of the bar's four items are SENTENCES this screen now
+shows inside the band's scope line — the selection, the group and, per Q42, the threshold the
+RPCs actually applied. Drawing them a second time as controls is two copies of one fact, which
+is the thing F3 exists to remove. Whether the filter line should be a button that opens
+«Tilpass» is a question about the Innsikt SCREEN, and F3 is the shared band; it is in the audit
+(`docs/fidelity/01-per-screen.md`) and it is F5's.
+
+## D183 — F3: «Bygger», the fifth Innsikt pill, is not drawn
+
+`v6:8619` builds five pills for the Innsikt rail. Four ship (Dashbord · Rapporter ·
+Lovpålagte · Maler). The fifth opens the report editor on a fresh draft.
+
+In this app the editor is `?rapport=<id>` of a report that EXISTS, so the pill has no
+destination until something creates the row — and **a deep link resolves or it is not drawn**
+(V6-5's standing rule). The affordance is already «＋ Ny rapport» in the «På tvers» card, which
+creates the report and then opens it, so drawing the pill would also be two controls for one
+action.
+
+## D184 — F3: the Innsikt band's scope line is LONGER than the drawing's
+
+`insScopeLine` (v6:8247) is «periode · gruppe». Ours is «Levende tall · {n} undersøkelser,
+{m} svar, {gruppe} · {terskelsetning}».
+
+The band MOVED the sentence this screen already had; it did not shorten it. Every clause was
+shipped and one of them is required: the threshold is the k the RPCs returned for this
+selection (Q42), never a figure computed in the page, and dropping it to match a mock that had
+no gate behind it would remove a statutory-facing statement to fit a layout.

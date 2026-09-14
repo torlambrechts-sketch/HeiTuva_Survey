@@ -15,7 +15,7 @@ sak, og en rangering som blander dem sier ingenting. Beslutninger og eldre-bunde
 
 | # | skjerm | mangler helt (a) | annen form (b) | egenskap/kopi (c) | holdt utenfor |
 |---|---|---|---|---|---|
-| 1 | **Undersøkelse-detalj** | **hodet med sju faktarader, svarmåler, KPI-kort og fordelingsstripe** · **28 underfaner i sju railer** · Invitasjon-visningen · Bølger-visningen · Resultatmatrisen · Sammenligningen · Type+Kilde på Målgruppe · Hjemmel+Eier+Frist på Tiltak | Spørsmål→Byggeren · Utsending→Send | fanerekkefølge | Oversikt-fanen, Feltarbeid, Målgruppes frafall, Metodikk-fanen, Historikks form, Leveranse (D133) |
+| 1 | **Undersøkelse-detalj** | **hodet med sju faktarader, svarmåler, KPI-kort og fordelingsstripe** · **27 underfaner i sju railer** · Invitasjon-visningen · Bølger-visningen · Resultatmatrisen · Sammenligningen · Type+Kilde på Målgruppe · Hjemmel+Eier+Frist på Tiltak | Spørsmål→Byggeren · Utsending→Send | fanerekkefølge | Oversikt-fanen, Feltarbeid, Målgruppes frafall, Metodikk-fanen, Historikks form, Leveranse (D133) |
 | 2 | **Undersøkelser** | subnav-rail · brødsmule · ingress · **«På tvers»** · **visningsvelger** · **blandingsstripe** · **sekskolonners tabell** · fem radikoner · utvidbar rad · «Liste og detalj»-panel | **tabell→kort** · **omfangsfiltre→statusfiltre** · svTuva-plassering | h1 32→28px · tellelinje | — |
 | 3 | **Send** | **«Avsender og utseende»** (fire kontroller + forhåndsvisning + overstyringsnotat) · «Sendes»-velger · «Last ned PNG»/«Plakat A4» · «Prøv eksempelfil» · «Lagre som målgruppe» | — | — | — |
 | 4 | **Skallet (Tuva)** | **hele panelet** — spørsmålsfelt, chips, svar med kilde og handling, tipskort, fremdriftsliste, boble — på ~12 skjermer | — | — | bryter, tommel, `tvTrackOpen` (Q183) |
@@ -99,7 +99,7 @@ bølgeplanen. De er ikke fravalgt — de hadde ingen skjerm å ligge på.
 
 ### 2.5 Det andre navigasjonsnivået kom aldri
 
-28 underfaner i sju railer (`v6:7139-7151`) → **null**. Tre av fem Innsikt-piller → borte.
+27 underfaner i sju railer (`v6:7139-7151`) → **null**. Tre av fem Innsikt-piller → borte.
 
 Appen bygger railer på ett nivå. Der tegningen har rail-i-rail, blir det ene nivået til en side
 som ruller — Resultater er det klareste eksemplet: seks underfaner ble én 874-linjers skjerm som

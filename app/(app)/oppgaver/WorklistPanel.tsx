@@ -251,13 +251,8 @@ export function WorklistPanel({
     type === 'oppgaver' ? 'wlScopeLineTasks' : type === 'tilbakemeldinger' ? 'wlScopeLineFeedback' : 'wlScopeLineAll'
 
   return (
-    <main className="animate-enter pt-[26px]">
-      {/* v5:3130-3132 — the breadcrumb. */}
-      <div className="flex items-center gap-[9px] text-[12.5px] text-mut">
-        <span>{t('wlCrumbRoot')}</span>
-        <span className="opacity-50">→</span>
-        <span className="font-semibold text-ink">{t('wlCrumbHere')}</span>
-      </div>
+    /* F3 — the breadcrumb is the shell's now (`components/Breadcrumb.tsx`). */
+    <main className="animate-enter mt-[14px]">
 
       <div className="mt-4 grid items-start gap-[18px] lg:[grid-template-columns:minmax(0,1.1fr)_minmax(330px,.9fr)]">
         <div className="min-w-0">

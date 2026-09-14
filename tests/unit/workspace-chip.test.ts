@@ -71,8 +71,13 @@ describe('Q171 — the nav label is «Handlinger», and still true of both halve
     // Four places name this surface. They drifted apart once already — C4 shipped
     // copy v4 then reverted — so the agreement is asserted rather than assumed.
     expect(no.nav.tasks).toBe(no.tasks.title)
-    expect(no.nav.tasks).toBe(no.tasks.wlCrumbHere)
+    // F3 — the breadcrumb leaf moved to the shared `crumb` namespace when the
+    // surface moved to the shell. Same property, one home: the four places
+    // still have to agree, and now the third one is shared with four other
+    // screens instead of being this screen's private copy.
+    expect(no.nav.tasks).toBe(no.crumb.tasks)
     expect(no.nav.tasks).toBe(no.footer.linkTasks)
+    expect(en.nav.tasks).toBe(en.crumb.tasks)
   })
 
   it('the heading follows the type filter, in both languages', () => {

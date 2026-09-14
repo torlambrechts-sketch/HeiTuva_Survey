@@ -5,7 +5,6 @@ import { kForMirror } from '@/lib/surveys/retention'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
-import { ChipLink } from '@/app/(app)/bibliotek/ChipLink'
 import {
   FILTERS,
   FILTER_KEY,
@@ -22,6 +21,8 @@ import { CADENCE_KEY } from '@/lib/send/registry'
 import { SharePanel, type ShareCandidate } from './SharePanel'
 import { BlankSurveyButton } from './BlankSurveyButton'
 import { effectiveK } from '@/lib/questions/threshold-tier'
+import { hasTarget, rateOf, rowRate } from '@/lib/surveys/participation'
+import { PageHeader, PARTICIPATION } from '@/components/PageHeader'
 
 type Search = { filter?: string; sok?: string; sorter?: string; del?: string }
 
@@ -148,8 +149,13 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     })),
   )
 
-  const pctOf = (s: SurveyListItem) =>
-    s.target && s.target > 0 ? s.responseCount / s.target : 0
+  /* One definition of a row's rate, shared with the headline above it
+     (`rowRate`, beside `rateOf`). A row with no recipient count sorts last and
+     shows no percentage at all — the pill falls back to the count below. */
+  const pctOf = (s: SurveyListItem) => {
+    const row = { id: s.id, responses: s.responseCount, target: s.target }
+    return hasTarget(row) ? rowRate(row) : 0
+  }
 
   // Sorted here rather than in Postgres: two of the four orders are computed
   // (response share, and status by the design's Aktiv/Utkast/Lukket reading
@@ -170,11 +176,35 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     }
   })
 
+  /* F3 — «På tvers» is the ORGANISATION's whole set, which is what the words
+     mean, while `surveys` above is the filter the reader can see. A second,
+     minimal read rather than filtering the first one in JS: `ilike` is the
+     database's and re-implementing it here would be a second definition of
+     which rows the list is showing. */
+  const { data: allRows, error: allError } = await supabase
+    .from('surveys')
+    .select('id, status, target, survey_questions(count)')
+    .eq('org_id', viewer.orgId)
+    .is('deleted_at', null)
+  if (allError) throw new Error(`survey totals read failed: ${allError.message}`)
+  const all = (allRows ?? []).map((r) => ({
+    id: r.id,
+    status: r.status,
+    target: r.target,
+    questions: r.survey_questions?.[0]?.count ?? 0,
+    responses: responseCounts.get(r.id) ?? 0,
+  }))
+
   const counts = {
-    active: surveys.filter((s) => s.status === 'aktiv').length,
-    drafts: surveys.filter((s) => s.status === 'utkast').length,
-    closed: surveys.filter((s) => s.status === 'lukket').length,
+    active: all.filter((s) => s.status === 'aktiv').length,
+    drafts: all.filter((s) => s.status === 'utkast').length,
+    closed: all.filter((s) => s.status === 'lukket').length,
   }
+  /* The card's rate is over the organisation, and `rateOf` is the one place a
+     ratio is formed — the drawing's own `crossStats` (v6:9131) divides by
+     `target || 30`, inventing a denominator, which is F1's defect in the
+     bundle. */
+  const crossRate = rateOf(all)
 
   // The share panel is open for one survey at a time, named in the URL.
   const shareFor = sp.del ? surveys.find((s) => s.id === sp.del) : undefined
@@ -217,29 +247,49 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div className="animate-enter pt-[34px]">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[28px] font-medium">{t('title')}</h1>
-          <p className="mt-[3px] text-[13px] text-mut">{t('counts', counts)}</p>
-        </div>
-        {canEdit ? (
-          // Both labels are whitespace-nowrap by design, so at 320px the pair is
-          // wider than the viewport unless the row may wrap. Wrapping is layout,
-          // not the control — the buttons keep their exact design size.
-          <div className="flex flex-wrap items-center gap-[10px]">
-            <Link
-              href="/undersokelser/ny"
-              className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink no-underline"
-            >
-              {tNav('newSurvey')}
-            </Link>
-            <BlankSurveyButton label={tNav('blankSurvey')} failedLabel={t('actionFailed')} />
-          </div>
-        ) : (
-          <p className="text-[13px] text-mut">{t('readerNotice')}</p>
-        )}
-      </div>
+    <div className="animate-enter">
+      {/* F3 — the two-column band the drawing has on four screens and the app
+          had on none (v6:2130). The CTA pair moves INTO the card's action slot,
+          which is where v6:2143 draws «＋ Ny»; both buttons are kept because
+          removing one is a product change and this is a layout phase. */}
+      <PageHeader
+        title={t('title')}
+        counts={t('counts', counts)}
+        scope={t('scopeLine', {
+          status: filter === 'alle' ? t('scopeAll') : t(FILTER_KEY[filter]),
+          shown: sorted.length,
+          total: all.length,
+        })}
+        lead={t('lead')}
+        cross={{
+          total: t('crossResponses', { n: crossRate?.responses ?? 0 }),
+          action: canEdit ? (
+            // Both labels are whitespace-nowrap by design, so at 320px the pair
+            // is wider than the viewport unless the row may wrap. Wrapping is
+            // layout, not the control — the buttons keep their design size.
+            <div className="flex flex-wrap items-center justify-end gap-[10px]">
+              <Link
+                href="/undersokelser/ny"
+                className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-semibold text-ink no-underline"
+              >
+                {tNav('newSurvey')}
+              </Link>
+              <BlankSurveyButton label={tNav('blankSurvey')} failedLabel={t('actionFailed')} />
+            </div>
+          ) : (
+            <p className="text-[13px] text-mut">{t('readerNotice')}</p>
+          ),
+          /* v6:9131's order: aktive, rate, spørsmål, utkast. The token says
+             WHERE the rate goes; the number and the label are the card's. */
+          chips: [
+            { value: String(counts.active), label: t('chipActive') },
+            PARTICIPATION,
+            { value: String(all.reduce((a, s) => a + s.questions, 0)), label: t('chipQuestions') },
+            { value: String(counts.drafts), label: t('chipDrafts') },
+          ],
+          participation: { measured: crossRate, total: all.length },
+        }}
+      />
 
       {/* V6-6 — svTuva. Participation only (Q184); the task tip is Q72's
           trigger or it is absent (Q185). */}
@@ -276,14 +326,14 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
         />
       ) : null}
 
-      <div className="mt-[26px] flex min-h-[46px] flex-wrap items-center justify-between gap-[14px]">
-        <div className="flex flex-wrap gap-2 rounded-full p-1 md:gap-[3px]" style={{ background: 'var(--sf2)' }}>
-          {FILTERS.map((f) => (
-            <ChipLink key={f} href={params({ filter: f })} active={filter === f} variant="segment">
-              {t(FILTER_KEY[f])}
-            </ChipLink>
-          ))}
-        </div>
+      {/* F3 — THE STATUS CHIPS ARE GONE FROM HERE, not duplicated: v6:8634
+          draws them in the subnav strip and `AppSubnav` builds them from
+          `keys.ts`. The condition is the one `AppSubnav` already states for
+          `admin` — a shell rail may absorb an in-page one only when its list is
+          COMPLETE — and four of four is. The row keeps the search and the sort,
+          which the drawing puts here (v6:2217-2222); the SCOPE filters that
+          v6:2206 draws in this position are F4's. */}
+      <div className="mt-[26px] flex min-h-[46px] flex-wrap items-center justify-end gap-[14px]">
         <SurveySearch
           query={query}
           sort={sort}
@@ -354,10 +404,10 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
                 // response count rather than reporting a 0 % that is not true
                 // (CLAUDE.md, "Never fabricate data in the UI").
                 statusActive: s.target
-                  ? t('statusActive', { pct: Math.min(100, Math.round(pctOf(s) * 100)) })
+                  ? t('statusActive', { pct: Math.round(pctOf(s) * 100) })
                   : t('statusActiveNoTarget', { done: s.responseCount }),
                 statusClosed: s.target
-                  ? t('statusClosed', { pct: Math.min(100, Math.round(pctOf(s) * 100)) })
+                  ? t('statusClosed', { pct: Math.round(pctOf(s) * 100) })
                   : t('statusClosedNoTarget', { done: s.responseCount }),
                 people: s.target ? t('people', { count: s.target }) : '',
                 responses: s.target

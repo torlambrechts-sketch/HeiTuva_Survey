@@ -8,6 +8,7 @@ import { ReportEditor } from './ReportEditor'
 import type { DutyCardData } from './types'
 import type { ComposedDocument, EditorReport, QuotePick } from './editor-types'
 import { effectiveK } from '@/lib/questions/threshold-tier'
+import { rateOf } from '@/lib/surveys/participation'
 
 /**
  * Rapporter — HeiTuva.dc.html:911-1330.
@@ -229,6 +230,27 @@ export default async function ReportsPage({
     .is('deleted_at', null)
     .in('template_pack_key', packKeys.length ? packKeys : ['__none__'])
 
+  /* F3 — the «På tvers» card's population: the ORGANISATION's surveys, which is
+     what «på tvers» means, and `survey_response_counts` for the numerator. The
+     rate itself is `rateOf`'s, so the drawing's `sum(responses)/sum(target||30)`
+     (v6:8238) — an invented denominator of thirty — is not reproduced. */
+  const { data: crossRows } = await supabase
+    .from('surveys')
+    .select('id, target')
+    .eq('org_id', viewer.orgId)
+    .is('deleted_at', null)
+  const { data: crossCounts } = await supabase.rpc('survey_response_counts', {
+    p_org: viewer.orgId,
+  })
+  const crossResponses = new Map((crossCounts ?? []).map((c) => [c.survey_id, Number(c.responses)]))
+  const crossRate = rateOf(
+    (crossRows ?? []).map((r) => ({
+      id: r.id,
+      target: r.target,
+      responses: crossResponses.get(r.id) ?? 0,
+    })),
+  )
+
   const { data: reports } = await supabase
     .from('reports')
     .select('id, title, kind, status, base_template, duty_id, created_at, share_scope')
@@ -274,6 +296,10 @@ export default async function ReportsPage({
   return (
     <ReportsScreen
       tab={tab}
+      /* F3 — the «På tvers» card's rate. `rateOf` is the one place a ratio is
+         formed; this hands over ROWS and the screen cannot pass a percentage.
+         Org-wide, because that is what «på tvers» means. */
+      cross={{ measured: crossRate, surveyTotal: (crossRows ?? []).length }}
       canEdit={viewer.role !== 'leser'}
       viewerMemberId={viewer.memberId}
       cards={cards}
