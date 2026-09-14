@@ -5990,3 +5990,46 @@ twice — plus the sentence CLAUDE.md asks for when an enumeration cannot be sta
 list is not «the seeded registries», it is **the text columns whose content this product renders
 verbatim and which have been observed to collide with a message value.** The next collision will be a
 column nobody has thought of, and the remedy is another row AND the sentence, never the row alone.
+
+## D180 — the fidelity comparison, and the empty composites it shipped on its first run
+
+**F2, 2026-09-14.** `npm run verify:fidelity` puts the drawing's render beside the app's render,
+screen by screen. It is not a gate — VERIFY.md's new closing section says why, and says it plainly:
+the two renders show different data, so a pixel diff between them would be red everywhere and a gate
+that fails on every screen gets switched off.
+
+**What it closed.** Both halves have been in `artifacts/` for phases —
+`artifacts/reference-<key>/` from `verify:reference` and `artifacts/phase-N/` from
+`verify:browser` — and `grep -rln "reference-v6" scripts/ tests/` returned exactly one file: the one
+that writes them. The comparison that produced the 2026-09-14 audit's sharpest finding took two of
+those files and one look.
+
+**AND ITS FIRST RUN PRINTED `ok` ON ALL TWENTY-EIGHT COMPOSITES WITH NOTHING IN THEM.**
+`page.setContent()` leaves the document on `about:blank`, and a document with no origin cannot load
+a `file://` subresource, so every composite was two broken-image icons — and the run reported
+success, because nothing checked. **That is CLAUDE.md's «green for something that structurally could
+not be seen», and it is the seventh instance**, committed by the script written to find that class
+of thing.
+
+Two changes, and the second is the one that matters:
+
+1. Write the composite to a real file and `goto` it, so the images have an origin to load from.
+2. **Assert `naturalWidth > 0` on both images before screenshotting**, and throw naming the file that
+   did not decode. Navigating is the fix; the assertion is the evidence — without it, the next thing
+   that stops the images loading (a renamed directory, a sandbox flag) is silent in exactly the same
+   way.
+
+**Proved before being trusted**, per the rule this project already applies to `edge-bundle.ts`'s
+extension check: pointing the left image at `__nope__<name>.png` gives
+`Error: composite for "admin-brukere" has 1 image(s) that did not decode: file:///…/__nope__admin-brukere.png`.
+
+**Seven of the drawing's thirty-five screens have no app capture to compare against**, and that is a
+gap in `tests/routes.manifest.ts` rather than in the product — every one of the seven is built:
+`live-revealed`, `oppgaver-oppgaver`, `oppgaver-tilbakemeldinger`, `respondent-kommentar`,
+`respondent-kommentar-lagret`, `respondent-takk`, `respondent-takk-sendt`. The report names them
+individually rather than counting them, because «no capture» covers two different facts — the state
+is built and undeclared, or the screen does not exist — and only the second is a gap in the product.
+
+**The composites are not committed.** They are derived from two sets that already are, and there are
+28 large PNGs; `artifacts/fidelity/00-report.md` is committed because the durable finding is the list
+above.

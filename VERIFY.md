@@ -373,3 +373,41 @@ No fixes until I've seen the list.
 
 - **What Gate 5a3 does NOT prove (recorded after Phase 6, no new check)** — 5a3 proves a denial test *exists* for every surface, not that the test's scope is *right*. `ui_messages` was cross-tenant from Phase 1 to Phase 6 behind a green 5a3: its policy asked "is the caller an administrator of any org" and the tests asked the same question. A gate that enumerates surfaces cannot see that a predicate is too wide; only reading the policy against the table's ownership can. The apparatus stays frozen; this is its documented limit.
 
+
+---
+
+## `verify:fidelity` IS NOT A GATE, AND THAT IS DELIBERATE (F2, 2026-09-14)
+
+**The seven gates above are unchanged.** `npm run verify:fidelity` is a REPORT: it puts the
+drawing's render beside the app's render, screen by screen, writes the composites to
+`artifacts/fidelity/` and **exits 0 whatever it finds**.
+
+**Why it cannot be a gate.** The two renders show different data, different text lengths and
+different states, so a pixel diff between them would be red on every screen. A gate that fails
+everywhere on its first run teaches nothing and gets switched off. What it produces is a picture a
+person looks at.
+
+**What it closed.** `artifacts/reference-<key>/` (renders of the drawing) and `artifacts/phase-N/`
+(renders of the app) have both existed for phases, and `grep -rln "reference-v6" scripts/ tests/`
+returned exactly one file — the one that WRITES them. Nothing had ever read them back.
+
+**And `tests/visual/screens.spec.ts` said so correctly and then pointed at the wrong gate.** Its
+header states, rightly, that the pixel baselines «are NOT proof of fidelity to the design — they
+were generated from this implementation». The sentence that followed named `verify:reference` as
+«the fidelity gate», which is false in its second clause: that script renders the bundle and
+compares it against its own committed pictures of the bundle, and never looks at the app. Corrected
+in the same commit.
+
+**Its two blind spots are printed in its own output**, because a comparison that reports differences
+without them reads as a defect list:
+
+1. It cannot tell drift from a DECISION. Feltarbeid, the Oversikt tab, Målgruppe's drop-off half,
+   the nps card, the cx workspace, uitest, `quizPass`/`quizTries`/certificate, the thirteen
+   integrations and resume are decided-not-built.
+2. **It is structurally blind to a surface the app never built**, because a screen that does not
+   exist produces no capture. Those appear as MISSING ROWS rather than as differences — which is
+   the most a picture comparison can do about the class the 2026-09-14 audit was written for.
+
+`tests/unit/fidelity-pairs.test.ts` is the part that DOES run in CI: every screen the target bundle
+renders must have a declared counterpart, so a handoff that adds one fails in the commit that adds
+it rather than being quietly left out.

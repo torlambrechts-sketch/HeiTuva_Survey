@@ -21,8 +21,21 @@ import { gotoRoute, signIn } from '../helpers/session'
  * They are regression guards: they catch a screen changing when nobody meant
  * it to. They are NOT proof of fidelity to the design — they were generated
  * from this implementation, so they can only ever confirm it still looks like
- * itself. `npm run verify:reference` is the fidelity gate; it renders the
- * design bundle and compares against that.
+ * itself.
+ *
+ * THE SENTENCE THAT USED TO FOLLOW THAT ONE WAS FALSE, and it was false in a
+ * way that made the true half above stop mattering: it said «`npm run
+ * verify:reference` is the fidelity gate; it renders the design bundle and
+ * compares against that». The first clause is right and the second is not.
+ * `scripts/verify/reference.ts` renders the bundle and compares it against its
+ * own committed pictures of the bundle — which catches a baseline drifting
+ * under a newer Chromium, and is why it exists. **It never looks at the app.**
+ *
+ * So the gap this comment correctly identifies had a gate named against it that
+ * did not close it, which is why nobody went looking. `npm run verify:fidelity`
+ * (F2) is what actually puts the two side by side; it reports rather than
+ * asserts, because the two renders show different data and a pixel diff between
+ * them would be red everywhere.
  *
  * They are committed only for screens whose pixels are a function of code and
  * seed data alone. Determinism comes from: one pinned Chromium/WebKit build,

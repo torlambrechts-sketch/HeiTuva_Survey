@@ -1112,6 +1112,18 @@ difference is not F1's**: `M:0120` (V6-3) added the `method_rules` table, which 
 this paragraph is the first to record. The command is
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
 
+**F2 TOOK IT TO 1452 ACROSS 108 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** One added line —
+`tests/unit/fidelity-pairs.test.ts: 4` — and no other entry moved, which is the proof rather than
+the total. F2 adds no table and no function; a script is not a catalogue surface.
+
+**And F2's own first run is the SEVENTH instance of «green for something that structurally could not
+be seen».** `verify:fidelity` composited the drawing beside the app, printed `ok` on all twenty-eight
+pairs, and produced twenty-eight pictures of two broken-image icons: `page.setContent()` leaves the
+document on `about:blank`, from which a `file://` subresource cannot load. **The script written to
+find that class of failure committed one**, and what caught it was opening the output — not the run.
+The guard is now an assertion that both images decoded (`naturalWidth > 0`), proved to fire against a
+synthetic bad path before being trusted, exactly as `edge-bundle.ts`'s extension check was (D180).
+
 **V5-2 AND V5-3 TOOK THE CENSUS TO 1325 ACROSS 94 FILES AND 5a3 TO 80 OF 110.** V5-2's two files
 carry 37 (`tests/db/worklist-notes.test.ts` 16, `tests/unit/worklist-rows.test.ts` 21) and V5-3 took
 `tests/unit/integrations.test.ts` from 10 to 19; the diff against the previous manifest is **two
