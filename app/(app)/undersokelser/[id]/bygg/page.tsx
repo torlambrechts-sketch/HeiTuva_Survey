@@ -8,6 +8,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import type { QualityRule } from '@/lib/questions/quality'
+import type { MethodRule } from '@/lib/questions/method'
 import { parseEngagement } from '@/lib/engagement'
 import { readScheduleChip } from '@/lib/schedules/read'
 import { SurveyContextBar } from '../SurveyContextBar'
@@ -135,6 +136,27 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     message: r.message,
   }))
 
+  /* V6-3 — the Metodikk rules. A shipped registry (`M:0120`), read like the
+     quality heuristics beside it. Unlike those it is NOT language-filtered:
+     there is one set, and its copy is Norwegian because the product's source
+     language is. A missing read is an error rather than an empty panel — an
+     empty advisory list and a failed one look identical on screen, which is the
+     shape that hid three members on Brukere. */
+  const { data: methodRows, error: methodError } = await supabase
+    .from('method_rules')
+    .select('key, severity, kind, config, title, why, fix')
+    .order('sort_order')
+  if (methodError) throw new Error(`method_rules read failed: ${methodError.message}`)
+  const methodRules: MethodRule[] = (methodRows ?? []).map((r) => ({
+    key: r.key,
+    severity: r.severity === 'forslag' ? 'forslag' : 'advarsel',
+    kind: r.kind,
+    config: r.config,
+    title: r.title,
+    why: r.why,
+    fix: r.fix,
+  }))
+
   // The pack that governs the policy, when one does. `guard_survey_policy`
   // (M:0034:93-99) refuses a policy change for a global pack whose own policy
   // is `locked`; the panel needs the pack's legal reference to say WHICH law,
@@ -180,6 +202,8 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         surveyId={survey.id}
         initial={draft}
         rules={rules}
+        methodRules={methodRules}
+        policyLocked={survey.policy_locked}
         anonymous={survey.anonymity === 'anonymous'}
         canEdit={viewer.role !== 'leser'}
         // A sent survey's questions are frozen: rounds snapshot their question

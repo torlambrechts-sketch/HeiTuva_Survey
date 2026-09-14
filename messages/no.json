@@ -2525,5 +2525,13 @@
     "linkTasks": "Handlinger",
     "linkUsers": "Brukere og grupper",
     "pitch": "Spør folkene dine. Få ærlige svar. Data lagres i EØS, og anonymiteten styres av terskelen dere setter."
+  },
+  "method": {
+    "title": "Metodikk",
+    "lead": "Råd om spørsmålene. Ingenting her hindrer deg i å sende.",
+    "empty": "Ingen merknader til spørsmålene slik de står nå.",
+    "warning": "Advarsel",
+    "suggestion": "Forslag",
+    "question": "Spørsmål"
   }
 }

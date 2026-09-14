@@ -2525,5 +2525,13 @@
     "linkTasks": "Actions",
     "linkUsers": "People and groups",
     "pitch": "Ask your people. Get honest answers. Data is stored in the EEA, and anonymity is governed by the threshold you set."
+  },
+  "method": {
+    "title": "Methodology",
+    "lead": "Advice about the questions. Nothing here prevents you from sending.",
+    "empty": "No notes on the questions as they stand.",
+    "warning": "Warning",
+    "suggestion": "Suggestion",
+    "question": "Question"
   }
 }

@@ -45,6 +45,8 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   dashboard_presets: 'the six shipped dashboard presets; data-not-code, DECISIONS Q25/Q27 — a preset names panel keys and carries no org id, no survey id and no number',
   report_templates: 'the five standard templates; data-not-code',
   quality_rules: 'question-quality heuristics; data-not-code',
+  method_rules:
+    'V6-3 (`M:0120`): the Metodikk check\u2019s eleven rules; data-not-code, same shape as `quality_rules` \u2014 a row carries a key, a severity, an evaluator kind and its copy, and no org id, no survey id and no count. It is ADVISORY by construction (Q178): the severity CHECK admits only `advarsel` and `forslag`, so a blocking severity is unrepresentable rather than merely absent. `tests/db/method-rules.test.ts` CHECKS that claim against the column list and against the constraint itself rather than repeating it here',
   theme_rules: 'free-text theme stems; data-not-code',
   benchmarks: 'seeded Norwegian reference values; DECISIONS Q8',
   task_kinds:

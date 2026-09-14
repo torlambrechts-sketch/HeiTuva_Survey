@@ -13,6 +13,21 @@
  * the next column is the one hand-maintenance gets wrong, and a generated file
  * has no next column to miss. tests/db/workspaces.test.ts compares this file's
  * Row keys against information_schema rather than trusting either.
+ *
+ * Regenerated 2026-09-14 (V6-3) against the local stack at migration HEAD, and
+ * the diff is worth recording because it was LARGER than the phase:
+ *
+ *   + method_rules            — V6-3's own table (M:0120)
+ *   + apply_entra_page, entra_connections_to_sync,
+ *     entra_refresh_token_for_worker, finish_entra_sync
+ *                             — I2's worker functions, in the schema since
+ *                               M:0116 and MISSING from this file until now
+ *
+ * So the committed types had been stale for four functions, and a caller of any
+ * of them would have been typed against nothing. Found by regenerating for an
+ * unrelated table — which is the argument for regenerating rather than
+ * hand-adding the one key the compiler asked for: a hand edit would have fixed
+ * the error and left the four.
  */
 export type Json =
   | string
@@ -635,6 +650,7 @@ export type Database = {
           consented_at: string
           consented_by: string | null
           created_at: string
+          id: string
           last_sync_at: string | null
           last_sync_error: string | null
           last_sync_error_at: string | null
@@ -650,6 +666,7 @@ export type Database = {
           consented_at?: string
           consented_by?: string | null
           created_at?: string
+          id?: string
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_error_at?: string | null
@@ -665,6 +682,7 @@ export type Database = {
           consented_at?: string
           consented_by?: string | null
           created_at?: string
+          id?: string
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_error_at?: string | null
@@ -677,11 +695,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "entra_connections_consented_by_fkey"
-            columns: ["consented_by"]
+            foreignKeyName: "entra_connections_consented_by_in_tenant"
+            columns: ["consented_by", "org_id"]
             isOneToOne: false
             referencedRelation: "org_members"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "entra_connections_org_id_fkey"
@@ -1003,6 +1021,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      method_rules: {
+        Row: {
+          config: Json
+          fix: string
+          key: string
+          kind: string
+          severity: string
+          sort_order: number
+          title: string
+          why: string
+        }
+        Insert: {
+          config?: Json
+          fix: string
+          key: string
+          kind: string
+          severity: string
+          sort_order?: number
+          title: string
+          why: string
+        }
+        Update: {
+          config?: Json
+          fix?: string
+          key?: string
+          kind?: string
+          severity?: string
+          sort_order?: number
+          title?: string
+          why?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -3074,6 +3125,10 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      apply_entra_page: {
+        Args: { p_org: string; p_users: Json }
+        Returns: Json
+      }
       attributed_results: {
         Args: { p_round?: string; p_survey: string }
         Returns: Json
@@ -3114,6 +3169,21 @@ export type Database = {
           scopes: string[]
           tenant_id: string
         }[]
+      }
+      entra_connections_to_sync: {
+        Args: never
+        Returns: {
+          org_id: string
+          tenant_id: string
+        }[]
+      }
+      entra_refresh_token_for_worker: {
+        Args: { p_org: string }
+        Returns: string
+      }
+      finish_entra_sync: {
+        Args: { p_org: string; p_seen: string[] }
+        Returns: number
       }
       get_benchmarks: {
         Args: {
@@ -3203,6 +3273,15 @@ export type Database = {
         }
         Returns: Json
       }
+      record_entra_sync: {
+        Args: {
+          p_error: string
+          p_org: string
+          p_seen: number
+          p_with_department: number
+        }
+        Returns: undefined
+      }
       redeem_live_voucher: { Args: { p_code: string }; Returns: Json }
       reply_to_comment: {
         Args: { p_body: string; p_comment: string }
@@ -3252,6 +3331,16 @@ export type Database = {
         Args: { p_group?: string; p_round?: string; p_survey: string }
         Returns: Json
       }
+      store_entra_connection: {
+        Args: {
+          p_by: string
+          p_org: string
+          p_scopes: string[]
+          p_tenant: string
+          p_token: string
+        }
+        Returns: undefined
+      }
       submit_response: {
         Args: {
           p_anon_choice?: boolean
@@ -3288,12 +3377,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3317,11 +3406,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3342,11 +3431,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3367,11 +3456,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3384,11 +3473,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

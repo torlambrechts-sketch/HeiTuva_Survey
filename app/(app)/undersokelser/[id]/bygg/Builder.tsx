@@ -14,6 +14,8 @@ import {
   type QuestionType,
 } from '@/lib/questions/registry'
 import { qualityFlags, type QualityRule } from '@/lib/questions/quality'
+import { methodNotes, type MethodRule } from '@/lib/questions/method'
+import { MethodPanel } from './MethodPanel'
 import type { Engagement } from '@/lib/engagement'
 import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
@@ -65,6 +67,8 @@ export function Builder({
   surveyId,
   initial,
   rules,
+  methodRules,
+  policyLocked,
   anonymous,
   canEdit,
   locked,
@@ -83,6 +87,8 @@ export function Builder({
   surveyId: string
   initial: BuilderDraft
   rules: QualityRule[]
+  methodRules: MethodRule[]
+  policyLocked: boolean
   anonymous: boolean
   canEdit: boolean
   locked: boolean
@@ -105,6 +111,7 @@ export function Builder({
   quizTeamBoard: boolean
 }) {
   const t = useTranslations('builder')
+  const tm = useTranslations('method')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
   const [advanced, setAdvanced] = useState(false)
   const [tab, setTab] = useState<Tab>('add')
@@ -213,6 +220,24 @@ export function Builder({
 
   const removeQuestion = (index: number) =>
     setDraft((d) => ({ ...d, questions: d.questions.filter((_, i) => i !== index) }))
+
+  /* Recomputed on every edit, which is what makes it advice rather than a
+     verdict: the author sees the note appear and disappear as they write. */
+  const methodNotesForDraft = useMemo(
+    () =>
+      methodNotes(
+        draft.questions.map((q, i) => ({
+          type: q.type,
+          text: q.text,
+          position: i,
+          config: q.config,
+          followUpOnLow: q.followUpOnLow,
+        })),
+        methodRules,
+        { policyLocked },
+      ),
+    [draft.questions, methodRules, policyLocked],
+  )
 
   const flagsFor = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof qualityFlags>>()
@@ -475,6 +500,26 @@ export function Builder({
           {...policy}
           questions={draft.questions.map((q) => ({ id: q.id, text: q.text }))}
           rules={rules}
+        />
+      ) : null}
+
+      {/* V6-3 — Metodikk. It sits BESIDE the readiness list rather than inside
+          it, and that placement is the decision: the readiness list says what
+          stops a send, and nothing here does (Q178). Folding advice into it
+          would make a methodological opinion look like a precondition, which is
+          exactly what «lint advises, lint does not block» refuses. */}
+      {tab === 'settings' ? (
+        <MethodPanel
+          notes={methodNotesForDraft}
+          questionTexts={draft.questions.map((q) => q.text)}
+          labels={{
+            title: tm('title'),
+            lead: tm('lead'),
+            empty: tm('empty'),
+            warning: tm('warning'),
+            suggestion: tm('suggestion'),
+            question: tm('question'),
+          }}
         />
       ) : null}
 

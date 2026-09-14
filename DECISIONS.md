@@ -848,3 +848,39 @@ half that cannot be proven by anything except credentials.
 4. Tokens stored hashed; compared constant-time; expiring.
 5. EU/EØS residency: Supabase `eu-central-1`, EU-region providers only (see Q6), Sentry EU, no respondent free text in logs or error payloads.
 6. Pixel-perfect to the design bundle tokens; deviations only where DECISIONS.md or the plan says so.
+
+## Q178–Q187 — v6: lint advises, and what the seventh handoff may not bring (2026-09-14)
+
+Settled by Tor after V6-0's measurement pass. Q178 is the one the install turned on.
+
+| Q | Question | Decision | Reasoning |
+|---|---|---|---|
+| **Q178** | v6's Metodikk draws five rules as «Blokkert» and gates sending on them (`goSendBlocked = !lint.canPublish`, v6:9857). Build it? | **LINT ADVISES, LINT DOES NOT BLOCK. `goSendBlocked` is NOT built; the severity «Blokkert» does not exist.** | «A tool that refuses to send what it just let you build, with no override, turns a methodological opinion into a technical bar. The person sending sees what is questionable and decides.» Enforced structurally rather than remembered: `method_rules.severity` is `check (severity in ('advarsel','forslag'))`, so a blocking severity is unrepresentable, and `lib/questions/method.ts` exports no `canPublish` and no boolean a caller could gate on. |
+| **Q179** | The four types the bundle blocks — matrix, slider, ranking, dropdown | **THEY STAY FIRST-CLASS.** In the enum, in the registry, sendable, unmarked. | A lint may advise about a shipped type. It may not withdraw one. |
+| **Q180** | «Sensitivt spørsmål for tidlig» fires on a statutory pack | **EXEMPT A LOCKED POLICY, or drop the rule.** The row carries `exempt_policy_locked`. | In a lovpålagt template the question ORDER is part of what makes it statutory. **A lint that warns against a lovpålagt template is a lint that is wrong.** The exemption lives in the ROW, so a second order-sensitive rule inherits it by saying so. |
+| **Q181** | The bundle's eleven rules carry «69 % høyere andel ubesvarte», «OR 1,77», «kvalitetskoeffisient 0,74–0,89 mot 0,18–0,51», «~30 px», «omtrent doblet frafall» | **NO EMPIRICAL FIGURE SHIPS.** Each rule states the property without the number, or cites a source properly. | Claims about the world, shipped as fact in UI copy, each carrying a figure a customer could check — and nothing in this repository sources any of them. «Matriser gir flere ubesvarte spørsmål på mobil» is true enough to be useful and defensible enough to keep; «69 %» is neither. **The test property is NOT «no digits»** — «Skala 0–10 på én rad» names our own control's range and stays — it forbids the SHAPES an empirical claim takes. |
+| **Q182** | «En påminnelse henter vanligvis inn 10–15 prosentpoeng» (svTuva) | **CUT THE NUMBER.** | The sharpest of the class: a prediction about the customer's own data, which she discovers is wrong by acting on it. |
+| **Q183** | `options.tuva` | **RECORDED as the FIFTH «who writes this column?» instance, and the first that is a DRAWING rather than code.** Any Tuva switch that ships names its writer in the phase that adds it. | `(st.options \|\| {}).tuva !== false` (v6:8964) reads a key the bundle's own `options` object never sets (v6:6561 has five keys, none of them `tuva`), so `tvShow` is unconditionally on. A gate reading a key nothing writes is a switch drawn in the ON position with a label saying it can be turned off. |
+| **Q184** | Does svTuva's «62 % har svart» bypass `app.k_for`? | **NO BYPASS IS NEEDED — Q28 already decided this.** The threshold hides svar-derived values, not counts of people. No new gate; none added. | Measured: `survey_response_counts` is authority-gated (`app.is_org_member`) and carries no k gate, and the Undersøkelser list already renders «3 av 12 svar». svTuva reads `status`, `responses.length`, `target`, `title` — **no answer content at all.** |
+| **Q185** | svTuva's third tip, «Jeg kan lage tiltak av funnene» | **NOT BUILT AS WORDED.** If Tuva proposes a task it fires on **Q72's trigger** — a survey with an audience group whose size is below `app.k_for(survey)` — and carries no group name, no question, no score. | That sentence is the seam where an analyst stops describing participation and starts describing answers. «Funnene» is content. |
+| **Q186** | `rlHasResume` — a respondent leaves and comes back | **NOT PLANNED.** `rlSkipShow`, `rlShowBar`, `rlShowTime` and `rlAnonOpen` ARE in scope. | Partial answers persisted against a token is a second write path and a store of un-submitted answers, straight against invariant 2 — «the only write path is `rpc.submit_response`, a single transaction». The other four are presentation over state we already hold. |
+| **Q187** | «Svarene slettes automatisk etter 24 måneder», on the respondent's own anonymity disclosure (`rlAnonRows`, v6:10075; also `privRows`, v6:7291) | **INTERPOLATE FROM `organizations.retention_months`, in both places, and state the «never» case rather than implying a number.** | False three ways: the column is `default 12 check (… in (0,6,12,24))`, it is per-organisation, and `0` / `privacy->>'auto_delete'` off means never. **The bundle contradicts itself 2075 lines earlier** — v6:8000 interpolates `(st.retention \|\| "12")` correctly — which is the strongest evidence it is an error rather than a decision. A respondent told «24 måneder» by a product configured to keep forever has been given a false promise about her own data, by the screen that exists to reassure her. |
+
+**And one standing constraint on the tranche:** *a deep link must resolve or not be drawn.* `sdTab` and
+`buildTab` have nothing to bind to, and with Feltarbeid decided-not-built one of `tvAnswerHasAction`'s
+destinations will never exist. **That answer points somewhere real or it is not built** — no helper may
+promise a screen we decided against.
+
+**Decided-not-built, recorded so they are not re-raised as omissions:**
+
+- **Feltarbeid** («hvem mangler, og når bør du purre»). Q28 permits the count and that is not enough:
+  **a screen organised around who is missing in a group of six is a list of five names and an
+  omission.** The number is permitted; the ARRANGEMENT makes it a pointer — the same insight as a
+  gated leaderboard leaking through its own silence, except here the visible one is the person who
+  did not answer. Reminders already reach everyone who has not answered without showing who they are,
+  which solves the need without the surface.
+- **Oversikt** (`sd.tabOver`). Every number in it exists already, scattered across three screens, and
+  the tab rail is the summary. **A tab that gathers figures from three other tabs is a fourth copy of
+  them, and copies drift.**
+- **Historikk** is BUILT: `survey_rounds` exist, nothing reads them, and a survey with four rounds is
+  four aggregates and no timeline today.
