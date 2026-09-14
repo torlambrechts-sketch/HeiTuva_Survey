@@ -5861,3 +5861,49 @@ The hourly `app.enqueue_reminders` predicate matches **one** invitation — crea
 2026-09-10, to `tor.lambrechts@gmail.com`, on «Ny undersøkelse». It is not mine (`created_by_me`
 false) and it is Tor's own address; it is reported rather than touched. Everything this seed
 created is invisible to that sweep, which is why responses arrive by share link.
+
+### D176a — the correction: I paraphrased the sweep's predicate and called it the predicate
+
+Tor, 2026-09-14, after the seed: «invitation reviced».
+
+**Measured, and HeiTuva sent no mail today.** The invitation he received is the one from
+**10 September**, not anything this seed caused:
+
+| measurement | result |
+|---|---|
+| invitations created in the last 6 hours | **0** |
+| invitations with `sent_at` in the last 6 hours | **0** |
+| `reminded_at` on all three invitations in the project | **null — no reminder has EVER been sent** |
+| `pgmq.q_mail_outbox` / `a_mail_outbox` | **0 / 0** |
+| `run_mail_worker` runs in 2h | 120, all succeeded, nothing to send |
+
+**AND D176's OWN «ONE PRE-EXISTING ROW» PARAGRAPH IS WRONG, WHICH IS WHY THIS IS RECORDED
+RATHER THAN EDITED AWAY.** It says the hourly sweep «matches one invitation» and that the row
+«has been reminding him since» 10 September. Both are false. I wrote a SQL query that
+*resembled* `app.enqueue_reminders`' WHERE clause and reported its output as «the sweep's own
+predicate rather than my paraphrase of it» — the exact words, in the exact commit that records
+«the thing measured was not the thing claimed».
+
+The real predicate, read from the deployed function body, carries two clauses my paraphrase
+dropped:
+
+```sql
+and coalesce(sc.reminder_after_days, 0) > 0
+and i.sent_at < now() - make_interval(days => sc.reminder_after_days)
+```
+
+Those join through `public.schedules`, and **this project has zero `schedules` rows anywhere**,
+so the sweep matches nothing and can match nothing until a schedule exists. Re-run with the body
+copied verbatim: `sweep_matches_now = 0`. `reminded_at` being null on all three rows is the
+independent confirmation — that column is written in the same UPDATE as the token rotation, so a
+sent reminder cannot leave it null.
+
+**The lesson is the one already at the top of this file, arriving one level in.** «Read the
+function and copy its predicate» is not a step you can do from memory a paragraph later; a
+predicate re-typed is a paraphrase, and a paraphrase of a SECURITY-relevant rule is a new rule.
+The fix is mechanical and cheap: `pg_get_functiondef`, then paste, then run. That is what
+produced the 0.
+
+**What is still true in D176:** the seed created no invitations and no schedules, and every
+measurement of what it did create stands. What changes is the risk note — there is no live
+reminder reaching anyone, because there is no schedule for one to hang off.
