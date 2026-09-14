@@ -46,11 +46,35 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 
 const args = process.argv.slice(2)
-const orgId = args[args.indexOf('--org') + 1]
 const apply = args.includes('--apply')
+const list = args.includes('--list')
+const orgArg = args.includes('--org') ? args[args.indexOf('--org') + 1] : undefined
+const nameArg = args.includes('--org-name') ? args[args.indexOf('--org-name') + 1] : undefined
 
-if (!args.includes('--org') || !orgId || !/^[0-9a-f-]{36}$/i.test(orgId)) {
-  console.error('Refusing to run: --org <uuid> is required, and is never guessed.')
+/*
+  Three ways in, and none of them guesses.
+
+  `--list` prints the organisations so the id can be SEEN rather than looked up
+  somewhere else; `--org-name` resolves an EXACT name and refuses on zero or
+  more than one match, so a near-miss can never silently pick a neighbour;
+  `--org` takes the uuid. The point of all three is the same: the organisation
+  this writes to is always something the operator said out loud.
+*/
+if (!list && !orgArg && !nameArg) {
+  console.error(
+    [
+      'Refusing to run: name the organisation explicitly. One of:',
+      '  --list                      print the organisations and their ids',
+      '  --org-name "Firma AS"       resolve an exact name (refuses if not unique)',
+      '  --org <uuid>                the id itself',
+      '',
+      'Add --apply to write; without it this is a dry run.',
+    ].join('\n'),
+  )
+  process.exit(1)
+}
+if (orgArg && !/^[0-9a-f-]{36}$/i.test(orgArg)) {
+  console.error(`Refusing to run: «${orgArg}» is not a uuid. Use --org-name for a name.`)
   process.exit(1)
 }
 
@@ -91,10 +115,40 @@ const SIGNUP = 'Påmelding til fagdag'
 const PACK_PREFIX = 'demo-egen-'
 
 async function main() {
+  if (list) {
+    const { data, error } = await svc
+      .from('organizations')
+      .select('id, name, created_at')
+      .order('created_at')
+    if (error) throw new Error(`listing organisations: ${error.message}`)
+    say(`\n  ${new URL(url!).host}\n`)
+    for (const o of data ?? []) say(`  ${o.id}  ${o.name}`)
+    say(`\n  ${(data ?? []).length} organisation(s). Nothing was written.\n`)
+    return
+  }
+
+  let orgId = orgArg
+  if (!orgId) {
+    const { data: matches, error: nameErr } = await svc
+      .from('organizations')
+      .select('id, name')
+      .eq('name', nameArg!)
+    if (nameErr) throw new Error(`resolving «${nameArg}»: ${nameErr.message}`)
+    if ((matches ?? []).length === 0) {
+      throw new Error(`No organisation named exactly «${nameArg}». Run --list to see the names.`)
+    }
+    if ((matches ?? []).length > 1) {
+      throw new Error(
+        `«${nameArg}» matches ${matches!.length} organisations — use --org <uuid> to say which.`,
+      )
+    }
+    orgId = matches![0]!.id
+  }
+
   const { data: org, error: orgErr } = await svc
     .from('organizations')
     .select('id, name')
-    .eq('id', orgId!)
+    .eq('id', orgId)
     .maybeSingle()
   if (orgErr) throw new Error(`reading the organisation: ${orgErr.message}`)
   if (!org) throw new Error(`No organisation with id ${orgId} — nothing was written.`)
@@ -102,7 +156,7 @@ async function main() {
   const { data: members } = await svc
     .from('org_members')
     .select('id, name, email, role, status')
-    .eq('org_id', orgId!)
+    .eq('org_id', orgId)
   const active = (members ?? []).filter((m) => m.status === 'active')
   if (active.length === 0) {
     throw new Error('That organisation has no active members, so a task would have no owner.')
@@ -116,7 +170,7 @@ async function main() {
   const { data: existing } = await svc
     .from('surveys')
     .select('id, title')
-    .eq('org_id', orgId!)
+    .eq('org_id', orgId)
     .in('title', [PULSE, SIGNUP])
   const have = new Set((existing ?? []).map((s) => s.title))
 
@@ -189,7 +243,7 @@ async function main() {
     const { data: survey, error: sErr } = await svc
       .from('surveys')
       .insert({
-        org_id: orgId!,
+        org_id: orgId,
         title,
         status: 'aktiv',
         anonymity,
@@ -295,7 +349,7 @@ async function main() {
   const { data: packs } = await svc
     .from('template_packs')
     .select('key')
-    .eq('org_id', orgId!)
+    .eq('org_id', orgId)
     .like('key', `${PACK_PREFIX}%`)
   if ((packs ?? []).length) {
     say('  skip     own templates already present')
@@ -305,8 +359,8 @@ async function main() {
       const author = active.find((m) => m.role === 'redaktor') ?? active[0]!
       const { error } = await svc.from('template_packs').insert([
         {
-          org_id: orgId!,
-          key: `${PACK_PREFIX}onboarding-${orgId!.slice(0, 8)}`,
+          org_id: orgId,
+          key: `${PACK_PREFIX}onboarding-${orgId.slice(0, 8)}`,
           category: 'Ansatte',
           use_case: null,
           title: 'Onboarding uke 1',
@@ -319,8 +373,8 @@ async function main() {
           ],
         },
         {
-          org_id: orgId!,
-          key: `${PACK_PREFIX}ledergruppe-${orgId!.slice(0, 8)}`,
+          org_id: orgId,
+          key: `${PACK_PREFIX}ledergruppe-${orgId.slice(0, 8)}`,
           category: 'Ansatte',
           use_case: null,
           title: 'Temperaturmåling ledergruppen',
@@ -336,7 +390,7 @@ async function main() {
   }
 
   // ── own bank questions ─────────────────────────────────────────────────
-  const { data: bank } = await svc.from('question_bank').select('id').eq('org_id', orgId!)
+  const { data: bank } = await svc.from('question_bank').select('id').eq('org_id', orgId)
   if ((bank ?? []).length) {
     say('  skip     own bank questions already present')
   } else {
@@ -347,8 +401,8 @@ async function main() {
       // PostgREST unions the keys across a bulk insert, so one row mentioning
       // it makes the others send NULL. That is D173, and it cost weeks.
       const { error } = await svc.from('question_bank').insert([
-        { org_id: orgId!, text: 'Hva bør vi slutte å gjøre?', type: 'text', category: 'Egne', used_count: 1, config: {}, author_member_id: author.id },
-        { org_id: orgId!, text: 'Hvilken samling vil du ha mer av?', type: 'choice', category: 'Egne', used_count: 0, config: { options: ['Fagdag', 'Workshop', 'Allmøte'] }, author_member_id: author.id },
+        { org_id: orgId, text: 'Hva bør vi slutte å gjøre?', type: 'text', category: 'Egne', used_count: 1, config: {}, author_member_id: author.id },
+        { org_id: orgId, text: 'Hvilken samling vil du ha mer av?', type: 'choice', category: 'Egne', used_count: 0, config: { options: ['Fagdag', 'Workshop', 'Allmøte'] }, author_member_id: author.id },
       ])
       if (error) throw new Error(`question_bank: ${error.message}`)
       say('  made     2 own bank questions')
@@ -356,7 +410,7 @@ async function main() {
   }
 
   // ── the worklist ───────────────────────────────────────────────────────
-  const { data: tasks } = await svc.from('tasks').select('id').eq('org_id', orgId!)
+  const { data: tasks } = await svc.from('tasks').select('id').eq('org_id', orgId)
   if ((tasks ?? []).length) {
     say(`  skip     ${(tasks ?? []).length} task(s) already in the register`)
   } else {
@@ -370,7 +424,7 @@ async function main() {
       ]
       const { error } = await svc.from('tasks').insert(
         seed.map((t, i) => ({
-          org_id: orgId!,
+          org_id: orgId,
           title: t.title,
           kind: t.kind,
           // Round-robin across REAL members, so «Eiere» shows more than one
@@ -407,7 +461,7 @@ async function main() {
         await svc
           .from('survey_rounds')
           .select('id, surveys!inner(org_id, title)')
-          .eq('surveys.org_id', orgId!)
+          .eq('surveys.org_id', orgId)
           .in('surveys.title', [PULSE, SIGNUP])
       ).data?.map((r) => r.id) ?? ['00000000-0000-0000-0000-000000000000'],
     )
