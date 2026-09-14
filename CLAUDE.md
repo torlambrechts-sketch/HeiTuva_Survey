@@ -1087,6 +1087,31 @@ functions are in neither sweep's denominator — the same recorded limit of that
 is frozen, so **the table conformed rather than the gate** — a surrogate `id`, the claim kept in
 `unique (org_id)` — and the assumption is logged for whoever unfreezes it (D168).
 
+**F1 TOOK THE CENSUS TO 1448 ACROSS 107 FILES AND LEFT 5a3 AT 81 OF 112.** The derivation, because
+that is what the rule asks for — `git diff tests/expected-counts.json` is the command, and it is a
+four-line diff:
+
+```
+1435 across 106
+ +  5  tests/db/token-retention.test.ts    new — M:0121's payload, incl. a CLOSED key set
+ +  8  tests/unit/anonymity-sheet.test.ts  new — the six rows, and the copy in both languages
+ +  9  tests/unit/tuva-analyst.test.ts     9 -> 18, the population property and the copy half
+ -  9  tests/unit/tuva-answers.test.ts     removed WITH the module it tested (Q190, D177)
+= 1448 across 107
+```
+
+**The fall is the correct direction and is the same shape as D158**: the nine tests were the only
+consumer of a module nothing rendered, so deleting them is what stops the number claiming a guard
+that guards nothing.
+
+**5a3 is UNMOVED BY F1 at 81 of 112** — 65 RLS tables (42 checked, 23 allowlisted) plus 47 SECURITY
+DEFINER functions (39 checked, 8 allowlisted), zero unproven. `M:0121` REPLACES
+`public.get_survey_for_token`, which was already enumerated and already allowlisted by design («renders
+/s/[token]; token-validated»). **The denominator reads 112 where this file carries 111, and the
+difference is not F1's**: `M:0120` (V6-3) added the `method_rules` table, which the gate lists and
+this paragraph is the first to record. The command is
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
 **V5-2 AND V5-3 TOOK THE CENSUS TO 1325 ACROSS 94 FILES AND 5a3 TO 80 OF 110.** V5-2's two files
 carry 37 (`tests/db/worklist-notes.test.ts` 16, `tests/unit/worklist-rows.test.ts` 21) and V5-3 took
 `tests/unit/integrations.test.ts` from 10 to 19; the diff against the previous manifest is **two

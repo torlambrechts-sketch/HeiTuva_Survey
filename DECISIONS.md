@@ -884,3 +884,16 @@ promise a screen we decided against.
   them, and copies drift.**
 - **Historikk** is BUILT: `survey_rounds` exist, nothing reads them, and a survey with four rounds is
   four aggregates and no timeline today.
+
+## Q188–Q190 — F1: the three defects (2026-09-14)
+
+| # | Subject | Decision | Why |
+|---|---|---|---|
+| **Q188** | svTuva's rate divided two populations by each other | **A RATIO IS COMPUTED OVER ONE POPULATION, AND THE MODULE SAYS WHICH ROWS.** The rate is over the ACTIVE surveys that have a recipient count; `lowest` ranks the same set; the surveys with no target are in neither half and are COUNTED (`unmeasuredCount`) so the copy can say so. `headlineKey`/`lowestKey` pick the sentence — the component may not. | `Math.min(100, …)` would print «100 %» and still be false: the existing guard (`totalTarget > 0`) protects against a denominator of ZERO, which is the failure this project already knew, and says nothing about a denominator drawn from a SUBSET of the rows the numerator came from. Against production — nine surveys, seven with `target` null — it printed **«700 % har svart»**, and dropped the two surveys with real participation from `lowest` for want of a denominator rather than ranking them. **«66 %» and «66 % i de 2 med mottakertall» are different claims**, so the population is named in the copy as well as in the code. |
+| **Q189** | Where does the respondent's retention figure come from? | **`M:0121` — the token payload carries `retention_months` and `retention_auto_delete`, resolved exactly as `app.apply_retention` resolves them. NOT `organizations.privacy`.** `lib/surveys/retention.ts` turns the two into a sentence, and it is the SAME function the manager's Personvern tab calls. | `/s/[token]` has no session: anon key, two SECURITY DEFINER RPCs, which is what keeps invariant 1 true on the one surface a stranger can open. So the figure cannot be read from `organizations` there. And invariant 3's corollary decides the shape: **no per-organisation value reaches a respondent surface unless a decision names it.** Q187 names the RETENTION; it does not name `privacy`, which also carries IP logging, consent and the EU-only flag. One boolean is resolved in the function rather than shipping the object it lives in. |
+| **Q190** | `lib/tuva/answers.ts` + 36 `tuva.*` messages in two languages, with no component | **REMOVED, not wired.** | Tor: «shipped strings nothing reads are the same class as a column nothing writes.» Wiring it means building the bundle's Tuva panel — an ask box, answer, source, rating, tips and a progress list on ~12 screens — which is a phase, and the ask box is a flagged Phase 6 AI feature besides. Building it inside a DEFECT phase is «something I might want unbuilt». The registry's reasoning is not lost: it is in this file, in `docs/DEVIATIONS.md` D177, and one command from `9a54a99` restores every line. **The census fell by 9 and that is the correct direction** — the same shape as D158, where removing tests that could not fail is what made the number mean something. |
+
+**And one thing F1 found that is NOT a decision, recorded so it is not re-raised as one:** production's
+`ui_messages` still holds the 36 `tuva.*` rows. Removing them is a bulk delete on the remote project,
+which CLAUDE.md sends to a human. They are inert — nothing reads them — and they go with the next
+reseed.

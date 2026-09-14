@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { ACTIVE_LOCALES, SOURCE_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales'
 import type { RespondentQuestion } from '@/lib/respondent/answers'
+import { retentionOf, type Retention } from '@/lib/surveys/retention'
 
 /**
  * Load the survey the way a RESPONDENT loads it — through
@@ -28,6 +29,9 @@ export type LoadResult =
       hasThread: boolean
       kThreshold: number
       respondentKind: 'person' | 'organisation'
+      /** Q187/M:0121 — resolved here rather than in the component, so the
+       *  preview's anonymity sheet and the respondent's are the same sheet. */
+      retention: Retention
       engage: Record<string, unknown>
       questions: RespondentQuestion[]
       locale: Locale
@@ -60,6 +64,8 @@ export async function loadTestSurvey(token: string): Promise<LoadResult> {
     has_thread?: boolean
     k_threshold?: number
     respondent_kind?: string
+    retention_months?: number | null
+    retention_auto_delete?: boolean | null
     engage: Record<string, unknown> | null
     langs: string[] | null
     questions: RespondentQuestion[]
@@ -79,6 +85,17 @@ export async function loadTestSurvey(token: string): Promise<LoadResult> {
       hasThread: s.has_thread === true,
       kThreshold: s.k_threshold ?? 5,
       respondentKind: (s.respondent_kind === 'organisation' ? 'organisation' : 'person'),
+      /* Q76 — the preview renders the SAME component, so it renders the same
+         anonymity sheet, with the same retention. A preview that showed a
+         different disclosure would be a preview of a screen no respondent
+         sees. Resolved with `retentionOf` here, exactly as `/s/[token]` does. */
+      retention: retentionOf({
+        retention_months: s.retention_months ?? null,
+        privacy:
+          s.retention_auto_delete === undefined || s.retention_auto_delete === null
+            ? {}
+            : { auto_delete: s.retention_auto_delete },
+      }),
       engage: s.engage ?? {},
       questions: s.questions ?? [],
       locale: (offered[0] ?? SOURCE_LOCALE) as Locale,

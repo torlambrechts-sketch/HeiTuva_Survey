@@ -5907,3 +5907,86 @@ produced the 0.
 **What is still true in D176:** the seed created no invitations and no schedules, and every
 measurement of what it did create stands. What changes is the risk note — there is no live
 reminder reaching anyone, because there is no schedule for one to hang off.
+
+## D177 — the Tuva registry is removed, and how to get it back
+
+**F1-3, 2026-09-14.** `lib/tuva/answers.ts` (110 lines), `tests/unit/tuva-answers.test.ts` (9 tests)
+and 36 `tuva.*` messages in both languages are deleted. Q190 has the reasoning; this entry has the
+measurement and the reversal.
+
+**Measured before deciding**, because «nothing reads it» is exactly the claim a working tree is least
+able to support without a command:
+
+```
+$ grep -rn "lib/tuva/answers" app/ components/ tests/ scripts/
+tests/unit/tuva-answers.test.ts:4:import { TUVA_ANSWERS, tuvaHref, tuvaKeyFor, … }
+```
+
+One consumer, and it is the module's own test. `git show --stat 9a54a99` confirms V6-5 added the
+module, the test and the copy, and **no component**.
+
+**What was RIGHT about it, and is worth having back verbatim when the panel is built:** the rule the
+file is organised around — *an answer points at a destination that exists, or it is not built* — and
+the three answers it repointed rather than shipping as drawn (`sdTab:"feltarbeid"` → the reminder on
+Send, reworded so it does not promise the refused half; `sdTab:"malgruppe"` → its second clause
+dropped; `build.short` → Q178's blocking language replaced with something true of this product).
+
+**The reversal is one command:**
+
+```
+git checkout 9a54a99 -- lib/tuva/answers.ts tests/unit/tuva-answers.test.ts
+```
+
+and the copy is in that commit's `messages/{no,en}.json` under `tuva`.
+
+## D178 — the anonymity sheet's TRIGGER is ours; the sheet is the drawing's
+
+**F1-2.** v6 draws the control that opens «Slik behandles svaret ditt» as a pill carrying a shield
+icon, the anonymity LABEL («Anonym» / «Valgfritt navn» / «Navngitt») and the words «hva betyr dette?»,
+in a chip row of its own (v6:5233-5243).
+
+**We render «hva betyr dette?» attached to the banner above it instead**, and the reason is a
+constraint the drawing does not have: our banner already states the anonymity, generated from the
+survey's settings by `anonymityPromise` — with the threshold spelled as a word and, below 5, the
+small-group caveat. The bundle's pill would put a SECOND account of anonymity beside the first, in
+fewer words and with no threshold. **Two accounts of what a respondent was promised is the thing this
+surface can least afford**, and it is the same condition `AppSubnav` applies to `admin` and Q172
+applied to the library: one control, not two.
+
+**The SHEET itself is the drawing's**, property for property: `border-radius:14px`, `1.5px solid
+var(--ink)`, `var(--sf)`, `padding:18px 20px`, a 15px/700 title, the 34px round close button, and
+rows of a fixed 118px label column against a 1px top rule (v6:5246-5257). Below 380px the row stacks
+rather than squeezing the value into 60px — RESPONSIVE.md's rule for a two-column row, and the
+drawing has no opinion under 380.
+
+**And two of the six rows are narrowed from the bundle's wording because its version is not quite
+true:**
+
+- «Påminnelser — sendes av systemet, ikke av lederen din» is a claim about WHO acts, and a `redaktor`
+  can in fact trigger a round of reminders from Send. What is unconditionally true —
+  `app.enqueue_reminders` reaches only invitations with `responded_at is null` — is also what a
+  respondent actually wants to know, so the row states the SELECTION: «Sendes automatisk, og bare til
+  dem som ikke har svart.»
+- «Frisvar — vises anonymisert» describes a process we do not perform. What we do is withhold the
+  group label below the threshold (`get_quotes`), so that is what the row says.
+
+## D179 — a generated task title is Norwegian on an English page, and the gate now knows
+
+**F1, found by `verify:i18n` on the run after the phase's reset.** `app.generate_blind_spot_tasks`
+writes a task whose title is «Denne undersøkelsen har grupper som ikke får egne resultater. Plikten
+til å kartlegge og følge opp gjelder likevel.», and V6-6 gave svTuva's Q72 tip the same sentence
+character for character — because it is the same duty said once. The gate matched the MESSAGE value
+against the TASK TITLE rendered on Oversikt and Handlinger, and accused the message.
+
+**It is CLAUDE.md's row 12 a third time**, and it pre-dates F1: both the message and the title exist
+at `9a54a99`. Nobody had run the gate since, because the V6 tranche ran continuously with one report.
+
+**The product fact underneath is real and is not fixed here:** a generated task title is stored in one
+language and rendered as-is, exactly as `surveys.title` and `survey_questions.text` are. That is what
+the Phase 6 translation editor is for.
+
+**The repair is the thirteenth entry in `isSeededContent`'s source list** — the same repair V2-8 made
+twice — plus the sentence CLAUDE.md asks for when an enumeration cannot be stated as a property: the
+list is not «the seeded registries», it is **the text columns whose content this product renders
+verbatim and which have been observed to collide with a message value.** The next collision will be a
+column nobody has thought of, and the remedy is another row AND the sentence, never the row alone.

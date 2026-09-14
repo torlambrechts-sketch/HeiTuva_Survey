@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import type { Analyst } from '@/lib/tuva/analyst'
+import { headlineKey, lowestKey, type Analyst } from '@/lib/tuva/analyst'
 
 /**
  * V6-6 — svTuva on the Undersøkelser list.
@@ -12,16 +12,19 @@ import type { Analyst } from '@/lib/tuva/analyst'
  *
  * The third tip is Q72's trigger or it is absent (Q185) — «I can make tasks out
  * of the findings» is the seam where an analyst stops describing participation
- * and starts describing answers, and it is not built.
+ * and starts describing replies, and it is not built.
+ *
+ * ── F1-1: THIS COMPONENT DOES NOT CHOOSE WHICH CLAIM TO MAKE ───────────────
+ *
+ * `headlineKey` and `lowestKey` live in the module, because «{pct} % har
+ * svart» and «{pct} % har svart i de {m} med mottakertall» are claims about
+ * different populations and the honest one is decided by the numbers. A
+ * component free to pick the shorter sentence is free to overstate.
  *
  * When there is nothing to say it renders NOTHING. A helper that always has an
  * opinion is a helper nobody believes.
  */
-export async function AnalystPanel({
-  analyst,
-}: {
-  analyst: Analyst
-}) {
+export async function AnalystPanel({ analyst }: { analyst: Analyst }) {
   const t = await getTranslations('analyst')
   if (analyst.activeCount === 0 && analyst.tips.length === 0) return null
 
@@ -34,14 +37,19 @@ export async function AnalystPanel({
         {t('title')}
       </h2>
       <p className="mt-2 text-[14px]">
-        {/* No denominator means no percentage — never a 0 % from an unknown one. */}
-        {analyst.pct === null
-          ? t('headlineNoRate', { n: analyst.activeCount })
-          : t('headline', { n: analyst.activeCount, pct: analyst.pct })}
+        {t(headlineKey(analyst), {
+          n: analyst.activeCount,
+          m: analyst.measured?.ids.length ?? 0,
+          pct: analyst.measured?.pct ?? 0,
+        })}
       </p>
       {analyst.lowest ? (
         <p className="mt-1 text-[13px] text-mut">
-          {t('lowest', { title: analyst.lowest.title, pct: analyst.lowest.pct })}
+          {t(lowestKey(analyst), {
+            title: analyst.lowest.title,
+            pct: analyst.lowest.pct,
+            m: analyst.measured?.ids.length ?? 0,
+          })}
         </p>
       ) : null}
 
@@ -52,25 +60,25 @@ export async function AnalystPanel({
               {tip.kind === 'low_response' ? (
                 <>
                   {t('tipLowResponse', { title: tip.title, n: tip.missing })}{' '}
-                  <Link href={`/undersokelser/${tip.surveyId}/send`} className="underline">
+                  <Link href={`/undersokelser/${tip.surveyId}/send`} className="touch-44 underline">
                     {t('tipLowResponseAction')}
                   </Link>
                 </>
               ) : tip.kind === 'draft' ? (
                 <>
                   {t('tipDraft', { title: tip.title })}{' '}
-                  <Link href={`/undersokelser/${tip.surveyId}/bygg`} className="underline">
+                  <Link href={`/undersokelser/${tip.surveyId}/bygg`} className="touch-44 underline">
                     {t('tipDraftAction')}
                   </Link>
                 </>
               ) : (
                 /* Q72's copy, near enough verbatim: the duty, not the finding.
-                   No group name, no question, no score. */
+                   No group name, no question, no rating. */
                 <>
                   {t('tipBelowThreshold')}{' '}
                   <Link
                     href={`/undersokelser/${tip.surveyId}/malgruppe`}
-                    className="underline"
+                    className="touch-44 underline"
                   >
                     {t('tipBelowThresholdAction')}
                   </Link>

@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Locale } from '@/lib/i18n/locales'
 import { anonymityPromise } from '@/lib/respondent/anonymity-promise'
+import type { Retention } from '@/lib/surveys/retention'
+import { AnonymitySheet } from './AnonymitySheet'
 import { QuestionComment } from './QuestionComment'
 
 /**
@@ -49,6 +51,7 @@ export function Respondent({
   hasThread,
   kThreshold,
   respondentKind,
+  retention,
   engage,
   alreadyResponded,
   questions,
@@ -70,6 +73,9 @@ export function Respondent({
   quizMode: boolean
   kThreshold: number
   respondentKind: 'person' | 'organisation'
+  /** Q187 — resolved by `retentionOf` on the server, so this component and the
+   *  manager's Personvern tab state the same thing. */
+  retention: Retention
   engage: Record<string, unknown>
   alreadyResponded: boolean
   questions: RespondentQuestion[]
@@ -351,6 +357,14 @@ export function Respondent({
           {secondsLeft ? t('secondsLeft', { n: secondsLeft }) : t('takeYourTime')}
         </span>
       </div>
+
+      {/* F1-2 — the disclosure the drawing puts behind «hva betyr dette?»
+          (v6:5237). It hangs off the banner that already states the promise
+          rather than repeating it in a pill of its own; see AnonymitySheet. */}
+      <AnonymitySheet
+        input={{ anonymity, kThreshold, respondentKind, retention }}
+        locale={locale}
+      />
 
       {/* The chips appear where a choice EXISTS — which is now either axis.
           Q113: there is one choice and it governs everything in the submission,

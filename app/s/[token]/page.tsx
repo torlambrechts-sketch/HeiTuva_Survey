@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMergedMessages } from '@/lib/i18n/messages'
 import { ACTIVE_LOCALES, SOURCE_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales'
 import type { RespondentQuestion } from '@/lib/respondent/answers'
+import { retentionOf } from '@/lib/surveys/retention'
 import { Respondent } from './Respondent'
 import { Closed } from './Closed'
 
@@ -43,6 +44,11 @@ type TokenSurvey = {
   run_mode?: string
   k_threshold?: number
   respondent_kind?: string
+  /** M:0121 — the organisation's own retention, for the anonymity sheet (Q187).
+   *  Two scalars rather than `organizations.privacy`, because only the value a
+   *  decision names may reach a respondent-facing surface. */
+  retention_months?: number | null
+  retention_auto_delete?: boolean | null
   engage: Record<string, unknown> | null
   langs: string[] | null
   already_responded: boolean
@@ -146,6 +152,21 @@ export default async function RespondentPage({
         quizMode={survey.run_mode === 'quiz'}
         kThreshold={typeof survey.k_threshold === 'number' ? survey.k_threshold : 5}
         respondentKind={survey.respondent_kind === 'organisation' ? 'organisation' : 'person'}
+        /* Q187. `retentionOf` is the SAME function the manager's Personvern tab
+           calls, so the two accounts of how long answers are kept cannot drift.
+
+           A payload from a database without M:0121 omits both fields, and the
+           safe reading is «not deleted automatically»: it understates the
+           protection rather than promising a deletion that does not happen,
+           which is the direction the bundle's hard-coded «24 måneder» got
+           wrong. */
+        retention={retentionOf({
+          retention_months: survey.retention_months ?? null,
+          privacy:
+            survey.retention_auto_delete === undefined || survey.retention_auto_delete === null
+              ? {}
+              : { auto_delete: survey.retention_auto_delete },
+        })}
         engage={survey.engage ?? {}}
         alreadyResponded={survey.already_responded}
         questions={Array.isArray(survey.questions) ? survey.questions : []}

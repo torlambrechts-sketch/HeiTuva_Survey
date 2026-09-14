@@ -71,7 +71,7 @@ async function isSeededContent(value: string): Promise<boolean> {
   const like = `%${value}%`
   const [
     packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
-    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis,
+    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis, taskTitle,
   ] =
     await Promise.all([
       svc.from('template_packs').select('id').ilike('title', like).limit(1),
@@ -124,10 +124,31 @@ async function isSeededContent(value: string): Promise<boolean> {
       // on Rapporter, and it is text rather than jsonb: I wrote the opposite in
       // a comment here and the gate corrected me by still failing.
       svc.from('duty_definitions').select('key').ilike('basis', like).limit(1),
+      // F1 — the THIRTEENTH source, and the third time this list has been
+      // extended by the same mechanism (V2-8 added two, this adds one).
+      //
+      // `app.generate_blind_spot_tasks` writes a task whose TITLE is «Denne
+      // undersøkelsen har grupper som ikke får egne resultater. Plikten til å
+      // kartlegge og følge opp gjelder likevel.» — and V6-6 gave svTuva's Q72
+      // tip the same sentence, character for character, because it is the same
+      // duty said once. So the gate matched the message value against a TASK
+      // TITLE on Oversikt and Handlinger and accused the message.
+      //
+      // The generated title really is Norwegian on an English page, and that is
+      // a product limitation rather than a chrome bug — the same one
+      // `surveys.title` above has, and the same one the Phase 6 translation
+      // editor is for. Logged rather than silenced (DEVIATIONS D177).
+      //
+      // AND THIS LIST IS AN ENUMERATION, SAID AS ONE. It is not «the seeded
+      // registries»; it is **the text columns whose content this product
+      // renders verbatim and which have been observed to collide with a message
+      // value**. The next collision will be a column nobody has thought of, and
+      // the remedy is another row here plus the sentence — never the row alone.
+      svc.from('tasks').select('id').ilike('title', like).limit(1),
     ])
   const found = [
     packTitle, packAudience, bank, surveyTitle, surveyAudience, sectionLabel, sectionDesc,
-    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis,
+    dutyTitle, dutyLaw, surveyQuestion, packLegalRef, dutyBasis, taskTitle,
   ].some((r) => (r.data?.length ?? 0) > 0)
   seededCache.set(value, found)
   return found

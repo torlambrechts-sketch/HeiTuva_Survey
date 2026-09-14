@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { Locale } from '@/lib/i18n/locales'
 import type { RespondentQuestion } from '@/lib/respondent/answers'
+import type { Retention } from '@/lib/surveys/retention'
 import { Respondent } from '@/app/s/[token]/Respondent'
 import { loadTestSurvey } from './actions'
 
@@ -42,6 +43,7 @@ export function TestRunner({
     run_mode: string | null
     kThreshold: number
     respondentKind: 'person' | 'organisation'
+    retention: Retention
     engage: Record<string, unknown>
     questions: RespondentQuestion[]
     feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
@@ -112,6 +114,7 @@ export function TestRunner({
       quizMode={survey.run_mode === 'quiz'}
       kThreshold={survey.kThreshold}
       respondentKind={survey.respondentKind}
+      retention={survey.retention}
       engage={survey.engage}
       alreadyResponded={false}
       questions={survey.questions}
