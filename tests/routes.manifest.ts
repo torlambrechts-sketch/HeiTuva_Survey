@@ -1423,7 +1423,12 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
           await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
-          await page.getByRole('button', { name: 'Ny rapport' }).click()
+          /* `.first()` because v6 draws this ONE action three times — the «På
+             tvers» card (v6:2809), the mine-list header (v6:3008) and the empty
+             state (v6:3054), all calling `onNewReport`. Two of the three ship,
+             so the locator has to say which. The card's is first in the DOM and
+             is present on every tab, which is what makes it the stable one. */
+          await page.getByRole('button', { name: 'Ny rapport' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
           await page.waitForLoadState('load')
         },

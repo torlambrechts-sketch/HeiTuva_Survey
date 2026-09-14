@@ -125,9 +125,21 @@ export async function PageHeader({
       {cross ? (
         <section
           aria-label={t('crossLabel')}
-          className="rounded-[20px] border border-line bg-sf px-6 py-5"
+          /* `min-w-0` because a grid track is `auto` and `auto` means
+             MAX-CONTENT: without it the card's own nowrap children set the
+             column's width and the whole page inherits it. Measured at 320px
+             before the fix — `document.documentElement.scrollWidth` 379 on
+             Undersøkelser, with this section 359 wide inside a 320 viewport,
+             and the heading and lead merely filling the track it had widened. */
+          className="min-w-0 rounded-[20px] border border-line bg-sf px-6 py-5"
         >
-          <div className="flex items-center justify-between gap-3">
+          {/* `flex-wrap` is the other half, and it is RESPONSIVE.md's rule
+              rather than a liberty: v6:2484 draws this row `nowrap` at ≥1280px,
+              where «På tvers», the count and the action all fit; below that
+              there is no drawing and the specification says wrap rather than
+              squeeze. Without it the three nowrap children are an unshrinkable
+              359px no matter what the container says. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-baseline gap-2.5">
               <h2 className="whitespace-nowrap font-display text-[21px] font-medium">
                 {t('cross')}

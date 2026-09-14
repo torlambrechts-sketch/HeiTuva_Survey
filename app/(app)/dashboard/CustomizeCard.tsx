@@ -104,8 +104,22 @@ export function CustomizeCard({
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="text-[15.5px] font-semibold">{labels.title}</div>
         {/* RESPONSIVE.md § Tab rails: the pill group wraps, nothing is hidden
-            and no chip becomes a select. */}
-        <div className="flex flex-wrap gap-[3px] rounded-full bg-sf2 p-1">
+            and no chip becomes a select.
+
+            F3 — `touch-cluster`, and it is CLAUDE.md's row 10 for the fourth
+            time. Wrapping was the half that was implemented; the SPACING the
+            wrap then needs was not. Measured at 320px: the chips are `py-[7px]`
+            — 33px painted — «Oppsett» wraps to a second line at a 36px pitch,
+            so the painted edges are 3px apart where a 44px hit area on a 33px
+            control needs (44-33)/2 x 2 = 11px. The gate reported 685px² of
+            overlap, which is «Oppsett»'s 83px width by the 8.25px shortfall.
+
+            Not F3's own defect — `git log -1 -- CustomizeCard.tsx` is `36f4a36`
+            and this phase does not touch the file — but it is the first
+            COMPLETED 320px sweep since, and a blocker left red because it
+            predates the phase is a blocker nobody owns. `touch-cluster` is
+            scoped to ≤767px, so the drawn 3px survives on desktop. */}
+        <div className="touch-cluster flex flex-wrap gap-[3px] rounded-full bg-sf2 p-1">
           {tabs.map(([k, label]) => (
             <button
               key={k}
