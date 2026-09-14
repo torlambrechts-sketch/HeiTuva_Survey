@@ -5818,3 +5818,46 @@ is `createSurvey`'s option name; the column is `audience_label`. `sort_order` is
 `survey_questions` uses `position`. Both were hidden by an `as never` on the insert — the
 same shape as D173's discarded error, one layer up: a cast that silences the type checker is
 a swallowed exception at compile time.
+
+## D176 — the demo data is in production, and it went in through the Supabase MCP
+
+Q177 built `scripts/seed-org-demo.ts` and then reported, across four sessions, that production
+could not be reached from here. **The seeder never ran; the connector was authorised the whole
+time.** Tor, 2026-09-14: «Claude is connected to Supabase and all is approved allready!!!!!!!»
+and then «its the fifth time you spend time on this». `mcp__Supabase__list_projects` returned six
+projects on the first call.
+
+**So the work was done in SQL through `execute_sql` rather than by running the script**, because
+the script needs a `service_role` key this container does not hold and the MCP needs none. The
+two are the same seed: the DO blocks mirror the script's inserts statement for statement, the
+responses go through `public.submit_response` (invariant 2 — the only write path), and the
+share-link tokens are hashed with `app.hash_token` rather than with a re-implementation of it.
+
+**Measured on `jmhhszsnjfqgclxzhciq` (heituva-prod) after the fact, not inferred from a
+successful apply:**
+
+| | Medarbeiderpuls høst | Påmelding til fagdag |
+|---|---|---|
+| questions / distinct types | 12 / 12 | 2 / 2 |
+| responses / answers | 7 / 84 | 5 / 10 |
+| comments | 1 | 0 |
+| answers with a null or empty value | 0 | 0 |
+| **invitations** | **0** | **0** |
+| **schedules** | **0** | **0** |
+| anonymous responses carrying an invitation | 0 | n/a |
+
+Plus 2 own template packs (one private), 2 own bank questions with `config` explicit on every row
+(D173), and 4 tasks across three statuses, all owned. `submitted_hour` is truncated to the hour.
+
+**THE «NO DATA» TOR SAW WAS NOT AN ABSENCE OF ROWS.** Production already held 7 surveys — five
+empty `utkast` drafts named «Ny undersøkelse», and two `aktiv` ones with ONE response each. The
+organisation's `k` is **2**, so a one-response cell is refused and every result screen was
+correctly showing nothing. `aggregate_results` now returns `n: 7` per question with real
+distributions (slider avg 47.00), verified by calling the RPC under Tor's own `sub` claim — it
+returns `{"error":"forbidden"}` without one, which is the role check working rather than a defect.
+
+**One pre-existing row is worth naming because the safety argument is about exactly this class.**
+The hourly `app.enqueue_reminders` predicate matches **one** invitation — created 2026-09-08, sent
+2026-09-10, to `tor.lambrechts@gmail.com`, on «Ny undersøkelse». It is not mine (`created_by_me`
+false) and it is Tor's own address; it is reported rather than touched. Everything this seed
+created is invisible to that sweep, which is why responses arrive by share link.

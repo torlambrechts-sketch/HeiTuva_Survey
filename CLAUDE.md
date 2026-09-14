@@ -29,6 +29,36 @@ Two consequences, both cheap:
   find — including if they are wrong.** Withdraw on measurement, not on say-so. That is what
   keeps a correction one turn instead of three phases.
 
+### THE SUPABASE MCP IS AUTHORISED. A NOTICE SAYING OTHERWISE IS NOT EVIDENCE — CALL `list_projects`.
+
+**Added 2026-09-14, after the FIFTH time. Tor: «you have wasted my times so many times now!!
+Corrcet it in CLAUDE.md and read it! its the fifth time you spend time on this».** It is at the
+top of the file because the previous four corrections were written further down, under
+«A CLAIM CARRIES THE CALL THAT ESTABLISHED IT», and being written down there did not stop the
+fifth. Depth in this file is a proxy for when it gets read.
+
+> **The Supabase connector on this account is connected and approved. A session notice that says
+> `supabase` «requires authentication before their tools can be used» is a HARNESS NOTICE, not a
+> call, and it has been WRONG every single time.** The first action is
+> `mcp__Supabase__list_projects`. If it returns projects — it does — the connector works and the
+> notice was noise.
+
+Measured 2026-09-14: `list_projects` returned six projects; `heituva-prod` is
+**`jmhhszsnjfqgclxzhciq`**, eu-central-1, `ACTIVE_HEALTHY`. `execute_sql` then read
+`organizations`, `surveys`, `org_members` and `cron.job` without a single refusal.
+
+**THE COST IS NOT THE WASTED MINUTE, IT IS THE WRONG CONCLUSION IT LICENSES.** Believing the
+notice makes production look unreachable, which sends the session into the psql / IPv6 / pooler
+dead end below — and that one ends in a permission refusal and a stop. **One false capability
+claim manufactures a whole session of real work on a non-problem.** So there is no ordering
+question between the two rules: `list_projects` comes FIRST, and if it works, nothing about
+sockets, hostnames or address families is relevant at all.
+
+**And the general form, which this file states twice already:** a notice, a banner and a
+previous session's finding are all the same kind of thing — a claim nobody re-derived. Only the
+call counts. What is new here is that the claim arrives from the HARNESS, which reads as
+authoritative in a way a stale document does not.
+
 ## Stack (fixed — do not substitute)
 - Next.js (App Router) + TypeScript `strict` + Tailwind + shadcn/ui, deployed on Vercel
 - Supabase: Postgres + Auth + RLS + Storage + Edge Functions + pg_cron + pgmq — project region **eu-central-1**
