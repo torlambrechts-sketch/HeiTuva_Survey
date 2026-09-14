@@ -393,7 +393,7 @@ is the one being added beside D110 in the same breath. **If the two missing inst
 are somewhere this table is not, and the command above will keep saying eight until they are in
 it.**
 
-**Fourteen instances now** — the command above returns 15 and therefore fourteen. The ninth is a REPEAT of the third — which is itself a finding — the
+**Fifteen instances now** — the command above returns 16 and therefore fifteen; the fifteenth was added 2026-09-14 and is the reachability row at the bottom, whose own section is below. The ninth is a REPEAT of the third — which is itself a finding — the
 tenth is the subtlest of all of them, and the eleventh was caught by a SWEEP OVER PROSE rather than
 by a gate or a measurement, which is a third way of finding them. Ten different constructs, one
 shape:
@@ -414,6 +414,7 @@ shape:
 | **`M:0107`'s own invitation derivation** (Q137, I1-1) | the FUNCTIONS that insert invitations — and then, one level out, the ROWS that reach a person | **«WHAT REACHES A PERSON IS NOT A ROW, IT IS A `pgmq.send`.»** Four functions hold five insertion points (`send_round` has two), so a body-wide read let the group loop's guard stand in for the named loop's. And `app.enqueue_reminders` inserts nothing at all and reaches them anyway. |
 | **`before insert or update` as a guard scope** (Q137, `M:0108`) | every UPDATE — which is the operation the author was thinking about, not the rule | **«A GUARD'S SCOPE IS THE COLUMN THE RULE IS ABOUT.»** `update of email` re-checks a re-pointed invitation; every-UPDATE also refused token rotation and the worker's `sent_at`, so **objecting caused repeated mail to the person who objected.** |
 | **`verify:i18n`'s Norwegian detector** (Q129, 2026-09-12) | the strings it already knows — the `no` message set — used as the definition of «Norwegian» | **«A DETECTOR THAT IDENTIFIES A DEFECT BY MATCHING KNOWN STRINGS CAN ONLY REPORT THE DEFECTS THAT COLLIDE WITH ONE.»** Not a gate looking in the wrong place: a gate that can only see what collides with something it already holds. |
+| **«the prod host is IPv6-only»** as a reachability diagnosis (2026-09-14) | the ONE hostname a lookup was run against — accurate about it, and silent about the container | **«A ROUTE IS A PROPERTY OF THE EGRESS, NOT OF A HOSTNAME.»** Both IPv4 poolers time out too: TCP 5432 does not leave a Claude Code container at all. The plausible repair the true fact suggests — «use the pooler» — is the trap, and it was walked ~10 times. |
 
 The fourth is the clearest about *why* this is a category, because **CHECK constraints arriving
 as the third construct is what proved the first two were examples someone had read as the list.**
@@ -746,6 +747,55 @@ what closes the gap is naming, in the sentence, WHICH object was interrogated.
 the dependencies this project has actually hit, and the next thing assumed will not be among them.
 When that happens the remedy is the rule first and a row second — never the row alone, because a
 list of capabilities to test can only ever be as long as the last surprise.
+
+### THERE IS NO POSTGRES ROUTE TO PRODUCTION FROM A CLAUDE CODE CONTAINER — SETTLED, STOP RE-DERIVING IT
+
+**Added 2026-09-14 (Tor, exasperated, and right): «you do this EVERY time; why cant you remember?
+Ipv6 and IPv4 you been though this at least 10 times allready».** He is describing a session cost
+paid over and over for one fact, and the reason it kept being paid is that the fact was never
+written as a conclusion — only the probe's raw rows existed, and raw rows invite re-interpretation.
+
+So it is a conclusion now:
+
+> **From a Claude Code container, production Postgres is unreachable BY EVERY HOSTNAME, and the
+> address family is not why.** Outbound traffic goes through an HTTP CONNECT proxy (`HTTPS_PROXY`),
+> which carries 443. **Raw TCP 5432 does not leave.** The next step after a failed connection is
+> therefore never another host.
+
+Measured, `npm run verify:capability`, 2026-09-14:
+
+| row | call | result |
+|---|---|---|
+| `prod-db-direct` | tcp `db.<ref>.supabase.co:5432` | families: **IPv6** only, `ENOTFOUND` |
+| `prod-db-pooler:0` | tcp `aws-0-eu-central-1.pooler.supabase.com:5432` | resolves IPv4, **timeout 20s** |
+| `prod-db-pooler:1` | tcp `aws-1-eu-central-1.pooler.supabase.com:5432` | resolves IPv4, **timeout 20s** |
+| `prod-rest-https` | `GET https://<ref>.supabase.co/rest/v1/` | **HTTP 401 — reachable, unauthenticated** |
+
+**The IPv4 pooler is the trap, and it is what makes this a row in the enumeration table rather than
+a note.** «The direct host is AAAA-only» is TRUE, it is the first thing a lookup shows, and it
+names a repair — «use the IPv4 pooler» — that is plausible, cheap to try, and wrong. So the honest
+reading of one accurate measurement leads directly into a second measurement nobody takes. It is
+row 10's shape one level out: *a fact that is right about the object it names and silent about the
+thing that is actually blocking.* The address family was a property of ONE hostname; the blocker is
+a property of the CONTAINER.
+
+**And it is a worse instance than the Docker one, because the correct repair looks like a
+circumvention.** Reaching production by a second hostname after the first attempt was denied is
+indistinguishable from working around the denial, so the attempt costs a stop as well as a session.
+
+**What to do instead, in order:**
+1. **`npm run verify:capability` FIRST**, before any sentence about what production can be reached
+   from. Its last paragraph now states this conclusion in its own output, so a future session reads
+   it rather than deriving it.
+2. **Supabase MCP** — the authorised route (see Operating authority). It speaks HTTPS to
+   `api.supabase.com` and needs no database socket. When the session reports it unauthenticated,
+   that is a connector authorisation the human grants; it is not a network fact and no hostname
+   affects it.
+3. **REST over HTTPS with a key in the environment.** `scripts/seed-org-demo.ts` already works this
+   way — `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`, no socket at all. `.env.local` is gitignored
+   (`.gitignore:6`), so it is a safe place for the key; the standing secrets rule still holds —
+   never printed, never committed.
+4. **Otherwise the human runs it**, and the ask is one line rather than a diagnosis.
 
 ## Verification
 After every phase, run the protocol in VERIFY.md. No phase is complete until its Gate 6 report shows READY FOR REVIEW with evidence. Claims without evidence (command output, file:line, or a screenshot you opened) are not acceptable status.

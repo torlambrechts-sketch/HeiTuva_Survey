@@ -140,6 +140,52 @@ async function main() {
     record(`prod-db-pooler:${h.split('-')[1]}`, `tcp connect ${h}:5432`, out === 'connected', out)
   }
 
+  /*
+    5b. THE ROUTE THAT ACTUALLY EXISTS, and the reason rows 5/5a keep costing a
+        session each. Measured 2026-09-14: `db.<ref>.supabase.co` is AAAA-only
+        AND BOTH IPv4 POOLERS TIME OUT — so the address family was never the
+        blocker. Egress here is an HTTP CONNECT proxy (`HTTPS_PROXY`); RAW TCP
+        5432 DOES NOT LEAVE THE CONTAINER BY ANY HOSTNAME.
+
+        So «reach production» is not a connection problem with a hostname fix.
+        It is HTTPS or nothing, and what HTTPS is missing is a KEY. This row
+        separates those two claims: reachability, then authorisation.
+  */
+  /*
+     THE HOST IS DERIVED FROM THE PROJECT REF, NOT FROM `SUPABASE_URL`, AND THE
+     FIRST VERSION OF THIS ROW TOOK IT FROM THE ENVIRONMENT — which measured
+     `http://127.0.0.1:54321` and reported HTTP 200 under the name
+     `prod-rest-https`, in a shell that happened to have the LOCAL url exported.
+     A row whose name says «prod» and whose call says «localhost» is this file's
+     own subject matter, so the host is computed from the one variable that can
+     only be production (`SUPABASE_DB_URL`'s `db.<ref>.supabase.co`) and the row
+     is NAMED after the host it actually reached.
+  */
+  if (direct) {
+    const ref = /^db\.([a-z0-9]+)\.supabase\.co$/.exec(direct)?.[1]
+    if (!ref) {
+      record('prod-rest-https', `parse ref from ${direct}`, false,
+        `«${direct}» is not db.<ref>.supabase.co, so no REST origin can be derived from it.`)
+    } else {
+      const host = `https://${ref}.supabase.co`
+      const r = run('curl', ['-s', '-o', '/dev/null', '-w', '%{http_code}', '--max-time', '25', `${host}/rest/v1/`], 30_000)
+      const code = r.out.trim()
+      record(
+        `prod-rest-https:${ref}`,
+        `curl -o /dev/null -w %{http_code} ${host}/rest/v1/`,
+        code === '401' || code === '200',
+        `HTTP ${code} (401 = REACHABLE and this process holds no prod key; 000 = no route)`,
+      )
+    }
+  }
+  record(
+    'egress-shape',
+    'echo $HTTPS_PROXY',
+    true,
+    `${process.env.HTTPS_PROXY ?? '(none)'}\nA CONNECT proxy carries 443 only. Postgres:5432 is NOT reachable from here — ` +
+      'not by the direct host, not by either pooler. Do not spend a session on the address family.',
+  )
+
   // 6. The local stack — the mirror's target. A real query, because a container
   //    reporting healthy and a database accepting a connection are two claims.
   {
@@ -159,7 +205,13 @@ async function main() {
   console.log(
     '\nA row that reads FAIL is what the call returned NOW. It is not a property of\n' +
     'the machine: dockerd not running and Docker not installed print the same way,\n' +
-    'and one of them is four seconds from OK. Read the raw text, not the verdict.\n')
+    'and one of them is four seconds from OK. Read the raw text, not the verdict.\n' +
+    '\nAND ONE CONCLUSION THAT IS STANDING RATHER THAN A READING, because it has\n' +
+    'been re-derived by hand at least ten times: if prod-db-direct, pooler:0 and\n' +
+    'pooler:1 all read FAIL while prod-rest-https reads OK, THERE IS NO POSTGRES\n' +
+    'ROUTE TO PRODUCTION FROM THIS CONTAINER AND NO HOSTNAME FIXES IT. The next\n' +
+    'step is never another host; it is a key in the environment, or the human\n' +
+    'runs the script on a machine with egress.\n')
 }
 
 void main()
