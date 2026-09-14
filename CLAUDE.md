@@ -267,6 +267,20 @@ authoritative in a way a stale document does not.
    because **the instance is the evidence for the question**, and an example silently repaired
    into the present tense is how a rule stops being believed. Two of the four now have writers;
    the question is unchanged.
+   **AND THE FIFTH INSTANCE IS A DRAWING, NOT CODE — `options.tuva` (V6-0, 2026-09-14).** v6 gates
+   its global helper on `(st.options || {}).tuva !== false` (v6:8964), and the bundle's own `options`
+   object is `{reminders, weeklyDigest, allowSelfServe, sso, brandMail}` (v6:6561). **`tuva` is not
+   one of its five keys**, so the read is always `undefined`, `undefined !== false` is true, and
+   `tvShow` is unconditionally on. A gate that reads a key nothing writes is not a gate; it is a
+   switch drawn in the ON position with a label saying it can be turned off.
+   Tor called it the sixth; **the list above holds four, so this is the FIFTH** — said rather than
+   quietly matched, because this file already records what a carried number costs.
+   **Why a drawing is worth adding to a rule about migrations:** the question «who writes this?» has
+   only ever been asked of columns, where the answer is a server action. Asked of a HANDOFF, it is
+   the difference between «the customer can turn Tuva off» and «Tuva is always on and the setting is
+   decoration» — and the bundle cannot tell you which, because the fixture never sets the key. A
+   phase that builds the switch without asking ships the second while believing the first.
+
    **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
    the question is not «is the column there» but «who WRITES it». A column that is read
    everywhere looks finished from every angle except the one that matters. If the answer is
