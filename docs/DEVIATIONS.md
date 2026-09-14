@@ -5737,3 +5737,38 @@ screenshots are committed — `logg-inn`, `logg-inn-feil` and `veiviser-formal`,
 viewports — and none of them lists a survey; `verify:responsive` measures a live page and
 holds no baseline at all. `verify:visual` passed unchanged and `verify:responsive` reported
 206 of 206 with 0 findings. The cost was real to expect and did not apply here.
+
+## D174 — a table inside a card must not bring its own card
+
+**Q176, Tor, 2026-09-14:** «we dont need a double box inside list; make it like handlinger.»
+
+The Maler list view rendered its table inside `rounded-[18px] border border-line bg-sf`. That
+was CORRECT while the table was the outermost element on the screen — it was the card. Q172
+wrapped the whole tab in `LibraryCard`, and the wrapper became **a border 22px inside an
+identical border, on the same background**.
+
+**THE MOVE THAT CAUSED IT LOOKED LIKE A PURE RELOCATION.** Q172 changed where the content
+sits and touched none of its markup, which is exactly why the wrapper survived: nothing about
+that diff mentions the table. A container's chrome is a claim about what the container IS —
+outermost or nested — and relocating the container falsifies the claim without editing the
+line that makes it.
+
+The Arbeidsliste has no wrapper at all: a full-width column strip on `--bg` and rows
+separated by `border-b`, both running to the card's edge. That only works in an **unpadded**
+region, so `LibraryCard` gained a `flush` slot rendered after the padded body rather than
+inside it. The padded body keeps what needs margins — the read-only note, «Firmaets maler»,
+the category note.
+
+**Measured, not eyeballed** (`scripts/walk/q176-boxes.ts` counts bordered containers and how
+many enclose each one): the list view now declares one rounded container, and the column
+strip is **1118px inside a 1120px card — 1px each side, which is the card's own border**. The
+two remaining nested boxes are the «Firmaets maler» cards, a card grid by design, exactly as
+the Arbeidsliste's owner chips sit inside its «Eiere» box.
+
+Guarded in `tests/unit/library-tabs.test.ts`: the page may declare only one `rounded-[20px]`
+box, must not contain the old wrapper's class string, and must route the list through `flush`.
+
+**A NOTE ON THE DRIVER, because it cost a run:** `tsx` compiles a const-assigned arrow with
+esbuild's `keepNames`, which injects a `__name` helper that does not exist inside
+`page.evaluate` — «ReferenceError: __name is not defined». Inner helpers in an evaluate body
+have to be inlined.

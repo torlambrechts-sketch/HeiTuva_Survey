@@ -170,6 +170,32 @@ describe('Q172 — the tab set is one registry, read by both renderers', () => {
     expect((code(chip).match(/<Link/g) ?? []).length).toBeGreaterThanOrEqual(4)
   })
 
+  it('Q176 — the list brings no card of its own inside the card', () => {
+    /*
+      Tor: «we dont need a double box inside list; make it like handlinger.»
+
+      The table carried `rounded-[18px] border border-line bg-sf`, which was
+      right while it WAS the outermost element and became a second border 22px
+      inside an identical one once Q172 wrapped it in `LibraryCard`.
+
+      Asserted structurally rather than by eye: the page may declare only ONE
+      rounded-and-bordered container, the card itself, and the list's rows must
+      run to its edges — which is what the `flush` slot is for. Measured on the
+      rendered page too (scripts/walk/q176-boxes.ts: the column strip is 1118px
+      inside a 1120px card, i.e. the card's own 1px border and nothing else).
+    */
+    const body = code(page)
+    // No second rounded container in the templates list.
+    expect(body).not.toContain('rounded-[18px] border border-line bg-sf')
+    // The card is the only `rounded-[20px]` box, and it is the component's.
+    expect((body.match(/rounded-\[20px\]/g) ?? []).length).toBe(1)
+    // The list goes through the unpadded slot, not the padded body.
+    expect(body).toMatch(/flush=\{standard\.length > 0 && view === 'liste' \? listRows/)
+    // Handlinger's treatment: a full-width column strip on `--bg`, rows
+    // separated by `border-b` rather than boxed.
+    expect(body).toContain('border-b border-line bg-bg')
+  })
+
   it('the lead promises only things the product does', () => {
     // The claim-set discipline, applied to copy of our own rather than a
     // bundle's: the bank adds into A DRAFT (D26 — the org's most recent one),

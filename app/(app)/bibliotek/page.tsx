@@ -256,11 +256,28 @@ function LibraryCard({
   filter,
   tools,
   children,
+  flush,
 }: {
   heading: string
   filter?: React.ReactNode
   tools?: React.ReactNode
-  children: React.ReactNode
+  /** The padded body: notes, card grids — anything with its own margins. */
+  children?: React.ReactNode
+  /**
+   * A region rendered to the card's own edges, with no padding.
+   *
+   * **Q176 — A TABLE INSIDE A CARD MUST NOT BRING ITS OWN CARD.** The list view
+   * kept the `rounded-[18px] border bg-sf` wrapper it had when it WAS the
+   * outermost thing on the screen, and once Q172 put it inside this card that
+   * wrapper became a second box drawn inside the first — a border 22px inside
+   * an identical border, on the same background.
+   *
+   * The Arbeidsliste has no such wrapper: its column header is a full-width
+   * `border-y` strip and its rows are `border-b`, both running to the card's
+   * edge. That only works if the region is unpadded, which is why this is a
+   * slot rather than more children.
+   */
+  flush?: React.ReactNode
 }) {
   return (
     <div className="mt-[18px] min-w-0 rounded-[20px] border border-line bg-sf">
@@ -271,7 +288,10 @@ function LibraryCard({
         </div>
         {tools ? <div className="flex flex-wrap items-center gap-[9px]">{tools}</div> : null}
       </div>
-      <div className="min-w-0 border-t border-line px-[22px] py-[18px]">{children}</div>
+      {children ? (
+        <div className="min-w-0 border-t border-line px-[22px] py-[18px]">{children}</div>
+      ) : null}
+      {flush ? <div className="min-w-0 border-t border-line">{flush}</div> : null}
     </div>
   )
 }
@@ -428,6 +448,70 @@ async function TemplatesTab({
     failed: t('failed'),
   })
 
+  /*
+    Q176 — the list, as a region that runs to the card's own edges.
+
+    **A TABLE INSIDE A CARD MUST NOT BRING ITS OWN CARD.** This markup used to
+    carry `rounded-[18px] border border-line bg-sf`, which was right while the
+    table WAS the outermost thing on the screen. Q172 put it inside
+    `LibraryCard` and nobody looked: the result was a border 22px inside an
+    identical border, on the same background — Tor's «double box».
+
+    The Arbeidsliste has no wrapper at all. Its column strip is a full-width
+    `border-b` on `--bg` and its rows are `border-b`, both running edge to
+    edge, which only works in an UNPADDED region. Hence the `flush` slot.
+  */
+  const listRows = (
+    <>
+          {/* The header row is desktop-only: below md each row becomes a card
+              (RESPONSIVE.md § Data tables, wide row — four fields), and a
+              column header with no columns under it is noise. `border-b` and
+              `bg-bg`, which is the Arbeidsliste's column strip (v5:3214). */}
+          <div className="hidden grid-cols-[1.6fr_1fr_1fr_118px] gap-4 border-b border-line bg-bg px-[22px] py-[13px] text-[11px] uppercase tracking-[.1em] text-mut md:grid">
+            <span>{t('colTemplate')}</span>
+            <span>{t('colCategory')}</span>
+            <span>{t('colScope')}</span>
+            <span />
+          </div>
+          {standard.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-col gap-3 border-b border-line px-[22px] py-[15px] last:border-b-0 md:grid md:grid-cols-[1.6fr_1fr_1fr_118px] md:items-center md:gap-4"
+            >
+              <span className="min-w-0">
+                <span className="block text-[14.5px] font-semibold">{p.title}</span>
+                <span className="mt-0.5 block text-[13px] text-mut">{p.audience}</span>
+              </span>
+              <span>
+                <span className="block text-[13px]">{p.category}</span>
+                {p.legalRef ? (
+                  <span className="mt-1 inline-block rounded-full bg-ac2 px-2.5 py-1 text-[11px] font-semibold">
+                    {p.legalRef}
+                  </span>
+                ) : null}
+                {/* v1 adds the policy to the LIST too (NEW:1976-1978), not only
+                    the cards: the same statutory pack has to read the same way
+                    whichever view someone happens to be in. */}
+                {policyLineFor(p) ? (
+                  <span className="mt-1 block text-[11.5px] text-mut">{policyLineFor(p)}</span>
+                ) : null}
+              </span>
+              <span className="text-[13px] text-mut">
+                {t('questionCount', { count: p.questionCount })} ·{' '}
+                {t('minutes', { mins: estimateMinutes(p.questionCount) })}
+              </span>
+              <UsePackButton
+                packId={p.id}
+                label={t('usePack')}
+                failedLabel={t('failed')}
+                disabledReason={readOnlyNote}
+                className="p-2.5 text-[12.5px] md:w-full"
+              />
+            </div>
+          ))}
+    </>
+  )
+
   return (
     <>
       <LibraryHero
@@ -482,6 +566,7 @@ async function TemplatesTab({
             </ChipLink>
           </span>
         }
+        flush={standard.length > 0 && view === 'liste' ? listRows : undefined}
       >
       {readOnlyNote ? (
         <p className="mb-4 rounded-[12px] bg-sbg px-4 py-[13px] text-[12.5px] leading-[1.6]">
@@ -537,55 +622,7 @@ async function TemplatesTab({
             />
           ))}
         </div>
-      ) : (
-        <div className="mt-3.5 overflow-hidden rounded-[18px] border border-line bg-sf">
-          {/* The header row is desktop-only: below md each row becomes a card
-              (RESPONSIVE.md § Data tables, wide row — four fields), and a
-              column header with no columns under it is noise. */}
-          <div className="hidden grid-cols-[1.6fr_1fr_1fr_118px] gap-4 bg-sf2 px-[22px] py-[13px] text-[11px] uppercase tracking-[.1em] text-mut md:grid">
-            <span>{t('colTemplate')}</span>
-            <span>{t('colCategory')}</span>
-            <span>{t('colScope')}</span>
-            <span />
-          </div>
-          {standard.map((p) => (
-            <div
-              key={p.id}
-              className="flex flex-col gap-3 border-t border-line px-[22px] py-[15px] md:grid md:grid-cols-[1.6fr_1fr_1fr_118px] md:items-center md:gap-4"
-            >
-              <span className="min-w-0">
-                <span className="block text-[14.5px] font-semibold">{p.title}</span>
-                <span className="mt-0.5 block text-[13px] text-mut">{p.audience}</span>
-              </span>
-              <span>
-                <span className="block text-[13px]">{p.category}</span>
-                {p.legalRef ? (
-                  <span className="mt-1 inline-block rounded-full bg-ac2 px-2.5 py-1 text-[11px] font-semibold">
-                    {p.legalRef}
-                  </span>
-                ) : null}
-                {/* v1 adds the policy to the LIST too (NEW:1976-1978), not only
-                    the cards: the same statutory pack has to read the same way
-                    whichever view someone happens to be in. */}
-                {policyLineFor(p) ? (
-                  <span className="mt-1 block text-[11.5px] text-mut">{policyLineFor(p)}</span>
-                ) : null}
-              </span>
-              <span className="text-[13px] text-mut">
-                {t('questionCount', { count: p.questionCount })} ·{' '}
-                {t('minutes', { mins: estimateMinutes(p.questionCount) })}
-              </span>
-              <UsePackButton
-                packId={p.id}
-                label={t('usePack')}
-                failedLabel={t('failed')}
-                disabledReason={readOnlyNote}
-                className="p-2.5 text-[12.5px] md:w-full"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      ) : null}
       </LibraryCard>
     </>
   )
