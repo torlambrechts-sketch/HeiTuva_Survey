@@ -78,8 +78,19 @@ Build the verification harness. This is infrastructure I will reuse every phase.
      the fifth handoff, the reference for screens a v4 phase built and no v5 phase
      touches. ONE FILE again.
    /design-reference-v5/…/HeiTuva.dc.html   -> artifacts/reference-v5/<screen>.png
-     the sixth handoff, the TARGET for every screen a v5 phase touches. ONE FILE for the
-     THIRD handoff running — which is now simply what a handoff is.
+     the sixth handoff, the reference for screens a v5 phase built and no v6 phase
+     touches. ONE FILE for the THIRD handoff running.
+   /design-reference-v6/…/HeiTuva.dc.html   -> artifacts/reference-v6/<screen>.png
+     the seventh handoff, the TARGET for every screen a v6 phase touches. ONE FILE for the
+     FOURTH handoff running — which is now simply what a handoff is.
+     AND THE FIRST HANDOFF TO REMOVE KEYS: 34 gone (28 uitest, 6 survey-list). `since`
+     assumes screens are ADDED, so both halves of the removal check were run — every state
+     key the manifest sets still resolves (14 of 15; the 15th is splash-only and lives in
+     v2's splash file), and the 35 captured PNGs are pairwise distinct, 35 files / 35
+     hashes. The second half EARNED ITSELF on this bundle: `respondent-kommentar-lagret`
+     came back identical to plain `respondent`, because v6 turned `qcSaved` from a keyed
+     map into a boolean over a new `qcSavedText` — a key that survived with a different
+     meaning, which no key-set diff can see.
      Screens are declared per bundle (`since`), so a screen whose file this bundle lacks
      is skipped rather than captured from the wrong page. `since` assumes screens are
      ADDED and not removed; v5 removes eight `sc-if` keys, so that was CHECKED rather
@@ -134,7 +145,8 @@ to prove your own implementation is wrong. Assume it is until evidence says othe
 Re-read CLAUDE.md and the phase scope in CLAUDE_CODE_PROMPTS.md. Re-read the relevant
 markup in the bundle that governs the screen (Q18, extended by Q52), which is read off
 the per-surface table in docs/v2/00-diff.md section 0.3 rather than inferred:
-/design-reference-v5/… for anything a v5 phase touches, /design-reference-v4/… for
+/design-reference-v6/… for anything a v6 phase touches, /design-reference-v5/… for
+screens v5 built and v6 does not touch, /design-reference-v4/… for
 screens v4 built and v5 does not touch, /design-reference-v3/… for screens v3 built and
 v4 does not touch, /design-reference-v2/… for screens v2 built and no later phase
 touches (and for the splash and Bruksområder, which NONE of v3, v4 or v5 handed over),

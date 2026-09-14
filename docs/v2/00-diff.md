@@ -1027,3 +1027,18 @@ both), `quizPass` (4), `quizTries` (4), «for å bestå» (1), `sertifikat` (3) 
 by Q84 — and `NPS i dag` (2) and `Kritikere` (4), which Q126 refused. **Four refusals landed; seven
 strings across three decisions did not.** The useful statement is that a handoff can now be
 *informed* by our decisions, not that it is *governed* by them.
+
+### § 0.3 governance row — v6 (added V6-1)
+
+| surface | judged against | why |
+|---|---|---|
+| Undersøkelser list, survey detail (all eleven tabs), Metodikk, respondent comment states | **v6** | every screen a v6 phase touches |
+| Arbeidsliste, Integrasjoner, shell footer, subnav | v5 | v5 built them; no v6 phase touches them |
+| Oversikt module grid, workspace chip, layout-note chip | v4 | v4 built them; no later phase touches them |
+| Oppgaver og tilbakemeldinger (C4's screen), respondent comment surface | v5 | V5-2 replaced C4's screen |
+| Splash, Bruksområder | **v2** | v3, v4, v5 and v6 were all ONE-FILE handoffs — four running, so this is what a handoff is |
+
+**And one governance note this bundle forces:** `respondent-kommentar-lagret` is declared
+`since: 'v3'`, so it renders for v3, v4, v5 AND v6. Its state patch now sets BOTH the pre-v6 keyed
+`qcSaved` map and v6's `qcSavedText` scalar, because a regeneration of an older set by name must
+keep working. Each model reads its own and ignores the other.
