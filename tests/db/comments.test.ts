@@ -465,6 +465,36 @@ describe('C1 — RLS: who reads a comment, and the invariant-4 boundary', () => 
     expect((data ?? []).length, 'the owning org’s administrator reads none of it').toBeGreaterThan(0)
   })
 
+  /*
+    ── HOW TO CHECK THIS BY HAND, AND THE WAY THAT LOOKS RIGHT AND IS NOT ─────
+
+    V6-2, 2026-09-14. This test went red («outsider saw 1 of 5») and the first
+    thing I did to investigate it was worthless in a way worth recording IN the
+    test about isolation, because it is «the thing measured was not the thing
+    claimed» in its purest form — a measurement of RLS that had no RLS in it.
+
+        psql> select set_config('request.jwt.claims', '{"sub":"…"}', true);
+        psql> set local role authenticated;      -- WARNING: SET LOCAL can only
+        psql>                                    -- be used in transaction blocks
+        psql> select … from survey_comments;     -- ran as postgres. RLS bypassed.
+
+    Postgres WARNED and carried on. `postgres` is a superuser, so the query
+    returned all five rows and looked exactly like a cross-tenant leak. Wrapped
+    in `begin … commit` the same three statements return ONE row — the
+    outsider's own org's — and zero of the owning org's.
+
+    **A superuser session cannot measure a policy, and the failure mode is that
+    it answers anyway.** If you are checking an RLS question by hand: put it in a
+    transaction, and confirm the role actually changed (`select current_user`)
+    before believing the rows.
+
+    The red itself was local fixture pollution — an earlier `seed-org-demo
+    --apply` run had given the outsider's org a comment, and this test asserts a
+    GLOBAL zero. Which is its own latent coupling, logged rather than changed
+    here: `.toBe(0)` on an unfiltered select equals «no cross-org leak» only
+    while the outsider's own org has none, and the property it means is «none of
+    the OWNING org's».
+  */
   it('18. an outsider reads nothing at all — and there was something to refuse', async () => {
     // The red run passed this against a missing table: PostgREST errored, `data`
     // was null, and `[] toEqual []` was satisfied by the absence of everything.

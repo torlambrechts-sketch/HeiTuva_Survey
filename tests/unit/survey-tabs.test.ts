@@ -58,6 +58,7 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
       'bygg',
       'historikk',
       'kommentarer',
+      'malgruppe',
       'personvern',
       'resultater',
       'send',
@@ -147,7 +148,6 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
     expect(SURVEY_TABS).not.toContain('feltarbeid')
     // Grows per phase: V6-2 shipped three, V6-4 adds the narrowings and
     // Historikk. Målgruppe is NOT among them — see the registry's own note.
-    expect(SURVEY_TABS).not.toContain('malgruppe')
-    expect(SURVEY_TABS.length).toBe(7)
+    expect(SURVEY_TABS.length).toBe(8)
   })
 })

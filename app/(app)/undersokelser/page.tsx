@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { AnalystPanel } from './AnalystPanel'
+import { analyse } from '@/lib/tuva/analyst'
+import { kForMirror } from '@/lib/surveys/retention'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -102,6 +105,49 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     schedulePaused: Boolean(schedules.get(r.id)?.paused_at),
   }))
 
+  /* V6-6 — svTuva's inputs. Group SIZES per survey, for Q72's trigger: «this
+     survey has a group that will never receive its own results». Sizes only —
+     no names, because the task Q72 describes carries none.
+
+     Two reads rather than a join, because `survey_invitations` is org-scoped
+     through its round and PostgREST cannot express the aggregate; the numbers
+     are small (one row per invitation for THIS org's surveys) and they are
+     counts of people, which Q28 permits. */
+  const surveyIds = (rows ?? []).map((r) => r.id)
+  const { data: analystRounds } = surveyIds.length
+    ? await supabase.from('survey_rounds').select('id, survey_id').in('survey_id', surveyIds)
+    : { data: [] }
+  const roundToSurvey = new Map((analystRounds ?? []).map((r) => [r.id, r.survey_id]))
+  const { data: analystInvites } = (analystRounds ?? []).length
+    ? await supabase
+        .from('survey_invitations')
+        .select('round_id, group_id')
+        .in('round_id', (analystRounds ?? []).map((r) => r.id))
+        .eq('is_test', false)
+    : { data: [] }
+
+  const sizes = new Map<string, Map<string, number>>()
+  for (const inv of analystInvites ?? []) {
+    const sid = roundToSurvey.get(inv.round_id)
+    if (!sid || !inv.group_id) continue
+    const per = sizes.get(sid) ?? new Map<string, number>()
+    per.set(inv.group_id, (per.get(inv.group_id) ?? 0) + 1)
+    sizes.set(sid, per)
+  }
+
+  const analyst = analyse(
+    surveys.map((s) => ({
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      responses: s.responseCount,
+      target: s.target,
+      groupSizes: [...(sizes.get(s.id)?.values() ?? [])],
+      // The mirror of `app.k_for`, guarded by tests/db/k-for-mirror.test.ts.
+      k: kForMirror({ respondent_kind: s.respondentKind, k_threshold: s.kThreshold }),
+    })),
+  )
+
   const pctOf = (s: SurveyListItem) =>
     s.target && s.target > 0 ? s.responseCount / s.target : 0
 
@@ -194,6 +240,10 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
           <p className="text-[13px] text-mut">{t('readerNotice')}</p>
         )}
       </div>
+
+      {/* V6-6 — svTuva. Participation only (Q184); the task tip is Q72's
+          trigger or it is absent (Q185). */}
+      <AnalystPanel analyst={analyst} />
 
       {shareFor && canEdit ? (
         <SharePanel

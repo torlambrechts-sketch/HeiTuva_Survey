@@ -126,14 +126,34 @@ authoritative in a way a stale document does not.
     copy C4 had shipped hours earlier (**Q123: NOT adopted** — it is a layout decision wearing a
     naming decision's clothes, and «Oppgaver» is untrue of half that screen's content).
 
-  **AND v6 SUPPLIED THE THIRD INSTANCE, WHICH IS THE CLEANEST OF THEM: A KEY THAT SURVIVED WITH A
-  DIFFERENT MEANING.** Through v5 `qcSaved` is a MAP of respondent comments keyed by question id.
-  In v6 (`v6:7849-7862`) it is a DERIVED BOOLEAN over a new scalar `qcSavedText`, and the map is
-  read by nothing. **`qcSaved` occurs 11 times in both files**; `qcSavedText` is 0 in v5 and 5 in
-  v6. No key arrived, none departed, and the model underneath changed completely. It was caught by
-  the reference harness's pairwise-distinct check — `respondent-kommentar-lagret` rendered
-  identical to plain `respondent` — on the first v6 run, which is the check earning itself the
-  first time a handoff removed anything.
+  **AND v6 SUPPLIED A THIRD KIND, WHICH IS NOT A DEEPER VERSION OF THE FIRST TWO BUT A DIFFERENT
+  THING — A KEY WHOSE MEANING BECAME SOMETHING ELSE WHILE ITS NAME STOOD STILL.** The distinction is
+  the entry (Tor, 2026-09-14, after V6-1):
+
+  - The header's `border-radius` and the nav label are **properties that changed away**. Something
+    observable about a screen was one value and became another. A reader comparing the two files on
+    that property sees it.
+  - `qcSaved` is **a name that kept its spelling and stopped meaning what it meant**. Through v5 it
+    is a MAP of respondent comments keyed by question id; in v6 (`v6:7849-7862`) it is a DERIVED
+    BOOLEAN over a new scalar `qcSavedText`, and the map is read by nothing. There is no property to
+    compare, because the thing the identifier denotes is not the same kind of thing.
+
+  **`qcSaved` occurs ELEVEN TIMES IN BOTH FILES. No key arrived, none departed, and the model
+  underneath changed completely.** `qcSavedText` is 0 in v5 and 5 in v6 — the whole change lives in a
+  name the diff had no reason to look at.
+
+  **So the state diff is not merely incomplete here, it is STRUCTURALLY BLIND.** A key-set comparison
+  answers «which identifiers exist», and both answers are correct; the question that would have
+  caught this — «does this identifier still denote the same kind of value» — is not one a set
+  difference can pose. That is why this earns an entry rather than a line under the other two: for a
+  changed property there is at least a thing to diff, and for this there is not.
+
+  It was caught by the reference harness's pairwise-distinct check — `respondent-kommentar-lagret`
+  rendered identical to plain `respondent` — on the FIRST v6 run, which is that check earning itself
+  the first time a handoff removed anything. **The lesson is not «also diff meanings», which is not a
+  mechanical operation. It is that a manifest which RENDERS each declared state and then requires the
+  results to differ is testing something a source diff cannot reach**, and it is worth the runtime it
+  costs.
 
   A count is monotone when identifiers only arrive, which is the usual case, and monotonicity
   reads as reassurance. It is not: **it rules out removal and says nothing about substitution.**
@@ -297,6 +317,20 @@ authoritative in a way a stale document does not.
    everywhere looks finished from every angle except the one that matters. If the answer is
    «nothing yet», say so in the column comment and log it; if the answer is «a server action»,
    the phase that adds the column adds the action, and a test asserts it exists.
+
+**A GENERATED FILE IS REGENERATED, NEVER HAND-PATCHED — AND V6-3 PAID FOR THE RULE BY LUCK.**
+`types/database.ts` says «GENERATED — do not hand-edit» at the top, and the temptation it exists to
+refuse is precise: the compiler names ONE missing key, and adding that one key makes the error go
+away. V6-3 regenerated it for an unrelated table (`method_rules`) and the diff came back larger than
+the phase — **four I2 worker functions** (`apply_entra_page`, `entra_connections_to_sync`,
+`entra_refresh_token_for_worker`, `finish_entra_sync`) had been in the schema since `M:0116` and
+missing from the types, so any caller of them was typed against nothing.
+
+**Nothing was looking for those. They were found because something else needed regenerating** — which
+is the whole argument: a hand edit would have satisfied the compiler and left all four, and the next
+hand edit would have left them again. The staleness is invisible precisely while you only ever add
+the key you were asked for. Regenerate, then read the diff, and treat anything in it beyond the
+change you expected as a finding rather than as noise.
 
 ## Data-not-code
 Question types, template packs, statutory duties, report sections, quality-flag rules, benchmarks, feature flags, and UI messages are **data** (seeded tables / registries). One renderer per question type keyed off the registry. Adding a pack/duty/language is a migration or a row, not a component.

@@ -33,23 +33,20 @@
  * rail from promising a screen we decided against — the same rule that governs
  * Tuva's answers.
  *
- * ── AND `malgruppe` IS NOT HERE, WHICH IS A DECISION RATHER THAN A GAP ─────
+ * ── `malgruppe` IS HALF A TAB, ON PURPOSE ─────────────────────────────────
  *
- * V6-4 built three of the four narrowings. `malgruppe` — «hvem får den, og hvem
- * faller fra» — sits directly against the reasoning that refused Feltarbeid:
- * **a screen organised around who is missing in a group of six is a list of
- * five names and an omission.** The audience half (which groups a round went
- * to) is probably fine; the drop-off half is the refused surface wearing a
- * different tab's name, and the bundle draws them together.
- *
- * Separating them is a decision about what the tab IS, not an implementation
- * detail — so it goes back to Tor rather than being settled here by whoever
- * happens to build it. Logged, not built.
+ * «Hvem får den, og hvem faller fra» is two screens sharing a name. The first
+ * is a property of the survey and ships. The second is Feltarbeid under another
+ * name and is refused for the same reason — **a surface organised around who
+ * did not answer is a list of names and an omission, whatever it is called.**
+ * The refusal is ON the screen rather than silent, so it reads as a decision
+ * and not as a tab somebody did not finish.
  */
 export const SURVEY_TABS = [
   'sporsmal',
   'utsending',
   'resultat',
+  'malgruppe',
   'kommentarer',
   'tiltak',
   'personvern',
@@ -63,6 +60,7 @@ export const TAB_SEGMENT: Record<SurveyTab, string> = {
   sporsmal: 'bygg',
   utsending: 'send',
   resultat: 'resultater',
+  malgruppe: 'malgruppe',
   kommentarer: 'kommentarer',
   tiltak: 'tiltak',
   personvern: 'personvern',
@@ -75,6 +73,7 @@ export const TAB_NAV_KEY: Record<SurveyTab, string> = {
   sporsmal: 'subnavSurveyQuestions',
   utsending: 'subnavSurveySend',
   resultat: 'subnavSurveyResults',
+  malgruppe: 'subnavSurveyAudience',
   kommentarer: 'subnavSurveyComments',
   tiltak: 'subnavSurveyTasks',
   personvern: 'subnavSurveyPrivacy',

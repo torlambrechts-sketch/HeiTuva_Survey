@@ -40,3 +40,40 @@ export function retentionOf(org: {
   if (months <= 0 || !autoDelete) return { kept: 'forever' }
   return { kept: 'months', months }
 }
+
+/**
+ * A MIRROR of `app.k_for(survey)`, and named as one.
+ *
+ * The database function is the authority:
+ *
+ *   case when s.respondent_kind = 'organisation' then 0
+ *        else s.k_threshold end
+ *
+ * **THE FIRST VERSION OF THIS MIRROR HAD `greatest(k_threshold, 3)`, BECAUSE I
+ * READ `M:0032` AND NOT `M:0057`.** `k_for_honours_q91` replaced the function
+ * and removed the floor — Q91 lets an organisation set a threshold of 2, and a
+ * floor of 3 would have silently overridden the promise it made. Two migrations
+ * define this function and only the later one is in force; reading *a*
+ * definition is not reading *the* definition. The deployed-function test below
+ * caught it on its first run.
+ *
+ * It lives in the `app` schema, so PostgREST cannot call it and a screen that
+ * needs the number has to compute it. **That is a second implementation of a
+ * security-relevant rule, which is the thing this project refuses elsewhere** —
+ * Kommentarer deliberately leaves invariant 4 to RLS for exactly this reason.
+ *
+ * It is acceptable here only because of what guards it:
+ * `tests/db/k-for-mirror.test.ts` calls the REAL function across a matrix of
+ * inputs and requires this one to agree. A drift becomes a failing test rather
+ * than a screen quietly using the wrong threshold.
+ *
+ * And it is used only for ADVICE (V6-6's Q72 tip). Nothing gated is computed
+ * from it — the gate itself is still the database's.
+ */
+export function kForMirror(survey: {
+  respondent_kind: string | null
+  k_threshold: number | null
+}): number {
+  if (survey.respondent_kind === 'organisation') return 0
+  return survey.k_threshold ?? 0
+}
