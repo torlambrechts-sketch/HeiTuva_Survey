@@ -88,6 +88,7 @@
   "tests/unit/register-stats.test.ts": 5,
   "tests/unit/registry-strings.test.ts": 5,
   "tests/unit/results-present.test.ts": 17,
+  "tests/unit/retention.test.ts": 8,
   "tests/unit/run-mode-voice.test.ts": 11,
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/sentry-scrub.test.ts": 8,

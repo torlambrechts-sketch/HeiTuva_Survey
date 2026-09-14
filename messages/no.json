@@ -72,7 +72,11 @@
     "subnavSurvey": "Undersøkelse",
     "subnavSurveyQuestions": "Spørsmål",
     "subnavSurveySend": "Utsending",
-    "subnavSurveyResults": "Resultater"
+    "subnavSurveyResults": "Resultater",
+    "subnavSurveyPrivacy": "Personvern",
+    "subnavSurveyComments": "Kommentarer",
+    "subnavSurveyTasks": "Tiltak",
+    "subnavSurveyHistory": "Historikk"
   },
   "dash": {
     "actionDraft": "«{title}» er fortsatt et utkast",
@@ -2533,5 +2537,50 @@
     "warning": "Advarsel",
     "suggestion": "Forslag",
     "question": "Spørsmål"
+  },
+  "surveyPrivacy": {
+    "title": "Personvern",
+    "lead": "Slik er denne undersøkelsen satt opp. Endringer gjøres i byggeren.",
+    "rowWhoSees": "Hvem kan se enkeltsvar",
+    "whoSeesAnonymous": "Ingen. Svarene er anonyme.",
+    "whoSeesNamed": "Eier og administrator",
+    "rowThreshold": "Terskel for nedbryting",
+    "thresholdValue": "Minst {n} svar per gruppe",
+    "rowLegal": "Lovgrunnlag",
+    "legalNone": "Ingen lovplikt registrert",
+    "rowRetention": "Oppbevaring",
+    "retentionMonths": "Svar slettes automatisk etter {n} måneder",
+    "retentionForever": "Svar slettes ikke automatisk",
+    "rowBasis": "Behandlingsgrunnlag",
+    "basisLegal": "Rettslig forpliktelse",
+    "basisInterest": "Berettiget interesse · arbeidsmiljø",
+    "edit": "Endre i byggeren",
+    "editLocked": "Se innstillingene i byggeren — de er låst"
+  },
+  "surveyHistory": {
+    "title": "Historikk",
+    "lead": "Rundene denne undersøkelsen har hatt.",
+    "empty": "Undersøkelsen har ikke vært sendt ennå.",
+    "round": "Runde {n}",
+    "statusOpen": "Åpen",
+    "statusClosed": "Lukket",
+    "opened": "Åpnet {date}",
+    "closed": "lukket {date}",
+    "questions": "{n} spørsmål i denne runden"
+  },
+  "surveyComments": {
+    "title": "Kommentarer",
+    "lead": "Tilbakemeldinger fra denne undersøkelsen.",
+    "leadOff": "Kommentarer er slått av for denne undersøkelsen.",
+    "empty": "Ingen kommentarer ennå.",
+    "anonymous": "Anonym",
+    "named": "Med navn",
+    "handled": "Behandlet"
+  },
+  "surveyTasks": {
+    "title": "Tiltak",
+    "lead": "Tiltak som kom ut av denne undersøkelsen.",
+    "empty": "Ingen tiltak er knyttet til denne undersøkelsen.",
+    "toWorklist": "Gå til arbeidslisten"
   }
 }

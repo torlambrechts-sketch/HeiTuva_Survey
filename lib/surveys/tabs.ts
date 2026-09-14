@@ -32,8 +32,29 @@
  * **A tab is in this list only when its route exists.** That is what keeps the
  * rail from promising a screen we decided against — the same rule that governs
  * Tuva's answers.
+ *
+ * ── AND `malgruppe` IS NOT HERE, WHICH IS A DECISION RATHER THAN A GAP ─────
+ *
+ * V6-4 built three of the four narrowings. `malgruppe` — «hvem får den, og hvem
+ * faller fra» — sits directly against the reasoning that refused Feltarbeid:
+ * **a screen organised around who is missing in a group of six is a list of
+ * five names and an omission.** The audience half (which groups a round went
+ * to) is probably fine; the drop-off half is the refused surface wearing a
+ * different tab's name, and the bundle draws them together.
+ *
+ * Separating them is a decision about what the tab IS, not an implementation
+ * detail — so it goes back to Tor rather than being settled here by whoever
+ * happens to build it. Logged, not built.
  */
-export const SURVEY_TABS = ['sporsmal', 'utsending', 'resultat'] as const
+export const SURVEY_TABS = [
+  'sporsmal',
+  'utsending',
+  'resultat',
+  'kommentarer',
+  'tiltak',
+  'personvern',
+  'historikk',
+] as const
 export type SurveyTab = (typeof SURVEY_TABS)[number]
 
 /** The path segment each tab owns. The segment is the SOURCE OF TRUTH for which
@@ -42,6 +63,10 @@ export const TAB_SEGMENT: Record<SurveyTab, string> = {
   sporsmal: 'bygg',
   utsending: 'send',
   resultat: 'resultater',
+  kommentarer: 'kommentarer',
+  tiltak: 'tiltak',
+  personvern: 'personvern',
+  historikk: 'historikk',
 }
 
 /** Message keys, in `nav`. Keyed by the registry so a fourth tab is a compile
@@ -50,6 +75,10 @@ export const TAB_NAV_KEY: Record<SurveyTab, string> = {
   sporsmal: 'subnavSurveyQuestions',
   utsending: 'subnavSurveySend',
   resultat: 'subnavSurveyResults',
+  kommentarer: 'subnavSurveyComments',
+  tiltak: 'subnavSurveyTasks',
+  personvern: 'subnavSurveyPrivacy',
+  historikk: 'subnavSurveyHistory',
 }
 
 export function surveyTabHref(surveyId: string, tab: SurveyTab): string {

@@ -54,7 +54,15 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
       expect(href, 'a tab must never become a query parameter').not.toMatch(/\?|fane=/)
     }
     // And the three segments are the routes that already existed.
-    expect(Object.values(TAB_SEGMENT).sort()).toEqual(['bygg', 'resultater', 'send'])
+    expect(Object.values(TAB_SEGMENT).sort()).toEqual([
+      'bygg',
+      'historikk',
+      'kommentarer',
+      'personvern',
+      'resultater',
+      'send',
+      'tiltak',
+    ])
   })
 
   it('href and resolve are inverses, so no pill can look selected while another is shown', () => {
@@ -137,6 +145,9 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
     */
     expect(SURVEY_TABS).not.toContain('over')
     expect(SURVEY_TABS).not.toContain('feltarbeid')
-    expect(SURVEY_TABS.length).toBe(3)
+    // Grows per phase: V6-2 shipped three, V6-4 adds the narrowings and
+    // Historikk. Målgruppe is NOT among them — see the registry's own note.
+    expect(SURVEY_TABS).not.toContain('malgruppe')
+    expect(SURVEY_TABS.length).toBe(7)
   })
 })

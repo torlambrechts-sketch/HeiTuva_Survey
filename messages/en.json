@@ -72,7 +72,11 @@
     "subnavSurvey": "Survey",
     "subnavSurveyQuestions": "Questions",
     "subnavSurveySend": "Distribution",
-    "subnavSurveyResults": "Results"
+    "subnavSurveyResults": "Results",
+    "subnavSurveyPrivacy": "Privacy",
+    "subnavSurveyComments": "Comments",
+    "subnavSurveyTasks": "Actions",
+    "subnavSurveyHistory": "History"
   },
   "dash": {
     "actionDraft": "“{title}” is still a draft",
@@ -2533,5 +2537,50 @@
     "warning": "Warning",
     "suggestion": "Suggestion",
     "question": "Question"
+  },
+  "surveyPrivacy": {
+    "title": "Privacy",
+    "lead": "How this survey is set up. Changes are made in the builder.",
+    "rowWhoSees": "Who can see individual answers",
+    "whoSeesAnonymous": "No one. The answers are anonymous.",
+    "whoSeesNamed": "Owner and administrator",
+    "rowThreshold": "Breakdown threshold",
+    "thresholdValue": "At least {n} answers per group",
+    "rowLegal": "Legal basis",
+    "legalNone": "No statutory duty registered",
+    "rowRetention": "Retention",
+    "retentionMonths": "Answers are deleted automatically after {n} months",
+    "retentionForever": "Answers are not deleted automatically",
+    "rowBasis": "Lawful basis",
+    "basisLegal": "Legal obligation",
+    "basisInterest": "Legitimate interest · working environment",
+    "edit": "Change in the builder",
+    "editLocked": "View the settings in the builder — they are locked"
+  },
+  "surveyHistory": {
+    "title": "History",
+    "lead": "The rounds this survey has had.",
+    "empty": "The survey has not been sent yet.",
+    "round": "Round {n}",
+    "statusOpen": "Open",
+    "statusClosed": "Closed",
+    "opened": "Opened {date}",
+    "closed": "closed {date}",
+    "questions": "{n} questions in this round"
+  },
+  "surveyComments": {
+    "title": "Comments",
+    "lead": "Feedback from this survey.",
+    "leadOff": "Comments are switched off for this survey.",
+    "empty": "No comments yet.",
+    "anonymous": "Anonymous",
+    "named": "Named",
+    "handled": "Handled"
+  },
+  "surveyTasks": {
+    "title": "Actions",
+    "lead": "Actions that came out of this survey.",
+    "empty": "No actions are linked to this survey.",
+    "toWorklist": "Go to the worklist"
   }
 }
