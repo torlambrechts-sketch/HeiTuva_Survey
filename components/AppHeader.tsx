@@ -4,6 +4,11 @@ import { Logo, Wordmark } from '@/components/Logo'
 import { AppNav } from '@/components/AppNav'
 import { AppSubnav } from '@/components/AppSubnav'
 import { LIBRARY_TABS, TAB_NAV_KEY, type LibraryTab } from '@/lib/library/tabs'
+import {
+  SURVEY_TABS,
+  TAB_NAV_KEY as SURVEY_TAB_NAV_KEY,
+  type SurveyTab,
+} from '@/lib/surveys/tabs'
 import { LangPicker } from '@/components/LangPicker'
 import { UserMenu } from '@/components/UserMenu'
 import { MobileNav } from '@/components/MobileNav'
@@ -183,6 +188,16 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           libraryTabs: Object.fromEntries(
             LIBRARY_TABS.map((tab) => [tab, t(TAB_NAV_KEY[tab] as 'subnavTemplates')]),
           ) as Record<LibraryTab, string>,
+          survey: t('subnavSurvey'),
+          /* Same derivation, same reason — V6-2. The survey rail grows one tab
+             per phase (Metodikk, the four narrowings, Historikk), and each one
+             arrives with its label already wired or not at all. */
+          surveyTabs: Object.fromEntries(
+            SURVEY_TABS.map((tab) => [
+              tab,
+              t(SURVEY_TAB_NAV_KEY[tab] as 'subnavSurveyQuestions'),
+            ]),
+          ) as Record<SurveyTab, string>,
         }}
       />
     </div>

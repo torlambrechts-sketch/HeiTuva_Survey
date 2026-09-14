@@ -3,6 +3,12 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { LIBRARY_TABS, libraryTabHref, resolveLibraryTab } from '@/lib/library/tabs'
+import {
+  SURVEY_TABS,
+  resolveSurveyPath,
+  surveyTabHref,
+  type SurveyTab,
+} from '@/lib/surveys/tabs'
 
 /**
  * The subnav — v5's shell addition (V5:227-234).
@@ -69,6 +75,8 @@ export function AppSubnav({
     /* Keyed by the registry rather than spelled out, so a fourth tab is a
        compile error here and not a pill that silently never renders. */
     libraryTabs: Record<(typeof LIBRARY_TABS)[number], string>
+    survey: string
+    surveyTabs: Record<SurveyTab, string>
   }
 }) {
   const pathname = usePathname()
@@ -134,6 +142,33 @@ export function AppSubnav({
     // Same shape as the tasks rail, and the resolver is the page's own, so the
     // default tab cannot be spelled two ways.
     currentHref = libraryTabHref(resolveLibraryTab(params.get('fane')))
+  }
+
+  /* The survey's own rail — V6-2, and it is the RE-PARENT the whole tranche
+     turns on. v6 stops treating Bygg / Send / Resultater as three numbered
+     steps and makes them tabs on one survey (v6:1255-2096); its script builds
+     them in the same function as this strip's other rails (v6:8629), so this is
+     where they belong.
+
+     **The paths stay** (Tor): a survey has three phases with distinct state,
+     and a URL saying which one you are in is a property rather than an
+     implementation choice. So the pills are real routes and `aria-current` is
+     decided by the PATH SEGMENT — there is no parameter that can disagree with
+     it, which is the one failure mode the tasks and library rails each needed a
+     comment about.
+
+     `/live` and `/test` are survey routes with no pill. They resolve to a null
+     tab, so the rail renders with NOTHING current — «no pill is current» and
+     «the first pill is current» are different claims, and only the first is
+     true there. */
+  const survey = resolveSurveyPath(pathname)
+  if (survey) {
+    label = labels.survey
+    items = SURVEY_TABS.map((tab) => ({
+      label: labels.surveyTabs[tab],
+      href: surveyTabHref(survey.surveyId, tab),
+    }))
+    currentHref = survey.tab ? surveyTabHref(survey.surveyId, survey.tab) : ''
   }
 
   if (label === null) return null

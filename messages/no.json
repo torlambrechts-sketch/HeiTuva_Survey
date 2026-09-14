@@ -68,7 +68,11 @@
     "subnavLibrary": "Bibliotek",
     "subnavUseCases": "Bruksområder",
     "subnavTemplates": "Maler",
-    "subnavBank": "Spørsmålsbank"
+    "subnavBank": "Spørsmålsbank",
+    "subnavSurvey": "Undersøkelse",
+    "subnavSurveyQuestions": "Spørsmål",
+    "subnavSurveySend": "Utsending",
+    "subnavSurveyResults": "Resultater"
   },
   "dash": {
     "actionDraft": "«{title}» er fortsatt et utkast",
@@ -1426,9 +1430,6 @@
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",
-    "stepBuild": "Bygg",
-    "stepSend": "Send",
-    "stepResults": "Resultater",
     "statusUtkast": "Utkast",
     "statusAktiv": "Aktiv",
     "statusLukket": "Lukket",

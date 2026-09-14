@@ -153,7 +153,6 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         title={survey.title}
         audience={survey.audience_label}
         status={(survey.status ?? 'utkast') as 'utkast' | 'aktiv' | 'lukket'}
-        current="resultater"
       />
       <LiveStage
         surveyId={id}

@@ -150,7 +150,6 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         audience={survey.audience_label}
         status={survey.status}
         recurrence={await readScheduleChip(survey.id, survey.status)}
-        current="send"
       />
       <SendScreen
         surveyId={survey.id}

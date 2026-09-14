@@ -167,7 +167,6 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         audience={survey.audience_label}
         status={survey.status}
         recurrence={await readScheduleChip(survey.id, survey.status)}
-        current="bygg"
       />
       <Builder
         personDef={vocab.personDef}

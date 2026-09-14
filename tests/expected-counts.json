@@ -90,6 +90,7 @@
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/sentry-scrub.test.ts": 8,
   "tests/unit/shell-footer.test.ts": 8,
+  "tests/unit/survey-tabs.test.ts": 9,
   "tests/unit/threshold-line.test.ts": 5,
   "tests/unit/threshold-tier.test.ts": 13,
   "tests/unit/turnstile-state.test.ts": 11,

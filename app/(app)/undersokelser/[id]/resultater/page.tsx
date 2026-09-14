@@ -170,7 +170,6 @@ export default async function ResultsPage({
         audience={survey.audience_label}
         status={survey.status}
         recurrence={await readScheduleChip(survey.id, survey.status)}
-        current="resultater"
       />
       <ResultsScreen
         surveyId={survey.id}

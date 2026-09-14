@@ -68,7 +68,11 @@
     "subnavLibrary": "Library",
     "subnavUseCases": "Use cases",
     "subnavTemplates": "Templates",
-    "subnavBank": "Question bank"
+    "subnavBank": "Question bank",
+    "subnavSurvey": "Survey",
+    "subnavSurveyQuestions": "Questions",
+    "subnavSurveySend": "Distribution",
+    "subnavSurveyResults": "Results"
   },
   "dash": {
     "actionDraft": "“{title}” is still a draft",
@@ -1426,9 +1430,6 @@
   },
   "surveyNav": {
     "back": "Back to surveys",
-    "stepBuild": "Build",
-    "stepSend": "Send",
-    "stepResults": "Results",
     "statusUtkast": "Draft",
     "statusAktiv": "Active",
     "statusLukket": "Closed",

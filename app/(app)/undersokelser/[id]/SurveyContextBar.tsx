@@ -18,26 +18,28 @@ const STATUS_KEY: Record<Status, string> = {
   lukket: 'statusLukket',
 }
 
-/** Which of the three steps this screen is. */
-export type SurveyStep = 'bygg' | 'send' | 'resultater'
-
-const STEPS: { step: SurveyStep; num: string; key: string }[] = [
-  { step: 'bygg', num: '1', key: 'stepBuild' },
-  { step: 'send', num: '2', key: 'stepSend' },
-  { step: 'resultater', num: '3', key: 'stepResults' },
-]
-
 /**
- * The survey context bar — HeiTuva.dc.html:194-211.
+ * The survey context bar — HeiTuva.dc.html:194-211, IDENTITY ONLY since V6-2.
  *
- * The design puts it above Bygg, Send and Resultater alike (`inSurvey`), so it
- * lives beside those routes rather than inside the Builder: it is what tells
- * you WHICH survey you are editing, and Phase 3's Send screen renders the same
- * bar with `current="send"`.
+ * It says WHICH survey you are looking at: back link, title, audience, status,
+ * the ↻ series chip and «Kjør live». It no longer says which STEP you are on.
  *
- * Send and Resultater do not exist until Phases 3 and 4. Their steps still
- * link, as the design's do — docs/DEVIATIONS.md D29 covers the forward links
- * the survey list already carries.
+ * ── THE THREE-STEP RAIL MOVED TO `AppSubnav` (V6-2) ────────────────────────
+ *
+ * v6 stops treating Bygg / Send / Resultater as three numbered steps and makes
+ * them tabs on one survey (`sd.tab*`, v6:1255-2096), built by the same script
+ * function as the shell's other rails (v6:8629). The rail is therefore in the
+ * subnav strip, reading `lib/surveys/tabs.ts`.
+ *
+ * **It is removed from here rather than left in place, and that is the
+ * condition the move rests on** — `AppSubnav`'s own header sets it for `admin`:
+ * two controls doing one job, one of them able to go out of date, is worse than
+ * one control. The library obeyed it at Q172 and so does this.
+ *
+ * The PATHS are unchanged (Tor): a survey has three phases with distinct state,
+ * and a URL saying which one you are in is a property rather than an
+ * implementation choice. So this is a re-parenting of the rail, not of the
+ * routes.
  */
 export async function SurveyContextBar({
   surveyId,
@@ -46,7 +48,6 @@ export async function SurveyContextBar({
   status,
   recurrence,
   liveMode,
-  current,
 }: {
   surveyId: string
   title: string
@@ -65,7 +66,6 @@ export async function SurveyContextBar({
    * will work rather than one that refuses at the last possible moment.
    */
   liveMode?: boolean
-  current: SurveyStep
 }) {
   const t = await getTranslations('surveyNav')
 
@@ -113,29 +113,6 @@ export async function SurveyContextBar({
             {t('runLive')}
           </Link>
         ) : null}
-      {/* RESPONSIVE.md § Tab rails: the rail wraps below md and each step keeps
-          its design size, so the three 44px targets stay apart. */}
-      <div className="flex flex-wrap gap-2 rounded-full bg-sf2 p-1 md:gap-[3px]">
-        {STEPS.map((s) => {
-          const active = s.step === current
-          return (
-            <Link
-              key={s.step}
-              href={`/undersokelser/${surveyId}/${s.step}`}
-              aria-current={active ? 'step' : undefined}
-              className={`touch-44 flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[12.5px] text-ink no-underline ${
-                active ? 'font-bold' : 'font-medium'
-              }`}
-              style={{ background: active ? 'var(--ac)' : 'var(--sf2)' }}
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sf text-[11px] font-bold">
-                {s.num}
-              </span>
-              {t(s.key as 'stepBuild')}
-            </Link>
-          )
-        })}
-      </div>
       </div>
     </div>
   )
