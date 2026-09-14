@@ -5772,3 +5772,49 @@ box, must not contain the old wrapper's class string, and must route the list th
 esbuild's `keepNames`, which injects a `__name` helper that does not exist inside
 `page.evaluate` — «ReferenceError: __name is not defined». Inner helpers in an evaluate body
 have to be inlined.
+
+## D175 — a demo seeder that may be pointed at production, and why it creates no invitations
+
+**Q177, Tor, 2026-09-14**, asked for demo data in his real production organisation after
+seeing the deployed product empty.
+
+**`scripts/seed-demo.ts` MUST NEVER BE AIMED AT A REAL PROJECT.** Its first act is
+`dropOrg('Nordisk Studio')` and `dropOrg('Annen Bedrift AS')`; it creates three
+`@nordiskstudio.test` auth users; and it refuses a non-local URL for exactly that reason. It
+is a fixture builder, not a data loader. `scripts/seed-org-demo.ts` is the other thing: it
+ADDS to an organisation that already exists and removes nothing.
+
+**THE SAFETY ARGUMENT IS ABOUT EMAIL, AND IT IS THE WHOLE DESIGN.** Production runs
+
+    reminders-hourly      7 * * * *   select app.enqueue_reminders()
+    mail-worker-minutely  * * * * *   select app.run_mail_worker()
+    schedules-hourly     17 * * * *   select app.run_due_schedules()
+
+and `app.enqueue_reminders` selects `from survey_invitations where not is_test` with
+`r.status = 'open'`, `responded_at is null`, `sent_at is not null`, `email is not null`, then
+`pgmq.send`s each one. **A demo seeder that created invitations with invented addresses
+would have the live worker emailing them within the hour** — read from the deployed
+function's own body, not assumed.
+
+So the script creates **no `survey_invitations` at all** and **no `schedules`**. Responses
+arrive through a SHARE LINK, which is how an anonymous respondent answers anyway:
+`share_links` carries no address and the sweep cannot see it. Verified that a share token
+accepts repeated submissions (12 → 15 responses on one round), so k=5 is reachable with zero
+invitations.
+
+**Refusals, each proven by running it:** no `--org` (refused), an org id that does not exist
+(refused, nothing written), no `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` (refused rather
+than defaulting — a default URL is how a script meant for one database reaches another). The
+default mode is a DRY RUN that prints the plan; `--apply` writes.
+
+**Proven end to end against a scratch organisation**, then measured independently in SQL:
+2 surveys, 12 responses, **13 of 13 question types**, 4 tasks spread across existing members,
+2 own templates, 2 own bank questions, 1 comment — and **0 invitations, 0 schedules, 0 auth
+users**, with the reminder sweep's exact predicate returning 0. Running it twice changed
+nothing.
+
+**TWO COLUMN NAMES WERE WRONG AND `tsc` FOUND BOTH ONLY AFTER A CAST CAME OFF.** `audience`
+is `createSurvey`'s option name; the column is `audience_label`. `sort_order` is the bank's;
+`survey_questions` uses `position`. Both were hidden by an `as never` on the insert — the
+same shape as D173's discarded error, one layer up: a cast that silences the type checker is
+a swallowed exception at compile time.
