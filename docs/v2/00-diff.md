@@ -974,3 +974,56 @@ them are claims:
   «Arbeidsliste», `admin` → «Administrasjon», and **everything else → «Innsikt»** — so `dashboard`
   and `reports` share a label. «subnavLabel per screen» is true of three of the five.
 
+
+## 0.3e — v6, the seventh handoff: THE FIRST BUNDLE TO REMOVE WHAT WE REFUSED (measured V6-0, 2026-09-14)
+
+`HeiTuva_dc__5_.html` · md5 **`7c25573daee30103642ccf67781b44f4`** · **10152 lines** · **298
+distinct `sc-if` keys**. Against v5 (`fc3b4db66616cfa15b817e7ae15d73c2`, 8836 lines, 265 keys):
+**+67 added, −34 removed**, net +33.
+
+The instruction said «+65, −32». Both nets agree at 33 and the totals 298/265 match exactly, so the
+difference is two keys counted differently, not a different file. **The numbers here are what
+`grep -o '<sc-if value="{{[^}]*}}"'` returns**, which is the command, beside the claim.
+
+### THE REMOVAL IS REAL, AND IT IS NOT ONLY THE PLAYGROUND
+
+The instruction says «the 32 removed are the entire uitest set». **Measured, 34 were removed and
+only 28 of them are the uitest set.** The uitest 28 — `isUitest`/`isUitest2`/`isUitest3`, `uiA`,
+`uiB`, `uiD`, `uiE`, `uiBoxView`, `uiColsOpen`, `uiExported`, `uiFilterCount`, `uiFiltersOpen`,
+`uiListView`, `uiMoreOpen`, `uiNoRows`, `uiTipOpen`, the six `u2*`, the five `col*`, `hasSubtools` —
+**match V5-0's corrected figure of 28 exactly**, which is the cross-check that the count is right.
+(`uiC` occurs 13 times in v5 but never as an `sc-if` key, so it is not in either set.)
+
+**THE OTHER SIX ARE A FUNCTIONAL REMOVAL AND MUST NOT BE FILED UNDER «the playground went away».**
+`repBrowsing` (v5:1638) and five survey-list row states — `s.canClose` (v5:1298), `s.hasRecur`
+(1268), `s.hasShare` (1271), `s.isRecur` (1294), `s.menuOpen` (1284). In v5 those drive the row's
+recurrence chip, share chip, and a **nine-action overflow menu** (Rediger spørsmål, Send eller
+påminn, Resultater, Lag rapport, Svar selv (test), Del, Kopier, Pause/Stopp gjentakelse, Lukk for
+svar, Slett).
+
+**They are re-parented, not deleted, and the distinction took a second measurement to establish.**
+Grepping the TEMPLATE for `s.on*` returns 0 in v6 and that reads as «the actions are gone». Grepping
+the SCRIPT returns all of them, several MORE often than v5 (`onSend` 2→4, `onResults` 2→4, `onShare`
+2→4, `onDelete` 6→7, and `onDetail` 0→2). The row became a selector (`s.onDetail`) feeding a
+`svDetail.*` side panel and the new full detail screen. **A key-set diff said «removed»; only the
+script said «moved».** That is this file's own rule — diffing keys tells you what a handoff added,
+reading the lines tells you what it changed away — arriving on the removal side for the first time.
+
+### WHY IT IS WORTH ITS OWN SECTION
+
+Two things v6 removes were **refused by a decision of ours**, and this is the first handoff where
+that has happened:
+
+| refused by | string | v5 | v6 |
+|---|---|---|---|
+| Q120 (DO NOT BUILD: no external reference beside a comment) | `sak #` | 2 | **0** |
+| I2/D167 (the refused Entra field) | `Sluttdato` | 2 | **0** |
+| I2/D167 | `employeeLeaveDateTime` | 1 | **0** |
+| V5-1 (an uptime claim with no monitor behind it) | «Alle tjenester kjører normalt» | 1 | **0** |
+
+**But the refusal is honoured selectively, so «the bundle now follows our decisions» would be the
+wrong conclusion to draw from it.** Unchanged and still drawn: `Kunde 4812` (Q120's other half, 3 in
+both), `quizPass` (4), `quizTries` (4), «for å bestå» (1), `sertifikat` (3) — all four narrowed away
+by Q84 — and `NPS i dag` (2) and `Kritikere` (4), which Q126 refused. **Four refusals landed; seven
+strings across three decisions did not.** The useful statement is that a handoff can now be
+*informed* by our decisions, not that it is *governed* by them.
