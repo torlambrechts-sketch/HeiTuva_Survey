@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { WORKLIST_VIEWS } from '@/lib/worklist/view'
+import { SURVEY_VIEWS } from '@/lib/surveys/view'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
@@ -83,6 +84,14 @@ const CompanyInput = z.object({
     refused by the other.
   */
   worklist_view: z.enum(WORKLIST_VIEWS),
+  /*
+    F4. The organisation's default Undersøkelser view — «liste» (the six-column
+    table), «delt» (list and detail) or «kort» (cards). Enumerated for exactly
+    the reason `worklist_view` gives directly above: three rendering modes the
+    screen implements, not a registry a migration extends. `lib/surveys/view.ts`
+    holds the one copy the reader, the cookie action and this boundary share.
+  */
+  survey_view: z.enum(SURVEY_VIEWS),
   workspace: z
     .string()
     .trim()
@@ -105,6 +114,7 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
     timezone: formData.get('timezone'),
     workspace: formData.get('workspace'),
     worklist_view: formData.get('worklist_view'),
+    survey_view: formData.get('survey_view'),
   })
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
@@ -131,6 +141,12 @@ export async function saveCompany(_prev: AdminResult | null, formData: FormData)
       // the column has a writer in the phase that adds it rather than becoming
       // a fifth instance of «who writes this column?».
       worklist_view: parsed.data.worklist_view,
+      // F4 — the survey list's default view. NOT NULL with a real default
+      // ('liste'), written unconditionally for the same reason as its three
+      // neighbours above. THE COLUMN'S WRITER IS HERE, in the phase that adds
+      // it: `M:0122` names this function, and a column named in a migration
+      // whose writer arrives «later» is the shape invariant 8 exists to refuse.
+      survey_view: parsed.data.survey_view,
     })
     .eq('id', admin.orgId)
   if (error) {

@@ -1196,7 +1196,11 @@
     "users": "Brukere",
     "usersEmpty": "Ingen brukere ennå.",
     "usersHeading": "Brukere",
-    "usersRoleNote": "Administrator styrer innstillinger og personvern. Redaktør lager og sender undersøkelser. Leser ser bare summerte resultater — aldri enkeltsvar."
+    "usersRoleNote": "Administrator styrer innstillinger og personvern. Redaktør lager og sender undersøkelser. Leser ser bare summerte resultater — aldri enkeltsvar.",
+    "fSurveyView": "Standardvisning for undersøkelser",
+    "fSurveyList": "Liste",
+    "fSurveySplit": "Liste og detalj",
+    "fSurveyCards": "Kort"
   },
   "profile": {
     "aboutMe": "Om meg",
@@ -1537,7 +1541,12 @@
     "chipActive": "aktive nå",
     "chipQuestions": "spørsmål",
     "chipDrafts": "utkast",
-    "filterClosed": "Lukket"
+    "filterClosed": "Lukket",
+    "svScopeAll": "Alle",
+    "svScopeMine": "Mine",
+    "svScopeLow": "Lav svarprosent",
+    "svScopeRecurring": "Gjentakende",
+    "svScopeShared": "Delt med meg"
   },
   "dashboard": {
     "allGroups": "alle grupper",

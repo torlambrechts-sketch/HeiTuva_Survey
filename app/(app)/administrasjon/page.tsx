@@ -14,7 +14,7 @@ export default async function CompanyTab() {
   const [{ data: org }, { data: workspaces }] = await Promise.all([
     supabase
       .from('organizations')
-      .select('name, orgnr, address, contact_name, contact_email, dpo, timezone, workspace, worklist_view')
+      .select('name, orgnr, address, contact_name, contact_email, dpo, timezone, workspace, worklist_view, survey_view')
       .eq('id', viewer.orgId)
       .single(),
     // W0/Q122: the registry is the authority on which workspaces exist, so the
@@ -54,6 +54,9 @@ export default async function CompanyTab() {
           // default, so the fallback is that default and never a blank option.
           workspace: org?.workspace ?? 'hr',
           worklistView: org?.worklist_view ?? 'list',
+          // F4, same rule again: NOT NULL with a real default, so the fallback
+          // is that default rather than a blank the select cannot render.
+          surveyView: org?.survey_view ?? 'liste',
         }}
         workspaces={options}
       />

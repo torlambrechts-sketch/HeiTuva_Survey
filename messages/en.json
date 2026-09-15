@@ -1196,7 +1196,11 @@
     "users": "Users",
     "usersEmpty": "No users yet.",
     "usersHeading": "Users",
-    "usersRoleNote": "Administrator manages settings and privacy. Editor creates and sends surveys. Viewer sees only aggregated results — never individual answers."
+    "usersRoleNote": "Administrator manages settings and privacy. Editor creates and sends surveys. Viewer sees only aggregated results — never individual answers.",
+    "fSurveyView": "Default survey view",
+    "fSurveyList": "List",
+    "fSurveySplit": "List and detail",
+    "fSurveyCards": "Cards"
   },
   "profile": {
     "aboutMe": "About me",
@@ -1537,7 +1541,12 @@
     "chipActive": "active now",
     "chipQuestions": "questions",
     "chipDrafts": "drafts",
-    "filterClosed": "Closed"
+    "filterClosed": "Closed",
+    "svScopeAll": "All",
+    "svScopeMine": "Mine",
+    "svScopeLow": "Low response rate",
+    "svScopeRecurring": "Recurring",
+    "svScopeShared": "Shared with me"
   },
   "dashboard": {
     "allGroups": "all groups",

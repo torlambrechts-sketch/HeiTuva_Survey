@@ -15,6 +15,7 @@ export type Company = {
   timezone: string
   workspace: string
   worklistView: string
+  surveyView: string
 }
 
 const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
@@ -171,6 +172,30 @@ export function CompanyForm({
             >
               <option value="list">{t('fWorklistList')}</option>
               <option value="board">{t('fWorklistBoard')}</option>
+            </select>
+          </label>
+
+          {/* F4 — the organisation's default Undersøkelser view, the column
+              half of the same «cookie plus column» (M:0122). The person's own
+              choice is `heituva.svview`; Tuva's placement is a cookie with NO
+              control here on purpose, because there is no organisation-level
+              fact about where one person wants an assistant to sit.
+
+              The option VALUES are the bundle's keys, and the mapping is the
+              part to get right: «Liste» is the six-column TABLE (v6:8942
+              `rowsOn`) and «Liste og detalj» is the value `delt`. Reading the
+              labels instead of the keys ships the detail panel under the
+              table's name. */}
+          <label className="block">
+            <span className={label}>{t('fSurveyView')}</span>
+            <select
+              name="survey_view"
+              defaultValue={company.surveyView}
+              className={`${field} touch-44-field`}
+            >
+              <option value="liste">{t('fSurveyList')}</option>
+              <option value="delt">{t('fSurveySplit')}</option>
+              <option value="kort">{t('fSurveyCards')}</option>
             </select>
           </label>
 

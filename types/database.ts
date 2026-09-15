@@ -28,6 +28,22 @@
  * unrelated table — which is the argument for regenerating rather than
  * hand-adding the one key the compiler asked for: a hand edit would have fixed
  * the error and left the four.
+ *
+ * Regenerated 2026-09-15 (F4) against the local stack at migration HEAD. The
+ * diff is TWO things and only one of them is a schema change:
+ *
+ *   + organizations.survey_view  — M:0122, in Row, Insert and Update
+ *   ~ the three `TableName extends (…)` helper types gained parentheses
+ *
+ * The second is the GENERATOR, not the database: the committed file was emitted
+ * by an older supabase CLI whose conditional types were written without them.
+ * TypeScript reads both identically. It is adopted rather than reverted because
+ * «regenerated, never hand-patched» means taking the generator's output whole —
+ * hand-keeping the old formatting would be the same edit this rule refuses, and
+ * the next regeneration would produce the same noise again.
+ *
+ * Noted so the next reader can tell the two apart: a large diff on a one-column
+ * migration looks like a mistake until somebody says which half is which.
  */
 export type Json =
   | string
@@ -1191,6 +1207,7 @@ export type Database = {
           plan: string
           privacy: Json
           retention_months: number
+          survey_view: string
           timezone: string
           updated_at: string
           worklist_view: string
@@ -1217,6 +1234,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          survey_view?: string
           timezone?: string
           updated_at?: string
           worklist_view?: string
@@ -1243,6 +1261,7 @@ export type Database = {
           plan?: string
           privacy?: Json
           retention_months?: number
+          survey_view?: string
           timezone?: string
           updated_at?: string
           worklist_view?: string
@@ -3377,12 +3396,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3406,11 +3425,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3431,11 +3450,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3456,11 +3475,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3473,11 +3492,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

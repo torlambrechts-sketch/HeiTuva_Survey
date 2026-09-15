@@ -312,6 +312,28 @@ authoritative in a way a stale document does not.
    decoration» — and the bundle cannot tell you which, because the fixture never sets the key. A
    phase that builds the switch without asking ships the second while believing the first.
 
+   **AND THE SIXTH INSTANCE INVERTS THE CONCLUSION — F4-a, 2026-09-15, asked of a FIXTURE.**
+   The five above all end «add the writer». This one ends «do not add one», and the inversion is
+   the reason it is worth its own paragraph rather than a sixth tick.
+
+   The survey list's «Svar» column had no denominator in the demo organisation, so the obvious
+   move was to let the test factory pass a `target`. **`surveys.target` has had a writer since
+   `M:0039` — a trigger that sets it from the round's invitation count.** A factory override
+   would have been a SECOND writer for a column that has one, and the two disagree the moment a
+   round is created: the fixture's number survives until the trigger fires and then silently
+   becomes a different number.
+
+   Measured on a bare reset plus `seed:demo`: **8 of 10 surveys already carried a target**, so
+   both branches of the column were reachable before the phase touched anything. What was
+   actually missing was `created_by` — `count(created_by) = 0` — which the factory was the last
+   path still leaving null.
+
+   So the question is the same and the answer runs the other way: **«who writes this column?»
+   asked of a fixture, answered «something already does», is a reason NOT to add one.** The
+   measurement is written into `tests/db/factories.ts` **where the option would have gone**, so
+   the next reader sees why the parameter is absent rather than assuming nobody thought of it —
+   an absent option looks identical to an oversight, and only a comment tells them apart.
+
    **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
    the question is not «is the column there» but «who WRITES it». A column that is read
    everywhere looks finished from every angle except the one that matters. If the answer is
