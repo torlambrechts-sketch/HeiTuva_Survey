@@ -1640,7 +1640,12 @@
     "qEmpty": "Undersøkelsen har ingen spørsmål ennå.",
     "qEmptyScale": "Ingen skalaspørsmål i denne undersøkelsen.",
     "qEmptyText": "Ingen fritekstspørsmål i denne undersøkelsen.",
-    "qNoTheme": "Tegningen har en Tema-kolonne. Vi lagrer ikke tema per spørsmål, og vi gjetter det ikke — en kolonne som ser ut som data, men er utledet av rekkefølgen, er verre enn ingen kolonne."
+    "qNoTheme": "Tegningen har en Tema-kolonne. Vi lagrer ikke tema per spørsmål, og vi gjetter det ikke — en kolonne som ser ut som data, men er utledet av rekkefølgen, er verre enn ingen kolonne.",
+    "refuseMatrise": "«Matrise» i tegningen er en gruppe × tema-matrise. Tema finnes ikke per spørsmål hos oss, og aksen vi faktisk har — gruppe × spørsmål — ligger allerede på dashbordet. Åpne dashbordet avgrenset til denne undersøkelsen i stedet for å få det samme bildet to steder.",
+    "deferSammenlign": "«Sammenligning» — runde mot runde med endringskolonne — er ikke bygget. Tallene finnes (runde-trenden ligger under «Runde for runde»), men selve matrisen er en ny visning og ikke en omgruppering av denne siden.",
+    "refuseFordeling": "«Fordeling» er ikke en egen fane her: fordelingen står i kortet til spørsmålet den hører til, sammen med svarene.",
+    "refuseFrisvar": "«Frisvar» er heller ikke en egen fane: sitatene står i kortet til spørsmålet de svarer på.",
+    "resMatrixLink": "Åpne dashbordet for denne undersøkelsen"
   },
   "dashboard": {
     "allGroups": "alle grupper",

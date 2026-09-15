@@ -25,7 +25,17 @@ import { REFUSED } from '@/lib/surveys/subtabs'
  * V5-3's «Sluttdato» exemption being derived rather than listed: widening a
  * hard-coded list buys a green screen and loses the guard.
  */
-export async function SubTabRefusals({ tab }: { tab: SurveyTab }) {
+export async function SubTabRefusals({
+  tab,
+  children,
+}: {
+  tab: SurveyTab
+  /** A control the refusal points AT — `resultat`'s matrix note says the
+   *  picture is on the dashboard, so the link belongs beside the sentence
+   *  rather than in a paragraph somewhere else on the page. Optional, because
+   *  most refusals point at nothing. */
+  children?: import('react').ReactNode
+}) {
   const rows = Object.entries(REFUSED).filter(([k]) => k.startsWith(`${tab}/`))
   if (rows.length === 0) return null
 
@@ -44,6 +54,7 @@ export async function SubTabRefusals({ tab }: { tab: SurveyTab }) {
           </li>
         ))}
       </ul>
+      {children}
     </section>
   )
 }

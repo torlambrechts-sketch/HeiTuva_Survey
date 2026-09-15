@@ -123,6 +123,48 @@ export const REFUSED: Record<string, string> = {
    * by accident.
    */
   'malgruppe/segmenter': 'refuseSegmenter',
+  /**
+   * ── `resultat` LOSES ITS WHOLE RAIL TOO, AND FOR FOUR DIFFERENT REASONS ──
+   *
+   * The audit called this «den dyreste klassen å rette … fordi hver underfane
+   * er en egen datavei». Measured, not one of the six needs a new data path —
+   * and four of them should not be a sub-tab at all.
+   *
+   * **Matrise duplicates a screen that already exists.** v6 draws group × THEME
+   * and the theme axis does not exist (see `qNoTheme`); the axis we have is
+   * group × QUESTION, which is `get_heatmap`. And `/dashboard` already passes a
+   * survey array straight into it — `?u=<id>` — so the survey-scoped matrix is
+   * ONE PARAMETER away today. Driven 2026-09-15: `/dashboard?u=<id>` reports
+   * «1 undersøkelse · 18 svar» and two heatmap cells against the ten-survey
+   * view's twenty-eight. A second entry point to one picture is the thing
+   * «a shell rail may absorb an in-page one only when its list is COMPLETE»
+   * exists to prevent, one floor down. The screen LINKS there instead.
+   */
+  'resultat/matrise': 'refuseMatrise',
+
+  /**
+   * **Sammenligning is the one genuinely missing view**, and it is deferred
+   * rather than refused. `get_trends(p_survey, p_group)` exists, but the drawn
+   * panel is a round × question matrix with a change column and a total row
+   * (v6:1595-1649), which is a new rendering rather than a re-cut. It is the
+   * only one of resultat's six that would ADD something.
+   */
+  'resultat/sammenlign': 'deferSammenlign',
+
+  /**
+   * **Fordeling and Frisvar are not beside «Per spørsmål» — they are INSIDE
+   * it.** `ResultsScreen.tsx:421` opens one `<section>` per question and that
+   * card holds the question, its `questionBars` (the distribution) and its
+   * `QuoteList` (the free text) together. Splitting them into three sub-tabs
+   * would take a question apart from its own answers, on a screen the fidelity
+   * audit records as having ZERO findings.
+   *
+   * So this is not «we did not build it». It is «we built it joined up», and
+   * the note says which — because a sub-tab that is simply absent reads as one
+   * somebody did not finish.
+   */
+  'resultat/fordeling': 'refuseFordeling',
+  'resultat/frisvar': 'refuseFrisvar',
 
   /**
    * v6:1851-1872 — four waves, day 0 -> +3 -> +7 -> +12, each to those who have

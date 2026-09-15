@@ -1640,7 +1640,12 @@
     "qEmpty": "This survey has no questions yet.",
     "qEmptyScale": "No scale questions in this survey.",
     "qEmptyText": "No free-text questions in this survey.",
-    "qNoTheme": "The design has a Theme column. We do not store a theme per question and we do not guess one — a column that looks like data but is derived from the ordering is worse than no column."
+    "qNoTheme": "The design has a Theme column. We do not store a theme per question and we do not guess one — a column that looks like data but is derived from the ordering is worse than no column.",
+    "refuseMatrise": "The design's «Matrise» is a group × theme matrix. We have no theme per question, and the axis we do have — group × question — is already on the dashboard. Open the dashboard scoped to this survey rather than having the same picture in two places.",
+    "deferSammenlign": "«Sammenligning» — round against round with a change column — is not built. The numbers exist (the round trend is under «Runde for runde»), but the matrix itself is a new view rather than a regrouping of this page.",
+    "refuseFordeling": "«Fordeling» is not a tab of its own here: the distribution sits in the card for the question it belongs to, beside the answers.",
+    "refuseFrisvar": "«Frisvar» is not a separate tab either: the quotes sit in the card for the question they answer.",
+    "resMatrixLink": "Open the dashboard for this survey"
   },
   "dashboard": {
     "allGroups": "all groups",

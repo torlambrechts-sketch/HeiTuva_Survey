@@ -331,3 +331,53 @@ describe('F5-2 — the question read view, and the column it must not have', () 
     expect(r?.tab).toBe('sporsmal')
   })
 })
+
+describe('F5-3 — resultat keeps its ONE screen, and says so four ways', () => {
+  const RESULTS = 'app/(app)/undersokelser/[id]/resultater/page.tsx'
+  const SCREEN = 'app/(app)/undersokelser/[id]/resultater/ResultsScreen.tsx'
+  const strip = (f: string) =>
+    readFileSync(f, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+  it('resultat has NO rail — all six are answered without one', () => {
+    expect(subTabsFor('resultat')).toHaveLength(0)
+    /* And the four that needed saying are said. «Per spørsmål» and «Runder» are
+       not refusals: they ARE this screen. */
+    for (const k of ['matrise', 'sammenlign', 'fordeling', 'frisvar']) {
+      expect(REFUSED_KEYS, `resultat/${k}`).toContain(`resultat/${k}`)
+    }
+    expect(REFUSED_KEYS).not.toContain('resultat/sporsmal')
+    expect(REFUSED_KEYS).not.toContain('resultat/runder')
+  })
+
+  it('Fordeling and Frisvar are refused BECAUSE the card already holds them', () => {
+    /* The load-bearing measurement: `ResultsScreen` opens one <section> per
+       question and that card carries both the bars and the quotes. If either
+       ever moves out of the per-question card, this refusal stops being true
+       and the test that guards it fails. */
+    const body = strip(SCREEN)
+    const card = body.slice(body.indexOf('<section key={q.id}'))
+    expect(card.slice(0, 3000)).toContain('QuoteList')
+    expect(card.slice(0, 3000)).toContain('questionBars')
+  })
+
+  it('the matrix note points at the screen that already draws it', () => {
+    /* `/dashboard` passes its survey array straight to `get_heatmap`, so
+       `?u=<id>` IS the survey-scoped group x question matrix. Driven: it
+       reports «1 undersøkelse» and two cells where the unscoped view has
+       twenty-eight. A second entry point to one picture is what the rail rule
+       refuses one floor up. */
+    expect(strip(RESULTS)).toMatch(/\/dashboard\?u=\$\{survey\.id\}/)
+    expect(strip(RESULTS)).toContain('resMatrixLink')
+    expect(strip('app/(app)/dashboard/page.tsx')).toMatch(/readHeatmap\(viewer\.orgId, selected/)
+  })
+
+  it('every resultat refusal has a sentence in both languages', () => {
+    for (const k of REFUSED_KEYS.filter((x) => x.startsWith('resultat/'))) {
+      for (const [lang, set] of [['no', no], ['en', en]] as const) {
+        expect((set.surveys as Record<string, string>)[REFUSED[k]!], `${lang}: ${k}`).toBeTruthy()
+      }
+    }
+  })
+})

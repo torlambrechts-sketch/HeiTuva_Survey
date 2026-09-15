@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { SubTabRefusals } from '@/components/SubTabRefusals'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
@@ -53,6 +55,7 @@ export default async function ResultsPage({
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('results')
+  const tS = await getTranslations('surveys')
 
   const { data: survey, error } = await supabase
     .from('surveys')
@@ -219,6 +222,22 @@ export default async function ResultsPage({
           />
         </div>
       ) : null}
+
+      {/* F5-3 — THE SUB-RAIL v6 DRAWS HERE IS NOT BUILT, AND ALL FOUR REASONS
+          ARE DIFFERENT. Matrise duplicates `/dashboard?u=<id>`, Sammenligning is
+          deferred, and Fordeling and Frisvar are not beside «Per spørsmål» but
+          INSIDE it — one card per question holds the question, its bars and its
+          quotes. Splitting those apart would take a question away from its own
+          answers on a screen the audit records as having zero findings.
+          Derived from the registry, so a reversal loses its sentence. */}
+      <SubTabRefusals tab="resultat">
+        <Link
+          href={`/dashboard?u=${survey.id}`}
+          className="touch-44 mt-3 inline-flex items-center rounded-[10px] border border-line px-3.5 py-2 text-[12.5px] font-semibold text-ink no-underline"
+        >
+          {tS('resMatrixLink')}
+        </Link>
+      </SubTabRefusals>
     </>
   )
 }
