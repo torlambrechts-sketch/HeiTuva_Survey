@@ -89,8 +89,43 @@ async function openBuilderPane(page: Page, tab: 'Generelt' | 'Legg til' | 'Innst
  * different survey the moment the seed changes. The picker addresses it by
  * name, and exercises the control while it is at it.
  */
+/**
+ * F4 — THE ROW'S ACTION LINKS, AND WHY THESE ARE REGEXES.
+ *
+ * Until F4 the list had ONE row component whose primary call to action was
+ * named for the row's status: «Fortsett å bygge» on a draft, «Se svar» on an
+ * active survey. Every state below reached the builder through the first of
+ * those, and `.first()` therefore meant «the first DRAFT» without saying so —
+ * the name did the filtering.
+ *
+ * v6:2339-2352 draws the table row with three ICON links instead, named for
+ * what they do rather than for the row's status, so that implicit filter is
+ * gone. `BUILD_LINK` matches the icon; `openDraftBuilder` restores the part the
+ * name used to supply, by selecting «Utkast» first.
+ *
+ * Both names are matched in either language, because `verify:i18n` drives these
+ * same states with the browser in English.
+ */
+const BUILD_LINK = /^(Rediger spørsmål|Edit questions): /
+const RESULTS_LINK = /^(Resultater|Results): /
+
+/**
+ * Open the builder of the first DRAFT survey — what
+ * `getByRole('link', { name: 'Fortsett å bygge' }).first()` used to mean.
+ *
+ * A site that has already narrowed the list (the bank's own-question state
+ * searches for one survey by name) must NOT use this: the filter click would
+ * discard its search. Those use `BUILD_LINK` directly.
+ */
+async function openDraftBuilder(page: Page) {
+  await page.getByRole('link', { name: 'Utkast', exact: true }).click()
+  await page.waitForURL((u) => u.searchParams.get('filter') === 'utkast')
+  await page.getByRole('link', { name: BUILD_LINK }).first().click()
+  await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+}
+
 async function pickSurvey(page: Page, title: string) {
-  await page.getByRole('link', { name: 'Se svar' }).first().click()
+  await page.getByRole('link', { name: RESULTS_LINK }).first().click()
   await page.waitForURL((u) => u.pathname.endsWith('/resultater'))
   // Addressed by its label, not by position: at desktop the header's own
   // language switcher is the first combobox on the page, so `.first()` picked
@@ -891,14 +926,14 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'default',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
         },
       },
       {
         name: 'avansert',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           // B2 moved «Byggemodus» into the GENERELT tab, where V2:580-587 draws
           // it; it used to float above the tab rail and was reachable from any
@@ -912,7 +947,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'vis',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await openBuilderPane(page, 'Vis')
         },
@@ -924,7 +959,7 @@ export const ROUTES: RouteSpec[] = [
         // surface in this screen — had no coverage at any viewport.
         name: 'innstillinger',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await openBuilderPane(page, 'Innstillinger')
           // Scoped to the visible heading: below xl the right pane exists
@@ -940,7 +975,7 @@ export const ROUTES: RouteSpec[] = [
         // and the threshold row.
         name: 'policy-open',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await openBuilderPane(page, 'Innstillinger')
           await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
@@ -953,7 +988,7 @@ export const ROUTES: RouteSpec[] = [
         // only place the product argues with the person setting it.
         name: 'policy-low-warning',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await openBuilderPane(page, 'Innstillinger')
           await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
@@ -1002,7 +1037,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'default',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/send'))
@@ -1030,7 +1065,7 @@ export const ROUTES: RouteSpec[] = [
           await page.context().addCookies([
             { name: 'heituva.workspace', value: 'cx', url: page.url() },
           ])
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/send'))
@@ -1040,7 +1075,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'import-open',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/send'))
@@ -1053,7 +1088,7 @@ export const ROUTES: RouteSpec[] = [
         // the seed switches `sms_channel` on for the demo org.
         name: 'sms',
         setup: async (page) => {
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/send'))
@@ -1067,7 +1102,7 @@ export const ROUTES: RouteSpec[] = [
           // The cadence panel's recurring branch — rounds, rotation and the
           // plan chips only exist once a cadence other than "Én gang" is
           // picked, so the default capture never sees them.
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('link', { name: 'Videre til utsending' }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/send'))
@@ -1123,7 +1158,7 @@ export const ROUTES: RouteSpec[] = [
         name: 'default',
         setup: async (page) => {
           const base = page.url().replace(/\/undersokelser.*$/, '')
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           await page.getByRole('button', { name: 'Lagre som mal' }).click()
           await page.getByRole('button', { name: 'Lagret som mal ✓' }).waitFor({ timeout: 15_000 })
@@ -1185,7 +1220,7 @@ export const ROUTES: RouteSpec[] = [
           // no "Lagre til banken" button at all.
           await page.getByLabel('Søk i undersøkelser…').fill('Utkast uten svar')
           await page.waitForURL((u) => (u.searchParams.get('sok') ?? '').length > 0)
-          await page.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+          await page.getByRole('link', { name: BUILD_LINK }).first().click()
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
           // Idempotent: an earlier verifier in the same run may already have
           // saved this question, and then the button reads "I banken ✓" and

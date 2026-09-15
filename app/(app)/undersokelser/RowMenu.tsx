@@ -4,47 +4,55 @@ import Link from 'next/link'
 import { NewReportButton } from '../rapporter/ReportRowActions'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { DELETE_FG, PRIMARY_ACTION, STATUS_COLORS, type ShareScope, type SurveyStatus } from './keys'
+import { DELETE_FG, type ShareScope, type SurveyStatus } from './keys'
 import { closeSurvey, copyAsNewRound, deleteSurvey } from './actions'
-import { hasTarget, rowRate } from '@/lib/surveys/participation'
 import { setSchedulePaused, stopSchedule } from './[id]/send/actions'
 
-export type SurveyListItem = {
+/**
+ * F4 — THE ROW MENU, EXTRACTED RATHER THAN DROPPED.
+ *
+ * This was the tail of `SurveyRow`, the single list row the app had before the
+ * three views. The drawing's table gives a row five icon buttons and no menu
+ * (v6:2339-2352), so building the three views to the drawing would have DELETED
+ * six actions that only exist here: share, copy as a new round, close, delete,
+ * pause the series and stop it.
+ *
+ * **A control removed from the one place it exists is a feature deleted**, which
+ * is the rule V4-0 used the other way round when «Ny undersøkelse» left the
+ * header — there it was checked that both destinations already existed. Here
+ * they did not, so the menu moves into the two views the drawing gives actions
+ * to (the table's «Handling» column and the detail panel) and the card grid,
+ * which the drawing gives none, gets none.
+ *
+ * Nothing inside is new. The handlers, the click-away, the Escape key and the
+ * failure alert are `SurveyRow`'s, moved unchanged.
+ */
+export type RowMenuSurvey = {
   id: string
   title: string
-  audience: string | null
   status: SurveyStatus
   scope: ShareScope
-  target: number | null
-  questionCount: number
-  responseCount: number
-  editorCount: number
-  createdAt: string
-  updatedAt: string
-  /** Q17 — the share panel's «bare der minst {k} har svart» line. */
   kThreshold: number
   respondentKind: 'person' | 'organisation'
-  /** Whether the series is paused, so the menu knows which verb to offer. */
   schedulePaused: boolean
 }
 
-type Labels = {
-  primaryDraft: string; primaryActive: string; primaryClosed: string
+export type RowMenuLabels = {
   moreOptions: string
   menuEdit: string; menuSend: string; menuResults: string; menuReport: string
   menuAnswer: string; menuShare: string; menuCopy: string; menuClose: string; menuDelete: string
-  statusDraft: string; statusActive: string; statusClosed: string
-  responses: string; sharedWith: string; failed: string; people: string
+  menuPause: string; menuStop: string; stopConfirm: string
+  failed: string
   /**
-   * The ↻ recurrence chip (NEW:873-875). Empty when the survey has no series —
-   * a one-off shows no chip rather than a chip saying it is a one-off.
+   * The recurrence sentence, or EMPTY when the survey has no series.
    *
-   * Formatted by the PAGE, from `lib/schedules/status.ts`, because this is a
-   * client component and next-intl's `t` does not cross that boundary. Same
-   * function the Send screen, the context bar and the rounds panel read.
+   * It is a label and a condition at once: the two pause/stop items are drawn
+   * only when it is non-empty, «so it doubles as the condition rather than a
+   * second flag that could disagree with the chip» — `SurveyRow`'s own
+   * reasoning, carried over with the code. The chip that displays it lives on
+   * the row; this component only asks whether there is one.
    */
   recurrence: string
-  menuPause: string; menuStop: string; stopConfirm: string
 }
 
 // The rows are ~37px tall in a gap-[2px] stack, so their 44px touch areas
@@ -53,23 +61,16 @@ type Labels = {
 const menuItem =
   'touch-44 mb-[7px] cursor-pointer rounded-[9px] border-none bg-transparent px-3 py-[10px] text-left text-[13px] text-ink no-underline last:mb-0 md:mb-0'
 
-/**
- * One survey row (HeiTuva.dc.html:766-801).
- *
- * A client component only because of the ··· menu and the three destructive
- * actions. Everything that is navigation is a `Link`, so the row works before
- * hydration and middle-click opens a new tab.
- */
-export function SurveyRow({
+export function RowMenu({
   survey,
   canEdit,
   shareHref,
   labels,
 }: {
-  survey: SurveyListItem
+  survey: RowMenuSurvey
   canEdit: boolean
   shareHref: string
-  labels: Labels
+  labels: RowMenuLabels
 }) {
   const [open, setOpen] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -80,8 +81,7 @@ export function SurveyRow({
   // A menu that only closes on its own trigger is a trap: click-away and Escape
   // are how people expect to leave one. Its links close it explicitly too —
   // they navigate client-side, so React reuses this component and `open` would
-  // otherwise survive the navigation, leaving the menu hanging over the screen
-  // it just opened.
+  // otherwise survive the navigation.
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
@@ -98,42 +98,6 @@ export function SurveyRow({
     }
   }, [open])
 
-  const status = STATUS_COLORS[survey.status]
-  const statusLine =
-    survey.status === 'utkast'
-      ? labels.statusDraft
-      : survey.status === 'aktiv'
-        ? labels.statusActive
-        : labels.statusClosed
-  const primary = PRIMARY_ACTION[survey.status]
-  const primaryLabel =
-    survey.status === 'utkast'
-      ? labels.primaryDraft
-      : survey.status === 'aktiv'
-        ? labels.primaryActive
-        : labels.primaryClosed
-
-  /**
-   * A percentage needs a denominator. `target` is null until Send chooses
-   * recipients, and a 0 % derived from an unknown denominator is a fabricated
-   * number — it reads as "nobody answered" when six people did.
-   *
-   * What follows from that is that the FILL is withheld, not the track. Hiding
-   * the whole bar was the first fix and it went one step too far: it removed a
-   * piece of the design's row (HeiTuva.dc.html:766-801) to avoid stating a
-   * number, when the track states nothing on its own. An empty track beside
-   * "6 svar" is the honest shape — the row still looks like every other row,
-   * and nothing claims a proportion nobody knows.
-   */
-  /* F3 — through `rowRate`, which is where the cap and the rounding live.
-     This was the FOURTH definition of a row's response rate: `responsePct` in
-     keys.ts (no caller), `pctOf` in page.tsx (the sort and the status pill),
-     this one (the bar the reader actually sees) and `rowRate` itself. The
-     three that shipped happened to agree; nothing made them. */
-  const row = { id: survey.id, responses: survey.responseCount, target: survey.target }
-  const measurable = hasTarget(row)
-  const pct = measurable ? Math.round(rowRate(row) * 100) : null
-
   function run(action: () => Promise<{ ok: boolean }>) {
     setOpen(false)
     setFailed(false)
@@ -145,100 +109,20 @@ export function SurveyRow({
   }
 
   return (
-    <div
-      ref={wrap}
-      className="relative rounded-2xl border-[1.5px] border-line bg-sf px-[22px] py-[18px]"
-    >
-      <div className="flex flex-wrap items-center gap-[14px]">
-        <span
-          className="whitespace-nowrap rounded-full px-[13px] py-[6px] text-xs font-bold"
-          style={{ background: status.bg, color: status.fg }}
-        >
-          {statusLine}
-        </span>
-        <span className="min-w-full flex-1 md:min-w-[200px]">
-          <span className="block font-display text-[20px] font-medium">{survey.title}</span>
-          {/*
-            The design's meta line is "{audience} · {N} personer · sendt {date}
-            · v{version}". Three of those four do not exist in this schema yet:
-            there is no version column, `target` is null until Send sets it, and
-            nothing has been sent before Phase 3. CLAUDE.md forbids rendering a
-            placeholder that looks like data, so the row shows only the segments
-            that are real and omits the rest — a shorter true line rather than a
-            complete false one. docs/DEVIATIONS.md D34.
-          */}
-          <span className="mt-[2px] block text-[13px] text-mut">
-            {[survey.audience, labels.people].filter(Boolean).join(' · ')}
-          </span>
-          <span className="mt-[6px] flex flex-wrap gap-1.5">
-            {labels.sharedWith ? (
-              <span className="inline-block rounded-full bg-ac2 px-[10px] py-1 text-[11.5px] font-semibold">
-                {labels.sharedWith}
-              </span>
-            ) : null}
-            {/* NEW:873-875. The chip a leser can also see, which is the whole
-                of Q23: without the RLS swap it would render from a row they
-                read as absent — indistinguishable from a survey that does not
-                repeat. */}
-            {labels.recurrence ? (
-              <span
-                className="inline-block rounded-full px-[10px] py-1 text-[11.5px] font-semibold"
-                style={{ background: 'var(--sbg)' }}
-              >
-                ↻ {labels.recurrence}
-              </span>
-            ) : null}
-          </span>
-        </span>
-        <span className="flex flex-wrap items-center gap-2">
-          <Link
-            href={`/undersokelser/${survey.id}/${primary.path}`}
-            className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-[18px] py-[10px] text-[12.5px] font-semibold text-ink no-underline"
-          >
-            {primaryLabel}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={labels.moreOptions}
-            aria-expanded={open}
-            aria-haspopup="menu"
-            className="touch-44 h-[38px] w-[38px] cursor-pointer rounded-[10px] border border-line bg-transparent text-base leading-none text-ink"
-          >
-            ···
-          </button>
-        </span>
-      </div>
-
-      <div className="mt-[14px] flex items-center gap-[14px]">
-        {/*
-          `role="progressbar"` only where there is a value to announce. A
-          progressbar with no `aria-valuenow` is worse than a plain box: a
-          screen reader announces a progress control and then has nothing to
-          say about its progress.
-        */}
-        <span
-          className="block h-[9px] flex-1 overflow-hidden rounded-full"
-          style={{ background: 'var(--sf2)' }}
-          {...(pct === null
-            ? { 'aria-hidden': true }
-            : {
-                role: 'progressbar',
-                'aria-valuenow': pct,
-                'aria-valuemin': 0,
-                'aria-valuemax': 100,
-                'aria-label': labels.responses,
-              })}
-        >
-          {pct === null ? null : (
-            <span className="block h-full rounded-full bg-ac" style={{ width: `${pct}%` }} />
-          )}
-        </span>
-        <span className="whitespace-nowrap text-[13px] text-mut">{labels.responses}</span>
-      </div>
+    <div ref={wrap} className="relative flex-none">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`${labels.moreOptions}: ${survey.title}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="touch-44 flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[9px] border border-line bg-transparent text-base leading-none text-ink"
+      >
+        ···
+      </button>
 
       {failed ? (
-        <p role="alert" className="mt-2 text-[12.5px] font-semibold text-ink">
+        <p role="alert" className="absolute right-0 top-[34px] z-[6] whitespace-nowrap rounded-lg border border-line bg-sf px-2 py-1 text-[12.5px] font-semibold text-ink">
           {labels.failed}
         </p>
       ) : null}

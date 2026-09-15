@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
@@ -9,6 +10,12 @@ import { audit } from '@/lib/auth/audit'
 import { NEW_QUESTION_TEXT, specOf } from '@/lib/questions/registry'
 import { PackQuestion, configFor } from '@/lib/questions/pack'
 import { SHARE_SCOPES, WIZARD_CADENCES } from './keys'
+import {
+  SURVEY_TUVA_COOKIE,
+  SURVEY_VIEWS,
+  SURVEY_VIEW_COOKIE,
+  TUVA_PLACEMENTS,
+} from '@/lib/surveys/view'
 
 export type SurveyResult = { ok: true } | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
 
@@ -368,6 +375,67 @@ export async function setResultsScope(surveyId: string, scope: string): Promise<
   if (!data?.length) return { ok: false, error: 'forbidden' }
 
   await audit(viewer.orgId, 'survey.results_scope', surveyId, { scope: parsed.data })
+  revalidatePath('/undersokelser')
+  return { ok: true }
+}
+
+/**
+ * F4 — the two per-person choices this screen carries, as Q122's mechanism and
+ * Q152's precedent: the cookie is written HERE because the list is a server
+ * component and cannot set one during render.
+ *
+ * NO DATABASE WRITE in either. Choosing the card view for yourself is not a
+ * change to the organisation's default, and the two are stored apart precisely
+ * so that one person's preference cannot become everybody's. The organisation's
+ * default is `organizations.survey_view`, written by `saveCompany`.
+ *
+ * `requireViewer` rather than a role check: a cookie about how YOUR list looks
+ * is not an organisation setting, so every signed-in member may set their own.
+ */
+const SurveyViewInput = z.object({ view: z.enum(SURVEY_VIEWS) })
+
+export async function setSurveyView(input: unknown): Promise<{ ok: boolean }> {
+  await requireViewer()
+  const parsed = SurveyViewInput.safeParse(input)
+  if (!parsed.success) return { ok: false }
+
+  const store = await cookies()
+  store.set(SURVEY_VIEW_COOKIE, parsed.data.view, {
+    path: '/',
+    sameSite: 'lax',
+    httpOnly: false,
+    maxAge: 60 * 60 * 24 * 365,
+  })
+  revalidatePath('/undersokelser')
+  return { ok: true }
+}
+
+/**
+ * Where Tuva sits — the side column (v6's default) or the floating bubble.
+ *
+ * A SECOND cookie rather than a field of the first, because the two choices are
+ * independent: a person may want the card view AND the bubble, and packing them
+ * together would make every write to one a write to the other. Same reason W2
+ * gave the Tilpasset workspace its own cookie.
+ *
+ * And no column beside it — `M:0122` carries the argument: a house default for
+ * «list or board» is a real choice, while there is no organisation-level fact
+ * about where one person wants an assistant to sit.
+ */
+const TuvaPlacementInput = z.object({ placement: z.enum(TUVA_PLACEMENTS) })
+
+export async function setTuvaPlacement(input: unknown): Promise<{ ok: boolean }> {
+  await requireViewer()
+  const parsed = TuvaPlacementInput.safeParse(input)
+  if (!parsed.success) return { ok: false }
+
+  const store = await cookies()
+  store.set(SURVEY_TUVA_COOKIE, parsed.data.placement, {
+    path: '/',
+    sameSite: 'lax',
+    httpOnly: false,
+    maxAge: 60 * 60 * 24 * 365,
+  })
   revalidatePath('/undersokelser')
   return { ok: true }
 }

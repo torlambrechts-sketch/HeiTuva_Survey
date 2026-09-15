@@ -10,6 +10,35 @@ import type { Database } from '@/types/database'
  */
 
 export type SurveyStatus = Database['public']['Tables']['surveys']['Row']['status']
+
+/**
+ * One row of the list, as the PAGE assembles it.
+ *
+ * F4 — moved here from `SurveyRow.tsx`, which is deleted: the single row the
+ * app had is replaced by three views (`SurveyTable`, `SurveyCards`,
+ * `SurveyDetail`), all reading `lib/surveys/list-row.ts`. The shape survives
+ * because the page still assembles it once and hands the pieces on; only the
+ * component that rendered it is gone, and its menu moved to `RowMenu.tsx`
+ * rather than being dropped with it.
+ */
+export type SurveyListItem = {
+  id: string
+  title: string
+  audience: string | null
+  status: SurveyStatus
+  scope: ShareScope
+  target: number | null
+  questionCount: number
+  responseCount: number
+  editorCount: number
+  createdAt: string
+  updatedAt: string
+  /** Q17 — the share panel's «bare der minst {k} har svart» line. */
+  kThreshold: number
+  respondentKind: 'person' | 'organisation'
+  /** Whether the series is paused, so the menu knows which verb to offer. */
+  schedulePaused: boolean
+}
 export type ShareScope = Database['public']['Tables']['surveys']['Row']['results_scope']
 
 /**

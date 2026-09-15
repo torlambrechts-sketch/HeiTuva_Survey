@@ -24,19 +24,27 @@ import { headlineKey, lowestKey, type Analyst } from '@/lib/tuva/analyst'
  * When there is nothing to say it renders NOTHING. A helper that always has an
  * opinion is a helper nobody believes.
  */
-export async function AnalystPanel({ analyst }: { analyst: Analyst }) {
+/**
+ * ── F4: `bare` — THE CONTENT WITHOUT ITS OWN CHROME ───────────────────────
+ *
+ * Tuva now sits in one of two places the DRAWING decides (the docked side
+ * column or the floating bubble, v6:9014-9018), and each brings its own frame,
+ * heading and switch button. This component kept its own `<aside>` and heading
+ * because it used to be a full-width block of its own, and two frames nested
+ * would be two headings saying «Tuva».
+ *
+ * So `bare` renders the SENTENCES AND TIPS ONLY, and `TuvaPlacementSwitch`
+ * supplies the frame. Not a second component: the copy, the two headline keys
+ * and Q185's tip rule are the same in both placements, and duplicating them is
+ * how the two would come to disagree.
+ */
+export async function AnalystPanel({ analyst, bare }: { analyst: Analyst; bare?: boolean }) {
   const t = await getTranslations('analyst')
   if (analyst.activeCount === 0 && analyst.tips.length === 0) return null
 
-  return (
-    <aside
-      aria-label={t('title')}
-      className="mt-5 rounded-2xl border border-line bg-sf px-[22px] py-[18px]"
-    >
-      <h2 className="text-[13px] font-semibold uppercase tracking-[.09em] text-mut">
-        {t('title')}
-      </h2>
-      <p className="mt-2 text-[14px]">
+  const body = (
+    <>
+      <p className={bare ? 'text-[13.5px] leading-[1.6]' : 'mt-2 text-[14px]'}>
         {t(headlineKey(analyst), {
           n: analyst.activeCount,
           m: analyst.measured?.ids.length ?? 0,
@@ -88,6 +96,20 @@ export async function AnalystPanel({ analyst }: { analyst: Analyst }) {
           ))}
         </ul>
       ) : null}
+    </>
+  )
+
+  if (bare) return body
+
+  return (
+    <aside
+      aria-label={t('title')}
+      className="mt-5 rounded-2xl border border-line bg-sf px-[22px] py-[18px]"
+    >
+      <h2 className="text-[13px] font-semibold uppercase tracking-[.09em] text-mut">
+        {t('title')}
+      </h2>
+      {body}
     </aside>
   )
 }

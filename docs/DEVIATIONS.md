@@ -6084,3 +6084,124 @@ The band MOVED the sentence this screen already had; it did not shorten it. Ever
 shipped and one of them is required: the threshold is the k the RPCs returned for this
 selection (Q42), never a figure computed in the page, and dropping it to match a mock that had
 no gate behind it would remove a statutory-facing statement to fit a layout.
+
+## D185 — F4: «Delt med meg» asks about the READER, not the survey
+
+`v6:7712` — `svScope === "delt"` is `!!(s.share && s.share.length)`, which is
+true of every survey that has any co-editor at all. Read literally, one person
+sharing a survey with another puts it in a third person's «Delt med meg».
+
+Ours is `survey_editors` containing the VIEWER (`lib/surveys/scopes.ts`,
+`sharedWithViewer`). The label is «Delt med **meg**»; a scope rail is five
+questions about *my* work, and a filter that selects other people's
+collaborations is not one of them.
+
+The bundle's reading is what a mock does when it has one fixture user. The
+product has members, and the distinction is only visible once it does.
+
+## D186 — F4: the survey-list detail panel has no «versjon»
+
+`v6:2270` draws `{{ svDetail.audience }} · eier {{ svDetail.owner }} · {{ svDetail.version }}`.
+`surveys` has no version column and never has; `s.version` is a mock field the
+fixture sets and increments on copy.
+
+The line ships with the two facts that exist. A hard-coded `v1` is the worked
+example in CLAUDE.md's never-fabricate rule, and relabelling the round COUNT as
+«versjon» would be the same invention with a truthful-looking source — the
+number would be real and the word would be false, which is harder to catch.
+
+## D187 — F4: the card grid shows the sent date where the drawing shows a version
+
+`v6:2400` puts `{{ s.version }}` in the card's top-right. Same absent column as
+D186. The card carries the SENT DATE there instead — a fact the survey has,
+already computed for the table's «Sendt» column, and «—» where it has never been
+sent.
+
+Chosen over leaving the corner empty because the card's top row is a two-item
+flex and one item would re-centre the status pill, which is a visible layout
+change to avoid stating nothing.
+
+## D188 — F4: the list card's heading is «Undersøkelser», not «Arbeidsliste»
+
+`v6:2204` — the survey list's card is headed «Arbeidsliste» on the Undersøkelser
+screen. That is the name of a DIFFERENT surface: Handlinger/`/oppgaver`, whose
+nav item, breadcrumb leaf, footer link and subnav label all read «Arbeidsliste»
+(Q171 asserts the four agree).
+
+Shipping it would put one product name on two unrelated screens, which reads as
+a navigation error rather than a heading. The card is headed «Undersøkelser».
+
+A bundle copy error rather than a decision to disagree with: the claim-set sweep
+is what this class of finding is for.
+
+## D189 — F4: the row's status-named CTAs are gone, and they had been doing the filtering
+
+v6:2339-2352 draws the table row's action column as three ICON links, named for
+what they do. The single row the app had before F4 carried a status-named
+primary call to action instead — «Fortsett å bygge» on a draft, «Se svar» on an
+active survey — and those two names do not survive the change.
+
+**They were load-bearing in the test harness in a way nothing declared.** Twelve
+manifest states and one gate reached the builder with
+
+    getByRole('link', { name: 'Fortsett å bygge' }).first()
+
+and «Fortsett å bygge» existed ONLY on draft rows, so `.first()` meant «the first
+DRAFT». The code showed a position; the predicate was inside the label. Swapping
+the locator alone would have kept every state green while silently changing which
+survey each one photographs.
+
+`openDraftBuilder` therefore selects «Utkast» and then takes the first row's
+build link — the same survey, with the filter written down instead of implied.
+The one site that had already narrowed the list by searching for a survey by name
+uses the locator directly, because the filter click would discard its search.
+
+Both locators match either language, because `verify:i18n` drives the same states
+with the browser in English.
+
+## D190 — F4: `/undersokelser` returned HTTP 500, and three gates called it green
+
+The first build of the three views passed `menuFor={(id) => rowMenu(id)}` from
+the page (a server component) to `SurveyTable` (`'use client'`). **A function
+cannot be serialised across that boundary**, so every request to the screen
+returned 500.
+
+`tsc --noEmit`, `eslint .` and `next build` all passed it. The rule is enforced
+when the tree is serialised — at render time, and nowhere earlier.
+
+What it cost is the part worth recording:
+
+- `verify:i18n` printed `ok undersokelser`. It reads the rendered text for
+  Norwegian on an English page; an error page has none.
+- `verify:responsive` printed
+  `ok undersokelser 390px scrollWidth=390 controls=0 small=0 overlaps=0`.
+  An error page does not overflow and has no controls, so it scores perfectly.
+  `controls=0` on a full application screen was the only visible trace.
+- `tests/unit/survey-views.test.ts` asserted that `page.tsx` CONTAINED the
+  defective line, so the guard required the defect.
+
+Measured, not inferred: neither `scripts/verify/i18n.ts` nor
+`scripts/verify/responsive.ts` reads `response.status()`, and
+`tests/helpers/session.ts`'s `gotoRoute` checks the landed PATH and not the
+status — so a 500 served at the right URL is a success to all of them.
+
+The gate is frozen (CLAUDE.md § Verification), so this is logged rather than
+fixed. It is the eighth instance of «green for something that structurally could
+not be seen».
+
+## D191 — F4: the second 500 was invisible until the first was fixed
+
+Rebuilding the menus as elements moved `rowMenu` from being CALLED in the JSX to
+being called where the map is built. Placed beside `rowMenu`'s own definition,
+that reached `shareHref={params({ del: s.id })}` — and `params` is a `const`
+declared forty lines further down, so the read landed in a temporal dead zone and
+the screen returned 500 again, with a different cause.
+
+**From outside, the two are the same page.** Same status, same body, same empty
+control count; only the server log tells them apart. That is the argument for
+driving a screen rather than re-reading it, and for reading the server's own
+output rather than the browser's.
+
+The map is built immediately above the `return`, after every helper, and that
+position is the guard — stated in the comment there, because nothing mechanical
+enforces it.

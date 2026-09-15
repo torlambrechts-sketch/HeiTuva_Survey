@@ -932,3 +932,35 @@ fifth screen inherits the surface by gaining a row rather than by someone rememb
   that do, read as a property of the band — in the phase whose subject is that shape, inside a
   test written to guard it. The test now states it in both directions, so a later phase cannot
   invent a percentage over template packs by copying the screen beside it.
+
+## Q196–Q201 — F4: the survey list (2026-09-15)
+
+The audit's largest gap: ten named surfaces missing and two in the wrong form.
+**Every decision below is a place the drawing offers a number nobody chose, or a
+control whose name means something other than what it does.**
+
+| # | Subject | Decision | Why |
+|---|---|---|---|
+| **Q196** | `surveys.target` in the test factory — the demo organisation's «Svar» column had no denominator | **NO factory option. The column has had a writer since `M:0039`** — a trigger setting it from the round's invitation count. | «Who writes this column?» asked of a FIXTURE, answered «something already does», is a reason NOT to add one: a factory override is a second writer, and the two disagree the moment a round is created. Measured on a bare reset: 8 of 10 surveys already carried a target, so both branches of the cell were reachable before the phase touched anything. What was missing was `created_by` — `count(created_by) = 0`. The measurement is written where the option would have gone, because an absent parameter looks identical to an oversight. |
+| **Q197** | Where the view mode lives | **`M:0122` — `organizations.survey_view` plus the cookie `heituva.svview`**, Q122's mechanism as Q152 applied it. `saveCompany` writes the column, with its control in Administrasjon → Firma, in this phase. | The list is a server component, so `localStorage` cannot reach the render that needs it — Q122's own argument. The writer ships with the column because invariant 8 has five recorded instances of a column read everywhere and written by nothing. |
+| **Q198** | Where Tuva's placement lives | **A SECOND cookie (`heituva.svtuva`) and NO column.** | A house default for «list or board» is a real choice — some organisations run a queue, some a board. **There is no organisation-level fact about where one person wants an assistant to sit**, and inventing the control to write it would be the larger sin than leaving the asymmetry. `M:0112`'s own reasoning about column toggles, applied to the next case. Two cookies rather than one packed value because the choices are independent: a person may want the cards AND the bubble. |
+| **Q199** | «Lav svarprosent», where the drawing divides by `target \|\| 30` | **A row with no recipient count is UNMEASURED, not low, and is excluded from the scope.** | The invented denominator's **third** appearance, and the worst of them: the first two produced an untrue number, this one **decides which rows a person sees**. A survey with 20 answers and no target would be in or out of a filter depending on an arbitrary constant, and the customer believes the filter is complete. F1's rule as a predicate rather than restated. |
+| **Q200** | «Delt med meg», where the drawing tests `!!(s.share && s.share.length)` | **A `survey_editors` row naming the VIEWER.** | The drawing's predicate is a property of the SURVEY — «this one has co-editors» — which selects every shared survey in the organisation and is not a scope at all. **The label says «meg».** A claim about the reader derived from a fact about the row. |
+| **Q201** | The mix bar's «66 % · 78 av 118 svar» | **One `Measured` feeds the bar, the percentage AND the sentence.** The status dots count every filtered row; the rate counts only rows with a denominator, and the label says which. | The invented denominator's **fourth** place (`svBar`, v6:9023) and the only one where it is printed as a COUNT as well as a rate — «118 inviterte» is a figure a manager would quote. The asymmetry between the dots and the bar is the point: a count of surveys is a fact about the list, a rate is a fact about a population inside it. |
+
+**Three things F4 built that the drawing does not have, each because removing
+them would have deleted a feature:**
+
+- **`RowMenu`.** The drawing's table row has five icon buttons and no menu, so
+  building to it would have dropped share, copy-as-new-round, close, delete,
+  pause and stop — six actions that exist nowhere else. Extracted from the
+  deleted `SurveyRow` and mounted in the two views the drawing gives actions to.
+- **The «Svar» cell's second branch.** v6:9058 prints `{responses} / {target || 30}`;
+  ours prints the COUNT where there is no denominator.
+- **The empty state's reset.** A person who has stacked a status, a scope and a
+  search needs one control to get back, not three.
+
+**And one thing it did NOT build:** the detail panel's «versjon» (v6:2270).
+`surveys` has no version column, a hard-coded `v1` is CLAUDE.md's own worked
+example of fabrication, and a round COUNT relabelled «versjon» is the same
+invention with extra steps.

@@ -758,6 +758,66 @@ so that a field moved from refused to built loses it automatically.
 forbidden list buys a green test and loses the guard; deriving the exemption keeps both. This is the
 same choice as «fix the column, not the predicate» one level up.
 
+## A GATE THAT NEVER READS THE STATUS CODE SCORES A 500 AS A PASS
+
+**Added 2026-09-15, after F4's survey list returned HTTP 500 to three green gates.**
+This is the EIGHTH instance of «green for something that structurally could not be seen»,
+and it is the cheapest one to state as a rule, because the missing measurement is one
+method call.
+
+`/undersokelser` passed a server component's closure to a client component
+(`menuFor={(id) => rowMenu(id)}`). **A function cannot be serialised across that boundary**,
+so every request to the screen returned 500. What passed anyway:
+
+- **`tsc --noEmit`, `eslint .` and `next build`.** The rule is enforced when the tree is
+  SERIALISED — at render time, and nowhere earlier. There is no static check for it.
+- **`verify:i18n`** printed `ok undersokelser`. It looks for Norwegian on an English page;
+  an error page has none, so it is clean by construction.
+- **`verify:responsive`** printed
+  `ok undersokelser 390px scrollWidth=390 controls=0 small=0 overlaps=0`. An error page does
+  not overflow and has no controls, so it scores PERFECTLY. The only trace was `controls=0`
+  on a full application screen — a number that has to be read as impossible rather than good.
+- **A unit test of mine asserted the defect's own spelling**, requiring `page.tsx` to contain
+  the offending line. The guard required the bug.
+
+Measured rather than assumed: neither `scripts/verify/i18n.ts` nor `scripts/verify/responsive.ts`
+calls `response.status()` at all, and `tests/helpers/session.ts`'s `gotoRoute` checks the landed
+PATH and not the status. **A 500 served at the right URL is a success to every one of them.**
+
+**THE GENERAL FORM, WHICH IS WHY THIS IS A HEADING AND NOT A NOTE:** every one of these gates
+measures a PROPERTY OF A RENDERED PAGE — its text, its boxes, its controls — and each property
+has a vacuous value that an error page satisfies for free. A gate looking for *something wrong
+in the output* cannot distinguish «nothing wrong» from «no output». The same sentence covers
+F2's composite of two broken-image icons and 5a3's «PROTECTED BUT UNPROVEN».
+
+The apparatus is frozen, so this is LOGGED, not built (D190). What does not need a gate is the
+reading habit: **a zero on a page that cannot be empty is a finding, not a pass.**
+
+### AND THE SECOND 500 WAS INVISIBLE UNTIL THE FIRST WAS FIXED
+
+Rebuilding the menus as elements moved `rowMenu` from being called in the JSX to being called
+where the map is built, and the first placement reached `params`, a `const` declared forty
+lines below — a temporal dead zone, and a second 500 with a different cause.
+
+**From outside the two are indistinguishable**: same status, same body, same `controls=0`. Only
+the server's own log told them apart. So when a screen is dead, read what the SERVER printed;
+the browser can only ever report that something failed, never which thing. A single fix
+verified only by «the error is still there» reads as «the fix did not work», and that reading
+is wrong half the time.
+
+### AND A LOCATOR'S NAME CAN BE CARRYING A PREDICATE NOBODY DECLARED
+
+Twelve manifest states and one gate reached the builder with
+`getByRole('link', { name: 'Fortsett å bygge' }).first()`. That name existed **only on draft
+rows**, so `.first()` meant «the first DRAFT» — the filtering lived in the label and the code
+showed only a position. F4 replaced the row's status-named CTA with the drawing's icon links,
+and swapping the locator alone would have kept every state green while silently changing which
+survey each one photographs. `openDraftBuilder` selects «Utkast» first, which is the same
+survey with the predicate written down (D189).
+
+**Ask of any locator you change: what was the OLD name excluding?** A rename that preserves the
+element does not necessarily preserve the set.
+
 ## FOUR THINGS F3 ESTABLISHED THAT ARE NOT ABOUT THE SURFACES IT BUILT
 
 **Added 2026-09-15 (Tor), accepting F3.** Each is a property rather than an instance, and each
@@ -1228,6 +1288,37 @@ DEFINER functions (39 checked, 8 allowlisted), zero unproven. `M:0121` REPLACES
 difference is not F1's**: `M:0120` (V6-3) added the `method_rules` table, which the gate lists and
 this paragraph is the first to record. The command is
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**F4 TOOK IT TO 1496 ACROSS 113 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** The derivation, and
+`git diff tests/expected-counts.json` is the command — the diff is three added lines and
+**nothing else moved in either direction**, which is the proof rather than the total:
+
+```
+1466 across 110
+ +  8  tests/db/survey-list.test.ts      new — F4-a: both «Svar» branches, the owner, three statuses
+ + 12  tests/unit/survey-scopes.test.ts  new — F4-b: the five scopes, incl. the two non-drawing predicates
+ + 10  tests/unit/survey-views.test.ts   new — F4-c/d: one derivation, three views, and the boundary rule
+= 1496 across 113
+```
+
+The tenth test in the last file is the fix pass's, and it REPLACED an assertion rather than
+adding to one: the original required `page.tsx` to contain `menuFor={(id) => rowMenu(id)}` —
+**the line that made the screen return 500** — so the count moved by one while the guard
+changed sides. A file's count is not a record of what it checks; the diff is.
+
+**5a3 holds at 81 of 112** — 65 RLS tables (42 checked, 23 allowlisted) plus 47 SECURITY
+DEFINER functions (39 checked, 8 allowlisted), zero unproven. `M:0122` adds a COLUMN and a
+CHECK to `organizations`, and neither is a catalogue surface either sweep enumerates: the same
+recorded limit of that gate, not a gap. The commands:
+`npm run census:write` for the first pair, and
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for
+the second.
+
+**And `verify:responsive` is 206 of 206 measured, 0 findings, 0 blockers** — after a run that
+reported **46 unmeasurable combinations**, all of them one 500, and a second that reported
+**276 overlapping pairs and 69 undersized controls**, all of them the table's action column and
+its row title. Three runs, three different truths about the same screen; only the last is
+about the screen.
 
 **F2 TOOK IT TO 1452 ACROSS 108 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** One added line —
 `tests/unit/fidelity-pairs.test.ts: 4` — and no other entry moved, which is the proof rather than

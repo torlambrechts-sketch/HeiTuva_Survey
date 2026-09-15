@@ -273,13 +273,19 @@ async function main() {
       if (path !== '/logg-inn') await signIn(pg, 'administrator', BASE_URL)
       await pg.goto(`${BASE_URL}${path.replace(/#.*$/, '')}`, { waitUntil: 'domcontentloaded' })
       await pg.waitForLoadState('load')
+      // F4 — the row's status-named CTAs («Fortsett å bygge», «Se svar») were
+      // replaced by the drawing's three icon links, which are named for what
+      // they do. The builder route also selects «Utkast» first, because the old
+      // name only ever appeared on a draft and so did the filtering silently.
       if (path.endsWith('#bygg')) {
-        await pg.getByRole('link', { name: 'Fortsett å bygge' }).first().click()
+        await pg.getByRole('link', { name: 'Utkast', exact: true }).click()
+        await pg.waitForURL((u) => u.searchParams.get('filter') === 'utkast')
+        await pg.getByRole('link', { name: /^Rediger spørsmål: / }).first().click()
         await pg.waitForURL((u) => u.pathname.endsWith('/bygg'))
         await pg.waitForLoadState('load')
       }
       if (path.endsWith('#resultater')) {
-        await pg.getByRole('link', { name: 'Se svar' }).first().click()
+        await pg.getByRole('link', { name: /^Resultater: / }).first().click()
         await pg.waitForURL((u) => u.pathname.endsWith('/resultater'))
         await pg.waitForLoadState('load')
       }
