@@ -1342,6 +1342,28 @@ coverage; all six findings were one line, «Gå til arbeidslisten» at 116×17, 
 was fixed here under «the phase that runs the sweep owns what it finds». **A route nobody walks is
 a route nobody can measure**, and the count rising is what made the defect visible.
 
+**Q208 TOOK IT TO 1537 ACROSS 115 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one added line and nothing else moved in
+either direction**, which is the proof rather than the total:
+
+```
+1532 across 114
+ +  5  tests/db/retention-registry.test.ts   new — the set, the default, the never case, read from pg_constraint
+= 1537 across 115
+```
+
+5a3 holds at **81 of 112** — 65 RLS tables + 47 SECURITY DEFINER functions, zero unproven. Q208
+adds no table and no definer function: a registry, a message and a page are not catalogue surfaces.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**AND THE RUN IS ONLY 115 FILES IF `SUPABASE_DB_URL` POINTS AT THE LOCAL STACK.** `.env.local` sets
+it to the PRODUCTION host, which no Claude Code container can reach (see the settled conclusion
+above), and the tests that read it rather than `LOCAL_DB_URL` — `entra-credential`, `entra-sync`,
+`deactivation`, `every-producer` — then fail with `psql: error:` and nothing else. **That is a
+failure of the environment wearing a defect's clothes**, and it is the same shape as the stale
+`next-server`: the thing measured was not the thing claimed. `export SUPABASE_DB_URL="$LOCAL_DB_URL"`
+before a local run, and read the failure text rather than the count.
+
 **F2 TOOK IT TO 1452 ACROSS 108 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** One added line —
 `tests/unit/fidelity-pairs.test.ts: 4` — and no other entry moved, which is the proof rather than
 the total. F2 adds no table and no function; a script is not a catalogue surface.

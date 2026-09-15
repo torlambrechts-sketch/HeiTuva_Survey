@@ -6284,3 +6284,56 @@ finding that belongs to «an earlier phase» belongs to no phase at all.
 **The sub-tab is clicked in the rail rather than reached by typing `?vis=`.** A
 gate that constructs the URL itself never finds out whether the control that
 produces it works.
+
+### D197 — the privacy notice's retention figure was wrong for every reader, and the sweep that found it found five more claims
+
+**Q208, 2026-09-15.** `legal.privacy5P` carried «standard 24 måneder» / «24 months by default» in
+shipped, public, both-language text. `organizations.retention_months` is
+`not null default 12` (`M:0002`) and production's one organisation is 12, so the figure was wrong
+for every reader of a GDPR document. **Fixed** — the notice no longer names a value it cannot
+resolve (Q208), and the numbers it does name come from `lib/surveys/retention.ts`, checked against
+`pg_constraint` by `tests/db/retention-registry.test.ts`.
+
+**AND THE SWEEP IS THE PART WORTH RECORDING, BECAUSE V5-1 ALREADY RAN ONE AND CAUGHT HALF OF IT.**
+`docs/LEGAL_DRAFTS.md` records two findings from V5-1's footer sweep: `privacy8P` names the demo
+organisation, `privacy7P` names the wrong email provider. Both true. Measured across BOTH message
+files, each claim occurs in **three** message keys, not one:
+
+| claim | keys | V5-1 logged |
+|---|---|---|
+| «Nordisk Studio AS» — a DEMO ORGANISATION — as the controller | `privacy1P`, `privacy8P`, `dpa1P` | `privacy8P` only |
+| Amazon SES / AWS Stockholm as the email sub-processor | `privacy4P`, `privacy7P`, `dpa5P` | `privacy7P` only |
+| LINK Mobility as the SMS sub-processor | `privacy4P`, `privacy7P`, `dpa5P` | noted under `privacy7P` |
+
+The command, so the next reader re-derives rather than carries it:
+
+```
+node -e "for(const l of ['no','en']){const m=require('./messages/'+l+'.json').legal;
+  for(const [k,v] of Object.entries(m)) if(/Nordisk Studio/.test(v)) console.log(l+':'+k)}"
+```
+
+**A footer sweep finds what the footer's own sections say.** V5-1 read §7 and §8 because those are
+where a sub-processor list and a contact address live; §1 («Hvem vi er»), §4 («Hvor opplysningene
+er») and the DPA's §5 say the same things about the same parties and were not in its frame. That is
+CLAUDE.md's own shape one more time — an enumeration of where a claim was expected to be, read as
+where it is — and the general form is worth the line: **a claim-set sweep is over CLAIMS, not over
+the sections that conventionally carry them.**
+
+Three further measurements taken in the same pass, none previously recorded:
+
+- **`privacy1P` carries «(org.nr. i Brønnøysundregistrene)»** — a parenthesis saying the
+  organisation number is in the register, standing where the number belongs. It is a placeholder
+  that reads as a disclosure.
+- **SMS is switched OFF in production.** `feature_flags.sms_channel = false`, measured
+  2026-09-15, and no message has ever been sent. LINK Mobility is named in a privacy notice AND in
+  the DPA's sub-processor approval clause for a channel that processes nothing. **The DPA
+  occurrence is the sharper one**: the controller is being asked to approve a named sub-processor
+  that handles none of their data, and is not asked to approve Brevo, which handles all of it.
+- **Cloudflare and Vercel check out.** `challenges.cloudflare.com` is in the deployed CSP and
+  `lib/turnstile.ts` calls it, so «bot-beskyttelse på forsiden» is true; `vercel.json` pins
+  `"regions": ["fra1"]`, so «EU-regioner» is true and vaguer than the fact.
+
+**NOTHING BEYOND `privacy5P` IS CHANGED HERE.** Tor reserved the parties-and-infrastructure claims
+for his own decision and asked for the list first: the entity name, the address, the organisation
+number and a mailbox confirmed to RECEIVE are facts this repository does not hold, and inventing
+any of them is the same error with better spelling — the standing rule from V5-1, unchanged.

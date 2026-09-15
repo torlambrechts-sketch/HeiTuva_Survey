@@ -77,3 +77,51 @@ export function kForMirror(survey: {
   if (survey.respondent_kind === 'organisation') return 0
   return survey.k_threshold ?? 0
 }
+
+/**
+ * THE RETENTION PERIODS THIS PRODUCT OFFERS, as one registry.
+ *
+ * ── WHY THIS MOVED HERE: THERE WERE THREE OF THEM ─────────────────────────
+ *
+ * Measured 2026-09-15, before this constant existed:
+ *
+ *   PrivacyPanel.tsx:17   `const RETENTIONS = [6, 12, 24, 0] as const`
+ *   actions.ts:199        `.refine((n) => [0, 6, 12, 24].includes(n))`
+ *   M:0002               `check (retention_months in (0, 6, 12, 24))`
+ *
+ * Three statements of one rule, agreeing by luck rather than by construction —
+ * the same shape F3 found in the row response rate, which had four definitions
+ * and one of them dead. The public privacy notice was about to become a FOURTH,
+ * and it is the one a data subject relies on.
+ *
+ * The database's CHECK is the authority; these two mirror it, and
+ * `tests/db/retention-registry.test.ts` reads the constraint back out of
+ * `pg_constraint` and requires them to agree. A value added to the column
+ * without being added here fails that test rather than silently making the
+ * notice incomplete.
+ *
+ * `ORDER` is the offering order the control renders — «ingen automatisk
+ * sletting» last, because it is the exception — and `RETENTION_MONTHS` is the
+ * DURATIONS alone, which is what a sentence about «etter så lenge» may name. A
+ * notice that listed 0 among the months would be saying «0 måneder», which is
+ * not what 0 means.
+ */
+export const RETENTION_MONTHS = [6, 12, 24] as const
+
+/** `retention_months = 0` — kept until somebody deletes them. Not a duration,
+ *  which is why it is not in the list above. */
+export const RETENTION_NEVER = 0
+
+/** The offering order of the control in Administrasjon → Personvern. */
+export const RETENTION_ORDER = [...RETENTION_MONTHS, RETENTION_NEVER] as const
+
+/** `organizations.retention_months` is `not null default 12` (M:0002). The
+ *  public notice states this as the DEFAULT and never as the value, because it
+ *  is a document for every organisation and only one of them is on the default. */
+export const RETENTION_DEFAULT = 12
+
+/** Every value the column accepts. The Zod boundary and the control both read
+ *  it, so neither can offer a value the CHECK refuses. */
+export function isRetention(n: number): boolean {
+  return (RETENTION_ORDER as readonly number[]).includes(n)
+}

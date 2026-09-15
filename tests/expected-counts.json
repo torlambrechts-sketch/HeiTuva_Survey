@@ -29,6 +29,7 @@
   "tests/db/quiz.test.ts": 22,
   "tests/db/recurrence.test.ts": 13,
   "tests/db/report-roles.test.ts": 10,
+  "tests/db/retention-registry.test.ts": 5,
   "tests/db/round-freeze.test.ts": 6,
   "tests/db/schedules-rls.test.ts": 6,
   "tests/db/segments.test.ts": 15,

@@ -8,7 +8,7 @@ subprocessor list get a Norwegian lawyer's read before any customer sees them."
 
 | Document | Where | Status |
 |---|---|---|
-| Personvernerklæring | `/personvern` — `legal.privacy*` in `messages/*.json` | DRAFT — banner shown on the page. **`privacy8P` names the DEMO ORGANISATION as the contact and `privacy7P` names the wrong email provider — both in shipped public text, see the section at the end (V5-1)** |
+| Personvernerklæring | `/personvern` — `legal.privacy*` in `messages/*.json` | DRAFT — banner shown on the page. **Each of V5-1's two findings occurs in THREE keys, not one — see D197: the demo organisation in `privacy1P`, `privacy8P` and `dpa1P`; the wrong email provider in `privacy4P`, `privacy7P` and `dpa5P`. `privacy5P`'s retention figure was a third finding and is FIXED (Q208).** |
 | Databehandleravtale | `/databehandleravtale` — `legal.dpa*` | DRAFT — banner shown on the page. **`dpa4P` has been WRONG TWICE in committed text (Q55, then Q91) — see the table below; start the review here** |
 | Oversikt over underleverandører | inside both texts (privacy §7, DPA §5) | DRAFT — part of the above |
 | Risikovurdering (DPIA) | not written; Administrasjon → Personvern lists it as "Ikke lastet opp ennå" | NOT STARTED |
@@ -157,3 +157,36 @@ protects prose**, which is the sentence CLAUDE.md already carries, arriving here
 time: ten false sentences in the help articles, eleven in Bruksområder, three in the v5 integration
 rows, and now two in the privacy notice.
 
+
+## THE THIRD FINDING, AND WHY THE SECOND SWEEP FOUND TWICE AS MUCH AS THE FIRST
+
+**2026-09-15, Q208 / D197.** `legal.privacy5P` said the default retention was **24 months**. The
+column default is **12** and production is 12 — so a public GDPR document stated a figure that was
+wrong for every reader, in both languages, and had been since it was written. **It is fixed**: the
+notice no longer names a value the page cannot resolve, because `/personvern` is a marketing route
+with no session and no organisation, and a single figure is false for every reader but one even
+when there is one to read. The allowed periods and the default now come from
+`lib/surveys/retention.ts` and are checked against the column's own CHECK by
+`tests/db/retention-registry.test.ts`.
+
+**AND THE COUNTING IS THE LESSON.** V5-1's sweep was over the FOOTER's documents and found the two
+claims where a reader expects them — the sub-processor list (§7) and the contact section (§8).
+Measured across both message files, each of those claims lives in **three** keys: §1 «Hvem vi er»
+and §4 «Hvor opplysningene er» repeat them, and so does the DPA. A claim-set sweep is over CLAIMS,
+not over the sections that conventionally carry them.
+
+**Still for the reviewer, unchanged and NOT edited here:**
+
+- the legal entity name as registered in Brønnøysund, its organisation number and registered
+  address — `privacy1P` currently carries the literal parenthesis «(org.nr. i
+  Brønnøysundregistrene)» where a number belongs, and names **Nordisk Studio AS**, which is a row
+  in the demo seed;
+- a mailbox confirmed to RECEIVE, before `personvern@heituva.no` is touched in `privacy6P` and
+  `privacy8P`;
+- **Brevo, France** replacing Amazon Web Services / Stockholm in `privacy4P`, `privacy7P` and
+  `dpa5P` — and Q6a's open question with it, because «EU/EØS only» is now a claim about Brevo's
+  processing locations and nothing in this repository has verified it;
+- **LINK Mobility**, named as an SMS sub-processor in `privacy4P`, `privacy7P` and `dpa5P` while
+  `feature_flags.sms_channel = false` in production and no message has ever been sent. The DPA
+  occurrence is the one to start with: it asks the controller to approve a sub-processor that
+  processes nothing, and does not ask them to approve the one that processes all the mail.

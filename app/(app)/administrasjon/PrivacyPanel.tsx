@@ -6,6 +6,7 @@ import { setDefaultThreshold, setPrivacy, setRetention } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
 import { PRIVACY_KEYS, type PrivacyKey } from './keys'
 import { thresholdTier } from '@/lib/questions/threshold-tier'
+import { RETENTION_ORDER } from '@/lib/surveys/retention'
 
 const LABEL: Record<PrivacyKey, [string, string]> = {
   ip_logging: ['pIpLogging', 'pIpLoggingDesc'],
@@ -13,8 +14,6 @@ const LABEL: Record<PrivacyKey, [string, string]> = {
   auto_delete: ['pAutoDelete', 'pAutoDeleteDesc'],
   consent: ['pConsent', 'pConsentDesc'],
 }
-
-const RETENTIONS = [6, 12, 24, 0] as const
 
 /** DECISIONS Q57 / Q38 — the picker v2 draws (HeiTuva.dc.html:2737-2747). The
  *  10 is Q36's ceiling. The low end is 2 since Q91 superseded Q17's floor of 3
@@ -140,7 +139,7 @@ export function PrivacyPanel({
           }}
           className="touch-44-field [--field-pad-y:10px] rounded-[10px] border border-line bg-bg px-[13px] py-2.5 text-[13.5px] text-ink outline-none"
         >
-          {RETENTIONS.map((m) => (
+          {RETENTION_ORDER.map((m) => (
             <option key={m} value={m}>
               {t(`r${m}` as 'r6' | 'r12' | 'r24' | 'r0')}
             </option>

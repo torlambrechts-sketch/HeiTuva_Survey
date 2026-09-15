@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { WORKLIST_VIEWS } from '@/lib/worklist/view'
 import { SURVEY_VIEWS } from '@/lib/surveys/view'
+import { isRetention } from '@/lib/surveys/retention'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireViewer } from '@/lib/auth/session'
@@ -196,7 +197,10 @@ export async function setPrivacy(key: string, value: boolean): Promise<AdminResu
   return { ok: true }
 }
 
-const RetentionInput = z.coerce.number().int().refine((n) => [0, 6, 12, 24].includes(n))
+// The allowed set is the registry's, not a literal: `lib/surveys/retention.ts`
+// mirrors the column's own CHECK and a test reads that CHECK back. A third
+// spelling here is a third place the rule can be wrong.
+const RetentionInput = z.coerce.number().int().refine(isRetention)
 
 export async function setRetention(months: number): Promise<AdminResult> {
   const admin = await requireAdmin()
