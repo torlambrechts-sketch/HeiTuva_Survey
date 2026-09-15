@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   SURVEY_TABS,
@@ -53,17 +53,23 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
       expect(href).toBe(`/undersokelser/${ID}/${TAB_SEGMENT[tab]}`)
       expect(href, 'a tab must never become a query parameter').not.toMatch(/\?|fane=/)
     }
-    // And the three segments are the routes that already existed.
-    expect(Object.values(TAB_SEGMENT).sort()).toEqual([
-      'bygg',
-      'historikk',
-      'kommentarer',
-      'malgruppe',
-      'personvern',
-      'resultater',
-      'send',
-      'tiltak',
-    ])
+    /*
+      AND EVERY SEGMENT IS A REAL ROUTE DIRECTORY, DERIVED RATHER THAN LISTED.
+
+      This was a literal list of eight strings, and F5-2 is what showed why that
+      is the wrong shape: re-pointing `sporsmal` from `bygg` to its own read view
+      failed this test for a spelling while saying nothing about whether the new
+      route existed. The property the rule actually wants is «no pill points at a
+      404», so it is read off the filesystem — a tab pointing at a segment nobody
+      built now fails here, and a segment renamed alongside its directory does
+      not.
+    */
+    const routes = readdirSync('app/(app)/undersokelser/[id]', { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+    for (const tab of SURVEY_TABS) {
+      expect(routes, `${tab} points at a segment with no route`).toContain(TAB_SEGMENT[tab])
+    }
   })
 
   it('href and resolve are inverses, so no pill can look selected while another is shown', () => {

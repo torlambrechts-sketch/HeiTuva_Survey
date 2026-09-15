@@ -39,6 +39,14 @@ import { SURVEY_TABS, type SurveyTab } from './tabs'
  * paragraph somebody has to remember to write.
  */
 export const SUBTABS: Partial<Record<SurveyTab, readonly string[]>> = {
+  /**
+   * v6:7143. `qFiltered` (v6:7252) — but as a PROPERTY, not the bundle's label
+   * regex. v6 matches `/Skala|Likert|Smilefjes|NPS/` against the rendered
+   * label, which is an enumeration of the four strings its fixture produced;
+   * the page reads `specOf(type).group` instead, so a sixth scale type needs
+   * no edit and a renamed label cannot drop a type out of the filter.
+   */
+  sporsmal: ['alle', 'skala', 'fritekst'],
   /** v6:7144. `commentsFiltered` (v6:7266) — one list, three predicates. */
   kommentarer: ['alle', 'venter', 'besvart'],
   /** v6:7145. `tasksFiltered` (v6:7268) — «Åpne» is `status !== 'lukket'` and

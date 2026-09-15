@@ -57,7 +57,10 @@ export type SurveyTab = (typeof SURVEY_TABS)[number]
 /** The path segment each tab owns. The segment is the SOURCE OF TRUTH for which
  *  tab is current — there is no parameter to disagree with it. */
 export const TAB_SEGMENT: Record<SurveyTab, string> = {
-  sporsmal: 'bygg',
+  // F5-2 — was 'bygg'. v6:1377 puts «Åpne byggeren» BESIDE the question table,
+  // which is the bundle saying these are two screens; the pill now points at
+  // the read view and the builder is one click further on. See `TAB_ALIAS`.
+  sporsmal: 'sporsmal',
   utsending: 'send',
   resultat: 'resultater',
   malgruppe: 'malgruppe',
@@ -85,6 +88,21 @@ export function surveyTabHref(surveyId: string, tab: SurveyTab): string {
 }
 
 /**
+ * F5-2 — SEGMENTS THAT ARE NOT A TAB'S OWN, BUT BELONG TO IT.
+ *
+ * `/bygg` is the editor behind «Spørsmål». Without this the rail would mark
+ * NOTHING current while somebody is editing the questions — the same wrong
+ * answer as `/live`, and wrong for the opposite reason: `/live` genuinely has
+ * no pill, and the builder genuinely has one.
+ *
+ * It is a separate map rather than a second entry in `TAB_SEGMENT` because
+ * that record is the source of truth for where a pill POINTS, and two segments
+ * claiming one tab there would make `surveyTabHref` ambiguous. This one only
+ * answers «which pill is lit».
+ */
+export const TAB_ALIAS: Record<string, SurveyTab> = { bygg: 'sporsmal' }
+
+/**
  * The survey id and current tab for a pathname, or null when the path is not a
  * survey sub-route.
  *
@@ -100,6 +118,6 @@ export function resolveSurveyPath(
   const m = /^\/undersokelser\/([0-9a-f-]{36})(?:\/([^/?]+))?/i.exec(pathname)
   if (!m) return null
   const seg = m[2]
-  const tab = SURVEY_TABS.find((t) => TAB_SEGMENT[t] === seg) ?? null
+  const tab = SURVEY_TABS.find((t) => TAB_SEGMENT[t] === seg) ?? (seg ? (TAB_ALIAS[seg] ?? null) : null)
   return { surveyId: m[1]!, tab }
 }

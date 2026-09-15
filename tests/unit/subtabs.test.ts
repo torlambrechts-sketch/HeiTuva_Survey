@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import en from '../../messages/en.json'
 import no from '../../messages/no.json'
-import { SURVEY_TABS, TAB_SEGMENT } from '../../lib/surveys/tabs'
+import { SURVEY_TABS, TAB_SEGMENT, resolveSurveyPath } from '../../lib/surveys/tabs'
 import {
   REFUSED,
   REFUSED_KEYS,
@@ -169,14 +169,20 @@ describe('F5-1 — the filters, and what they are filters OF', () => {
   const TASKS = 'app/(app)/undersokelser/[id]/tiltak/page.tsx'
   const AUDIENCE = 'app/(app)/undersokelser/[id]/malgruppe/page.tsx'
 
-  it('kommentarer and tiltak are the ONLY tabs with a rail', () => {
+  it('exactly three tabs have a rail, and the other five must not', () => {
     /* Stated in both directions, which is F3's lesson written into the phase
-       that came after it: «these two have one» is half a property, and the
-       half that catches a mistake is «and the other six must not». */
+       that came after it: «these have one» is half a property, and the half
+       that catches a mistake is «and the rest must not».
+
+       It says THREE because F5-2 added `sporsmal`. Recorded rather than
+       silently widened: this assertion failed when the read view shipped, which
+       is the test doing its job — a rail appearing on a fourth tab without a
+       phase behind it is exactly what it is for. */
+    const RAILED = ['kommentarer', 'sporsmal', 'tiltak']
     const withRail = SURVEY_TABS.filter((t) => subTabsFor(t).length > 0)
-    expect([...withRail].sort()).toEqual(['kommentarer', 'tiltak'])
+    expect([...withRail].sort()).toEqual(RAILED)
     for (const t of SURVEY_TABS) {
-      if (t === 'kommentarer' || t === 'tiltak') continue
+      if (RAILED.includes(t)) continue
       expect(subTabsFor(t), `${t} grew a rail`).toHaveLength(0)
     }
   })
@@ -245,5 +251,83 @@ describe('F5-1 — the filters, and what they are filters OF', () => {
     expect(src(AUDIENCE)).toContain('<SubTabRefusals')
     // And the tab with no rail does not mount one.
     expect(src(AUDIENCE)).not.toContain('<SubTabRail')
+  })
+})
+
+describe('F5-2 — the question read view, and the column it must not have', () => {
+  const READ = 'app/(app)/undersokelser/[id]/sporsmal/page.tsx'
+  const src = readFileSync(READ, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+
+  it('THE TEMA COLUMN IS NOT BUILT, and the screen says why', () => {
+    /* v6:6959 is `theme: THEMES[i % THEMES.length]` over a six-item array —
+       the drawing assigns a theme BY INDEX MODULO. `survey_questions` has no
+       theme column and `theme_rules` is the free-text classifier, not a
+       taxonomy. It is the column that would look MOST like real data, so it is
+       refused ON the screen rather than quietly dropped. */
+    expect(src).not.toMatch(/THEMES|\btheme\b/i)
+    expect(src).toContain('qNoTheme')
+    for (const [lang, set] of [['no', no], ['en', en]] as const) {
+      expect((set.surveys as Record<string, string>).qNoTheme, lang).toBeTruthy()
+    }
+  })
+
+  it('Besvart and Snitt come from aggregate_results, never from a table read', () => {
+    /* Invariant 1: the client selects nothing from `responses` or `answers`.
+       The only results path on this screen is the k-gated RPC, called ONCE for
+       the whole survey rather than per question. */
+    expect(src).toMatch(/\.rpc\('aggregate_results'/)
+    expect(src).not.toMatch(/from\('(responses|answers)'\)/)
+    expect([...src.matchAll(/\.rpc\('aggregate_results'/g)]).toHaveLength(1)
+  })
+
+  it('a refused cell renders the em dash, never a zero', () => {
+    /* «Nobody answered» and «we may not say» are different claims, and only one
+       of them is about the respondents. `insufficient_data` maps to null and
+       null renders «—». */
+    expect(src).toMatch(/insufficient_data \? null/)
+    expect(src).toMatch(/n == null \? '—'/)
+    expect(src).toMatch(/avg == null \? '—'/)
+  })
+
+  it('the filters read the REGISTRY, not the bundle’s label regex', () => {
+    /* v6:7253 matches `/Skala|Likert|Smilefjes|NPS/` against the rendered
+       label — an enumeration of the four strings its fixture produced. Ours
+       asks `specOf(type).group`, so a sixth scale type needs no edit here. */
+    expect(src).toMatch(/specOf\(/)
+    expect(src).toMatch(/\.group\b/)
+    expect(src).toMatch(/'skala'/)
+    expect(src).toMatch(/'apne'/)
+    expect(src).not.toMatch(/Likert\|/)
+  })
+
+  it('the question count is of ALL questions, not of the filtered view', () => {
+    /* «3 spørsmål» under «Fritekst» on a survey of twelve is a fact about the
+       filter wearing the survey's clothes — F1's population rule, one screen
+       over. */
+    expect(src).toMatch(/qCount', \{ n: rows\.length \}/)
+    expect(src).toMatch(/shown\.map\(/)
+  })
+
+  it('the tab points at the read view and the builder stays its own route', () => {
+    expect(TAB_SEGMENT.sporsmal).toBe('sporsmal')
+    expect(src).toContain('qOpenBuilder')
+    expect(src).toMatch(/\/bygg`/)
+  })
+
+  it('a leser is not offered the builder, which is the point of the split', () => {
+    /* `bygg/page.tsx:208` renders `canEdit={viewer.role !== 'leser'}`, so the
+       link would hand that role an editor with every control greyed out — the
+       screen this view exists to spare them. */
+    expect(src).toMatch(/viewer\.role === 'leser' \? null/)
+  })
+
+  it('/bygg still lights the Spørsmål pill, because it is that tab’s editor', () => {
+    /* Without the alias the rail would mark NOTHING current while somebody is
+       editing the questions — the same answer `/live` gets, and wrong for the
+       opposite reason: /live genuinely has no pill and the builder has one. */
+    const r = resolveSurveyPath('/undersokelser/11111111-2222-4333-8444-555555555555/bygg')
+    expect(r?.tab).toBe('sporsmal')
   })
 })
