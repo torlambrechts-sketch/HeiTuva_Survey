@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import { SubTabRail } from '@/components/SubTabRail'
+import { resolveSubTab } from '@/lib/surveys/subtabs'
 import { getTranslations, getFormatter } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -27,15 +29,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  */
 export default async function SurveyCommentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ vis?: string }>
 }) {
   const { id } = await params
+  const sub = resolveSubTab('kommentarer', (await searchParams).vis)!
   if (!UUID.test(id)) notFound()
 
   await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('surveyComments')
+  const tS = await getTranslations('surveys')
   const fmt = await getFormatter()
 
   const { data: survey, error } = await supabase
@@ -64,6 +70,21 @@ export default async function SurveyCommentsPage({
     : { data: [], error: null }
   if (commentError) throw new Error(`survey_comments read failed: ${commentError.message}`)
 
+  /* F5 — the sub-tab is a PREDICATE over the list this page already read, not a
+     second query. `commentsFiltered` (v6:7267) is the bundle's own mechanism and
+     it is the right one here: three round trips to show three views of nine rows
+     would be three chances for the counts to disagree.
+
+     «Behandlet» AND NOT «Besvart», WHICH IS A DEVIATION WITH A MEASUREMENT
+     BEHIND IT. `handled_at` has two writers — `reply_to_comment` (M:0102) sets
+     it alongside a reply, and `set_comment_handled` (M:0101) sets it with no
+     reply at all. So «Besvart» would be false on the second path, and the row
+     chip on this very screen has said «Behandlet» since C4. Two words for one
+     state is how one of them ends up wrong. */
+  const rows = (comments ?? []).filter((c) =>
+    sub === 'alle' ? true : sub === 'venter' ? c.handled_at === null : c.handled_at !== null,
+  )
+
   return (
     <main>
       <SurveyContextBar
@@ -74,17 +95,25 @@ export default async function SurveyCommentsPage({
         liveMode={survey.run_mode === 'live'}
       />
 
-      <section className="mt-5 rounded-2xl border border-line bg-sf px-[22px] py-[18px]">
+      <section className="mt-5 rounded-2xl border border-line bg-sf">
+        <div className="px-[22px] py-[18px]">
         <h1 className="font-display text-xl font-medium">{t('title')}</h1>
         <p className="mt-1 text-[13px] text-mut">
           {survey.feedback_mode === 'av' ? t('leadOff') : t('lead')}
         </p>
 
-        {(comments ?? []).length === 0 ? (
-          <p className="mt-4 text-[13px] text-mut">{t('empty')}</p>
+        {rows.length === 0 ? (
+          /* The empty state names the FILTER, not the screen. «Ingen
+             kommentarer ennå» under «Venter» is false when nine are handled —
+             an empty view and an empty screen are different facts. */
+          <p className="mt-4 text-[13px] text-mut">
+            {(comments ?? []).length === 0
+              ? t('empty')
+              : tS(sub === 'venter' ? 'subEmptyVenter' : 'subEmptyBesvart')}
+          </p>
         ) : (
           <ul className="mt-4 flex list-none flex-col gap-3 p-0">
-            {(comments ?? []).map((c) => (
+            {rows.map((c) => (
               <li key={c.id} className="rounded-xl border border-line bg-bg px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
@@ -108,6 +137,9 @@ export default async function SurveyCommentsPage({
             ))}
           </ul>
         )}
+        </div>
+        {/* v6:1243 — the rail sits on the card's bottom edge, inside it. */}
+        <SubTabRail surveyId={survey.id} tab="kommentarer" current={sub} />
       </section>
     </main>
   )

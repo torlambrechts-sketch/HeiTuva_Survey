@@ -817,6 +817,81 @@ async function main() {
       author_member_id: adminMember?.memberId ?? null,
     })
     if (replyError) throw new Error(`seed survey_comment_replies: ${replyError.message}`)
+
+    /*
+      ── F5-1 · THE STATES THE FILTERS FILTER FOR ──────────────────────────
+
+      Measured before this existed: across the whole demo organisation,
+      `count(*) filter (where handled_at is not null)` over `survey_comments`
+      was **0**, every survey-scoped task was `status <> 'lukket'`, and every
+      one of them had a `law_ref`. So all three comment sub-tabs and all three
+      task sub-tabs returned IDENTICAL rows, and six filters were green
+      against a fixture that could not tell them apart.
+
+      That is the shape CLAUDE.md records six times — «the seed reaches only
+      states the current code creates» — arriving in a phase whose entire
+      subject is filters. A filter whose branches cannot differ is not a
+      filter that works; it is one nothing has asked a question of.
+
+      Through the RPC rather than an UPDATE, for `set_comment_handled`'s own
+      reason (M:0101): the column has one writer and a fixture that bypasses it
+      is a second.
+    */
+    const { error: handledError } = await asAdmin.rpc('set_comment_handled', {
+      p_comment: firstComment.id,
+      p_handled: true,
+    })
+    if (handledError) throw new Error(`seed set_comment_handled: ${handledError.message}`)
+  }
+
+  /*
+    The task half of the same measurement. `app.generate_blind_spot_tasks` is
+    the only writer of a SURVEY-SCOPED task, and it produces exactly one shape:
+    `undersokelsesplikt` · `foreslatt` · with a `law_ref`. Measured —
+    `select distinct kind, status, (law_ref is not null) from tasks where
+    source_round_id is not null` returned ONE row — so «Åpne», «Alle» and «Med
+    hjemmel» selected the same set on every survey in the organisation.
+
+    Two rows fix that, and they are chosen so each filter lands differently
+    rather than merely differing from the default: with these, Alle is four,
+    Åpne is three (the closed one drops out) and Med hjemmel is three (the
+    other one drops out). Three filters, three different answers, none of them
+    a subset of the answer next to it by accident.
+
+    `source_kind`/`source_ref`/`source_round_id` together satisfy the composite
+    FK to `survey_rounds (id, survey_id)`; `kind` is deliberately NOT
+    `undersokelsesplikt`, because `tasks_blind_spot_once` is a partial unique
+    index over exactly that kind and these are not blind-spot rows.
+  */
+  const filterTasks = [
+    { title: 'Lukket tiltak fra denne runden', kind: 'tiltak', status: 'lukket', law: 'arbeidsmiljo' },
+    { title: 'Oppfølging uten hjemmel', kind: 'risikovurdering', status: 'pagar', law: null },
+  ] as const
+  for (const ft of filterTasks) {
+    const { data: row, error: ftError } = await svc
+      .from('tasks')
+      .insert({
+        org_id: org.id,
+        title: ft.title,
+        kind: ft.kind,
+        status: ft.status,
+        law_ref: ft.law,
+        source_kind: 'survey',
+        source_ref: above.id,
+        source_round_id: aboveRound.id,
+      })
+      .select('id')
+      .single()
+    if (ftError) throw new Error(`seed filterTasks(${ft.title}): ${ftError.message}`)
+    // The closed one carries the row the close guard requires, so the
+    // register's own rule is satisfied by the fixture rather than bypassed.
+    if (ft.status === 'lukket') {
+      const { error: aError } = await svc.from('task_effect_assessments').insert({
+        task_id: row.id,
+        note: 'Tiltaket ble gjennomført og runden etter viste utslag.',
+      })
+      if (aError) throw new Error(`seed task_effect_assessments: ${aError.message}`)
+    }
   }
 
   /*

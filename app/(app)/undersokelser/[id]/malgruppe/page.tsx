@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { SubTabRefusals } from '@/components/SubTabRefusals'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -128,6 +129,13 @@ export default async function SurveyAudiencePage({
           </Link>
         </p>
       </section>
+
+      {/* F5 — THIS TAB HAS NO SUB-RAIL, AND THAT IS THE MEASUREMENT.
+          v6 gives it three: «Grupper», «Segmenter» and «Levering». The first IS
+          this page; the other two are refused for two different reasons, and a
+          rail of one pill is not a rail. The notes are derived from the
+          registry, so a refusal reversed loses its sentence by leaving it. */}
+      <SubTabRefusals tab="malgruppe" />
     </main>
   )
 }

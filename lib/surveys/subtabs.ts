@@ -38,7 +38,19 @@ import { SURVEY_TABS, type SurveyTab } from './tabs'
  * reason lives in `REFUSED` below, so the refusal is a row rather than a
  * paragraph somebody has to remember to write.
  */
-export const SUBTABS: Partial<Record<SurveyTab, readonly string[]>> = {}
+export const SUBTABS: Partial<Record<SurveyTab, readonly string[]>> = {
+  /** v6:7144. `commentsFiltered` (v6:7266) — one list, three predicates. */
+  kommentarer: ['alle', 'venter', 'besvart'],
+  /** v6:7145. `tasksFiltered` (v6:7268) — «Åpne» is `status !== 'lukket'` and
+   *  «Med hjemmel» is `law_ref is not null`, which is the bundle's `!!t.law`. */
+  tiltak: ['apne', 'alle', 'hjemmel'],
+  /**
+   * `malgruppe` HAS NO RAIL, AND THAT IS THE MEASUREMENT RATHER THAN AN
+   * OMISSION. Its three sub-tabs are «Grupper», «Segmenter» and «Levering»:
+   * the first IS this page, and the other two are refused below for two
+   * different reasons. A rail of one pill is not a rail, so there is none.
+   */
+}
 
 /**
  * WHAT THE DRAWING OFFERS AND THIS PRODUCT WILL NOT BUILD, with the reason
@@ -79,6 +91,30 @@ export const REFUSED: Record<string, string> = {
    * authentication ever becomes a surface it is an Administrasjon one.
    */
   'utsending/leveranse': 'refuseLeveranse',
+  /**
+   * v6:7256 — the drawing filters ONE array by `g.kind === "Segment"`, because
+   * its fixture makes a segment A KIND OF GROUP. **Q92 decided the opposite,
+   * and it decided it on a security argument.**
+   *
+   * «Segments are RULES, not membership … they select the population being
+   * looked at; they NEVER become rows in a heatmap or columns in a report
+   * beside groups», because `org_members.group_id` is scalar and that is *why*
+   * k=5 per cell means anything: each respondent contributes to exactly one
+   * breakdown. Two overlapping segments with five answers each and an
+   * intersection of two disclose the two by subtraction — k does not compose.
+   *
+   * Measured 2026-09-15: **no column in `public` references a segment at all**
+   * (`select … from information_schema.columns where column_name like
+   * '%segment%'` returns nothing outside the `segments` table itself), and
+   * `survey_invitations` records `group_id` and nothing else. So a survey HAS
+   * no segments to list, and giving it some would mean writing the segment onto
+   * the invitation — which is membership, which is the thing Q92 refused.
+   *
+   * This is the only refusal in this file that is about the MODEL rather than
+   * about missing data, and it is the one that would have been easiest to build
+   * by accident.
+   */
+  'malgruppe/segmenter': 'refuseSegmenter',
 
   /**
    * v6:1851-1872 — four waves, day 0 -> +3 -> +7 -> +12, each to those who have

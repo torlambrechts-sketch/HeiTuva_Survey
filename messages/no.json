@@ -1611,7 +1611,18 @@
     "subRail_malgruppe": "Målgruppe",
     "subRail_sporsmal": "Spørsmål",
     "subRail_resultat": "Resultater",
-    "subRail_utsending": "Utsending"
+    "subRail_utsending": "Utsending",
+    "sub_kommentarer_alle": "Alle",
+    "sub_kommentarer_venter": "Venter",
+    "sub_kommentarer_besvart": "Behandlet",
+    "sub_tiltak_apne": "Åpne",
+    "sub_tiltak_alle": "Alle",
+    "sub_tiltak_hjemmel": "Med hjemmel",
+    "refuseSegmenter": "«Segmenter» i tegningen viser segmenter som en slags gruppe. Hos oss er et segment en regel som velger hvem som skal spørres, ikke en merkelapp på svaret — derfor står det ikke lagret hvilket segment en invitasjon kom fra, og en undersøkelse har ingen segmenter å vise. Segmentene selv ligger under Målgrupper.",
+    "subEmptyVenter": "Ingen kommentarer venter på behandling.",
+    "subEmptyBesvart": "Ingen kommentarer er behandlet ennå.",
+    "subEmptyApne": "Ingen åpne tiltak.",
+    "subEmptyHjemmel": "Ingen tiltak har en hjemmel."
   },
   "dashboard": {
     "allGroups": "alle grupper",

@@ -158,3 +158,92 @@ describe('F5 — the sub-tab registry is the second navigation level', () => {
     }
   })
 })
+
+describe('F5-1 — the filters, and what they are filters OF', () => {
+  const src = (f: string) =>
+    readFileSync(f, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+  const COMMENTS = 'app/(app)/undersokelser/[id]/kommentarer/page.tsx'
+  const TASKS = 'app/(app)/undersokelser/[id]/tiltak/page.tsx'
+  const AUDIENCE = 'app/(app)/undersokelser/[id]/malgruppe/page.tsx'
+
+  it('kommentarer and tiltak are the ONLY tabs with a rail', () => {
+    /* Stated in both directions, which is F3's lesson written into the phase
+       that came after it: «these two have one» is half a property, and the
+       half that catches a mistake is «and the other six must not». */
+    const withRail = SURVEY_TABS.filter((t) => subTabsFor(t).length > 0)
+    expect([...withRail].sort()).toEqual(['kommentarer', 'tiltak'])
+    for (const t of SURVEY_TABS) {
+      if (t === 'kommentarer' || t === 'tiltak') continue
+      expect(subTabsFor(t), `${t} grew a rail`).toHaveLength(0)
+    }
+  })
+
+  it('malgruppe has no rail BECAUSE two of its three are refused', () => {
+    /* A rail of one pill is not a rail. The reason it is one pill is the two
+       refusals, so the two facts are asserted together — otherwise a later
+       phase that un-refuses «Segmenter» leaves this tab railless for no
+       recorded reason. */
+    expect(subTabsFor('malgruppe')).toHaveLength(0)
+    expect(REFUSED_KEYS).toContain('malgruppe/segmenter')
+    expect(REFUSED_KEYS).toContain('malgruppe/levering')
+    expect(bundleSubTabs()['malgruppe']).toEqual(['grupper', 'segmenter', 'levering'])
+  })
+
+  it('a filter only reads fields its page actually selects', () => {
+    /* `law_ref` is the instance: the tasks page selected five columns and
+       «Med hjemmel» is a fact about a sixth, so the filter would have matched
+       NOTHING and looked like an empty result rather than a bug. */
+    expect(src(TASKS)).toMatch(/\.select\('[^']*law_ref[^']*'\)/)
+    expect(src(TASKS)).toMatch(/law_ref !== null/)
+    expect(src(COMMENTS)).toMatch(/\.select\('[^']*handled_at[^']*'\)/)
+    expect(src(COMMENTS)).toMatch(/handled_at === null/)
+  })
+
+  it('neither page turns a sub-tab into a second query', () => {
+    /* One read, three views. Three round trips over nine rows would be three
+       chances for the counts to disagree, and the bundle's own mechanism is a
+       predicate (`commentsFiltered`, `tasksFiltered`). */
+    for (const f of [COMMENTS, TASKS]) {
+      const eqRoundFilters = [...src(f).matchAll(/\.in\('(round_id|source_round_id)'/g)]
+      expect(eqRoundFilters.length, `${f} reads its list more than once`).toBe(1)
+    }
+  })
+
+  it('the empty state names the FILTER when the screen is not empty', () => {
+    /* «Ingen kommentarer ennå» under «Venter» is false when nine are handled.
+       An empty view and an empty screen are different facts and the copy says
+       which one it is. */
+    for (const [f, keys] of [
+      [COMMENTS, ['subEmptyVenter', 'subEmptyBesvart']],
+      [TASKS, ['subEmptyHjemmel', 'subEmptyApne']],
+    ] as const) {
+      for (const k of keys) expect(src(f), `${f} lacks ${k}`).toContain(k)
+      for (const [lang, set] of [['no', no], ['en', en]] as const) {
+        for (const k of keys) {
+          expect((set.surveys as Record<string, string>)[k], `${lang}: ${k}`).toBeTruthy()
+        }
+      }
+    }
+  })
+
+  it('«Behandlet», never «Besvart» — handled_at has two writers', () => {
+    /* `reply_to_comment` (M:0102) sets it WITH a reply and
+       `set_comment_handled` (M:0101) sets it WITHOUT one, so «Besvart» is
+       false on the second path. The row chip on this screen has said
+       «Behandlet» since C4 and two words for one state is how one goes wrong.
+       Asserted over the SHIPPED string, not over the registry. */
+    expect((no.surveys as Record<string, string>).sub_kommentarer_besvart).toBe('Behandlet')
+    expect((no.surveyComments as Record<string, string>).handled).toBe('Behandlet')
+  })
+
+  it('every page that has a rail mounts it, and malgruppe mounts the refusals', () => {
+    expect(src(COMMENTS)).toContain('<SubTabRail')
+    expect(src(TASKS)).toContain('<SubTabRail')
+    expect(src(AUDIENCE)).toContain('<SubTabRefusals')
+    // And the tab with no rail does not mount one.
+    expect(src(AUDIENCE)).not.toContain('<SubTabRail')
+  })
+})

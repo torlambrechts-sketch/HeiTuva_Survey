@@ -1611,7 +1611,18 @@
     "subRail_malgruppe": "Audience",
     "subRail_sporsmal": "Questions",
     "subRail_resultat": "Results",
-    "subRail_utsending": "Send"
+    "subRail_utsending": "Send",
+    "sub_kommentarer_alle": "All",
+    "sub_kommentarer_venter": "Waiting",
+    "sub_kommentarer_besvart": "Handled",
+    "sub_tiltak_apne": "Open",
+    "sub_tiltak_alle": "All",
+    "sub_tiltak_hjemmel": "With a legal basis",
+    "refuseSegmenter": "The design's «Segmenter» shows segments as a kind of group. Here a segment is a rule that picks who to ask, not a label on the answer — so which segment an invitation came from is not recorded, and a survey has no segments to show. The segments themselves live under Audiences.",
+    "subEmptyVenter": "No comments are waiting to be handled.",
+    "subEmptyBesvart": "No comments have been handled yet.",
+    "subEmptyApne": "No open actions.",
+    "subEmptyHjemmel": "No action has a legal basis."
   },
   "dashboard": {
     "allGroups": "all groups",
