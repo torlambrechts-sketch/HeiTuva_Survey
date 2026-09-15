@@ -145,6 +145,30 @@ export async function createSurvey(
      * survey.
      */
     templatePackKey?: string
+    /**
+     * F4 — THERE IS NO `target` OPTION HERE, AND THAT IS THE MEASUREMENT.
+     *
+     * The column looked like the seed's gap: the demo organisation's response
+     * column had no denominator, so the obvious move was to let fixtures pass
+     * one. `surveys.target` already has a writer — a trigger that sets it from
+     * the round's invitation count (`M:0039`) — so a factory override would be
+     * a SECOND writer for a column that has one, and the two would disagree the
+     * moment a round was created.
+     *
+     * Measured on a bare reset plus `seed:demo`: 10 surveys, 8 with a target
+     * and 2 without. Both branches of «Svar» were already reachable; the thing
+     * that was actually missing was the owner, below.
+     *
+     * «Who writes this column?» asked of a FIXTURE rather than of a migration —
+     * and the answer «something already does» is a reason not to add one.
+     */
+    /**
+     * F4 — the «Eier» column's source. `surveys.created_by` gained writers at
+     * Q96 (three sites in `undersokelser/actions.ts`, one in `bibliotek`), so
+     * the column has a real producer; the factory was the one path that still
+     * left it null, which made the demo org's owner column empty.
+     */
+    createdBy?: string | null
     svc?: Client
   } = {},
 ) {
@@ -156,6 +180,7 @@ export async function createSurvey(
       org_id: orgId,
       title,
       audience_label: opts.audience ?? null,
+      created_by: opts.createdBy ?? null,
       langs: opts.langs ?? ['no'],
       respondent_kind: opts.respondentKind ?? 'person',
       // An organisation survey is named whatever the caller passed: the CHECK

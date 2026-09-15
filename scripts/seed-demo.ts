@@ -62,6 +62,18 @@ async function main() {
     { groupName: GROUP_PRIMARY },
   )
 
+  /* F4 — THE OWNERS THE «Eier» COLUMN READS.
+     `surveys.created_by` gained writers at Q96 (three sites in
+     `undersokelser/actions.ts`, one in `bibliotek/actions.ts`), so the column
+     has a real producer in the product — and the FACTORY was the one path that
+     still left it null, which is why a bare seed produced ten surveys and zero
+     owners. Measured before the fix: `count(created_by) = 0` in the demo org.
+
+     Two owners rather than one, because «Mine» is a filter: with a single owner
+     it selects everything and demonstrates nothing. */
+  const ownerAdmin = org.members.find((m) => m.role === 'administrator')!.memberId
+  const ownerRedaktor = org.members.find((m) => m.role === 'redaktor')!.memberId
+
   // W2 · Q122 — THE ORG DEFAULT IS SEEDED, and the two organisations get
   // DIFFERENT ones on purpose.
   //
@@ -275,7 +287,7 @@ async function main() {
   const above = await createSurvey(org.id, 'Arbeidsmiljø — månedlig', [
     { type: 'scale', text: 'Hvordan har uken på jobb vært?' },
     { type: 'text', text: 'Hva bør vi endre?' },
-  ], { audience: 'Hele selskapet', langs: ['no', 'en'], templatePackKey: 'arbeidsmiljo-manedlig' })
+  ], { audience: 'Hele selskapet', langs: ['no', 'en'], templatePackKey: 'arbeidsmiljo-manedlig', createdBy: ownerAdmin })
 
   // Free text that the seeded theme rules actually match, so the themes panel
   // and the theme-filtered quote list have something real to show. Six people
@@ -421,7 +433,7 @@ async function main() {
 
   const below = await createSurvey(org.id, 'Psykososial kartlegging', [
     { type: 'likert', text: 'Jeg vet hva som forventes av meg i jobben min' },
-  ], { audience: 'Alle ansatte · årlig', templatePackKey: 'psykososial-kartlegging' })
+  ], { audience: 'Alle ansatte · årlig', templatePackKey: 'psykososial-kartlegging', createdBy: ownerRedaktor })
   const belowRound = await createRound(below, 6, { groupId: org.groupId })
   await submitResponses(
     belowRound.tokens,
@@ -436,7 +448,7 @@ async function main() {
 
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
-  ], { status: 'utkast', audience: 'Hele selskapet' })
+  ], { status: 'utkast', audience: 'Hele selskapet', createdBy: ownerRedaktor })
 
   // --- V1-2: the attributed path needs a survey that HAS one ----------------
   // Until now the demo organisation held only person surveys, so every screen
@@ -671,7 +683,7 @@ async function main() {
   //   four statuses.
   const bounceSurvey = await createSurvey(org.id, 'Pulssjekk utvikling', [
     { type: 'scale', text: 'Hvordan er arbeidsmengden?' },
-  ], { audience: GROUP_SECONDARY })
+  ], { audience: GROUP_SECONDARY, createdBy: ownerAdmin })
 
   const { data: groupSend } = await asAdmin.rpc('send_round', {
     p_survey: bounceSurvey.id,
@@ -756,7 +768,7 @@ async function main() {
   // capture or by 5a3 — the anonymous rows alone cannot show a refusal.
   const namedSurvey = await createSurvey(org.id, 'Åpen tilbakemelding', [
     { type: 'scale', text: 'Hvordan fungerer rutinene?' },
-  ], { audience: GROUP_PRIMARY })
+  ], { audience: GROUP_PRIMARY, createdBy: ownerRedaktor })
   await svc.from('surveys').update({ feedback_mode: 'named' }).eq('id', namedSurvey.id)
   const namedRound = await createRound(namedSurvey, 1, { groupId: org.groupId })
   await anonRpc('submit_response', {
@@ -959,6 +971,43 @@ async function main() {
     }),
     5,
   )
+
+  /* F4 — A CLOSED SURVEY, because the demo organisation had none.
+     Measured on a bare reset: ten surveys, nine `aktiv` and one `utkast`. The
+     mix bar draws three dots (aktive · utkast · lukket, v6:2229-2231) and the
+     status rail offers four filters, so a third of both controls had nothing
+     to show and a screenshot of them could not be told from a control that
+     cannot count.
+
+     A NEW survey rather than closing an existing one: `above` carries the live
+     session, the share link and the results captures, and moving a fixture
+     every other state depends on to satisfy this one is how a seed acquires
+     couplings nobody can see. It has real responses first, because a closed
+     survey with none is the empty state of a different screen.
+
+     `status: 'lukket'` is set through the same column `closeSurvey`
+     (`undersokelser/actions.ts:266`) writes, so `app.close_rounds_with_survey`
+     (M:0068) fires here exactly as it does in the product — the round closes
+     and the snapshot is taken by the trigger, not by this script. */
+  const closed = await createSurvey(
+    org.id,
+    'Medarbeiderpuls vår',
+    [
+      { type: 'likert', text: 'Jeg får brukt styrkene mine i jobben' },
+      { type: 'scale', text: 'Hvor godt fungerer samarbeidet i teamet?' },
+    ],
+    { audience: 'Hele selskapet', templatePackKey: 'arbeidsmiljo-manedlig', createdBy: ownerAdmin },
+  )
+  const closedRound = await createRound(closed, 9, { groupId: org.groupId })
+  await submitResponses(
+    closedRound.tokens,
+    (i) => ({
+      [closed.questions[0]!.id]: { value: 3 + (i % 3) },
+      [closed.questions[1]!.id]: { value: 6 + (i % 4) },
+    }),
+    7,
+  )
+  await svc.from('surveys').update({ status: 'lukket' }).eq('id', closed.id)
 
   // dsr_requests has no producer yet, so this is a direct row — and it is made
   // UNMISTAKABLY SYNTHETIC on purpose. A realistic-looking data-subject request

@@ -736,6 +736,93 @@ so that a field moved from refused to built loses it automatically.
 forbidden list buys a green test and loses the guard; deriving the exemption keeps both. This is the
 same choice as «fix the column, not the predicate» one level up.
 
+## FOUR THINGS F3 ESTABLISHED THAT ARE NOT ABOUT THE SURFACES IT BUILT
+
+**Added 2026-09-15 (Tor), accepting F3.** Each is a property rather than an instance, and each
+comes from a measurement the phase had to take anyway.
+
+### A BLOCKER LEFT RED BECAUSE IT PREDATES THE PHASE IS A BLOCKER NOBODY OWNS
+
+This is the audit's own central diagnosis — **a shared surface has no owner when phases are
+per-screen** — applied one floor down, to a FINDING rather than to a control.
+
+`verify:responsive` reported 685px² of hit-area overlap in the dashboard's customize rail at
+320px. `git log -1 -- app/(app)/dashboard/CustomizeCard.tsx` is `36f4a36`; F3 does not touch the
+file. So by the letter of «one verification pass and one fix pass, findings from the fix pass are
+logged to the next phase», it was loggable and not fixable.
+
+**It was fixed, and that is the rule now.** The phase that RUNS the sweep that finds a thing is the
+phase that owns it, whoever wrote the line. The reason is the same one the audit gives for the
+shared surfaces: a finding that belongs to «an earlier phase» belongs to no phase at all, because
+no earlier phase is ever going to run again. F3's run was the first COMPLETED 320px sweep since
+`36f4a36` — nine of eleven browser gates having been cancelled across the intervening tranche (see
+«A continuous run on a shared branch pays for work it throws away») — so «the next phase will pick
+it up» had already been false once.
+
+**The limit, so this does not become a licence to widen every phase:** it applies to a finding a
+gate THIS phase ran actually reported, with a fix whose size is the finding's, not the feature's.
+`touch-cluster` on one rail is that; rebuilding the customize card is not.
+
+### REFUSING A COMPONENT THE PARAMETER IS WHAT MAKES A RULE STRUCTURAL
+
+F1 closed a defect where a ratio was formed over two different populations. F3 put the same figure
+on three more screens, from a bundle that computes `sum(responses) / sum(target || 30)` in TWO
+places (`crossStats` v6:9131, `insStats` v6:8238) — an invented denominator of thirty per survey
+with no recipient count.
+
+The protection is not that the screens were written carefully. **It is that `PageHeader` has no
+`pct` prop.** A screen hands over `{ measured, total }` — rows — and `rateOf` is the only place a
+ratio forms. There is nothing for a future screen to pass wrongly, so reopening F1's defect is
+STRUCTURALLY IMPOSSIBLE rather than merely discouraged, and a phase that wants to would have to
+change the component's signature, which is a visible edit in a file with the reasoning in it.
+
+This is the same discipline as «fix the column, not the predicate» and as the catalogue-derived
+sweep: **prefer the shape where the wrong thing cannot be expressed over the shape where it is
+merely not done.**
+
+### A GRID TRACK IS `auto`, AND `auto` MEANS MAX-CONTENT
+
+The mechanism, because it presented with its cause and its symptom in the wrong order.
+
+`/undersokelser` measured `document.documentElement.scrollWidth` 379 in a 320px viewport. The
+elements REPORTED at 359px wide were the `<h1>`, the counts line and the lead — so the heading
+looked like the cause. It was a consequence: they are block children filling a track that something
+else had already widened.
+
+**The cause was the card**, whose three `whitespace-nowrap` children («På tvers», the response
+count, the CTA pair) have a combined min-content width of 359px. Below `lg` the band is a
+single-column grid; a grid track with no stated size is `auto`; **`auto` resolves to max-content
+when the container does not constrain it**, so the card's unshrinkable row set the column, and
+everything else in the column inherited it.
+
+Two fixes, and both are needed: `min-w-0` on the card so the track MAY shrink, and `flex-wrap` on
+its header row so the content CAN. Neither alone is enough — the first lets the track shrink and
+the content then overflows it, the second lets the content wrap in a track still sized to
+max-content.
+
+**The reading rule: in a grid or flex overflow, the widest reported element is usually the victim.
+Look for the narrowest child that cannot shrink.**
+
+### WRITING OUT WHY A RULE DOES NOT APPLY IS WORTH AS MUCH AS APPLYING IT
+
+F3 removed two in-page rails under «a shell rail may absorb an in-page one only when its list is
+COMPLETE», whose premise is that two controls doing one job is worse than one. Then
+`verify:responsive` found TWO «Ny rapport» buttons on one screen, which looks exactly like the same
+defect.
+
+It is not, and v6 settles it: the bundle draws that one action THREE times — the «På tvers» card
+(v6:2809), the mine-list header (v6:3008) and the empty state (v6:3054) — all calling `onNewReport`.
+Two of the three ship.
+
+**The rule is about a RAIL duplicated between the shell and the page — one navigation control in two
+places, which can disagree about what is selected. It is not about an action having both a header
+CTA and an empty-state CTA, which cannot disagree about anything.** The fix was therefore to the
+TEST's locator, not to the product.
+
+A rule stated only by its instances gets applied to the next thing that resembles one. **The
+boundary is the part that makes it usable, and it only gets written down when something sits just
+outside it.**
+
 ## A catch-all is a decision, not a safety measure
 **A catch-all is not a safety measure, it is a decision to make one class of failure
 invisible, and it is only sound if you know which class.** You will know it as one thing;
