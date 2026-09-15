@@ -113,8 +113,12 @@ export default async function SurveyTasksPage({
           </ul>
         )}
 
+        {/* `touch-44` — measured 116x17 at 390px and 320px, so a thumb aimed at
+            it had a 17px-tall target. Predates F5; found because F5 gave this
+            route its FIRST manifest coverage, and the phase that runs the sweep
+            owns what it finds. */}
         <p className="mt-4 text-[13px]">
-          <Link href="/oppgaver" className="underline">
+          <Link href="/oppgaver" className="touch-44 inline-block underline">
             {t('toWorklist')}
           </Link>
         </p>

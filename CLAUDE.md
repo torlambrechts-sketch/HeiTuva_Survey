@@ -1320,6 +1320,28 @@ reported **46 unmeasurable combinations**, all of them one 500, and a second tha
 its row title. Three runs, three different truths about the same screen; only the last is
 about the screen.
 
+**F5 TOOK IT TO 1532 ACROSS 114 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one added line and nothing else moved in
+either direction**, which is the proof rather than the total:
+
+```
+1496 across 113
+ + 36  tests/unit/subtabs.test.ts   new — F5-0..F5-4, grown per phase: 11 -> 18 -> 26 -> 30 -> 36
+= 1532 across 114
+```
+
+5a3 holds at **81 of 112** — 65 RLS tables (42 checked, 23 allowlisted) plus 47 SECURITY DEFINER
+functions (39 checked, 8 allowlisted), zero unproven. F5 adds no table and no definer function: a
+registry, two components and a route are not catalogue surfaces, which is the correct reading
+rather than a gap. `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against
+`grep -E 'enumerated'`.
+
+**AND `verify:responsive` WENT 224 OF 224 MEASURED, 0 FINDINGS, 0 BLOCKERS — after a first run that
+reported SIX.** The 224 is up from 206 because F5 gave three survey sub-routes their first manifest
+coverage; all six findings were one line, «Gå til arbeidslisten» at 116×17, which predates F5 and
+was fixed here under «the phase that runs the sweep owns what it finds». **A route nobody walks is
+a route nobody can measure**, and the count rising is what made the defect visible.
+
 **F2 TOOK IT TO 1452 ACROSS 108 FILES AND 5a3 IS UNMOVED AT 81 OF 112.** One added line —
 `tests/unit/fidelity-pairs.test.ts: 4` — and no other entry moved, which is the proof rather than
 the total. F2 adds no table and no function; a script is not a catalogue surface.

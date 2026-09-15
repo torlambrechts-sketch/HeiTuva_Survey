@@ -6205,3 +6205,82 @@ output rather than the browser's.
 The map is built immediately above the `return`, after every helper, and that
 position is the guard — stated in the comment there, because nothing mechanical
 enforces it.
+
+## D192 — F5: five of eight tabs have no sub-rail, for five different reasons
+
+v6 draws 27 sub-tabs across seven rails. Nine ship, on three tabs. The other
+five tabs carry none, and the reasons do not generalise — which is why they are
+listed rather than summarised.
+
+| tab | v6 draws | what happens | why |
+|---|---|---|---|
+| `sporsmal` | 3 | **all three ship** | a filter over the read view's own list |
+| `kommentarer` | 3 | **all three ship** | `handled_at` is the predicate |
+| `tiltak` | 3 | **all three ship** | `status` and `law_ref` are the predicates |
+| `malgruppe` | 3 | none | «Grupper» IS the page; «Segmenter» reopens Q92; «Levering» is four invented figures |
+| `resultat` | 6 | none | Matrise duplicates the dashboard; Fordeling and Frisvar are inside the per-question card; Sammenligning is deferred; «Per spørsmål» and «Runder» ARE the screen |
+| `utsending` | 7 | none | four are already `/send`; Invitasjon is built INTO it; Leveranse is refused; Bølger is deferred |
+| `over` | 2 | none | the tab itself is decided-NOT-NOW |
+
+**A rail of one pill is not a rail**, which is what collapses `malgruppe` once
+two of its three are refused. That is the general rule the table hides.
+
+## D193 — F5: «Behandlet», not the bundle's «Besvart»
+
+`survey_comments.handled_at` has TWO writers: `reply_to_comment` (`M:0102`)
+sets it alongside a reply, and `set_comment_handled` (`M:0101`) sets it with no
+reply at all. So «Besvart» — answered — is false on the second path.
+
+The row chip on this very screen has said «Behandlet» since C4, and two words
+for one state is how one of them ends up wrong. A test asserts the sub-tab
+label and the row chip are the same string in Norwegian.
+
+## D194 — F5: the sub-tab filters were green against a fixture that could not tell them apart
+
+Measured before anything was built: across the whole demo organisation,
+`count(*) filter (where handled_at is not null)` over `survey_comments` was
+**0**, and
+`select distinct kind, status, (law_ref is not null) from tasks where
+source_round_id is not null` returned exactly **one row** — every survey-scoped
+task was `undersokelsesplikt · foreslatt · with a law_ref`, because
+`app.generate_blind_spot_tasks` is their only writer.
+
+So all three comment sub-tabs and all three task sub-tabs selected IDENTICAL
+sets. Six filters, none of them distinguishable from the one beside it.
+
+That is «the seed reaches only states the current code creates» — the shape
+this project has recorded six times — arriving in the phase whose entire
+subject is filters. The seed now carries one handled comment (through
+`set_comment_handled` rather than an UPDATE, because the column has one writer)
+and two survey-scoped tasks chosen so each filter lands on a DIFFERENT set
+rather than merely differing from the default.
+
+## D195 — F5: `law_ref` was not in the tasks select, so «Med hjemmel» would have matched nothing
+
+The survey tasks page selected `id, title, kind, status, due_at`. «Med hjemmel»
+is a fact about `law_ref`, a sixth column, so the filter would have returned an
+empty list on every survey — and an empty list under a filter looks like a true
+answer, not a bug.
+
+A test now asserts that every filter only reads fields its page actually
+selects. It is the same shape as a gate reading a key nothing writes: the code
+runs, the screen renders, and the answer is silently always the same.
+
+## D196 — F5: three survey sub-routes had never been walked by any browser gate
+
+`tests/routes.manifest.ts` carried `send` and `resultater` but not `sporsmal`,
+`kommentarer` or `tiltak`. No browser gate had ever opened them, at any width,
+in any language.
+
+F5 adds the three routes with their sub-tab states — which is keeping an
+existing gate's coverage in step with the app, not adding a gate — and the
+first completed run found a defect on the first try: **«Gå til arbeidslisten»
+measured 116×17 at both 390px and 320px**, a 17px-tall target for a thumb.
+
+The line predates F5. It is fixed here under F3's rule — *the phase that runs
+the sweep that finds a thing owns it, whoever wrote the line* — because a
+finding that belongs to «an earlier phase» belongs to no phase at all.
+
+**The sub-tab is clicked in the rail rather than reached by typing `?vis=`.** A
+gate that constructs the URL itself never finds out whether the control that
+produces it works.

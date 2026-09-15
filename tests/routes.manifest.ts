@@ -124,6 +124,31 @@ async function openDraftBuilder(page: Page) {
   await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
 }
 
+/**
+ * F5 — open one survey's TAB, and optionally one of its sub-tabs.
+ *
+ * The survey is named rather than taken by position, for `pickSurvey`'s own
+ * reason: rows are ordered by creation time, so `.first()` addresses a place
+ * and not a survey. The sub-tab is clicked in the rail rather than reached by
+ * typing `?vis=` — a gate that constructs the URL itself never finds out
+ * whether the control that produces it works.
+ */
+async function openSurveyTab(page: Page, segment: string, subLabel?: string) {
+  await page.getByLabel('Søk i undersøkelser…').fill('Arbeidsmiljø — månedlig')
+  await page.waitForURL((u) => (u.searchParams.get('sok') ?? '').length > 0)
+  await page.getByRole('link', { name: BUILD_LINK }).first().click()
+  await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+  const id = new URL(page.url()).pathname.split('/')[2]
+  const base = page.url().replace(/\/undersokelser.*$/, '')
+  await page.goto(`${base}/undersokelser/${id}/${segment}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('load')
+  if (subLabel) {
+    await page.getByRole('link', { name: subLabel, exact: true }).click()
+    await page.waitForURL((u) => (u.searchParams.get('vis') ?? '').length > 0)
+    await page.waitForLoadState('load')
+  }
+}
+
 async function pickSurvey(page: Page, title: string) {
   await page.getByRole('link', { name: RESULTS_LINK }).first().click()
   await page.waitForURL((u) => u.pathname.endsWith('/resultater'))
@@ -1291,6 +1316,53 @@ export const ROUTES: RouteSpec[] = [
       })
       await page.waitForURL((u) => u.pathname.startsWith('/logg-inn'), { timeout: 15_000 })
     } }],
+  },
+  {
+    /*
+      F5 — THE THREE SURVEY SUB-ROUTES THE MANIFEST HAD NEVER WALKED.
+
+      `send` and `resultater` were in here; `sporsmal`, `kommentarer` and
+      `tiltak` were not, so no browser gate had ever loaded them at any width.
+      F5 puts a rail on two of them and builds the third from nothing, and a
+      screen no gate opens is the shape this project has hit eight times — most
+      recently as an HTTP 500 that three gates scored green.
+
+      Reached the way `resultater` is reached, through the list, because the
+      route needs a real survey id. «Arbeidsmiljø — månedlig» is the one the
+      seed gives comments, tasks and answers above k, so every sub-tab has rows
+      on both sides of its predicate.
+    */
+    route: '/undersokelser',
+    label: 'survey-sporsmal',
+    as: 'administrator',
+    phase: 'phase-2',
+    states: [
+      { name: 'default', setup: (page: Page) => openSurveyTab(page, 'sporsmal') },
+      { name: 'skala', setup: (page: Page) => openSurveyTab(page, 'sporsmal', 'Skala') },
+      { name: 'fritekst', setup: (page: Page) => openSurveyTab(page, 'sporsmal', 'Fritekst') },
+    ],
+  },
+  {
+    route: '/undersokelser',
+    label: 'survey-kommentarer',
+    as: 'administrator',
+    phase: 'phase-5',
+    states: [
+      { name: 'default', setup: (page: Page) => openSurveyTab(page, 'kommentarer') },
+      { name: 'venter', setup: (page: Page) => openSurveyTab(page, 'kommentarer', 'Venter') },
+      { name: 'behandlet', setup: (page: Page) => openSurveyTab(page, 'kommentarer', 'Behandlet') },
+    ],
+  },
+  {
+    route: '/undersokelser',
+    label: 'survey-tiltak',
+    as: 'administrator',
+    phase: 'phase-5',
+    states: [
+      { name: 'default', setup: (page: Page) => openSurveyTab(page, 'tiltak') },
+      { name: 'alle', setup: (page: Page) => openSurveyTab(page, 'tiltak', 'Alle') },
+      { name: 'hjemmel', setup: (page: Page) => openSurveyTab(page, 'tiltak', 'Med hjemmel') },
+    ],
   },
   {
     // Resultater (HeiTuva.dc.html:2136-2298). Reached through the survey list
