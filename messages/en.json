@@ -1601,7 +1601,17 @@
     "tuvaToggle": "Show or hide Tuva",
     "tuvaMark": "T",
     "tuvaName": "Tuva",
-    "tuvaSub": "Looking at your selection"
+    "tuvaSub": "Looking at your selection",
+    "refuseHeading": "Not built",
+    "refuseLevering": "The design's «Levering» shows a funnel from sent to completed. Four of its six figures do not exist: we do not measure whether the email was opened, a response is either complete or not started, and we get no delivery report back from the email provider. Sent, completed and objections are on Send and Audiences.",
+    "refuseLeveranse": "The design's «Leveranse» shows SPF, DKIM and DMARC for the sending domain. Those describe our own setup rather than this survey — they are the same for every survey — so they belong in Administration the day they are measured.",
+    "deferBolger": "The design's «Bølger» sends four rounds of reminders on a fixed plan. We send one. More waves is a decision about how hard to chase people, not a missing screen.",
+    "subRail_kommentarer": "Comments",
+    "subRail_tiltak": "Actions",
+    "subRail_malgruppe": "Audience",
+    "subRail_sporsmal": "Questions",
+    "subRail_resultat": "Results",
+    "subRail_utsending": "Send"
   },
   "dashboard": {
     "allGroups": "all groups",

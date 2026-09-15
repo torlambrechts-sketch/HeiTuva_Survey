@@ -1601,7 +1601,17 @@
     "tuvaToggle": "Vis eller skjul Tuva",
     "tuvaMark": "T",
     "tuvaName": "Tuva",
-    "tuvaSub": "Ser på utvalget ditt"
+    "tuvaSub": "Ser på utvalget ditt",
+    "refuseHeading": "Ikke bygget",
+    "refuseLevering": "«Levering» i tegningen viser en trakt fra sendt til fullført. Fire av de seks tallene finnes ikke: vi måler ikke om e-posten ble åpnet, en besvarelse er enten fullført eller ikke påbegynt, og vi får ingen returmelding fra e-postleverandøren. Sendt, fullført og reservasjoner står på Utsending og Målgrupper.",
+    "refuseLeveranse": "«Leveranse» i tegningen viser SPF, DKIM og DMARC for avsenderdomenet. Det er opplysninger om oppsettet vårt, ikke om denne undersøkelsen — de er like for alle undersøkelser — så de hører hjemme i Administrasjon den dagen de måles.",
+    "deferBolger": "«Bølger» i tegningen sender fire runder påminnelser etter en fast plan. Vi sender én påminnelse. Flere bølger er en avgjørelse om hvor hardt man skal purre, ikke en manglende skjerm.",
+    "subRail_kommentarer": "Kommentarer",
+    "subRail_tiltak": "Tiltak",
+    "subRail_malgruppe": "Målgruppe",
+    "subRail_sporsmal": "Spørsmål",
+    "subRail_resultat": "Resultater",
+    "subRail_utsending": "Utsending"
   },
   "dashboard": {
     "allGroups": "alle grupper",
