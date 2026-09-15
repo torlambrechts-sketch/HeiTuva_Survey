@@ -1645,7 +1645,16 @@
     "deferSammenlign": "«Sammenligning» — runde mot runde med endringskolonne — er ikke bygget. Tallene finnes (runde-trenden ligger under «Runde for runde»), men selve matrisen er en ny visning og ikke en omgruppering av denne siden.",
     "refuseFordeling": "«Fordeling» er ikke en egen fane her: fordelingen står i kortet til spørsmålet den hører til, sammen med svarene.",
     "refuseFrisvar": "«Frisvar» er heller ikke en egen fane: sitatene står i kortet til spørsmålet de svarer på.",
-    "resMatrixLink": "Åpne dashbordet for denne undersøkelsen"
+    "resMatrixLink": "Åpne dashbordet for denne undersøkelsen",
+    "invTitle": "Invitasjonen",
+    "invLead": "Dette er e-posten mottakeren får. Den vises fra samme mal som utsendingen bruker — endrer du malen, endrer forhåndsvisningen seg.",
+    "invSubject": "Emne",
+    "invSubjectLen": "({n} tegn)",
+    "invTokenPlaceholder": "din-personlige-lenke",
+    "invLinkNote": "Lenken er unik for hver mottaker. Her står en plassholder i stedet for et ekte engangsord.",
+    "invOriginMissing": "Adressen til appen (NEXT_PUBLIC_APP_URL) er ikke satt i dette miljøet, så lenken kan ikke vises. Vi gjetter den ikke.",
+    "invNoOrigin": "[adressen er ikke satt]",
+    "invNoEmbeddedQuestion": "Tegningen legger det første spørsmålet inne i e-posten, med et kort om når det er greit. Vår invitasjon inneholder ikke noe spørsmål — den har hilsen, lenke, anonymitetsløfte og hvor man spør. Kortet ville forklart en regel for noe vi ikke har."
   },
   "dashboard": {
     "allGroups": "alle grupper",

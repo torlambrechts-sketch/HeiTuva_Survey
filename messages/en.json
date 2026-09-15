@@ -1645,7 +1645,16 @@
     "deferSammenlign": "«Sammenligning» — round against round with a change column — is not built. The numbers exist (the round trend is under «Runde for runde»), but the matrix itself is a new view rather than a regrouping of this page.",
     "refuseFordeling": "«Fordeling» is not a tab of its own here: the distribution sits in the card for the question it belongs to, beside the answers.",
     "refuseFrisvar": "«Frisvar» is not a separate tab either: the quotes sit in the card for the question they answer.",
-    "resMatrixLink": "Open the dashboard for this survey"
+    "resMatrixLink": "Open the dashboard for this survey",
+    "invTitle": "The invitation",
+    "invLead": "This is the email the recipient receives. It is rendered from the same template the sending uses — change the template and this changes with it.",
+    "invSubject": "Subject",
+    "invSubjectLen": "({n} characters)",
+    "invTokenPlaceholder": "your-personal-link",
+    "invLinkNote": "The link is unique to each recipient. A placeholder stands here instead of a real one-time token.",
+    "invOriginMissing": "The app's address (NEXT_PUBLIC_APP_URL) is not set in this environment, so the link cannot be shown. We do not guess it.",
+    "invNoOrigin": "[the address is not set]",
+    "invNoEmbeddedQuestion": "The design puts the first question inside the email, with a card explaining when that is acceptable. Our invitation contains no question — it has a greeting, the link, the anonymity promise and where to ask. The card would explain a rule for something we do not have."
   },
   "dashboard": {
     "allGroups": "all groups",

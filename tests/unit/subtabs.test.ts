@@ -381,3 +381,70 @@ describe('F5-3 — resultat keeps its ONE screen, and says so four ways', () => 
     }
   })
 })
+
+describe('F5-4 — the invitation preview IS the template', () => {
+  const PREVIEW = 'app/(app)/undersokelser/[id]/send/InvitationPreview.tsx'
+  const src = readFileSync(PREVIEW, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+
+  it('it calls the SAME function the worker calls, and stores nothing', () => {
+    /* Two writers for one fact is the failure this shape avoids: a stored
+       subject would keep showing what somebody saved after the template
+       changed, so the preview would be wrong exactly when it mattered. */
+    expect(src).toMatch(/invitationMessage\(\{/)
+    expect(readFileSync('supabase/functions/mail-worker/index.ts', 'utf8')).toMatch(
+      /invitationMessage\(\{/,
+    )
+  })
+
+  it('`surveys` still has no subject, sender, purpose or body column', () => {
+    /* The measurement that made the preview render the template rather than a
+       row. Asserted over the generated types, so adding such a column fails
+       here in the commit that adds it. */
+    const types = readFileSync('types/database.ts', 'utf8')
+    const surveys = types.slice(types.indexOf('surveys: {'), types.indexOf('surveys: {') + 2600)
+    for (const col of ['invitation_subject', 'invitation_body', 'sender', 'purpose']) {
+      expect(surveys, `surveys.${col} appeared`).not.toMatch(new RegExp(`\\b${col}\\b`))
+    }
+  })
+
+  it('the origin is read from the environment and NEVER invented', () => {
+    /* A host is a claim, not a specification — the `heituva.no` lesson. Where
+       NEXT_PUBLIC_APP_URL is unset the preview says so instead of guessing a
+       plausible domain, which is the easiest false thing to ship because it
+       reads as a fact. */
+    expect(src).toMatch(/process\.env\.NEXT_PUBLIC_APP_URL/)
+    expect(src).toMatch(/invOriginMissing/)
+    expect(src).not.toMatch(/heituva\.(no|com)/)
+  })
+
+  it('no real token is shown, and the placeholder says it is one', () => {
+    expect(src).toMatch(/invTokenPlaceholder/)
+    expect(src).toMatch(/invLinkNote/)
+    for (const [lang, set] of [['no', no], ['en', en]] as const) {
+      const ph = (set.surveys as Record<string, string>).invTokenPlaceholder!
+      expect(ph, lang).toBeTruthy()
+      // Not 32+ hex, i.e. not something a reader could mistake for a token.
+      expect(ph, `${lang}: the placeholder looks like a token`).not.toMatch(/^[0-9a-f]{16,}$/i)
+    }
+  })
+
+  it('the embedded question is refused, because our mail contains none', () => {
+    /* `lib/mail/copy.ts` is greeting, one sentence, the link, the promise, the
+       question route and the do-not-forward line. Drawing the «Derfor ligger
+       spørsmålet i e-posten» card would explain a rule for a feature that does
+       not exist — a false claim about the product, not a missing panel. */
+    const copy = readFileSync('lib/mail/copy.ts', 'utf8')
+    expect(copy).not.toMatch(/options|question_id|q1/)
+    expect(src).toMatch(/invNoEmbeddedQuestion/)
+  })
+
+  it('utsending has no rail — four of its seven are already this screen', () => {
+    expect(subTabsFor('utsending')).toHaveLength(0)
+    expect(REFUSED_KEYS).toContain('utsending/leveranse')
+    expect(REFUSED_KEYS).toContain('utsending/bolger')
+    // Invitasjon is BUILT, so it must not be in the refusal list.
+    expect(REFUSED_KEYS).not.toContain('utsending/invitasjon')
+  })
+})

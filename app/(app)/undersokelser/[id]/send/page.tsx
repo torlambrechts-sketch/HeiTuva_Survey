@@ -5,6 +5,7 @@ import { requireViewer } from '@/lib/auth/session'
 import { isFlagEnabled } from '@/lib/flags'
 import type { Cadence, CustomUnit } from '@/lib/send/registry'
 import { readScheduleChip } from '@/lib/schedules/read'
+import { InvitationPreview } from './InvitationPreview'
 import { SurveyContextBar } from '../SurveyContextBar'
 import { SendScreen } from './SendScreen'
 import { effectiveK } from '@/lib/questions/threshold-tier'
@@ -206,6 +207,17 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
           name: g.name,
           count: headcount.get(g.id) ?? 0,
         }))}
+      />
+
+      {/* F5-4 — «Invitasjon» (v6:1795). Built HERE rather than as a sub-tab on
+          a read view: with Leveranse refused and Bølger deferred, four of
+          utsending's seven sub-tabs are already this screen, so a separate read
+          view would be a new page wrapping panels that exist plus one preview.
+          The preview belongs where the sending is set up. */}
+      <InvitationPreview
+        orgName={viewer.orgName}
+        surveyTitle={survey.title}
+        anonymous={survey.anonymity !== 'named'}
       />
     </>
   )
