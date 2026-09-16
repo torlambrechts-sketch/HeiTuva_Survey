@@ -1359,3 +1359,133 @@ Re-derived as `app\.(is_|has_|can_)`, a property rather than a list.
 
 Same lesson as the migration probe two hours earlier that returned three false zeroes from
 guessed object names: **a negative from a predicate you wrote from memory is not evidence.**
+
+## 2026-09-16 — prod sync: the distance was SIX migrations, not three, and the ninth check earned itself again
+
+**The instruction said production was at M:0119 and the distance was M:0120–M:0122.** Measured, it
+was at **M:0113** — the ledger's last row was `20260912171153 worklist_notes` — and the whole **I2
+tranche (M:0114–M:0118) plus M:0119** had never been applied.
+
+### HOW THE WRONG DISTANCE SURVIVED THE FIRST PROBE, WHICH IS THE LESSON
+
+The first probe was BY OBJECT, exactly as instructed, and it was still wrong:
+
+```
+method_rules                         absent   ✓ M:0120 missing
+organizations.survey_view            absent   ✓ M:0122 missing
+position('retention' in get_survey_for_token)  0   ✓ M:0121 missing
+```
+
+All three true. All three applied. All three returned `{"success":true}`. **And the probe was an
+enumeration of the migrations I expected to be missing, read as the distance** — CLAUDE.md's own
+shape, committed by the person following the instruction that says to avoid it. «By object» fixes
+the *method*; it does nothing about the *scope*, and the scope was taken from the instruction.
+
+**What caught it was the fingerprint, because a fingerprint cannot be scoped to an expectation:**
+
+```
+rls_tables   local e7c079c7…   prod 1c6ff3c9…
+  < public.entra_connections    (local only — I2 never landed)
+  > public.scim_credentials     (prod only — I2 removed it)
+```
+
+**So the rule that generalises: an existence probe answers the question you ASKED. A whole-catalogue
+comparison answers the question you did not.** Run the probe to know what to apply; run the
+fingerprint to know what you missed. This is the same relationship as «an apply is not evidence, a
+comparison is», one level out — the probe is the apply's cousin, not the comparison's.
+
+### THE OUT-OF-ORDER APPLY HAD A REAL COST, NOT A COSMETIC ONE
+
+`M:0119` and `M:0121` both `create or replace public.get_survey_for_token`, and **M:0121's body is
+written on top of M:0119's** — it contains `has_thread`. Applying M:0119 after M:0121 would have
+silently reverted the retention payload F1 shipped for the respondent's anonymity sheet: no error,
+no failed check, a green apply, and a respondent sheet that stops being able to state a duration.
+
+Order run: M:0115 → M:0116 → M:0117 → M:0118 → M:0119, then **M:0121 re-applied**, then M:0114.
+Each file verbatim through `apply_migration`. Every call succeeded; nothing failed.
+
+### THE MIRROR FINGERPRINT — ALL EIGHT MATCH
+
+| hash | value (both sides) |
+|---|---|
+| `n_columns` | 523 |
+| `columns` | `3719a0c3d5b48fd88f72847469c5dc18` |
+| `constraints` | `ba316160fb14b620994474e3ef8bc1fc` |
+| `policies` | `66e6ab6b199c475f8dedafe2af077568` |
+| `rls_tables` | `e7c079c751cb3238eb774346fd820bb5` |
+| `functions` | `09d52577bb6a077ad3455cd0fd2ff00a` |
+| `grants` | `b568f7e603b7321a682432283bd64ba7` |
+| `enums` | `113b10fde591212cbecd19621b2afca5` |
+
+### THE NINTH CHECK SPLITS, AND THAT IS WHAT IT IS FOR
+
+```
+fns                     local 118                                 prod 118          same
+normalised_aggregate    aac5eef35c147865b5b336b24d73232d          same              MATCH
+raw_aggregate           5f0ccf85b424b58a6304819dd9ed9444          a270ffe903b777d4e81be0d5f2dd62c1   DIFFER
+```
+
+A raw mismatch under a matching normalised aggregate means **comments and whitespace only**, by
+construction. **24 of 118 functions differ**, and the direction is not ambiguous — prod's bodies are
+the stripped ones, every time:
+
+```
+chars           local 51 806   prod 42 093    9 713 lost
+`--` markers    local    144   prod      7      137 lost
+functions with ZERO comment markers left on prod:  22 of 24
+```
+
+The worst individually: `public.get_trends` 3025 chars / 15 markers → **1967 / 0**;
+`public.get_benchmarks` 5186 / 11 → 4339 / 0; `app.resolve_token` 2637 / 11 → 1890 / 0. Two are
+partial rather than total — `app.report_quotes` 8 → 3, `public.snapshot_report` 7 → 4.
+
+**This is the drift this file already recorded on 2026-09-09** («twenty-seven of seventy-nine
+functions differed in comment text»), still standing, now re-measured at 24 of 118 against a larger
+catalogue. It is the hand-transcription signature of the 2026-09-05/07/08 applies, and **none of
+today's ten applies added to it** — the ten migrations applied here are not in the list.
+
+**NOT REPAIRED, and that is a decision rather than an oversight.** It is behaviour-neutral by
+construction, the eight-hash fingerprint and every gate are clean, and repairing it means
+re-applying 24 function bodies to production for prose. The cost of leaving it is real and worth
+naming: **a future session reading `get_trends` on prod finds no reasoning at all**, in a project
+whose reasoning lives in its comments. The repair, when someone wants it, is mechanical —
+`create or replace` each of the 24 from its own migration file, then re-run the ninth check and
+require `raw_aggregate` to match.
+
+### LEDGER AND WHAT IS NOW TRUE THERE THAT WAS NOT
+
+Ledger: **198 rows**, head `20260916074942`. It carries MCP's own timestamps, so it cannot be
+diffed against filenames — the eight hashes are the evidence, not the row count. Ten rows added:
+
+```
+20260915084444 method_rules                      20260915085347 status_source_names_a_side
+20260915084509 token_carries_retention           20260915085408 entra_sync_schedule
+20260915084527 survey_default_view               20260915085430 token_has_thread
+20260915085246 entra_connection                  20260915085454 token_carries_retention_reapply
+20260915085328 entra_sync                        20260916074942 remove_scim_push
+```
+
+New in production, none of it previously there:
+
+- **`entra_connections`** — the first long-lived third-party credential this schema holds, the token
+  in `vault` and only its handle in the row. RLS on with NO policy, grants revoked explicitly.
+- **Eleven Entra functions** — two `app` sync functions, `entra_connection_status`,
+  `disconnect_entra`, `store_entra_connection`, and the five worker wrappers.
+- **A new cron job, `entra-sync-nightly`, `0 3 * * *`, active.** It is a no-op until
+  `entra_sync_url` and `entra_sync_secret` exist in the vault — and it RAISES A WARNING naming the
+  missing one rather than passing silently, which is the difference between «not set up» and «ran
+  and found nothing».
+- **SCIM is gone**: `scim_credentials` 0, `%scim%` functions 0. The one row was HeiTuva AS's own,
+  never used, and `count(external_id) = 0` — SCIM provisioned nobody, ever.
+- **`org_members.status_source`** is now `('local','directory')` rather than `('local','scim')`.
+- **`method_rules`**, **`organizations.survey_view`**, and `get_survey_for_token` carrying both
+  `has_thread` and the retention pair.
+
+Cron now: `entra-sync-nightly`, `mail-worker-minutely`, `reminders-hourly`, `retention-daily`,
+`schedules-hourly` — all active.
+
+Advisors re-read: nothing new is wrong. `entra_connections` appears under `rls_enabled_no_policy`,
+which is **by design** and stated in `M:0115`'s own comment. One pre-existing item, unrelated to
+this sync and not acted on: **leaked-password protection is disabled** in Supabase Auth.
+
+PITR not raised (Q131).

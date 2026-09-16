@@ -1014,6 +1014,45 @@ the dependencies this project has actually hit, and the next thing assumed will 
 When that happens the remedy is the rule first and a row second — never the row alone, because a
 list of capabilities to test can only ever be as long as the last surprise.
 
+### AN EXISTENCE PROBE ANSWERS THE QUESTION YOU ASKED; A FINGERPRINT ANSWERS THE ONE YOU DID NOT
+
+**Added 2026-09-16, after a prod sync whose stated distance was three migrations and whose real
+distance was nine.** This file already says «probe BY OBJECT, not by version string, because the
+ledger cannot be diffed against filenames». That is right, and it is not sufficient, and the gap is
+worth its own heading because the probe FIXES THE METHOD AND INHERITS THE SCOPE.
+
+The instruction said production was at M:0119. The probe was by object and every row of it was true:
+
+```
+method_rules                                   absent
+organizations.survey_view                      absent
+position('retention' in get_survey_for_token)  0
+```
+
+Three objects, three correct answers, three migrations applied, three successes. **Production was
+at M:0113** — the entire I2 tranche and `token_has_thread` had never landed — and no probe written
+from the instruction could have said so, because *the objects to probe for came from the
+instruction*. It is the enumeration shape with the list supplied by somebody else.
+
+**The whole-catalogue comparison is what cannot be scoped that way**, and one line of it settled it:
+
+```
+rls_tables   local e7c079c7…   prod 1c6ff3c9…
+  < public.entra_connections    (local only)
+  > public.scim_credentials     (prod only)
+```
+
+**So the order is: probe to decide what to apply, fingerprint to discover what you did not know to
+probe for — and the fingerprint comes FIRST when the distance is asserted rather than measured.**
+This is «an apply is not evidence, a comparison is» one level out: the probe is the apply's cousin.
+
+**AND THE COST OF THE WRONG ORDER WAS NOT COSMETIC.** `M:0119` and `M:0121` both replace
+`get_survey_for_token`, and M:0121's body is built on M:0119's. Applying M:0119 after M:0121 —
+which is what «catch up on the missing six» would have done — silently reverts F1's retention
+payload on the respondent's anonymity sheet. Green apply, no error, and a respondent surface that
+quietly stops being able to state a duration. **When two migrations replace one function, applying
+them out of order is a successful, invisible regression.**
+
 ### THERE IS NO POSTGRES ROUTE TO PRODUCTION FROM A CLAUDE CODE CONTAINER — SETTLED, STOP RE-DERIVING IT
 
 **Added 2026-09-14 (Tor, exasperated, and right): «you do this EVERY time; why cant you remember?
