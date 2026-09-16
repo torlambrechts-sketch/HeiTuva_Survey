@@ -6834,3 +6834,189 @@ write 5498 rows to restate what the bundle already says.
 What is worth knowing for next time: **the namespace-level hash is the wrong
 granularity for this question**, because it cannot separate «missing» from
 «wrong», and only one of those matters.
+
+### D219 — the global helper is back, and the three reasons it can be
+
+**G4 · Q219.** `lib/tuva/answers.ts` and its suite were deleted in F1 under Q190.
+They are restored, and **the restoration is only honest because the removal's
+reasons are measurably gone** — not because the judgement changed:
+
+| Q190's reason | What closed it |
+|---|---|
+| No panel to live in | F4 shipped `svTuva` with both placements and the switch |
+| `options.tuva` had no writer — «a switch whose state nothing stores is decoration» | G2 gave it a column, a default, a backfill and `setOption` |
+| No feature phase to build it in | G3 closed the last of the five fidelity gaps |
+
+Q190's own text named the condition for its reversal — «if a later phase wants
+one, that phase adds the writer and the test» — and G2 was that phase. Recorded
+as a table because a reversal with no ledger of what changed is how a decision
+gets undone twice.
+
+The three answer repairs V6-5 made are unchanged and still needed: Feltarbeid is
+still decided-not-built, Målgruppe still ships as half a tab, and Q178's
+blocking language is still unrepresentable. Tests 4, 5 and 6 hold all three.
+
+### D220 — two Tuvas, and the drawing settles it twice
+
+**G4 · Q220.** On `/undersokelser` the global helper does not draw, and `svTuva`
+stands in. That is the bundle's decision, reached two independent ways:
+
+- `tvShow` excludes `["surveys","respond","splash","login"]` **by name**
+  (v6:8965);
+- `tuvaFor`'s map has **no `surveys` key at all** (v6:6831-6882), so it returns
+  null there regardless.
+
+**The premise that sent me looking was not quite right, and the correction is
+worth keeping.** The brief described v6 as having «REPLACED a generic `surveys:`
+entry in the shared `tuvaFor` map». Measured: **`tuvaFor` does not exist in v5,
+and neither does any `tv*` identifier** — `grep -c` returns 0 for all of
+`tvShow`, `tvOpen`, `tvRated`, `tvAnswer`, `tvTrackOpen` in the v5 bundle. The
+global helper is a v6 ARRIVAL, so there was no entry to replace. The conclusion
+survives the correction because it rests on v6's own two exclusions, not on a
+diff against v5.
+
+**Dock/float is separate, and only one of the two has any.** svTuva's placement
+is the cookie `heituva.svtuva` (`resolveTuvaPlacement`, default `side`) because a
+server component renders it. The helper's open/shut is `useState`, which is what
+`TuvaPlacement.tsx` already records as the rule: a cookie is for what the SERVER
+must render correctly.
+
+### D221 — the ask box and the rating do not ship, and the screen says so
+
+**G4 · Q221.** Two controls in the panel collect something with nowhere to put
+it. Both are refused on the screen with the reason, the way admin-profil and
+admin-malgrupper do.
+
+**The rating is the sharper of the two, and not for the obvious reason.**
+`onTvRateUp` and `onTvRateDown` are `setState` and nothing else — but the
+drawing's own down-vote line is **«Takk. Spørsmålet er logget slik at vi kan
+lære av det»** (v6:9011). That sentence *asserts a write*. So this is not a
+control that does nothing; it is a control that tells the user it did something.
+There is no column and no endpoint, and building the control first and the
+writer «later» is what invariant 8 refuses.
+
+**The ask box («Spør Tuva om tallene…», v6:5869-5879) is a capability claim over
+a `switch`.** `tvAnswer` (v6:6784-6820) is five `hit("mangler","purre",…)`
+branches plus a default that already says «Det klarer jeg ikke å svare på».
+Three of the five could not ship regardless:
+
+1. the first opens **Feltarbeid** (`sdTab:"feltarbeid"`), decided-not-built;
+2. it computes `(inv - res)` from `sum(s.target || 30)` — **the invented
+   denominator of thirty** that F1 closed and F3 made structurally impossible by
+   refusing `PageHeader` a `pct` prop;
+3. the statutory branch says «Jeg fyller ut det jeg har tall for, du signerer»,
+   which attributes report drafting to Tuva.
+
+So the panel says what she does — points you onward from the screen you are on —
+and says plainly that she does not answer typed questions.
+
+### D222 — «Kom i gang» is redirected, not refused, and the bundle's copy is the worse of the two
+
+**G4 · Q221.** `tvTrack` (v6:8976-8995) is a second four-step get-started
+checklist, inside the helper. G3 already shipped one on Oversikt, derived from
+real state. Two would be worse than one **because they can disagree**: the
+bundle's steps are library-set / wizard / send / follow-up against G3's wizard /
+template / people / test, so the two «N av 4» readouts are over different
+predicates and can differ on the same day. F3's rule about a rail duplicated
+between shell and page is about exactly this — controls that can disagree about
+what is true.
+
+**And the bundle's version is defective on its own terms.** `tvTrackLabel`
+(v6:8991-8992) computes `done` as
+`[surveys.length > 0, surveys.length > 0, …]` — **steps one and two are marked
+done by the same condition**, so «Velg et ferdig sett» and «Lag undersøkelsen»
+can never disagree. That is four steps over three predicates, which is precisely
+what G3's `onboarding` test 2 («each step ticks on its own fact alone») exists
+to forbid.
+
+So the panel carries a line pointing at Oversikt instead. Refusing it would have
+been wrong — the feature exists and works; it is just somewhere else.
+
+### D223 — `tvTrackOpen` is a disclosure toggle, not telemetry
+
+**G4, measured.** The name reads like open-tracking, and the brief listed it
+beside the rating as a thing that might «collect something with nowhere to put
+it». It does not collect anything: `onTvTrack` is
+`setState(x => ({ tvTrackOpen: !x.tvTrackOpen }))` and `tvTrackToggle` is
+«Kom i gang» / «Skjul kom i gang» (v6:8994-8995). **It is the expand/collapse
+state of the «Kom i gang» section.**
+
+Recorded because building it as telemetry would have been building a different
+feature — and a worse one, since it would have needed a writer nothing has.
+There is no open-tracking anywhere in the panel.
+
+### D224 — a suppression that could not fail, and the test that was passing on it
+
+**G4's own fix pass, and it is this project's recurring shape found in my own
+new code.** `tuvaKeyFor` had an explicit line making `/undersokelser` return
+null. Test 9 asserted that behaviour and passed.
+
+**Deleting the line left all twelve tests green.** With the suppression removed
+the function still returns null, because no prefix rule below it matches
+`/undersokelser` either — so the guard was redundant for behaviour and the test
+was passing by fall-through, not because of the thing it claimed to check. That
+is «a derivation that finds nothing looks identical to a product that has
+nothing», one floor down: *a guard that cannot fail*.
+
+The line is a **declaration** — «this screen is silent on purpose, not by
+omission» — and declarations are what the day-somebody-adds-a-`/undersokelser`-
+prefix-rule case needs. So it is now an exported `TUVA_SUPPRESSED` list, checked
+in the resolver, and the test asserts the LIST. Proven: emptying it fails test 9.
+
+The reasoning is written into the resolver rather than only here, because a
+reader who sees a line that changes no behaviour will otherwise delete it.
+
+### D225 — the helper floats only at ≥1280px, and RESPONSIVE.md decides that
+
+**G4's fix pass, and the first attempt was the wrong diagnosis — recorded
+because the wrong one looked right.**
+
+`verify:responsive` called two blockers on Bibliotek at 320px: the bubble's hit
+area overlapping a use-case chip by 59px². Measured, the geometry was exact —
+the 52px bubble's left edge lands at x=246 (320 − 22 − 52) and the chip runs to
+x=249, so 3px × ~20px. The obvious fix followed: shrink the bubble to 44px below
+`sm`, which moves the edge to 254 and clears it.
+
+**That took the count from two to SEVEN**, across five screens and both widths:
+«Administrasjon», «Arbeidsmiljø» twice, «Lovpålagt», «Interne notater» and two
+import rows. The first measurement was true about the two states it named and
+silent about the property — *a fixed corner over full-width content sits on
+whatever happens to be under it*, and which control that is depends on the
+screen and the scroll. Fixing the position was fixing an instance.
+
+**RESPONSIVE.md already decides the shape, in three rules:**
+
+- **6** — «Sticky elements: page header only. Do not add sticky footers or
+  bottom bars that the design does not have.» The bundle is a 1440px canvas;
+  below 1280px there is no design for this bubble at all.
+- **2** — expanded hit areas must not overlap, and the fix is «once as a shared
+  utility/component, not per instance».
+- **4** — no feature hidden on mobile: reflow, never remove.
+
+So the helper is **in the flow below `xl` and fixed at `xl` and above**, where
+the drawing is authoritative and the pixel bar applies. The 52px bubble and the
+22px insets are the bundle's, unchanged, where they are the bundle's to set.
+Seven blockers to zero; 242 of 242 measured.
+
+**The mount moved with it** — inside `.frame` rather than after `<AppFooter />`,
+because an in-flow element after the footer is below the footer.
+
+### D226 — LOGGED, not fixed: the survey row menu overlaps its own trigger at 320px
+
+**G4's fix pass.** With every Tuva blocker cleared, `verify:responsive` reports
+one remaining: `undersokelser/row-menu @320px — "Slett" / "Flere valg:
+Medarbeiderpuls vår"`, 411px².
+
+**It is not Tuva's.** The helper renders no DOM on `/undersokelser` at all
+(`tuvaKeyFor` returns null, the component returns `null`, and the drive measured
+`tuvaBubble=0` there) — svTuva stands on that screen. This is F4's row menu
+overlapping the button that opens it, which is popover geometry and depends on
+where the row sits.
+
+It did not appear in the pre-Tuva run on a different fixture, and the two runs
+between had aborted before reaching that state, so what changed is most likely
+the row's position after a reseed rather than the code.
+
+**Logged rather than fixed, because a phase gets one verification pass and one
+fix pass and this is the fix pass.** It is a real finding on a real screen and
+it belongs to whoever opens `SurveyTable` next, with the measurement above.

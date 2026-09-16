@@ -178,6 +178,13 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
     }
     walk('app')
     walk('components')
+    /* G4 — `lib` joins the sweep. Tuva's answers live in `lib/tuva/answers.ts`
+       and form survey sub-routes, so the property this test states — no
+       hard-coded survey sub-path may name a route that does not exist — was
+       true of two directories and silent about the third. Widened here rather
+       than copied into a second test: it is the same property, and two tests
+       asserting it is how they come to disagree. */
+    walk('lib')
 
     const offenders: string[] = []
     for (const file of files) {

@@ -1578,6 +1578,35 @@ it: **a derivation that finds nothing looks identical to a product that has noth
 floor is what tells them apart. Both were then proven to FIRE — a synthetic `onboardHidden`, a
 synthetic `audit(org, 'group.created')` — before being trusted.
 
+**G4 TOOK IT TO 1604 ACROSS 121 FILES AND 5a3 IS UNMOVED AT 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one added line and nothing else moved in
+either direction**, which is the proof rather than the total:
+
+```
+1592 across 120
+ + 12  tests/unit/tuva-answers.test.ts   restored from 9a54a99 and adapted to the registry form
+= 1604 across 121
+```
+
+Measured on a bare reset: unit 707 + db/invariants 897 = **1604**, the manifest sum exactly. 5a3
+holds at **81 of 114**: G4 adds no table and no SECURITY DEFINER function — a registry, a component
+and a shell mount are not catalogue surfaces, which is the correct reading rather than a gap.
+
+**AND `survey-tabs.test.ts` GREW BY NO TESTS WHILE COVERING A THIRD DIRECTORY.** D198's sweep
+walked `app` and `components`; Tuva's answers live in `lib`, so the property it states — no
+hard-coded survey sub-path may name a route that does not exist — was true of two directories and
+silent about the third. `walk('lib')` is one line inside the existing test rather than a second
+test asserting the same thing, and it was proven to fire against a synthetic `lib/__probe.ts`.
+**The count did not move and the coverage did**, which is this file's own sentence: a file's count
+is not a record of what it checks.
+
+**AND G4's OWN SUPPRESSION WAS A GUARD THAT COULD NOT FAIL.** `tuvaKeyFor` had an explicit line
+returning null for `/undersokelser`, and test 9 asserted the behaviour and passed — **and deleting
+the line left all twelve tests green**, because nothing below it matches that prefix either, so the
+function returned null by fall-through. The line was a DECLARATION wearing a guard's clothes. It is
+an exported `TUVA_SUPPRESSED` list now and the test asserts the LIST, which does fail when emptied
+— proven. Found by the same habit that found G3's two: prove the guard red before trusting it.
+
 5a3 holds at **81 of 114** — 65 RLS tables (42 checked, 23 allowlisted) plus 49 SECURITY DEFINER
 functions (39 checked, 10 allowlisted), zero unproven. `M:0124` and `M:0125` add three functions
 and all three live in the `app` schema, which neither sweep enumerates — the same recorded limit of
