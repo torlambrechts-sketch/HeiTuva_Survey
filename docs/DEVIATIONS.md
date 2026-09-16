@@ -6768,3 +6768,69 @@ guard.** The first re-run refused to start: «a server is already running at
 :3100, but source files are newer than the build it is serving». That is
 `serverBuildId()` doing exactly what it was added for — a probe fix measured
 against the binary that predates it would have been a green nobody earned.
+
+### D217 — the name fingerprint matched exactly while 24 function bodies differed
+
+**Prod sync, 2026-09-16, applying M:0123–M:0126.** CLAUDE.md's rule is
+«fingerprint to discover what you did not know to probe for». This is the first
+time the fingerprint itself was not enough, and the gap is worth its own entry.
+
+**The name-level comparison came out EXACTLY equal.** Local minus the fifteen
+objects the four migrations create hashed `7fe95a24…` over 471 items; prod minus
+the one constraint M:0123 drops hashed `7fe95a24…` over 471 items. Identical.
+By that measure the distance between prod and local was precisely four
+migrations and nothing else.
+
+**It was not.** A second fingerprint over `md5(prosrc)` reported **25 functions
+whose bodies differed**, only one of which (`app.enqueue_reminders`) the pending
+migrations explain. Names matched; bodies did not. That is the `qcSaved` shape
+one floor down — *a set difference answers «which identifiers exist» and cannot
+pose «is this still the same thing»* — applied to a database rather than to a
+handoff.
+
+**And the honest reading of 25 was not «prod is 24 migrations behind».** All 24
+are last defined in M:0001–M:0053, untouched since. Comparing one in full —
+`public.survey_response_counts`, the smallest — the SQL was character-identical
+and the difference was **a missing comment block**. So a third fingerprint,
+over the body with `--` comments stripped and whitespace collapsed, returned
+**exactly one row: `app.enqueue_reminders`**, and after M:0126 it returned
+**none**.
+
+The 24 are the residue of an old hand-transcribed sync — the episode CLAUDE.md
+already records as «shipped v6 with comment blocks shortened». They are
+cosmetic, they are now measured as cosmetic rather than assumed to be, and
+production's executable code is byte-equivalent to the repository.
+
+**Three fingerprints, three different answers, and only the third is about
+behaviour.** The lesson is the ordering: names, then bodies, then bodies with
+comments stripped — because each one is silent about exactly what the next one
+sees, and stopping at the first would have reported a clean sync that was
+clean for the wrong reason.
+
+### D218 — prod's `ui_messages` is 631 keys short per language, and that is harmless
+
+**Prod sync, 2026-09-16.** D215 said production would need the message reseed.
+Measured, the picture is smaller and more precise than that.
+
+`ui_messages` on prod holds **2118 keys per language against the repository's
+2749**, and **every row is `org_id is null`** — not one is a customer
+translation override. Namespace hashes differ for 28 of 29 namespaces, which
+reads alarming and is not: the overlay is `overlay(BUNDLED, rows)`, the bundle
+is the BASE, so **a missing row falls through to the compiled copy**. Only a row
+whose value DISAGREES can override the bundle with something stale.
+
+Measured per key rather than per namespace: sweeping `no.dash` against the
+repository's 80 key/value fingerprints returned **one** differing row —
+`onboardTitle`, the key G3 changed. Deriving the value-changed set from git
+across G1–G3 returned **four**: `dash.onboardTitle` and `admin.oRemindersDesc`,
+in both languages. Those four were updated on prod and the same sweep now
+returns none.
+
+So there was no reseed to do, only four rows. **The 631 missing keys are the
+overlay being sparse, which is what it is supposed to be** — rows exist for
+copy someone once seeded, and the bundle carries the rest. A full reseed would
+write 5498 rows to restate what the bundle already says.
+
+What is worth knowing for next time: **the namespace-level hash is the wrong
+granularity for this question**, because it cannot separate «missing» from
+«wrong», and only one of those matters.
