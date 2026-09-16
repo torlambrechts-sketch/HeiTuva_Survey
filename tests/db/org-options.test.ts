@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { serviceClient, type Client } from './clients'
 import { createOrg, createSurvey, dropOrg } from './factories'
-import { OPTION_DEFAULTS, OPTION_KEYS, OPTION_ROWS, runModeAllowed } from '../../lib/org/options'
+import { OPTION_DEFAULTS, OPTION_KEYS, OPTION_ROWS, optionsOf, runModeAllowed } from '../../lib/org/options'
 
 /**
  * G2 — «Alternativer» governs what the product does, and the database is where
@@ -262,5 +262,88 @@ describe('G2 — a disallowed run mode cannot be reached, even from psql', () =>
       .toBeLessThan(order.indexOf('organizations_mode_in_use'))
     expect(defs.find((d) => d[0] === 'surveys_run_mode_allowed')![1]).toMatch(/UPDATE OF run_mode/)
     expect(defs.find((d) => d[0] === 'organizations_mode_in_use')![1]).toMatch(/UPDATE OF options/)
+  })
+})
+
+describe("G3 — Tor's split: two wired, two removed", () => {
+  it('9. `reminders` OFF stops the sweep producing anything for that organisation', async () => {
+    /*
+      THE READER THE SWITCH NEVER HAD (D208). Asserted through
+      `app.enqueue_reminders` itself rather than by grepping its body: that
+      function is what the cron job runs, and a source assertion would pass
+      against a body that reads the key and then ignores it.
+
+      The fixture builds the whole precondition — an open round, an invitation
+      sent long enough ago, a schedule with a reminder day — so the ONLY thing
+      between it and a reminder is the switch.
+    */
+    // `createSurvey` makes no round, so the fixture makes one. Stated rather
+    // than assumed: the first draft read `survey_rounds` for a survey that had
+    // none and failed on the empty result, not on the rule.
+    const round = psql(
+      `insert into public.survey_rounds (survey_id, round_no, status, question_snapshot)
+       values ('${surveyId}', 1, 'open', '[]'::jsonb) returning id`,
+    )[0]![0]!
+    // A plain insert: `schedules` has no unique constraint on `survey_id`, so
+    // an `on conflict (survey_id)` clause is a syntax error rather than an
+    // upsert. Measured from `pg_constraint` after the first draft failed on it.
+    psql(
+      `insert into public.schedules (survey_id, cadence, reminder_after_days)
+       values ('${surveyId}', 'once', 2)`,
+    )
+    psql(
+      `insert into public.survey_invitations (round_id, email, token_hash, channel, sent_at)
+       values ('${round}', 'paaminn-${TAG}@example.test',
+               encode(extensions.digest('r-${TAG}', 'sha256'), 'hex'),
+               'email', now() - interval '9 days')`,
+    )
+
+    await setOptions({ reminders: false })
+    const off = Number(psql(`select app.enqueue_reminders()`)[0]![0])
+
+    await setOptions({ reminders: true })
+    const on = Number(psql(`select app.enqueue_reminders()`)[0]![0])
+
+    // POSITIVE CONTROL in the same test: without it, `off === 0` would pass
+    // against a sweep that produces nothing for any reason at all.
+    expect(on, 'the fixture never produced a reminder, so «0 when off» proves nothing')
+      .toBeGreaterThan(0)
+    expect(off, 'a reminder was produced for an organisation that turned them off').toBe(0)
+  })
+
+  it('10. the two REMOVED keys are unwritable, and the stored values are left alone', async () => {
+    /*
+      Removal is STRUCTURAL rather than cosmetic: `OPTION_KEYS` no longer names
+      them, `setOption`'s Zod enum derives from that list, and `optionsOf`
+      builds its object from it — so the key cannot be written, read or
+      rendered, without a bulk UPDATE on production.
+
+      And the stored value STAYS. `audit_events` already holds every
+      `option.change` anyone made to these two, and such a row is interpretable
+      only while the key it names is still visible in the column.
+    */
+    expect(OPTION_KEYS as readonly string[]).not.toContain('weekly_digest')
+    expect(OPTION_KEYS as readonly string[]).not.toContain('allow_self_serve')
+    expect(Object.keys(optionsOf({ weekly_digest: true }))).not.toContain('weekly_digest')
+
+    // The column default no longer supplies them to a NEW organisation…
+    const def = psql(
+      `select column_default from information_schema.columns
+        where table_schema='public' and table_name='organizations' and column_name='options'`,
+    )[0]![0]!
+    expect(def).not.toContain('weekly_digest')
+    expect(def).not.toContain('allow_self_serve')
+
+    // …and an EXISTING row that carries one is untouched by every write since.
+    await svc
+      .from('organizations')
+      .update({ options: { weekly_digest: true } } as never)
+      .eq('id', orgId)
+    await svc.from('organizations').update({ options: { tuva: false } } as never).eq('id', orgId)
+    const { data } = await svc.from('organizations').select('options').eq('id', orgId).single()
+    const got = (data as { options: Record<string, boolean> }).options
+    expect(got.weekly_digest, 'a stored value for a removed key was dropped').toBe(true)
+    expect(got.tuva).toBe(false)
+    await setOptions({ ...OPTION_DEFAULTS })
   })
 })

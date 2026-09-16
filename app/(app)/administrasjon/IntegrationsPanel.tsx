@@ -193,6 +193,31 @@ export function IntegrationsPanel({
           {error && <p className="mt-[11px] text-[11.5px] font-semibold text-mut">{error}</p>}
         </section>
       )}
+
+      {/* ── API-nøkkel and Webhooks (v5:3520-3560) — REFUSED ON THE SCREEN ──
+          Q89 answered the public API and the webhooks: NO, DO NOT BUILD IT,
+          and expressly «not deferred for capacity and must not be read as
+          scheduling». Re-read 2026-09-16; it stands.
+
+          Q151 then decided these two cards were «not built, at all — not even
+          disabled», because the bundle draws a FABRICATED key
+          (`ht_live_9f2c··············a41`) and a FABRICATED rotation date, and
+          a disabled control still advertises the capability.
+
+          BOTH STILL HOLD, AND THIS IS NOT A REVERSAL OF EITHER. What changes is
+          the treatment of the gap: absent with no notice is the one outcome
+          that is not acceptable, so the screen says the thing rather than
+          leaving a reader to wonder whether they have missed a tab. A SENTENCE
+          is not a control — it advertises nothing, it closes a question, and it
+          is the same form `mgPopulationsUnavailable` has carried since V2-3a.
+
+          Deliberately one card for both: they are one decision. */}
+      <section className="rounded-[18px] border border-line bg-sbg px-6 py-[22px]">
+        <h2 className="text-[16px] font-bold">{t('apiTitle')}</h2>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.55] text-mut">
+          {t('apiUnavailable')}
+        </p>
+      </section>
     </div>
   )
 }

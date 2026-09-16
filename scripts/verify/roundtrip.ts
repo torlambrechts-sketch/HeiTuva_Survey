@@ -17,6 +17,8 @@ import { BASE_URL, ensureServer } from './server'
 import { signIn } from '../../tests/helpers/session'
 import { personaClient, serviceClient } from '../../tests/db/clients'
 import { ORG_PRIMARY, PERSONAS } from '../../tests/db/personas'
+import { FREELY_TOGGLEABLE_KEYS, optionLabelKey } from '../../lib/org/options'
+import noMessages from '../../messages/no.json'
 
 config({ path: '.env.local', quiet: true })
 
@@ -780,20 +782,39 @@ async function main() {
         return []
       }
 
+      /* G3 fix pass — THE SWITCH THIS PROBE DROVE WAS «Ukentlig sammendrag på
+         e-post», BY NAME, AND Q215 REMOVED THAT ROW. The gate then timed out
+         for thirty seconds on a control that no longer exists, which reads as
+         a broken product and is a stale probe.
+
+         A second hard-coded label would orphan the same way at the next
+         removal, so the target is DERIVED from the registry that decides which
+         rows the panel draws: the first key that is neither `sso` (its own
+         three cases below, plus a break-glass refusal) nor a `guardsExisting`
+         row (the database may REFUSE to turn it off while a survey is in that
+         mode, which is correct behaviour and would read as a failure here).
+         Fix the source of truth, not the string. */
+      const optionKey = FREELY_TOGGLEABLE_KEYS[0]
+      if (!optionKey) throw new Error('no freely toggleable option row in lib/org/options.ts')
+      const optionLabel = (noMessages as Record<string, Record<string, string>>).admin?.[
+        optionLabelKey(optionKey)
+      ]
+      if (!optionLabel) throw new Error(`no admin.${optionLabelKey(optionKey)} in messages/no.json`)
+
       const before = new Date().toISOString()
-      await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
+      await page.getByRole('switch', { name: optionLabel }).click()
       const rows = await auditAfter(before)
       const row = rows?.[0] as { action: string; target: string; meta: { from?: boolean; to?: boolean } } | undefined
       show(
         'audit_events (option.change)',
-        row?.target === 'weekly_digest' && typeof row?.meta?.to === 'boolean' && row.meta.from !== row.meta.to,
-        row ?? { count: rows?.length ?? 0 },
+        row?.target === optionKey && typeof row?.meta?.to === 'boolean' && row.meta.from !== row.meta.to,
+        row ?? { key: optionKey, label: optionLabel, count: rows?.length ?? 0 },
       )
       // Put it back the way the seed had it — and wait for the audit row that
       // proves the restore landed, for the same reason. A restore that races is
       // how one gate's timing becomes the NEXT gate's mystery.
       const beforeRestore = new Date().toISOString()
-      await page.getByRole('switch', { name: 'Ukentlig sammendrag på e-post' }).click()
+      await page.getByRole('switch', { name: optionLabel }).click()
       await auditAfter(beforeRestore)
       await page.close()
     }

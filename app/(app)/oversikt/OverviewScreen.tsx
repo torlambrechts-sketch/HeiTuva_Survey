@@ -69,6 +69,7 @@ export async function OverviewScreen({
   quizRecent,
   quizNext,
   showOnboard,
+  onboard,
   workspace,
 }: {
   orgName: string
@@ -93,7 +94,16 @@ export async function OverviewScreen({
      pre-W2 behaviour. Never fabricate: a strip naming a workspace that does
      not exist is indistinguishable from a real one. */
   workspace: WorkspaceState | null
+  /* G3 — «Kom i gang» is shown while the checklist is incomplete AND the
+     viewer can act on it. A `leser` is not being asked to get started, and
+     cannot read `survey_invitations` at all (its select policy is
+     `can_edit_survey`), so step four would read «not done» for them as a fact
+     about the RLS policy rather than about the organisation. */
   showOnboard: boolean
+  /** The four derived steps, in v6:9245's order. Never a stored checklist.
+   *  Copy arrives RESOLVED rather than as keys, because the second step's
+   *  subline interpolates two counts the page has and this component does. */
+  onboard: { key: string; done: boolean; href: string; title: string; sub: string }[]
 }) {
   const t = await getTranslations('dash')
 
@@ -116,6 +126,8 @@ export async function OverviewScreen({
       : (hour < 11 ? t('greetMorningNoName')
         : hour < 18 ? t('greetDayNoName')
         : t('greetEveningNoName'))
+
+  const onboardDoneCount = onboard.filter((o) => o.done).length
 
   const peak = Math.max(1, ...activity.days.map((d) => d.n))
   const doneLoop = loop.filter((l) => l.done).length
@@ -434,18 +446,88 @@ export async function OverviewScreen({
           </div>
 
           {showOnboard ? (
-            <div className="flex flex-wrap items-center gap-[15px] pt-[15px]">
-              <span className="block h-10 w-10 flex-none rounded-xl border border-dashed border-line" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold">{t('onboardTitle')}</span>
-                <span className="mt-[2px] block text-[13px] text-mut">{t('onboardSub')}</span>
-              </span>
-              <Link
-                href="/undersokelser/ny"
-                className="touch-44 inline-flex cursor-pointer items-center whitespace-nowrap rounded-[10px] border border-line bg-transparent px-5 py-[11px] text-[13px] font-semibold text-ink no-underline"
-              >
-                {t('start')}
-              </Link>
+            /* «Kom i gang» — v6:445-467. Four steps, a progress bar, and no ×.
+             *
+             * The bundle's dismiss button writes `onboardHidden`, a fixture
+             * flag; and its four ticks write `onboardDone`, which the step's
+             * own button sets whether or not the step was done. Neither has a
+             * writer here and neither is drawn: the ticks are DERIVED from what
+             * the organisation actually has (lib/oversikt/onboarding.ts), and
+             * the card therefore dismisses itself by being completed. A dismiss
+             * control would be a second way to hide something that already
+             * hides itself, and it would need a column nobody reads (D212).
+             *
+             * The bundle's progress line is «{n} av 4 gjort · tar under ti
+             * minutter». The second clause is a duration nobody has measured,
+             * so it does not ship — the same rule that kept the prototype's
+             * «+289» and its «3 av 4» manager grade off this screen (D213). */
+            <div className="mt-4 rounded-[14px] border border-dashed border-line bg-bg px-5 py-[18px]">
+              <div className="flex flex-wrap items-center gap-[14px]">
+                <span className="min-w-[180px] flex-1">
+                  <span className="block text-[15px] font-semibold">{t('onboardTitle')}</span>
+                  <span className="mt-[2px] block text-[13px] text-mut">
+                    {t('onboardProgress', { done: onboardDoneCount, total: onboard.length })}
+                  </span>
+                </span>
+                <span
+                  className="block h-[7px] w-[110px] flex-none overflow-hidden rounded-full bg-sf2"
+                  role="progressbar"
+                  aria-valuenow={onboardDoneCount}
+                  aria-valuemin={0}
+                  aria-valuemax={onboard.length}
+                  aria-label={t('onboardTitle')}
+                >
+                  <span
+                    className="block h-full rounded-full bg-ac"
+                    style={{ width: `${Math.round((onboardDoneCount / onboard.length) * 100)}%` }}
+                  />
+                </span>
+              </div>
+              <div className="mt-[14px] flex flex-col gap-[2px]">
+                {onboard.map((step, i) => (
+                  <div
+                    key={step.key}
+                    className="flex flex-wrap items-center gap-[13px] border-t border-line py-[11px]"
+                  >
+                    <span
+                      className="flex h-6 w-6 flex-none items-center justify-center rounded-full border-[1.5px] text-[11px] font-bold text-ink"
+                      style={{
+                        background: step.done ? 'var(--ac2)' : 'transparent',
+                        borderColor: step.done ? 'var(--ac2)' : 'var(--line)',
+                      }}
+                      aria-hidden
+                    >
+                      {step.done ? '\u2713' : String(i + 1)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block text-[14px] font-semibold"
+                        style={{ opacity: step.done ? 0.55 : 1 }}
+                      >
+                        {step.title}
+                      </span>
+                      <span className="mt-[2px] block text-[12.5px] text-mut">
+                        {step.sub}
+                      </span>
+                    </span>
+                    {/* A done step is a STATEMENT, not a control: the bundle
+                        draws «Ferdig» as a button, and a button that does
+                        nothing is the decoration this phase is about. */}
+                    {step.done ? (
+                      <span className="flex-none whitespace-nowrap rounded-[10px] border border-line px-4 py-[9px] text-[12.5px] font-semibold text-mut">
+                        {t('onboardDone')}
+                      </span>
+                    ) : (
+                      <Link
+                        href={step.href}
+                        className="touch-44 inline-flex flex-none cursor-pointer items-center whitespace-nowrap rounded-[10px] border border-ac bg-ac px-4 py-[9px] text-[12.5px] font-semibold text-acf no-underline"
+                      >
+                        {t('onboardDoIt')}
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

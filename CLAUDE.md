@@ -306,6 +306,19 @@ authoritative in a way a stale document does not.
    switch drawn in the ON position with a label saying it can be turned off.
    Tor called it the sixth; **the list above holds four, so this is the FIFTH** — said rather than
    quietly matched, because this file already records what a carried number costs.
+
+   **AND THIS PARAGRAPH NAMED ONE ROW OF A FIVE-ROW LIST (corrected by G2, 2026-09-16).** `tuva`
+   was written down because it was the row somebody was looking at. Measured, v6:8008's panel
+   reads FIVE keys — `tuva`, `quiz`, `live`, `paaminn`, `klarsprak` — and the fixture's `options`
+   object contains NONE of them. All five are `undefined !== false`, all five draw ON, none
+   survives a reload. **The instance was not a row; it was the panel.**
+
+   That is this file's own central shape turned on one of its own entries: **an enumeration of
+   ONE, read as the list.** A single instance does not announce itself as a sample, and it is
+   harder to interrogate than a list of three — nobody asks «is this all of them?» of a sentence
+   that names one thing. So when an instance is found inside a STRUCTURE — a row of a panel, a
+   key of an object, one call site of a pattern — the next question is how many siblings it has,
+   before the instance is written down.
    **Why a drawing is worth adding to a rule about migrations:** the question «who writes this?» has
    only ever been asked of columns, where the answer is a server action. Asked of a HANDOFF, it is
    the difference between «the customer can turn Tuva off» and «Tuva is always on and the setting is
@@ -334,25 +347,35 @@ authoritative in a way a stale document does not.
    the next reader sees why the parameter is absent rather than assuming nobody thought of it —
    an absent option looks identical to an oversight, and only a comment tells them apart.
 
-   **AND THE QUESTION HAS A TWIN THAT IS WORSE, FOUND BY G2 ASKING THIS ONE OF A PANEL
-   (2026-09-16, D208): «WHO READS THIS COLUMN?»**
+   **THE QUESTION HAS TWO FACES AND IT IS ONE RULE (G2, 2026-09-16, D208). Tor: «I asked about
+   storage, which is the visible gap in a DRAWING; in a PRODUCT the effect is.»**
 
-   `organizations.options` carries the «Alternativer» switches. Measured —
-   `grep -rn "select('options" --include=*.ts app/ lib/` plus a `pg_proc` sweep for the key
-   names — **it is read in THREE places in the entire product: the panel's own read, the
-   panel's own write, and `lib/auth/session.ts:94`. Exactly one key, `sso`, changes what the
-   product does.** `reminders`, `weekly_digest`, `allow_self_serve` and `brand_mail` have been
-   stored, audited and drawn as ON since `M:0002` while nothing honoured them.
+   > **A control is a setting only if something WRITES its state and something READS it.
+   > Neither half is the rule; the pair is.**
 
-   **A column with no WRITER produces a feature reachable only from psql. A column with no
-   READER produces a control that looks like it works** — and that one is worse, because every
-   test passes: the value round-trips, the audit row is written, the switch moves. Nothing is
-   missing except the effect.
+   The two faces fail differently, and which one you meet is decided by what you are looking at:
 
-   The two questions are the same question asked from opposite ends, and the second is the one
-   nobody asks, because a setting that saves feels finished. `lib/org/options.ts` answers it per
-   key — `enforcedAt` is a `file:symbol` a reader can open, or `null` with the reason — and
-   `tests/db/org-options.test.ts` opens the file and requires the symbol to be there.
+   - **Nothing writes it** — the shape a DRAWING has, and the one that is visible. `options.tuva`
+     is read by a gate and set by nothing, so the switch is decoration and the fixture cannot
+     tell you. A phase that builds it ships «always on» while believing «the customer can turn
+     it off».
+   - **Nothing reads it** — the shape a PRODUCT has, and **it is the worse half, because it
+     survives every test that checks the value round-trips.** The value saves, the audit row is
+     written, the switch moves, the page reloads with it in the new position. Nothing is missing
+     except the effect.
+
+   Measured — `grep -rn "select('options" --include=*.ts app/ lib/` plus a `pg_proc` sweep for the
+   key names: **`organizations.options` is read in THREE places in the entire product, two of them
+   the settings screen reading and writing itself, and exactly ONE key changes what the product
+   does.** `reminders`, `weekly_digest`, `allow_self_serve` and `brand_mail` had drawn as ON since
+   `M:0002` with no function in `app` or `public` naming them.
+
+   **So the second face is not asked, because a setting that SAVES feels finished.** A column with
+   no writer is reachable only from psql and somebody eventually notices; a column with no reader
+   looks correct from every angle there is, including the tests. `lib/org/options.ts` answers both
+   faces per key — `enforcedAt` is a `file:symbol` a reader can open, or `null` with the reason —
+   and `tests/db/org-options.test.ts` OPENS the file and requires the symbol to be there, because
+   a registry that merely states the answer is a claim nobody re-derived.
 
    **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
    the question is not «is the column there» but «who WRITES it». A column that is read
@@ -1520,6 +1543,40 @@ value became derived; `guards-over-state` required the new UPDATE-only guard to 
 which is that test doing its job; and `tests/invariants`' SSO fixture was writing the WHOLE
 `options` object, which is how D210 became visible. **A file's count is not a record of what it
 checks; the diff is.**
+
+**G3 TOOK IT TO 1592 ACROSS 120 FILES AND 5a3 IS UNMOVED AT 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **two added lines, two raised, and nothing
+else moved in either direction**, which is the proof rather than the total:
+
+```
+1569 across 118
+ + 12  tests/unit/onboarding.test.ts     new — the four derivations, each reachable alone; the two claims dropped
+ +  7  tests/unit/panel-refusals.test.ts new — the three notices, and the audit catalogue behind one of them
+ +  2  tests/db/org-options.test.ts   10 -> 12  the reminders join, and the two removed keys' default
+ +  2  tests/unit/org-options.test.ts 8 -> 10   the removal leaves no row, and brand_mail's new reason
+= 1592 across 120
+```
+
+Measured on a bare local run: unit 695 + db/invariants 897 = **1592**, which is the manifest sum
+exactly (`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`).
+
+5a3 holds at **81 of 114** — 65 RLS tables + 49 SECURITY DEFINER functions, zero unproven. `M:0126`
+REPLACES `app.enqueue_reminders` and changes a column DEFAULT: an `app`-schema function is in
+neither sweep's denominator and a default is not a catalogue surface, which is the same recorded
+limit of that gate rather than a gap. The commands: `npm run census:write` for the first pair, and
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for the
+second.
+
+**AND TWO OF G3's OWN GUARDS WENT RED ON CORRECT CODE BEFORE THEY WENT GREEN**, both instances of
+rules already in this file. `onboarding` test 11 asserts there is no dismiss control, and the
+component's comment explaining WHY there is none spells out `onboardHidden` — «a refusal named in a
+comment is found by a grep over that comment», so the assertion measures the comment-stripped source.
+And `panel-refusals` test 6 swept for `audit\('…'` when the action is the SECOND argument
+(`audit(orgId, 'member.group', …)`), so it found nothing at all and would have reported an empty
+catalogue as a clean one. It was caught only by the `expect(size).toBeGreaterThan(10)` line beside
+it: **a derivation that finds nothing looks identical to a product that has nothing**, and the
+floor is what tells them apart. Both were then proven to FIRE — a synthetic `onboardHidden`, a
+synthetic `audit(org, 'group.created')` — before being trusted.
 
 5a3 holds at **81 of 114** — 65 RLS tables (42 checked, 23 allowlisted) plus 49 SECURITY DEFINER
 functions (39 checked, 10 allowlisted), zero unproven. `M:0124` and `M:0125` add three functions

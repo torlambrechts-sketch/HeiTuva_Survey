@@ -26,8 +26,11 @@ const LABEL: Record<OptionKey, [string, string]> = {
   live: ['oLive', 'oLiveDesc'],
   klarsprak: ['oKlarsprak', 'oKlarsprakDesc'],
   reminders: ['oReminders', 'oRemindersDesc'],
-  weekly_digest: ['oWeeklyDigest', 'oWeeklyDigestDesc'],
-  allow_self_serve: ['oAllowSelfServe', 'oAllowSelfServeDesc'],
+  /* `weekly_digest` and `allow_self_serve` were here. Removed with their rows
+     (G3, D211): both governed features that do not exist. The MESSAGES stay in
+     `messages/*.json` deliberately — `verify:i18n` reads every message and a
+     deleted key is one more thing to re-add if the decision reverses, while an
+     unreferenced message costs nothing and is not user-visible. */
   sso: ['oSso', 'oSsoDesc'],
   brand_mail: ['oBrandMail', 'oBrandMailDesc'],
 }

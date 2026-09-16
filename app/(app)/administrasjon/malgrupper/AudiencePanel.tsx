@@ -322,6 +322,47 @@ export function AudiencePanel({
           </div>
         ) : null}
       </section>
+
+      {/* ── Frosne medlemskap (v6:4319-4323) — BUILT, and it is copy ──────
+          The card is one sentence, `freezeNote` (v6:8797), and Q64 already
+          decided that sentence is TRUE of this product: «materialise at send —
+          which is already the behaviour». Membership is fixed into
+          `survey_invitations` when a round goes out and never re-evaluated, so
+          two rounds stay comparable even after a segment rule changes.
+
+          So there is nothing to build except the statement, and the statement
+          was missing: the rule held and the screen did not say it. Q64's own
+          note records that the bundle STATES rules as well as drawing controls,
+          and that a stated rule is a source. This is that. */}
+      <section className={CARD}>
+        <h2 className="text-[16px] font-bold">{t('mgFreezeTitle')}</h2>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.55] text-mut">
+          {t('mgFreezeNote')}
+        </p>
+      </section>
+
+      {/* ── Endringslogg (v6:4336-4341) — REFUSED, with the measurement ───
+          The bundle's five rows are AUDIENCE changes: members added by a sync,
+          a segment rule edited, a population frozen for a round, one member
+          removed by hand, a supplier list imported.
+
+          Measured 2026-09-16 against every `audit(` call in the product: there
+          is an action for a member MOVED between groups (`member.group`) and
+          for nothing else on this screen — no group created, renamed or
+          deleted, no segment rule changed, no import, no sync.
+
+          So four of the five row kinds have no record at all, and building it
+          from the fifth would put a log on a COMPLIANCE screen that looks
+          complete and is not. An incomplete changelog is worse than an absent
+          one precisely because somebody would rely on it. The refusal names
+          what is missing, so the next phase knows the shape of the work: the
+          audit writes come first, the panel after. */}
+      <section className="rounded-[18px] border border-line bg-sbg px-6 py-[22px]">
+        <h2 className="text-[16px] font-bold">{t('mgAuditTitle')}</h2>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.55] text-mut">
+          {t('mgAuditUnavailable')}
+        </p>
+      </section>
     </>
   )
 }

@@ -52,8 +52,20 @@ export const OPTION_KEYS = [
   'live',
   'reminders',
   'klarsprak',
-  'weekly_digest',
-  'allow_self_serve',
+  /* `weekly_digest` and `allow_self_serve` STOOD HERE and are gone (G3, D211,
+     Tor's decision). Both governed features that do not exist — there is no
+     digest and no approval flow — and «a switch over nothing is worse than no
+     switch: it promises a capability.»
+
+     Removing them from THIS list is the whole removal: `setOption`'s Zod enum
+     is `z.enum(OPTION_KEYS)`, `optionsOf` builds its object from it, and the
+     panel's `ROW_ORDER` is it. The key becomes unwritable, unread and
+     unrendered in one edit.
+
+     THE STORED VALUES STAY, and `M:0126` says why at length — the short form
+     is that `audit_events` holds every `option.change` anyone made to them, and
+     such a row is interpretable only while the key it names is still visible in
+     the column. */
   'sso',
   'brand_mail',
 ] as const
@@ -101,8 +113,10 @@ export const OPTION_ROWS: readonly OptionRow[] = [
   },
   {
     key: 'reminders',
-    enforcedAt: null,
-    why: 'reminders-unread',
+    // G3 — WIRED. `app.enqueue_reminders` (M:0126) reads it: an organisation
+    // with it off produces no reminders at all, while `reminder_after_days`
+    // still decides WHEN for everyone else. A master switch and a schedule.
+    enforcedAt: 'supabase/migrations/20260916000126:app.enqueue_reminders',
   },
   {
     key: 'klarsprak',
@@ -112,10 +126,24 @@ export const OPTION_ROWS: readonly OptionRow[] = [
     // org-configurable. The boundary is asserted in the test.
     enforcedAt: 'app/(app)/undersokelser/[id]/bygg/page.tsx:klarsprakOn',
   },
-  { key: 'weekly_digest', enforcedAt: null, why: 'digest-unbuilt' },
-  { key: 'allow_self_serve', enforcedAt: null, why: 'selfserve-unbuilt' },
   { key: 'sso', enforcedAt: 'lib/auth/session.ts:ssoRequired' },
-  { key: 'brand_mail', enforcedAt: null, why: 'brandmail-unread' },
+  {
+    key: 'brand_mail',
+    // G3 — NOT WIRED, and the reason is not «nobody got round to it».
+    // Tor's split put this with `reminders` as a feature that exists: «the logo
+    // in the invitation template». Measured, there is no such template.
+    // `invitationMessage` (lib/mail/copy.ts:73) returns `{ subject, text }` and
+    // `MailMessage.html` is never set — the only place a message is built is
+    // `supabase/functions/mail-worker/index.ts:190`. The invitation is PLAIN
+    // TEXT, so there is no HTML for a logo to sit in.
+    //
+    // The logos themselves exist (`logo_light`, `logo_dark`, `logo_icon`,
+    // Q58/V2-2). The gap is the mail body. So «wire it» is not a wiring: it is
+    // «build an HTML invitation», a new respondent-facing surface, and that is
+    // Tor's decision rather than a phase's.
+    enforcedAt: null,
+    why: 'brandmail-no-html',
+  },
 ] as const
 
 const BY_KEY = new Map(OPTION_ROWS.map((r) => [r.key, r]))
@@ -164,8 +192,28 @@ export const OPTION_DEFAULTS: Record<OptionKey, boolean> = {
   live: true,
   klarsprak: true,
   reminders: true,
-  weekly_digest: true,
-  allow_self_serve: false,
   sso: false,
   brand_mail: true,
+}
+
+/**
+ * The keys a probe may toggle freely, derived rather than listed.
+ *
+ * G3's fix pass: `verify:roundtrip` drove «Ukentlig sammendrag på e-post» by
+ * name, and Q215 removed that row — so a gate that had passed for phases
+ * started timing out on a control that no longer exists. The repair is not a
+ * second hard-coded label, which would orphan the same way at the next removal.
+ *
+ * Excluded: `sso`, which has its own three round-trip cases and a break-glass
+ * refusal, and any row with `guardsExisting`, which the database may REFUSE to
+ * turn off while a survey is in that mode — a refused write is the correct
+ * behaviour and would read as a broken probe.
+ */
+export const FREELY_TOGGLEABLE_KEYS: readonly OptionKey[] = OPTION_ROWS.filter(
+  (r) => r.key !== 'sso' && !r.guardsExisting,
+).map((r) => r.key)
+
+/** `reminders` -> `oReminders`, the panel's own label-key convention. */
+export function optionLabelKey(key: OptionKey): string {
+  return `o${key.replace(/(^|_)(\w)/g, (_m, _s, c: string) => c.toUpperCase())}`
 }

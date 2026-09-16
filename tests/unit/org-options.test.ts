@@ -46,7 +46,9 @@ describe('G2 — every switch has copy, in both languages', () => {
     // Tor's rule: «say what each toggle does when off». Asserted as a property
     // of the STRING rather than reviewed once — a later copy edit that drops the
     // clause fails here.
-    for (const k of ['tuva', 'quiz', 'live', 'klarsprak'] as const) {
+    // G3 added `reminders` to this set when it gained a reader: a row that
+    // DOES something must say what it does when it does not.
+    for (const k of ['tuva', 'quiz', 'live', 'klarsprak', 'reminders'] as const) {
       const base = `o${k[0]!.toUpperCase()}${k.slice(1)}Desc`
       expect(no.admin![base], `no.${base} must say what off does`).toMatch(/\bAv:/)
       expect(en.admin![base], `en.${base} must say what off does`).toMatch(/\bOff:/)
@@ -62,9 +64,55 @@ describe('G2 — every switch has copy, in both languages', () => {
   })
 })
 
+describe("G3 — Tor's split, and the premise that did not hold", () => {
+  it('9. the two removed keys leave no row, no label and no notice behind', () => {
+    for (const gone of ['weekly_digest', 'allow_self_serve']) {
+      expect(OPTION_KEYS as readonly string[], `${gone} is still a key`).not.toContain(gone)
+      expect(OPTION_ROWS.map((r) => r.key), `${gone} still has a row`).not.toContain(gone)
+    }
+    const panel = readFileSync('app/(app)/administrasjon/OptionsPanel.tsx', 'utf8')
+    // The LABEL map is what would render one. Its comment names them on purpose
+    // — the removal is explained where it happened — so the assertion is over
+    // the code, which is the lesson from «a refusal named in a comment is found
+    // by a grep over that comment».
+    const code = panel.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).not.toMatch(/weekly_digest:/)
+    expect(code).not.toMatch(/allow_self_serve:/)
+  })
+
+  it('10. brand_mail is unenforced because there is no HTML invitation', () => {
+    /*
+      THE PREMISE, ASSERTED. Tor's split put `brand_mail` with `reminders` as a
+      feature that exists — «the logo in the invitation template». There is no
+      template: `invitationMessage` returns `{ subject, text }` and nothing in
+      the product sets `MailMessage.html`.
+
+      This is the measurement, kept as a test so that BUILDING the HTML
+      invitation is what makes the row wireable — and so that this test fails
+      the day somebody does, which is the right moment to revisit the switch.
+    */
+    const copy = readFileSync('lib/mail/copy.ts', 'utf8')
+    expect(copy, 'invitationMessage now returns more than subject and text')
+      .toMatch(/return \{ subject, text \}/)
+    const worker = readFileSync('supabase/functions/mail-worker/index.ts', 'utf8')
+    expect(worker.replace(/\/\*[\s\S]*?\*\//g, ''), 'the worker now builds an HTML body')
+      .not.toMatch(/\bhtml:/)
+
+    const row = OPTION_ROWS.find((r) => r.key === 'brand_mail')!
+    expect(row.enforcedAt, 'brand_mail claims a reader').toBeNull()
+    expect(row.why).toBe('brandmail-no-html')
+    expect(no.admin!['oUnread_brandmail-no-html']).toMatch(/ren tekst/)
+    expect(en.admin!['oUnread_brandmail-no-html']).toMatch(/plain text/)
+  })
+})
+
 describe('G2 — the registry is the one statement of the set', () => {
-  it('5. ENFORCED_KEYS is derived, and it is exactly the five with a reader', () => {
-    expect([...ENFORCED_KEYS].sort()).toEqual(['klarsprak', 'live', 'quiz', 'sso', 'tuva'])
+  it('5. ENFORCED_KEYS is derived, and it is exactly the six with a reader', () => {
+    // G3 wired `reminders` (D211). `brand_mail` is the only unenforced row
+    // left, and it is unenforced because there is no HTML invitation for a logo
+    // to sit in — not because nobody got round to it.
+    expect([...ENFORCED_KEYS].sort())
+      .toEqual(['klarsprak', 'live', 'quiz', 'reminders', 'sso', 'tuva'])
     expect(ENFORCED_KEYS.length + OPTION_ROWS.filter((r) => r.enforcedAt === null).length)
       .toBe(OPTION_KEYS.length)
   })

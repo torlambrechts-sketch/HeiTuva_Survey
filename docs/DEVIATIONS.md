@@ -6623,3 +6623,148 @@ that, the SSO guard would have read a dropped key as «turning it off», which i
 always allowed — **a partial write could have bypassed the break-glass rule.**
 The ordering is asserted from `pg_trigger` in `tests/db/org-options.test.ts`,
 because a rename would silently reorder two security guards.
+
+### D211 — two shipped switches removed, and their stored values left where they are
+
+**G3 · Q215, Q216.** `weekly_digest` and `allow_self_serve` are gone from
+`lib/org/options.ts`, from `OptionsPanel`'s label map and therefore from the
+screen. `M:0126` changes `organizations.options`' DEFAULT from nine keys to
+seven and writes **no `UPDATE`**.
+
+**So an organisation created before today still carries both keys, and nothing
+reads them.** That is the deviation, and it is deliberate: the alternative is a
+destructive write across every organisation's settings to delete data that costs
+nothing, cannot be recovered, and is the only thing that would make the setting
+meaningful if the feature is ever built. **A key nothing reads is not migrated
+away; it is ignored.**
+
+`app.merge_org_options` (`M:0125`) means a later write cannot drop them by
+accident either — a partial write changes the keys it names and no others — so
+the two keys will sit there unchanged until something deletes them on purpose.
+
+The two MESSAGES stay in `messages/*.json` for the same reason and are recorded
+in a comment where the rows used to be: an unreferenced message is not
+user-visible and costs nothing, while a deleted one is work to re-add if the
+decision reverses. `oUnread_reminders-unread` and `oUnread_brandmail-unread`
+were DELETED rather than left, because unlike the other two they had become
+FALSE — `reminders` is read now, and `brand_mail`'s reason is no longer «not
+yet» but «there is no HTML invitation at all».
+
+### D212 — «Kom i gang» has no dismiss control, because the card dismisses itself
+
+**G3 · Q218.** v6:454 draws an × that writes `onboardHidden`. It is not built.
+
+A dismiss button needs somewhere to remember the dismissal, and there is no such
+column; adding one would be a second who-writes-this instance in the phase that
+is about them. What is built instead is a card whose visibility is
+`onboardCount(steps) < 4` — **it stops showing when the last step is done**,
+which is the outcome the × exists to reach and is reached by doing the thing
+rather than by hiding the reminder to do it.
+
+The reasoning is in the component beside the card, so a reader who wonders where
+the × went finds the answer at the place they are looking. The unit test asserts
+the absence from the STRIPPED source, because the comment explaining the refusal
+contains the word it refuses (CLAUDE.md: a refusal named in a comment is found by
+a grep over that comment — it went red on correct code the first time it ran).
+
+### D213 — three of v6's onboarding details do not ship, and each has a different reason
+
+**G3 · Q218.** The card is v6:445-467 and three things in it are not copied.
+
+1. **«tar under ti minutter» is dropped from the progress line.** It is a
+   duration nobody has measured, and the wizard alone has four steps. Same rule
+   that kept the prototype's «+289» and its «3 av 4» manager grade off this
+   screen: never render an invented measurement.
+2. **«Ti maler på norsk, fire av dem lovpålagte» becomes two interpolated
+   counts.** Measured 2026-09-16: **22 shared packs, 6 with a `legal_ref`.** The
+   bundle's numbers are a count of ITS fixture library — CLAUDE.md's «a
+   description of a class may not carry a count of the instance in front of
+   you». The claim survives, the numerals come from the database, and
+   `verify:copy` would refuse the fixed ones anyway.
+3. **Two of the four «Gjør det» destinations are substituted.** The bundle sends
+   `import` and `test` to its `send` SCREEN; ours is
+   `/undersokelser/[id]/send`, which is survey-scoped and does not exist for the
+   organisation the checklist addresses. `import` goes to Målgrupper, where a
+   group is actually made; `test` goes to the survey list, because choosing
+   WHICH survey to test is a real decision and picking one here would be a
+   guess. Every href is asserted against the filesystem (D198's guard, one
+   screen wider).
+
+### D214 — Målgrupper's Endringslogg is refused, and the refusal is catalogue-derived
+
+**G3.** v6 draws an audience change log. It is not built, and the card says so.
+
+Measured 2026-09-16 over every `audit(` call in `app/` and `lib/`: the
+audience-shaped actions are **exactly one**, `member.group` — a member moved
+between groups. Creating, renaming and deleting a group, changing a segment
+rule, importing a list and syncing from Entra ID write nothing anywhere.
+
+So four of the five row kinds a changelog would show **have no record at all**,
+and building it from the fifth would put a log on a compliance screen that looks
+complete and is not. **An incomplete changelog is worse than an absent one
+precisely because somebody would rely on it.** The events come first; the panel
+after.
+
+The test that holds this does not carry the list: it sweeps every `audit(` call
+and asserts the audience-shaped set is `['member.group']`. A phase that adds
+`group.created` fails it in that commit, so the refusal cannot outlive its
+reason. Proven red first with a synthetic `audit(org, 'group.created')`.
+
+### D215 — `ui_messages` made a correct edit invisible for four measurements
+
+**G3, found while verifying.** `dash.onboardTitle` was changed from «Sett opp en
+undersøkelse med veiviseren» to «Kom i gang» in `messages/no.json`, the app was
+rebuilt, and the screen kept rendering the old title.
+
+CLAUDE.md already states the rule — *the JSON is the seed, the table is what the
+product serves; changing the file changes nothing a user sees* — and this is a
+second instance of it, with a wrinkle worth recording. **The eleven NEW keys
+rendered correctly from the file**, because the bundle is the BASE of
+`overlay(BUNDLED, rows)` and a key with no row falls through to it. Only the
+CHANGED key was stale. So the failure mode is not «new copy does not appear»; it
+is **«edited copy does not appear, while new copy does»**, which reads as the
+edit not having been made.
+
+`npm run seed:i18n -- --local` fixed it, and then it still rendered stale for two
+more measurements — because a `next start` from an earlier build was holding port
+3117 and the newly launched one had silently failed to bind. That is the stale
+`next-server` trap, third instance. **The reading rule stands: when a screen
+disagrees with the source, establish WHICH BINARY is answering before concluding
+anything about the code.**
+
+Production will need the same reseed when it is taken.
+
+### D216 — removing a control orphaned a probe that named it, and the repair is a derivation
+
+**G3's fix pass.** `verify:roundtrip` failed after Q215 removed the
+`weekly_digest` row: the gate drives «Ukentlig sammendrag på e-post» **by name**
+(`scripts/verify/roundtrip.ts:784`), so it spent thirty seconds waiting for a
+switch that no longer exists and then exited 1.
+
+The gate was right and the product was right. What was wrong is that a probe
+held a COPY of a decision — which row the panel draws — and the decision moved.
+
+**The repair is not a second label.** That would orphan identically at the next
+removal, which is CLAUDE.md's enumeration shape in its plainest form: a list of
+one, written down, read as a property. The target is now derived from
+`lib/org/options.ts`:
+
+```ts
+export const FREELY_TOGGLEABLE_KEYS = OPTION_ROWS.filter(
+  (r) => r.key !== 'sso' && !r.guardsExisting,
+).map((r) => r.key)
+```
+
+`sso` is excluded because it has three round-trip cases of its own and a
+break-glass refusal; a `guardsExisting` row is excluded because the DATABASE may
+refuse to turn it off while a survey is in that mode — a correct refusal that
+would read here as a broken probe. The label comes from `messages/no.json` via
+the panel's own `o` + PascalCase convention, and the probe throws a named error
+rather than timing out if either lookup misses. Measured after the change:
+`{"action":"option.change","target":"tuva","meta":{"to":false,"from":true}}`.
+
+**And the gate that caught the SECOND attempt at this was the build-staleness
+guard.** The first re-run refused to start: «a server is already running at
+:3100, but source files are newer than the build it is serving». That is
+`serverBuildId()` doing exactly what it was added for — a probe fix measured
+against the binary that predates it would have been a green nobody earned.

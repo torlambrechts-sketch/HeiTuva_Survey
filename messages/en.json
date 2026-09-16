@@ -124,7 +124,7 @@
     "nothingRequiresAction": "Nothing needs your attention right now",
     "nothingRequiresActionSub": "New drafts, low response rates and unread free text appear here.",
     "onboardSub": "Purpose, questions, recipients and cadence in four steps",
-    "onboardTitle": "Set up a survey with the wizard",
+    "onboardTitle": "Get started",
     "overline": "Overview",
     "quizBoardTeams": "{n} teams",
     "quizBoards": "Latest leaderboards",
@@ -149,7 +149,18 @@
     "wsEmptyTitle": "No modules selected",
     "wsLayoutFollows": "The dashboard follows the «{preset}» layout",
     "wsLayoutOwn": "The dashboard keeps your own layout",
-    "wsReset": "Restore the default"
+    "wsReset": "Restore the default",
+    "onboardProgress": "{done} of {total} done",
+    "onboardDoIt": "Do it",
+    "onboardDone": "Done",
+    "onbWizard": "Set up your first survey",
+    "onbWizardSub": "Purpose, questions, recipients and cadence in four steps",
+    "onbMal": "Pick a ready-made template",
+    "onbMalSub": "{packs} ready-made templates in Norwegian, {legal} of them statutory",
+    "onbImport": "Add your people",
+    "onbImportSub": "Paste a list, make a group, or connect Entra ID",
+    "onbTest": "Send a test to yourself",
+    "onbTestSub": "See what the recipient actually gets"
   },
   "wizard": {
     "overline": "Wizard",
@@ -1131,7 +1142,7 @@
     "oBrandMail": "Use company logo in emails",
     "oBrandMailDesc": "Shown at the top of the invitation",
     "oReminders": "Automatic reminders",
-    "oRemindersDesc": "Follows the schedule you set per survey",
+    "oRemindersDesc": "Master switch over reminders. Off: no survey in the organisation sends reminders, whatever is set per survey under Send.",
     "oSso": "Sign in with Entra ID (SSO)",
     "oSsoBreakGlass": "Can sign in without Entra ID",
     "oSsoBreakGlassDesc": "At least one active administrator must always be able to sign in with a password or email link, so the organisation can get back in if the directory fails.",
@@ -1217,11 +1228,14 @@
     "oLiveDesc": "QR and real-time results. Off: no survey can be put into live mode, and the mode cannot be turned off while a survey is in it.",
     "oKlarsprak": "Plain-language check",
     "oKlarsprakDesc": "Warns about difficult words in questions. Off: the builder shows no language flags. The threshold and anonymity warnings stay either way — those cannot be turned off.",
-    "oUnread_reminders-unread": "This switch is stored, but nothing in the product reads it yet. Reminders are set per survey under Send.",
     "oUnread_digest-unbuilt": "This switch is stored, but the weekly summary is not built yet, so it changes nothing.",
     "oUnread_selfserve-unbuilt": "This switch is stored, but there is no approval flow yet, so it changes nothing.",
-    "oUnread_brandmail-unread": "This switch is stored, but the email template does not read it yet.",
-    "errRunModeInUse": "The mode cannot be turned off while a survey is in it. Set those to standard first."
+    "errRunModeInUse": "The mode cannot be turned off while a survey is in it. Set those to standard first.",
+    "mgFreezeTitle": "Frozen memberships",
+    "mgFreezeNote": "Membership is frozen when the survey is sent. Two rounds stay comparable even if the segment rule changes later.",
+    "mgAuditTitle": "Change log",
+    "mgAuditUnavailable": "A change log for audiences is not built yet. Today we record exactly one event from this screen — a member being moved between groups. Creating, renaming and deleting groups, changing a segment rule, importing and syncing from Entra ID are written down nowhere, so a log built now would look complete without being it. The events have to be recorded first; the log comes after them.",
+    "oUnread_brandmail-no-html": "This switch is stored, but the invitation is sent as plain text — there is no HTML template for the logo to sit in. The logos are stored and are used in the product and on shared reports."
   },
   "profile": {
     "aboutMe": "About me",
@@ -2697,7 +2711,9 @@
     "detailStep_first": "The first sync",
     "detailStepDesc_first": "Runs straight after approval. A few minutes for most.",
     "detailStep_schedule": "Then it runs itself",
-    "detailStepDesc_schedule": "Every night. If something fails the screen says so — it does not sit there looking successful."
+    "detailStepDesc_schedule": "Every night. If something fails the screen says so — it does not sit there looking successful.",
+    "apiTitle": "API key and webhooks",
+    "apiUnavailable": "HeiTuva has no public API and sends no webhooks. That is a decision, not a missing piece: data leaves HeiTuva through exports and shared reports, which hold the k threshold and can be traced. We show neither a key nor an endpoint here, because a disabled button still promises something we do not have."
   },
   "footer": {
     "badgeDpa": "Data processing agreement",

@@ -3,6 +3,7 @@ import { readWorkspace } from '@/lib/workspace/current'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { OverviewScreen, type ActionItem, type Activity, type ComplianceChip } from './OverviewScreen'
+import { ONBOARD_STEPS, onboardCount, onboardDone } from '@/lib/oversikt/onboarding'
 
 /**
  * Oversikt — HeiTuva.dc.html:218-317. Built last in Phase 5, because it is the
@@ -30,7 +31,10 @@ export default async function OverviewPage() {
     supabase.rpc('overview_activity', { p_org: viewer.orgId }),
     supabase
       .from('surveys')
-      .select('id, title, status, created_at')
+      /* `template_pack_key` is read by the «Kom i gang» checklist's second
+         step and by nothing else on this screen — added to the existing
+         select rather than fetched again (G3). */
+      .select('id, title, status, created_at, template_pack_key')
       .eq('org_id', viewer.orgId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false }),
@@ -72,7 +76,9 @@ export default async function OverviewPage() {
   const surveyIds = (surveys ?? []).map((s) => s.id)
   const { data: invitations } = await supabase
     .from('survey_invitations')
-    .select('round_id, survey_rounds!inner(survey_id)')
+    /* `is_test` is the «Kom i gang» checklist's fourth step and nothing else
+       here reads it; taken off this select rather than counted again (G3). */
+    .select('round_id, is_test, survey_rounds!inner(survey_id)')
     .in(
       'survey_rounds.survey_id',
       surveyIds.length ? surveyIds : ['00000000-0000-0000-0000-000000000000'],
@@ -82,6 +88,39 @@ export default async function OverviewPage() {
     const sid = (row as unknown as { survey_rounds: { survey_id: string } }).survey_rounds.survey_id
     invitedBySurvey.set(sid, (invitedBySurvey.get(sid) ?? 0) + 1)
   }
+
+  /* «Kom i gang» — the only count this screen did not already have. A head
+     request, because the number is not shown: only whether it is above zero.
+     `groups` selects on `is_org_member`, so it reads the same for every role;
+     the invitation halves above do not, which is one of the two reasons the
+     card is gated on `canEdit` (see OverviewScreen's prop comment). */
+  const { count: groupCount } = await supabase
+    .from('groups')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', viewer.orgId)
+
+  /* The second step's subline counts the ready-made packs. v6 writes «Ti maler
+     på norsk, fire av dem lovpålagte» — a count of ITS fixture library, which
+     is CLAUDE.md row 11's shape and is false here twice over (22 and 6). The
+     sentence keeps its claim and gets the real numbers; `verify:copy` would
+     refuse the fixed ones. `org_id is null` is «ferdig mal»: the packs the
+     product ships, not the ones this organisation wrote. */
+  const [{ count: packCount }, { count: legalPackCount }] = await Promise.all([
+    supabase.from('template_packs').select('id', { count: 'exact', head: true }).is('org_id', null),
+    supabase
+      .from('template_packs')
+      .select('id', { count: 'exact', head: true })
+      .is('org_id', null)
+      .not('legal_ref', 'is', null),
+  ])
+
+  const onboardState = onboardDone({
+    surveys: (surveys ?? []).length,
+    fromPack: (surveys ?? []).filter((s) => s.template_pack_key !== null).length,
+    groups: groupCount ?? 0,
+    invitations: (invitations ?? []).filter((i) => !i.is_test).length,
+    testInvitations: (invitations ?? []).filter((i) => i.is_test).length,
+  })
 
   const raw = (activityRaw ?? {}) as Record<string, unknown>
   const activity: Activity = {
@@ -300,10 +339,22 @@ export default async function OverviewPage() {
         // so this count means «assessed and closed» rather than «ticked».
         done: l.status === 'lukket',
       }))}
-      // The design shows the wizard prompt as a dismissible row. There is
-      // nothing to dismiss until there is something else to do, so it stands in
-      // for the empty state: an organisation with no surveys at all.
-      showOnboard={(surveys ?? []).length === 0}
+      /* G3 — v6 replaces the single dismissible row with a four-step
+         checklist, so «show it» is no longer «this organisation has no
+         surveys»: it is «the checklist is not finished», which is the only
+         reading under which the other three steps are ever reachable. It stops
+         showing when the fourth step is done, which is also the dismissal. */
+      showOnboard={viewer.role !== 'leser' && onboardCount(onboardState) < ONBOARD_STEPS.length}
+      onboard={ONBOARD_STEPS.map((step) => ({
+        key: step.key,
+        done: onboardState[step.key],
+        href: step.href,
+        title: t(step.copy[0] as 'onbWizard'),
+        sub:
+          step.key === 'mal'
+            ? t('onbMalSub', { packs: packCount ?? 0, legal: legalPackCount ?? 0 })
+            : t(step.copy[1] as 'onbWizardSub'),
+      }))}
     />
   )
 }
