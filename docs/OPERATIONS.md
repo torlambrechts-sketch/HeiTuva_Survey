@@ -1489,3 +1489,42 @@ which is **by design** and stated in `M:0115`'s own comment. One pre-existing it
 this sync and not acted on: **leaked-password protection is disabled** in Supabase Auth.
 
 PITR not raised (Q131).
+
+### A DISTANCE MEASURED AGAINST A LIST OF EXPECTED ABSENCES IS THE LIST, NOT THE DISTANCE
+
+**Tor, 2026-09-16, on the sync above.** This is why the fingerprint is EIGHT HASHES and not a
+checklist, and it is the sentence to read before any remote apply.
+
+«Probe by object» is already in this file, and it is a rule about METHOD. It says nothing about
+SCOPE — and the scope comes from whoever states the task. The 2026-09-16 sync probed three objects,
+got three correct answers, applied three migrations successfully, and was six migrations wrong,
+because the three objects were the ones the instruction named.
+
+> **A probe can only report on what you thought to ask for. Only a whole-catalogue comparison can
+> report on what you did not.** So: fingerprint FIRST whenever the distance is asserted rather than
+> measured, then probe to decide the order.
+
+### «IN ORDER» IS NOT SUFFICIENT WHEN TWO MIGRATIONS REPLACE ONE FUNCTION
+
+**Its own entry, at Tor's instruction, because the failure mode leaves nothing to find.**
+
+`M:0119` (`token_has_thread`) and `M:0121` (`token_carries_retention`) both
+`create or replace public.get_survey_for_token`. **M:0121's body is written on top of M:0119's** —
+it contains `has_thread` as well as the retention pair. So the two are not independent: the LATER
+one is a superset, and applying them in filename order after the fact is only correct if the later
+one is applied last.
+
+The 2026-09-16 sync applied M:0121 first (believing prod to be at M:0119). Catching up on the
+missing six «in order» afterwards would have run M:0119 last and **silently reverted F1's retention
+payload on the respondent's anonymity sheet.**
+
+**Why that is worse than an error:** the apply returns success, no gate fails, no test is red — the
+respondent surface simply stops being able to state a duration, and the sentence it used to render
+is gone. There is no artefact to find later. The only signal would have been a human noticing an
+absent paragraph on a page they had no reason to re-read.
+
+**So before applying a catch-up set, group the files by the OBJECT they replace.** Where two touch
+the same function, read both bodies and apply the superset last — filename order is a proxy for
+dependency order and it is the wrong proxy exactly when one migration was written against another.
+The sync above did this: M:0115..M:0119 in order, then **M:0121 re-applied** as the last word on
+`get_survey_for_token`.
