@@ -69,7 +69,14 @@ export async function SurveyDetail({
     { href: `/undersokelser/${row.id}/send`, label: t('detailSend') },
     { href: `/undersokelser/${row.id}/kommentarer`, label: t('detailComments') },
     { href: `/undersokelser/${row.id}/malgruppe`, label: t('detailAudience') },
-    { href: `/undersokelser/${row.id}/rapport`, label: t('detailReport') },
+    /* v6:9081 `onReport` is `setState({ screen:"reports", repTab:"standard" })` —
+       the REPORTS SCREEN, not a survey sub-route. There is no per-survey report
+       route in the drawing and there is none in the model either: `reports` has
+       no `survey_id`, it carries `filters.survey_ids[]`, so a report SELECTS
+       surveys rather than belonging to one. F4 wrote `/undersokelser/${id}/rapport`,
+       which has never existed — 65 captures 404'd on it, from every screen that
+       renders a survey list, because Next prefetches every <Link>. */
+    { href: '/rapporter?fane=standard', label: t('detailReport') },
   ]
 
   return (

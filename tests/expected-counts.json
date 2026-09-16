@@ -104,7 +104,7 @@
   "tests/unit/shell-footer.test.ts": 8,
   "tests/unit/subtabs.test.ts": 36,
   "tests/unit/survey-scopes.test.ts": 12,
-  "tests/unit/survey-tabs.test.ts": 9,
+  "tests/unit/survey-tabs.test.ts": 10,
   "tests/unit/survey-views.test.ts": 10,
   "tests/unit/threshold-line.test.ts": 5,
   "tests/unit/threshold-tier.test.ts": 13,

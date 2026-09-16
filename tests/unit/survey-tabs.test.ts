@@ -143,6 +143,56 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
     }
   })
 
+  it('NO HARD-CODED SURVEY SUB-PATH NAMES A ROUTE THAT DOES NOT EXIST', () => {
+    /*
+      F4 SHIPPED `/undersokelser/${id}/rapport`, AND NO SUCH ROUTE HAS EVER
+      EXISTED. Two call sites — the row's action icons and the detail panel's
+      six links — built the path as a template literal instead of going through
+      this registry, so the derivation two tests above could not see them: it
+      checks the tabs IN `SURVEY_TABS`, and these were never in it.
+
+      The cost was 65 of 288 captures failing in `verify:browser` with
+      «404 (Not Found)», on screens that have nothing to do with reports —
+      `live`, `bygg`, `send`, `resultater`, `bibliotek` — because **Next
+      prefetches every `<Link>` in the viewport**, so one bad href on a list row
+      404s from every screen that renders the list. The symptom appears
+      everywhere except where the cause is.
+
+      So the property is stated over the SOURCE rather than over the registry:
+      any `/undersokelser/${…}/<segment>` written anywhere in the app must name
+      a directory that exists. Derived from the filesystem, so a route added or
+      renamed needs no edit here, and the next invented segment fails in the
+      commit that adds it.
+    */
+    const dirs = readdirSync('app/(app)/undersokelser/[id]', { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${e.name}`
+        if (e.isDirectory()) walk(full)
+        else if (/\.tsx?$/.test(e.name)) files.push(full)
+      }
+    }
+    walk('app')
+    walk('components')
+
+    const offenders: string[] = []
+    for (const file of files) {
+      const body = code(readFileSync(file, 'utf8'))
+      // `/undersokelser/${anything}/segment` — the template-literal form. A
+      // trailing `?query` or a closing backtick/quote ends the segment.
+      for (const m of body.matchAll(/\/undersokelser\/\$\{[^}]+\}\/([a-z-]+)/g)) {
+        const seg = m[1]!
+        if (!dirs.includes(seg)) offenders.push(`${file}: /${seg}`)
+      }
+    }
+
+    expect(offenders, 'a link to a survey sub-route nobody built').toEqual([])
+  })
+
   it('only tabs whose route exists are in the registry', () => {
     /*
       The rail may not promise a screen we decided against. `over` (Oversikt) is

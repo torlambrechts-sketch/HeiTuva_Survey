@@ -805,6 +805,38 @@ the browser can only ever report that something failed, never which thing. A sin
 verified only by «the error is still there» reads as «the fix did not work», and that reading
 is wrong half the time.
 
+### AND ONE BAD `<Link>` 404s FROM EVERY SCREEN THAT RENDERS THE LIST
+
+**Added 2026-09-16, when `verify:browser` finally ran and reported 65 of 288 captures failing.**
+This is the companion to the section above and the sharper half: there the gates could not see a
+dead page; here a gate saw the damage everywhere except where the cause was.
+
+F4 shipped `/undersokelser/${id}/rapport` at two call sites — the row's action icons and the detail
+panel's six links. **No such route has ever existed.** The failures were on `live`, `test-modus`,
+`bygg`, `send`, `resultater`, `bibliotek` and the survey sub-tabs: screens with nothing to do with
+reports. **Next prefetches every `<Link>` in the viewport**, so one invented href on a list row
+404s from every screen that renders the list, and not one of the 65 messages named the offending
+path — they all read `Failed to load resource: 404 (Not Found)`.
+
+**So the reading rule: when a whole band of unrelated screens fails identically, the cause is
+something they SHARE, and on a list-driven app that is usually a row.** The URL is in the capture's
+own `httpErrors` log, never in the console line; going to the artefact is what turned 65 symptoms
+into one cause.
+
+**Two things made it invisible for two phases.** `survey-tabs.test.ts` already derived the valid
+segments from `readdirSync`, and it could not see these, because it checks the tabs **in
+`SURVEY_TABS`** and these were template literals that never entered the registry — *a derivation is
+only as wide as the set it iterates*. And `verify:browser` had not completed a run since before F4:
+the browser job was cancelled or red across the whole tranche, which is «a continuous run on a
+shared branch pays for work it throws away» collecting its bill a second time.
+
+The guard is now stated over the SOURCE rather than over the registry: any
+`/undersokelser/${…}/<segment>` written anywhere in `app/` or `components/` must name a directory
+that exists, swept off the filesystem. Proven RED first — it named both call sites — and the fix is
+the bundle's own answer: v6's `onReport` is `setState({ screen:"reports", repTab:"standard" })`, the
+reports screen, and `reports` has no `survey_id` at all, only `filters.survey_ids[]`. **A report
+selects surveys; it does not belong to one.** So the route was not forgotten, it was never a route.
+
 ### AND A LOCATOR'S NAME CAN BE CARRYING A PREDICATE NOBODY DECLARED
 
 Twelve manifest states and one gate reached the builder with

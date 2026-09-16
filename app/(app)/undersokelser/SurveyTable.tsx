@@ -172,7 +172,11 @@ export function SurveyTable({
                     [
                       [`/undersokelser/${r.id}/bygg`, labels.build, 'build'],
                       [`/undersokelser/${r.id}/resultater`, labels.results, 'results'],
-                      [`/undersokelser/${r.id}/rapport`, labels.report, 'report'],
+                      // v6:2348's third icon calls `r.onReport`, which is
+                      // `setState({ screen:"reports", repTab:"standard" })` —
+                      // the reports screen. Not a survey sub-route: `reports`
+                      // has no survey_id, only `filters.survey_ids[]`.
+                      ['/rapporter?fane=standard', labels.report, 'report'],
                     ] as const
                   ).map(([href, label, kind]) => (
                     <Link

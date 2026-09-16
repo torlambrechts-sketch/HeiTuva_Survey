@@ -6337,3 +6337,23 @@ Three further measurements taken in the same pass, none previously recorded:
 for his own decision and asked for the list first: the entity name, the address, the organisation
 number and a mailbox confirmed to RECEIVE are facts this repository does not hold, and inventing
 any of them is the same error with better spelling — the standing rule from V5-1, unchanged.
+
+### D198 — `/undersokelser/[id]/rapport` was linked from two places and never existed
+
+**2026-09-16, found by the first COMPLETED `verify:browser` run since before F4.** 65 of 288
+captures failed with `404 (Not Found)`; every one was
+`/undersokelser/<uuid>/rapport?_rsc=…`, prefetched. Two call sites built the path as a template
+literal: `SurveyDetail.tsx:72` (the detail panel's sixth link) and `SurveyTable.tsx:175` (the row's
+third action icon). Both are F4-c/d's and both are on `main`.
+
+**FIXED, and the fix is the drawing's own answer rather than a new route.** v6's `onReport`
+(v6:7300, 9081, 9103) is `setState({ screen:"reports", repTab:"standard" })` — the reports screen.
+And the model agrees: `public.reports` has no `survey_id` column, it carries
+`filters.survey_ids[]`, so **a report selects surveys rather than belonging to one**. Both links go
+to `/rapporter?fane=standard`.
+
+**The guard is derived, not listed.** `tests/unit/survey-tabs.test.ts` already read the valid
+segments off the filesystem and still could not see this: it iterates `SURVEY_TABS`, and these two
+hrefs never entered the registry. The new assertion sweeps `app/` and `components/` for any
+`/undersokelser/${…}/<segment>` literal and requires the segment to be a real directory. Proven RED
+first — it named both files — and `verify:browser` went **65 failures -> 0**, 223 captured.
