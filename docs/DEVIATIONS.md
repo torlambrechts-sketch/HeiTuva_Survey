@@ -6514,3 +6514,112 @@ failure. **So it has to say what should be true when it finishes, not which
 button to press**: wait for either label, click only the off one, then wait for
 the on one. Both are written that way now, and `verify:responsive` went from 224
 declared with 2 blockers to **242 of 242 measured, 0 findings, 0 blockers**.
+
+### D207 — v6 replaces the whole «Alternativer» row set, and leaves its fixture behind
+
+**v6:8008 against v2/v3/v4/v5 · G2 · Q212.**
+
+Four bundles draw the same five rows — `reminders`, `weeklyDigest`,
+`allowSelfServe`, `sso`, `brandMail`. **v6 replaces every one of them** with
+`tuva`, `quiz`, `live`, `paaminn`, `klarsprak`, and reverses the tuple order
+from `[key, label, desc]` to `[label, desc, key]`. That is a rewrite, not an
+edit, so neither list is «the» list: the panel ships nine rows, v6's five first.
+
+**And the object behind it did not move.** v6:6561 is still
+`{reminders, weeklyDigest, allowSelfServe, sso, brandMail}`, so the panel reads
+five keys the fixture does not contain: every row evaluates
+`undefined !== false`, every switch draws ON, and none of them survives a
+reload. CLAUDE.md records this as the fifth «who writes this?» instance and
+names `tuva`; **measured, it is true of all five rows.** The recorded instance
+was one row of a five-row list, and the list is the whole panel.
+
+**One row is not adopted as drawn.** `paaminn` is our `reminders` renamed, and
+its description — «Etter to og fem dager» — asserts a fixed schedule this
+product does not have: reminders follow the per-survey plan set under Utsending.
+v5's «Følger planen du setter per undersøkelse» is the true sentence and stays.
+The label keeps its own spelling for the same reason.
+
+### D208 — four of the five shipped option switches were stored and never read
+
+**`organizations.options` · G2 · Q214. Measured 2026-09-16.**
+
+```
+grep -rn "select('options" --include=*.ts app/ lib/
+  app/(app)/administrasjon/actions.ts:330     ← the panel's own write
+  lib/auth/session.ts:94                      ← ssoRequired
+app/(app)/administrasjon/valg/page.tsx:27     ← the panel's own read
+```
+
+Three reads in the whole product. Two of them are the settings screen reading
+and writing itself. **Exactly one key — `sso` — changes what the product does.**
+A `pg_proc` sweep across `app` and `public` names none of the other four either.
+
+So `reminders`, `weekly_digest`, `allow_self_serve` and `brand_mail` have been
+stored, audited and drawn as ON since `M:0002` while the product behaved
+identically either way.
+
+**This is the twin of the rule G2 was asked for.** «A switch whose state nothing
+STORES is not a setting» is what a drawing gets wrong, and storage is visible.
+**A switch whose state nothing READS is not a setting either — and it is the
+worse half, because it survives every test that checks the value round-trips.**
+
+Not deleted here, and the reason is that the four split: `reminders` and
+`brand_mail` govern features that EXIST and could be wired; `weekly_digest` and
+`allow_self_serve` govern features that do not exist at all. Removing a shipped
+control is a product decision rather than a fix, so it goes to Tor. What is
+closed is the pretence: `lib/org/options.ts` records `enforcedAt: null` with a
+reason for each, `tests/unit/org-options.test.ts` requires the reason to resolve
+in both languages, and the panel prints it under the row.
+
+### D209 — `/undersokelser/[id]/live` offered «Start live» with the mode turned off
+
+**G2's own fix pass, found by driving the route.**
+
+With live disallowed for the organisation and the survey moved to standard, the
+route returned **HTTP 200 with an enabled «Start live» button**. Clicking it
+would have been refused by `app.guard_run_mode_allowed` — a control that works
+and a screen that lies about it, which is exactly Tor's case: *a feature that is
+off but still reachable by URL is a switch that describes rather than controls.*
+
+`LiveStage` now takes `modeAllowed` separately from `isLiveMode`, disables the
+button and prints the organisation's refusal. The two are separate props on
+purpose: «this survey is not live» and «this organisation does not do live» have
+different next steps, and the second is not the editor's to take — so the
+organisation's sentence is shown FIRST, because «set this survey to live» is
+useless advice when live is not available at all.
+
+Driven after the fix: `«Start live» present: 1 disabled: true`, with
+«Virksomheten har slått av live-modus. En administrator kan slå den på under
+Administrasjon → Valg.»
+
+### D210 — a whole-object write to `options` dropped every key it did not name
+
+**`M:0125` · G2's fix pass, found by `verify:roundtrip` on the SSO case.**
+
+`M:0124` put a rule on `organizations.options`. `verify:roundtrip` then failed
+on **`options.sso (break-glass honoured)`** — a case with nothing to do with run
+modes.
+
+The gate writes the whole column: `update organizations set options =
+'{"sso":true}'`. That is legal SQL and it DROPS the other eight keys. The reader
+treats an absent key as OFF, so from `app.guard_mode_still_in_use`'s point of
+view the write disallowed `live` and `quiz` — and the organisation had surveys
+in both, so the guard refused a write about SSO.
+
+**The guard was right and the shape was wrong**, and the same statement had been
+quietly resetting the column in `tests/invariants` for phases — harmless while
+`options` had one meaningful key, and a way to turn four features off the moment
+`M:0124` gave four of them meaning.
+
+Fixed at the COLUMN rather than at the callers: `app.merge_org_options` makes
+`new.options` = `old.options || new.options`, so a write changes the keys it
+names and no other. A list of callers to fix would have been an enumeration —
+correct about the ones that exist, silent about the next.
+
+**The trigger's name is load-bearing.** BEFORE triggers fire in NAME order, and
+both guards on this table read `new.options`. `organizations_aa_merge_options`
+sorts before `organizations_guard_sso` and `organizations_mode_in_use`; without
+that, the SSO guard would have read a dropped key as «turning it off», which is
+always allowed — **a partial write could have bypassed the break-glass rule.**
+The ordering is asserted from `pg_trigger` in `tests/db/org-options.test.ts`,
+because a rename would silently reorder two security guards.

@@ -39,6 +39,7 @@ export function RunModePanel({
   runMode,
   anonymity,
   packLocks,
+  allowedModes,
   feedbackMode,
   linkOnly,
   strings: s,
@@ -60,6 +61,12 @@ export function RunModePanel({
   /** A statutory pack whose policy is `locked` — the clause in
    *  `app.guard_quiz_policy` that is a real refusal rather than a consequence. */
   packLocks: boolean
+  /** G2 — the run modes Administrasjon → Valg allows. `standard` is always in
+   *  it: a survey must be runnable, so it is not a setting and never can be.
+   *  The DATABASE is what refuses a disallowed mode
+   *  (`app.guard_run_mode_allowed`); this only stops offering it, so the screen
+   *  and the rule cannot disagree about which is authoritative. */
+  allowedModes: readonly string[]
   strings: {
     title: string
     desc: string
@@ -76,6 +83,10 @@ export function RunModePanel({
     /** The one refusal that survives, and it stays a refusal. */
     quizPackLocked: string
     namedSurvey: string
+    /** G2 — «Denne virksomheten har slått av …». A refusal whose next step
+     *  belongs to somebody else, so it names where that is. */
+    modeNotAllowed: string
+    modeOffHere: string
     failed: string
     /* B2 — «Byggemodus» moves inside this card, where V2:580-587 draws it:
        one card, Kjøremodus above a rule, Byggemodus below it. It used to sit
@@ -153,6 +164,7 @@ export function RunModePanel({
       }
       if (r.error === 'quizPackLocked') setNote(s.quizPackLocked)
       else if (r.error === 'namedSurvey') setNote(s.namedSurvey)
+      else if (r.error === 'modeNotAllowed') setNote(s.modeNotAllowed)
       else setNote(s.failed)
     })
   }
@@ -178,10 +190,16 @@ export function RunModePanel({
           ? s.quizWillName
           : null
 
+  /* G2. `locked` existed on this shape and was `false` on all three rows —
+     a parameter with no caller, which is what it stops being here. A mode the
+     organisation has turned off is drawn disabled with the reason underneath,
+     rather than removed: a control that vanishes teaches nothing, and the
+     editor's next step is to ask an administrator. */
+  const allowed = (m: Mode) => m === 'standard' || allowedModes.includes(m)
   const cards: { key: Mode; label: string; desc: string; locked: boolean }[] = [
     { key: 'standard', label: s.standard, desc: s.standardDesc, locked: false },
-    { key: 'live', label: s.live, desc: s.liveDesc, locked: false },
-    { key: 'quiz', label: s.quiz, desc: s.quizDesc, locked: false },
+    { key: 'live', label: s.live, desc: s.liveDesc, locked: !allowed('live') },
+    { key: 'quiz', label: s.quiz, desc: s.quizDesc, locked: !allowed('quiz') },
   ]
 
   return (
@@ -207,7 +225,9 @@ export function RunModePanel({
               }}
             >
               <span className="text-[13.5px] font-bold">{c.label}</span>
-              <span className="text-[11.5px] leading-[1.4] text-mut">{c.desc}</span>
+              <span className="text-[11.5px] leading-[1.4] text-mut">
+                {c.locked ? s.modeOffHere : c.desc}
+              </span>
             </button>
           )
         })}

@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
+import { optionsOf } from '@/lib/org/options'
 import type { QualityRule } from '@/lib/questions/quality'
 import type { MethodRule } from '@/lib/questions/method'
 import { parseEngagement } from '@/lib/engagement'
@@ -120,10 +121,43 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   // split the Library makes, so the two surfaces cannot disagree about order.
   const bank = [...bankUnordered.filter((r) => r.isOwn), ...bankUnordered.filter((r) => !r.isOwn)]
 
-  const { data: ruleRows, error: ruleError } = await supabase
-    .from('quality_rules')
-    .select('key, pattern, rule, message')
-    .eq('lang', viewer.locale)
+  /* G2 — «Klarspråk-sjekk» (v6:8008), and THE ENFORCEMENT POINT the registry
+     names for it (`lib/org/options.ts`).
+
+     Gated at the FETCH rather than at the render: off means the rules are never
+     read, `rules` is empty, and `qualityFlags` returns nothing for every
+     question — one branch instead of one per call site, and the Builder needs
+     no new prop to forget.
+
+     ── WHAT IT DOES NOT GOVERN, WHICH IS THE PART WORTH WRITING DOWN ────────
+     `policyWarnings` is a DIFFERENT set and stays on. Those carry the threshold
+     and anonymity warnings, and CLAUDE.md is explicit that nothing weakening a
+     security invariant is org-configurable — a switch that silenced them would
+     be exactly that, wearing a copy-quality label. The two live in separate
+     modules and `tests/unit/org-options.test.ts` asserts the boundary rather
+     than leaving it to the reader. */
+  const orgOptions = optionsOf(
+    (
+      await supabase
+        .from('organizations')
+        .select('options')
+        .eq('id', survey.org_id)
+        .maybeSingle()
+    ).data?.options,
+  )
+  const klarsprakOn = orgOptions.klarsprak
+  /* G2 — which run modes the Builder may OFFER. The database is what refuses a
+     disallowed one (`app.guard_run_mode_allowed`), so this decides what is
+     drawn and never what is permitted: one authority, and the screen defers to
+     it rather than restating it. */
+  const allowedModes = (['live', 'quiz'] as const).filter((m) => orgOptions[m])
+
+  const { data: ruleRows, error: ruleError } = klarsprakOn
+    ? await supabase
+        .from('quality_rules')
+        .select('key, pattern, rule, message')
+        .eq('lang', viewer.locale)
+    : { data: [], error: null }
   if (ruleError) throw new Error(`quality_rules read failed: ${ruleError.message}`)
 
   // The heuristics are Norwegian-specific and only seeded for `no`. An English
@@ -196,6 +230,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
         feedbackMode={survey.feedback_mode}
         linkOnly={linkOnly}
         packLocks={packLocks}
+        allowedModes={allowedModes}
         bank={bank}
         quizTimeBonus={survey.quiz_time_bonus}
         quizTeamBoard={survey.quiz_team_board}

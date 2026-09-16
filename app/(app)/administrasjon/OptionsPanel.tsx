@@ -4,22 +4,27 @@ import { useOptimistic, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { setDefaultLang, setOption, setSsoExempt } from './actions'
 import { ADMIN_ERROR_KEY, type AdminResult } from './types'
-import { type OptionKey } from './keys'
+import { OPTION_KEYS, optionRow, type OptionKey } from '@/lib/org/options'
 
 /** One active administrator, as the break-glass list draws them (D82). */
 export type BreakGlassAdmin = { id: string; name: string; exempt: boolean }
 
-/** Row order exactly as the design lists it (HeiTuva.dc.html:3288-3294), with
- *  the disabled SSO row in its fourth position. */
-const ROW_ORDER = [
-  'reminders',
-  'weekly_digest',
-  'allow_self_serve',
-  'sso',
-  'brand_mail',
-] as const
+/**
+ * Row order: v6:8008's five first, in ITS order, then the four this product
+ * shipped before v6 rewrote the panel.
+ *
+ * v2, v3, v4 and v5 all draw the SAME five rows; v6 replaces every one of them
+ * and even reverses the tuple order. That is a whole-panel substitution rather
+ * than an edit, so neither list is «the» list and both ship (D207). The SSO row
+ * keeps its own treatment wherever it lands.
+ */
+const ROW_ORDER = OPTION_KEYS
 
 const LABEL: Record<OptionKey, [string, string]> = {
+  tuva: ['oTuva', 'oTuvaDesc'],
+  quiz: ['oQuiz', 'oQuizDesc'],
+  live: ['oLive', 'oLiveDesc'],
+  klarsprak: ['oKlarsprak', 'oKlarsprakDesc'],
   reminders: ['oReminders', 'oRemindersDesc'],
   weekly_digest: ['oWeeklyDigest', 'oWeeklyDigestDesc'],
   allow_self_serve: ['oAllowSelfServe', 'oAllowSelfServeDesc'],
@@ -175,11 +180,30 @@ export function OptionsPanel({
 
           const on = optimistic[key]
           const [label, desc] = LABEL[key]
+          /* G2 — A SWITCH NOTHING READS IS NOT A SETTING, AND IT SAYS SO.
+
+             Measured 2026-09-16: `organizations.options` had five keys and
+             exactly ONE reader. `reminders`, `weekly_digest`,
+             `allow_self_serve` and `brand_mail` have been stored, audited and
+             drawn as ON since `M:0002` while nothing — not a module, not a
+             function in `app` or `public` — read them (D208).
+
+             They are not deleted here: two of them govern features that do not
+             exist at all, and removing a shipped control is a product decision
+             rather than a fix. What they do instead is stop pretending. The
+             reason comes from the registry, so a row cannot lose its notice by
+             gaining a reader somewhere the registry does not name. */
+          const row = optionRow(key)
           return (
             <div key={key} className="flex items-center gap-3.5">
               <span className="flex-1">
                 <span className="block text-[14px] font-semibold">{t(label)}</span>
                 <span className="mt-0.5 block text-[13px] text-mut">{t(desc)}</span>
+                {row.enforcedAt === null ? (
+                  <span className="mt-1 block text-[12.5px] leading-[1.45] text-mut">
+                    {t(`oUnread_${row.why}` as 'oUnread_digest-unbuilt')}
+                  </span>
+                ) : null}
               </span>
               <button
                 type="button"

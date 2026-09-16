@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+import { optionsOf } from '@/lib/org/options'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import QRCode from 'qrcode'
@@ -44,6 +45,13 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
     .eq('id', id)
     .maybeSingle()
   if (!survey || survey.org_id !== viewer.orgId) notFound()
+
+  /* G2 — does this ORGANISATION allow live mode at all? Separate from
+     `run_mode`, which is about this survey. */
+  const liveAllowed = optionsOf(
+    (await supabase.from('organizations').select('options').eq('id', viewer.orgId).maybeSingle())
+      .data?.options,
+  ).live
 
   const { data: round } = await supabase
     .from('survey_rounds')
@@ -160,6 +168,11 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         roundId={round?.id ?? null}
         title={survey.title}
         isLiveMode={survey.run_mode === 'live'}
+        /* G2 — the organisation's own setting. Read here rather than in
+           LiveStage because the stage is a client component and this is a
+           server read; and separate from `isLiveMode` because the two refusals
+           have different next steps. */
+        modeAllowed={liveAllowed}
         session={
           session && open
             ? { id: session.id, code: session.code, revealed: session.revealed }
@@ -183,6 +196,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
           close: t('close'),
           noRound: t('noRound'),
           notLiveMode: t('notLiveMode'),
+          modeNotAllowed: t('modeNotAllowed'),
           noSession: t('noSession'),
           scanHint: t('scanHint'),
           guard: t('guard'),

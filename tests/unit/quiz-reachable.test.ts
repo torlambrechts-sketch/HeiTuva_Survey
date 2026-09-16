@@ -48,10 +48,29 @@ describe('the run-mode card', () => {
     expect(panel).toMatch(/type Mode = 'standard' \| 'live' \| 'quiz'/)
   })
 
-  it('the quiz card is NOT locked', () => {
+  it('the quiz card is locked ONLY by the organisation, never by «not built»', () => {
+    /*
+      RESTATED BY G2, NOT WEAKENED — and the restatement is the point.
+
+      This asserted the literal `locked: false`, which was the right way to say
+      «quiz is reachable» while the only alternative was D135's «Quiz er ikke
+      bygget ennå». G2 gives the card a second, legitimate reason to be locked:
+      an organisation that has turned quiz off in Administrasjon → Valg. So the
+      property is no longer «never locked» but «locked by ONE thing, and that
+      thing is a setting rather than a claim about the product».
+
+      A test that asserts a literal is asserting a spelling, and a spelling stops
+      being true the first time the value is derived. F4's guard required
+      `menuFor={(id) => rowMenu(id)}` — the line that made a screen return 500 —
+      for the same reason.
+    */
     const card = panel.match(/\{ key: 'quiz',[^}]*\}/)?.[0] ?? ''
     expect(card, 'quiz card not found').not.toBe('')
-    expect(card).toMatch(/locked: false/)
+    expect(card, 'the quiz card is hard-locked again').not.toMatch(/locked: true/)
+    expect(card, 'locked must be DERIVED from the org setting').toMatch(/locked: !allowed\('quiz'\)/)
+    // And the derivation can only ever consult the organisation: `allowed`
+    // reads `allowedModes`, which the server builds from `organizations.options`.
+    expect(panel).toMatch(/const allowed = \(m: Mode\) => m === 'standard' \|\| allowedModes\.includes\(m\)/)
   })
 
   it('«Quiz er ikke bygget ennå» is gone from both languages', () => {

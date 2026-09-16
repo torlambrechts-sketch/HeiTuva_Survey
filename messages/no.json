@@ -462,7 +462,9 @@
     "no": "Nei",
     "nextStepsLabel": "Hva skjer nå (vises til respondenten)",
     "nextStepsHint": "Én eller to setninger om hva som skjer med svarene, og når. Står tomt hvis du ikke skriver noe — vi finner ikke på en dato.",
-    "nextStepsPlaceholder": "F.eks.: Resultatene legges fram i AMU i oktober, og lederne får sine tall samme uke."
+    "nextStepsPlaceholder": "F.eks.: Resultatene legges fram i AMU i oktober, og lederne får sine tall samme uke.",
+    "runModeNotAllowed": "Virksomheten har slått av denne modusen. En administrator kan slå den på under Administrasjon → Valg.",
+    "runModeOffHere": "Slått av for denne virksomheten"
   },
   "send": {
     "title": "Slik når den fram",
@@ -1206,7 +1208,20 @@
     "fSurveyView": "Standardvisning for undersøkelser",
     "fSurveyList": "Liste",
     "fSurveySplit": "Liste og detalj",
-    "fSurveyCards": "Kort"
+    "fSurveyCards": "Kort",
+    "oTuva": "Vis Tuva-hjelp",
+    "oTuvaDesc": "Tips og forslag i grensesnittet. Av: analysepanelet på Undersøkelser vises ikke.",
+    "oQuiz": "Tillat quiz-modus",
+    "oQuizDesc": "Gir poeng og resultattavle. Av: ingen undersøkelse kan settes i quiz-modus, og modusen kan ikke slås av mens en undersøkelse står i den.",
+    "oLive": "Live-modus på storskjerm",
+    "oLiveDesc": "QR og sanntidsresultater. Av: ingen undersøkelse kan settes i live-modus, og modusen kan ikke slås av mens en undersøkelse står i den.",
+    "oKlarsprak": "Klarspråk-sjekk",
+    "oKlarsprakDesc": "Advarer om vanskelige ord i spørsmål. Av: byggeren viser ingen språkflagg. Advarslene om terskel og anonymitet står uansett — de kan ikke slås av.",
+    "oUnread_reminders-unread": "Denne bryteren lagres, men ingenting i produktet leser den ennå. Påminnelser settes per undersøkelse under Utsending.",
+    "oUnread_digest-unbuilt": "Denne bryteren lagres, men ukentlig sammendrag er ikke bygget ennå, så den endrer ingenting.",
+    "oUnread_selfserve-unbuilt": "Denne bryteren lagres, men det finnes ingen godkjenningsflyt ennå, så den endrer ingenting.",
+    "oUnread_brandmail-unread": "Denne bryteren lagres, men e-postmalen leser den ikke ennå.",
+    "errRunModeInUse": "Modusen kan ikke slås av mens en undersøkelse står i den. Sett dem til standard først."
   },
   "profile": {
     "aboutMe": "Om meg",
@@ -2555,7 +2570,8 @@
     "closingTitle": "Kunngjøringsskjerm",
     "closingUnavailable": "Kunngjøringsskjerm er ikke bygget ennå. Den viser hva dere gjør videre, og det er tekst noen skriver — ingenting i basen holder den.",
     "fullscreenTitle": "Presentasjonsvisning",
-    "fullscreenUnavailable": "Fullskjermvisning er ikke bygget ennå. Skjermbildet du ser her er det eneste som er tegnet."
+    "fullscreenUnavailable": "Fullskjermvisning er ikke bygget ennå. Skjermbildet du ser her er det eneste som er tegnet.",
+    "modeNotAllowed": "Virksomheten har slått av live-modus. En administrator kan slå den på under Administrasjon → Valg."
   },
   "liveJoin": {
     "title": "Bli med",

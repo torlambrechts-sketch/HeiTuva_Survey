@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { OPTION_DEFAULTS } from '../../lib/org/options'
 import { admin, anon, uniq } from '../helpers'
 import { buildFixture, type Fixture } from './fixture'
 
@@ -260,8 +261,16 @@ describe('(b5) SSO break-glass — the organisation can always get back in (D82,
   let org: { id: string }
   let first: { id: string }
   let second: { id: string }
-  const on = { sso: true }
-  const off = { sso: false }
+  /* G2 — SPREAD ONTO THE STORED OBJECT, which is what `setOption` does.
+     These were bare `{ sso: true }` and replaced the whole column, dropping
+     every other switch. Harmless while the fixture was the only writer and
+     invisible while `options` had one meaningful key — and then `M:0124` added
+     four that GOVERN features, and a whole-object write became a way to turn
+     Tuva, quiz, live and klarspråk off by saving an unrelated setting.
+     The product never wrote that way; the test did, and it was the test that
+     made the difference visible. */
+  const on = { ...OPTION_DEFAULTS, sso: true }
+  const off = { ...OPTION_DEFAULTS, sso: false }
 
   const member = async (row: Record<string, unknown>) => {
     const { data, error } = await admin().from('org_members').insert(row).select('id').single()

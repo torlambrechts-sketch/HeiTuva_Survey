@@ -30,6 +30,12 @@ export type AdminError =
   | 'sso_no_break_glass'
   /** This is the last such administrator, and SSO is on — the database refused the change. */
   | 'sso_last_break_glass'
+  /** G2 — the mode is still in use, so it may not be disallowed
+   *  (`app.guard_mode_still_in_use`, `M:0124`). Its own result rather than
+   *  `save_failed` for the reason `group_in_use` has one: retrying will fail
+   *  identically, and the administrator's next step is to move those surveys to
+   *  standard mode. That next step is what the copy names. */
+  | 'run_mode_in_use'
 
 export type AdminResult = { ok: true } | { ok: false; error: AdminError }
 
@@ -45,4 +51,5 @@ export const ADMIN_ERROR_KEY: Record<AdminError, string> = {
   sso_self_lockout: 'errSsoSelf',
   sso_no_break_glass: 'errSsoNoBreakGlass',
   sso_last_break_glass: 'errSsoLastBreakGlass',
+  run_mode_in_use: 'errRunModeInUse',
 }

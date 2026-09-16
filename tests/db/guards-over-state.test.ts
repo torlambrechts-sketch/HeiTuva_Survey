@@ -304,6 +304,15 @@ describe('the shape itself', () => {
       // break out of; the state «SSO enforced with no exempt administrator» is
       // unreachable at creation because the org has no members yet.
       'organizations.organizations_guard_sso',
+      // G2 — the same reasoning, same table, and the list is `order by 1`, so
+      // it sits here rather than where it was written. The rule is «a mode may
+      // not be DISALLOWED while a survey is in it», which is an EDGE: allowed
+      // -> disallowed. On INSERT an organisation is created with the column
+      // default and has no surveys at all, so the state this guard is about is
+      // unreachable at creation. Scoped `of options` for Q137's reason — every
+      // other switch on the screen rewrites that column, and an unscoped guard
+      // would re-check all of them on every save.
+      'organizations.organizations_mode_in_use',
       // Closing a task IS an event rather than a state: a closed task is
       // immutable by a separate rule (M:0066, «lukket is terminal»), so there
       // is no second road to the state this guard is about.

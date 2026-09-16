@@ -35,12 +35,14 @@ export function privacyToStored(key: PrivacyKey, on: boolean): boolean {
   return INVERTED.has(key) ? !on : on
 }
 
-/** Option toggles that are actually settable. `sso` is absent: it ships in
- *  Phase 6 (DECISIONS Q5) and the action refuses the key. */
-// `sso` is a real key since Phase 6 (Entra ID). Its switch is only offered when
-// Auth has the provider configured — see OptionsPanel and docs/DEVIATIONS.md D82.
-export const OPTION_KEYS = ['reminders', 'weekly_digest', 'allow_self_serve', 'sso', 'brand_mail'] as const
-export type OptionKey = (typeof OPTION_KEYS)[number]
+/* G2 — the option keys MOVED to `lib/org/options.ts`, which carries the one
+   place the product READS each of them. Re-exported here so the existing
+   imports keep working and there is still exactly one definition.
+
+   The move is the point: this file held a list of keys, and a list of keys
+   cannot answer «who reads this?» — the question that turned out to have the
+   answer «nothing» for four of the five (D208). */
+export { OPTION_KEYS, type OptionKey } from '@/lib/org/options'
 
 export const DSR_TYPES = ['innsyn', 'retting', 'sletting', 'portabilitet'] as const
 export type DsrType = (typeof DSR_TYPES)[number]

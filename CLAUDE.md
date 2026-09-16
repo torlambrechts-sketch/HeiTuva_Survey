@@ -334,6 +334,26 @@ authoritative in a way a stale document does not.
    the next reader sees why the parameter is absent rather than assuming nobody thought of it —
    an absent option looks identical to an oversight, and only a comment tells them apart.
 
+   **AND THE QUESTION HAS A TWIN THAT IS WORSE, FOUND BY G2 ASKING THIS ONE OF A PANEL
+   (2026-09-16, D208): «WHO READS THIS COLUMN?»**
+
+   `organizations.options` carries the «Alternativer» switches. Measured —
+   `grep -rn "select('options" --include=*.ts app/ lib/` plus a `pg_proc` sweep for the key
+   names — **it is read in THREE places in the entire product: the panel's own read, the
+   panel's own write, and `lib/auth/session.ts:94`. Exactly one key, `sso`, changes what the
+   product does.** `reminders`, `weekly_digest`, `allow_self_serve` and `brand_mail` have been
+   stored, audited and drawn as ON since `M:0002` while nothing honoured them.
+
+   **A column with no WRITER produces a feature reachable only from psql. A column with no
+   READER produces a control that looks like it works** — and that one is worse, because every
+   test passes: the value round-trips, the audit row is written, the switch moves. Nothing is
+   missing except the effect.
+
+   The two questions are the same question asked from opposite ends, and the second is the one
+   nobody asks, because a setting that saves feels finished. `lib/org/options.ts` answers it per
+   key — `enforcedAt` is a `file:symbol` a reader can open, or `null` with the reason — and
+   `tests/db/org-options.test.ts` opens the file and requires the symbol to be there.
+
    **THREE OF THE FOUR TIMES THIS HAS FIRED, THE COLUMN EXISTED AND WAS READ** — which is why
    the question is not «is the column there» but «who WRITES it». A column that is read
    everywhere looks finished from every angle except the one that matters. If the answer is
@@ -1481,6 +1501,35 @@ tests rather than asserting anything. The commands: `npm run census:write` for t
 with 2 blockers, one of which had been red since F6 and neither of which was about a screen. See
 D206: both were manifest states that WRITE, clicking a control unconditionally that a previous
 viewport had already clicked. `verify:browser` captured 241 of 241 with 0 failures.
+
+**G2 TOOK IT TO 1569 ACROSS 118 FILES AND 5a3 IS UNMOVED AT 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **two added lines and nothing else moved
+in either direction**, which is the proof rather than the total:
+
+```
+1551 across 116
+ + 10  tests/db/org-options.test.ts     new — the column default vs the registry, the two guards, the merge
+ +  8  tests/unit/org-options.test.ts   new — the copy as a CLAIM SET, and «what does OFF do» as a property
+= 1569 across 118
+```
+
+**And three EXISTING tests changed sides without moving the total**, which is the half a count
+cannot show: `quiz-reachable`'s «the quiz card is NOT locked» asserted the literal `locked: false`
+— right while the only alternative was D135's «Quiz er ikke bygget ennå», wrong the moment the
+value became derived; `guards-over-state` required the new UPDATE-only guard to declare its scope,
+which is that test doing its job; and `tests/invariants`' SSO fixture was writing the WHOLE
+`options` object, which is how D210 became visible. **A file's count is not a record of what it
+checks; the diff is.**
+
+5a3 holds at **81 of 114** — 65 RLS tables (42 checked, 23 allowlisted) plus 49 SECURITY DEFINER
+functions (39 checked, 10 allowlisted), zero unproven. `M:0124` and `M:0125` add three functions
+and all three live in the `app` schema, which neither sweep enumerates — the same recorded limit of
+that gate, three times more, and the correct reading rather than a gap.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**And `verify:responsive` is 242 of 242 measured, 0 findings, 0 blockers; `verify:browser` 241
+captured, 0 failed** — unchanged by G2, which is the expected reading: the four toggles default ON,
+so every captured state is the state that was captured before.
 
 **AND THE RUN IS ONLY 115 FILES IF `SUPABASE_DB_URL` POINTS AT THE LOCAL STACK.** `.env.local` sets
 it to the PRODUCTION host, which no Claude Code container can reach (see the settled conclusion

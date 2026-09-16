@@ -462,7 +462,9 @@
     "no": "No",
     "nextStepsLabel": "What happens next (shown to the respondent)",
     "nextStepsHint": "One or two sentences about what happens to the answers, and when. Left blank if you write nothing — we do not invent a date.",
-    "nextStepsPlaceholder": "For example: The results go to the working environment committee in October, and managers get their own figures the same week."
+    "nextStepsPlaceholder": "For example: The results go to the working environment committee in October, and managers get their own figures the same week.",
+    "runModeNotAllowed": "This organisation has turned the mode off. An administrator can turn it on under Administration → Options.",
+    "runModeOffHere": "Turned off for this organisation"
   },
   "send": {
     "title": "How it reaches them",
@@ -1206,7 +1208,20 @@
     "fSurveyView": "Default survey view",
     "fSurveyList": "List",
     "fSurveySplit": "List and detail",
-    "fSurveyCards": "Cards"
+    "fSurveyCards": "Cards",
+    "oTuva": "Show Tuva help",
+    "oTuvaDesc": "Tips and suggestions in the interface. Off: the analyst panel on Surveys is not shown.",
+    "oQuiz": "Allow quiz mode",
+    "oQuizDesc": "Adds points and a leaderboard. Off: no survey can be put into quiz mode, and the mode cannot be turned off while a survey is in it.",
+    "oLive": "Live mode on a big screen",
+    "oLiveDesc": "QR and real-time results. Off: no survey can be put into live mode, and the mode cannot be turned off while a survey is in it.",
+    "oKlarsprak": "Plain-language check",
+    "oKlarsprakDesc": "Warns about difficult words in questions. Off: the builder shows no language flags. The threshold and anonymity warnings stay either way — those cannot be turned off.",
+    "oUnread_reminders-unread": "This switch is stored, but nothing in the product reads it yet. Reminders are set per survey under Send.",
+    "oUnread_digest-unbuilt": "This switch is stored, but the weekly summary is not built yet, so it changes nothing.",
+    "oUnread_selfserve-unbuilt": "This switch is stored, but there is no approval flow yet, so it changes nothing.",
+    "oUnread_brandmail-unread": "This switch is stored, but the email template does not read it yet.",
+    "errRunModeInUse": "The mode cannot be turned off while a survey is in it. Set those to standard first."
   },
   "profile": {
     "aboutMe": "About me",
@@ -2555,7 +2570,8 @@
     "closingTitle": "Closing screen",
     "closingUnavailable": "The closing screen is not built yet. It shows what you will do next, and that is text somebody writes — nothing in the database holds it.",
     "fullscreenTitle": "Presentation view",
-    "fullscreenUnavailable": "Full-screen view is not built yet. The screen you see here is the only one that was drawn."
+    "fullscreenUnavailable": "Full-screen view is not built yet. The screen you see here is the only one that was drawn.",
+    "modeNotAllowed": "This organisation has turned live mode off. An administrator can turn it on under Administration → Options."
   },
   "liveJoin": {
     "title": "Join",

@@ -408,6 +408,12 @@ export type PolicyResult =
         /** Defence in depth. The UI switches the mode first, so this should not
          *  reach a person — if it does, something refused the anonymity change. */
         | 'quizNeedsNamed'
+        /** G2 — the organisation has not allowed this run mode
+         *  (`app.guard_run_mode_allowed`, `M:0124`). A refusal with a next step
+         *  that is somebody else's: an administrator turns it on in
+         *  Administrasjon → Valg. Named rather than falling through to
+         *  «failed», because retrying will fail identically every time. */
+        | 'modeNotAllowed'
         | 'failed'
     }
 
@@ -576,6 +582,10 @@ export async function setRunMode(
       return { ok: false, error: 'quizPackLocked' }
     }
     if (/quiz_requires_named/.test(error.message)) return { ok: false, error: 'quizNeedsNamed' }
+    // G2. The guard is in the DATABASE and not here, so this maps a refusal
+    // rather than making one — which is what keeps the rule true of psql and of
+    // the seed as well as of this action.
+    if (/run_mode_not_allowed/.test(error.message)) return { ok: false, error: 'modeNotAllowed' }
     console.error(`setRunMode failed: ${error.message}`)
     return { ok: false, error: 'failed' }
   }

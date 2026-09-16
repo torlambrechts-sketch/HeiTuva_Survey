@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { optionsOf } from '@/lib/org/options'
 import { AnalystPanel } from './AnalystPanel'
 import { analyse } from '@/lib/tuva/analyst'
 import { kForMirror } from '@/lib/surveys/retention'
@@ -135,9 +136,19 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
      three explicit steps by `resolveSurveyView`. */
   const { data: orgRow } = await supabase
     .from('organizations')
-    .select('survey_view')
+    .select('survey_view, options')
     .eq('id', viewer.orgId)
     .maybeSingle()
+
+  /* G2 — «Vis Tuva-hjelp» (v6:8008), and THE ENFORCEMENT POINT the registry
+     names for it (`lib/org/options.ts`).
+
+     Off renders no analyst and no placement switch. Tuva reads participation
+     counts and writes nothing, so nothing is stranded when it goes and no URL
+     reaches it separately — it is a panel on a screen, not a route. That is
+     what makes this one of the two toggles whose «off» needs no guard on the
+     way back: there is no state to strand. */
+  const tuvaOn = optionsOf(orgRow?.options).tuva
   const members = new Map(
     (memberRows ?? []).map((m) => [m.id, { name: m.name || m.email, email: m.email }]),
   )
@@ -740,8 +751,8 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
           {/* v6:2415 — the 76px spacer the bubble needs so it never covers the
               last row. Only in the bubble placement, because in the side
               placement there is no bubble to clear. */}
-          {placement === 'bubble' ? <div className="h-[76px]" /> : null}
-          {placement === 'bubble' ? (
+          {tuvaOn && placement === 'bubble' ? <div className="h-[76px]" /> : null}
+          {tuvaOn && placement === 'bubble' ? (
             <TuvaPlacementSwitch placement="bubble" labels={tuvaLabels}>
               <AnalystPanel analyst={analyst} bare />
             </TuvaPlacementSwitch>
@@ -750,7 +761,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
 
         {/* v6:2438 — the docked side column, which is the DRAWING'S DEFAULT and
             which the app had in neither placement. */}
-        {placement === 'side' ? (
+        {tuvaOn && placement === 'side' ? (
           <TuvaPlacementSwitch placement="side" labels={tuvaLabels}>
             <AnalystPanel analyst={analyst} bare />
           </TuvaPlacementSwitch>

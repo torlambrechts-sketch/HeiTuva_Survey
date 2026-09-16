@@ -22,6 +22,9 @@ type Strings = {
   close: string
   noRound: string
   notLiveMode: string
+  /** G2 — the ORGANISATION does not allow live mode. A different sentence
+   *  from `notLiveMode`, with a next step the editor cannot take themselves. */
+  modeNotAllowed: string
   noSession: string
   scanHint: string
   guard: string
@@ -76,6 +79,7 @@ export function LiveStage({
   roundId,
   title,
   isLiveMode,
+  modeAllowed,
   session,
   qrSvg,
   joinUrl,
@@ -93,6 +97,12 @@ export function LiveStage({
   roundId: string | null
   title: string
   isLiveMode: boolean
+  /** G2 — whether the ORGANISATION allows live mode at all.
+   *  Distinct from `isLiveMode`, which is about THIS survey: «this survey is
+   *  not live» and «this organisation does not do live» are different
+   *  sentences with different next steps, and one of them is not the editor's
+   *  to take. */
+  modeAllowed: boolean
   session: { id: string; code: string; revealed: boolean } | null
   qrSvg: string | null
   joinUrl: string | null
@@ -168,7 +178,7 @@ export function LiveStage({
           ) : (
             <button
               type="button"
-              disabled={pending || !roundId || !isLiveMode}
+              disabled={pending || !roundId || !isLiveMode || !modeAllowed}
               onClick={() => act(() => openLiveSession(surveyId, roundId!, orgId))}
               className="touch-44 cursor-pointer whitespace-nowrap rounded-[10px] border-none bg-ac px-5 py-[11px] text-[13px] font-bold text-acf disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -187,7 +197,22 @@ export function LiveStage({
         </div>
       </div>
 
-      {!isLiveMode ? (
+      {/* G2 — THE URL TEST, AND IT FAILED BEFORE THIS BRANCH EXISTED.
+
+          Tor: «a feature that is OFF but still reachable by URL is a switch
+          that describes rather than controls.» Driven with live disallowed,
+          this route returned HTTP 200 with a «Start live» button on it — the
+          click would have been refused by `app.guard_run_mode_allowed`, which
+          is a control that works and a screen that lies about it.
+
+          The organisation's refusal comes FIRST because it is the one the
+          editor cannot act on: «set this survey to live» is useless advice when
+          the organisation does not allow live at all. */}
+      {!modeAllowed ? (
+        <p className="mt-[18px] rounded-[10px] border border-dashed border-line bg-bg px-[15px] py-3 text-[13px] text-mut">
+          {s.modeNotAllowed}
+        </p>
+      ) : !isLiveMode ? (
         <p className="mt-[18px] rounded-[10px] border border-dashed border-line bg-bg px-[15px] py-3 text-[13px] text-mut">
           {s.notLiveMode}
         </p>

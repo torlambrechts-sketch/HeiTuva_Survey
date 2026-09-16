@@ -12,6 +12,7 @@ import { requireViewer } from '@/lib/auth/session'
 import { ENTRA_PROVIDER, entraAvailable } from '@/lib/auth/entra'
 import { audit } from '@/lib/auth/audit'
 import type { AdminError, AdminResult } from './types'
+import { OPTION_KEYS } from '@/lib/org/options'
 import { privacyToStored, type PrivacyKey as PrivacyKeyName } from './keys'
 
 /**
@@ -288,7 +289,11 @@ export async function setDefaultThreshold(k: number): Promise<AdminResult> {
   return { ok: true }
 }
 
-const OptionKey = z.enum(['reminders', 'weekly_digest', 'allow_self_serve', 'brand_mail', 'sso'])
+/* G2 — DERIVED, not spelled a second time. This was a literal enum beside
+   `OPTION_KEYS` in `keys.ts` and the CHECK-less jsonb column: three statements
+   of one set, agreeing by luck, which is F3's `responsePct` shape. The registry
+   is the one place now, and adding a key cannot forget this boundary. */
+const OptionKey = z.enum(OPTION_KEYS)
 
 export async function setOption(key: string, value: boolean): Promise<AdminResult> {
   const admin = await requireAdmin()
@@ -335,6 +340,14 @@ export async function setOption(key: string, value: boolean): Promise<AdminResul
 
   const { error } = await supabase.from('organizations').update({ options }).eq('id', admin.orgId)
   if (error) {
+    /* G2 — the other half of «off means off». `app.guard_mode_still_in_use`
+       refuses disallowing `live` or `quiz` while a survey is in that mode,
+       because otherwise the feature would be off and its route still rendering
+       — a switch that describes rather than controls. The rule is the
+       database's; this maps it to a refusal with a next step. */
+    if (/run_mode_in_use/.test(error.message)) {
+      return { ok: false, error: 'run_mode_in_use' }
+    }
     console.error(`setOption(${parsed.data}) failed: ${error.message}`)
     return { ok: false, error: dbError(error) }
   }

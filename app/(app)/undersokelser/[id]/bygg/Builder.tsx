@@ -77,6 +77,7 @@ export function Builder({
   feedbackMode,
   linkOnly,
   packLocks,
+  allowedModes,
   bank,
   quizTimeBonus,
   quizTeamBoard,
@@ -104,6 +105,8 @@ export function Builder({
    *  means «already sent» — the two are different locks and only this one is
    *  the clause `app.guard_quiz_policy` refuses on. */
   packLocks: boolean
+  /** G2 — the run modes Administrasjon → Valg allows. Read on the server. */
+  allowedModes: readonly string[]
   /** B3 — the rows the picker overlay offers, read on the server. */
   bank: BankRow[]
   /** V2-10, Q84 — the two quiz toggles the narrowing kept. */
@@ -429,6 +432,7 @@ export function Builder({
           runMode={runMode}
           anonymity={policy.anonymity}
           packLocks={packLocks}
+          allowedModes={allowedModes}
           feedbackMode={feedbackMode}
           linkOnly={linkOnly}
           advanced={advanced}
@@ -446,6 +450,8 @@ export function Builder({
             quizSwitchedToNamed: t('quizSwitchedToNamed'),
             quizPackLocked: t('quizPackLocked'),
             namedSurvey: t('runModeNamedSurvey'),
+            modeNotAllowed: t('runModeNotAllowed'),
+            modeOffHere: t('runModeOffHere'),
             buildMode: t('buildMode'),
             buildModeDescSimple: t('buildModeDescSimple'),
             buildModeDescAdvanced: t('buildModeDescAdvanced'),
