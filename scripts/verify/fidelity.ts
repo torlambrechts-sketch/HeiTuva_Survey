@@ -84,7 +84,22 @@ const OUT = 'artifacts/fidelity'
  *     in `tests/routes.manifest.ts`, so there is no picture of it.
  *   · «not built» — there is no such screen. Nothing here can say more about it.
  */
-type Pair = { app: string | null; note?: string }
+type Pair = {
+  app: string | null
+  note?: string
+  /**
+   * Which PROJECT's app capture to pair with. `desktop` unless stated.
+   *
+   * THE RESPONDENT SURFACE IS MOBILE, AND PAIRING IT WITH A DESKTOP SHOT WAS
+   * COMPARING TWO DIFFERENT THINGS. The bundle draws `/s/[token]` at 780px —
+   * CLAUDE.md: «respondent-facing surfaces … mobile-first pixel-perfect at
+   * 380-420px» — and `findAppShot` took `.desktop.png` for every row, so five
+   * composites put a phone drawing beside a 2880px browser window and invited
+   * a verdict on the difference. That is the script's own «captured under the
+   * wrong name» failure, arriving in the pairing instead of in the capture.
+   */
+  project?: 'desktop' | 'mobile'
+}
 
 const PAIRS: Record<string, Pair> = {
   'admin-brukere': { app: 'admin-brukere.default' },
@@ -101,10 +116,10 @@ const PAIRS: Record<string, Pair> = {
   dashboard: { app: 'dashboard.default' },
   hjelp: { app: 'hjelp.default' },
   live: { app: 'live.default' },
-  'live-revealed': { app: null, note: 'not in the capture manifest — the app reveals, no state declared' },
+  'live-revealed': { app: 'live.revealed' },
   oppgaver: { app: 'oppgaver.default' },
-  'oppgaver-oppgaver': { app: null, note: 'not in the capture manifest — /oppgaver?type=oppgaver is built' },
-  'oppgaver-tilbakemeldinger': { app: null, note: 'not in the capture manifest — /oppgaver?type=tilbakemeldinger is built' },
+  'oppgaver-oppgaver': { app: 'oppgaver.type-oppgaver' },
+  'oppgaver-tilbakemeldinger': { app: 'oppgaver.type-tilbakemeldinger' },
   oversikt: { app: 'oversikt.default' },
   profil: { app: 'profil.default' },
   'rapport-editor': { app: 'rapport-editor.innhold' },
@@ -113,11 +128,11 @@ const PAIRS: Record<string, Pair> = {
   rapporter: { app: 'rapporter.lovpalagte' },
   'rapporter-mine': { app: 'rapporter.mine-rapporter' },
   'rapporter-standard': { app: 'rapporter.standardmaler' },
-  respondent: { app: 'respondent.default' },
-  'respondent-kommentar': { app: null, note: 'not in the capture manifest — the comment box is built' },
-  'respondent-kommentar-lagret': { app: null, note: 'not in the capture manifest — the saved state is built' },
-  'respondent-takk': { app: null, note: 'not in the capture manifest — the thanks screen is built' },
-  'respondent-takk-sendt': { app: null, note: 'not in the capture manifest — the thanks screen is built' },
+  respondent: { app: 'respondent.default', project: 'mobile' },
+  'respondent-kommentar': { app: 'respondent.kommentar', project: 'mobile' },
+  'respondent-kommentar-lagret': { app: 'respondent.kommentar-lagret', project: 'mobile' },
+  'respondent-takk': { app: 'respondent-takk.default', project: 'mobile' },
+  'respondent-takk-sendt': { app: 'respondent-takk.sendt', project: 'mobile' },
   resultater: { app: 'resultater.default' },
   send: { app: 'send.default' },
   undersokelser: { app: 'undersokelser.default' },
@@ -136,10 +151,10 @@ async function targetBundleDir(): Promise<string> {
   return `artifacts/${dirs.sort().at(-1)!}`
 }
 
-async function findAppShot(stem: string): Promise<string | null> {
+async function findAppShot(stem: string, project: 'desktop' | 'mobile' = 'desktop'): Promise<string | null> {
   const phases = (await readdir('artifacts')).filter((d) => d.startsWith('phase-'))
   for (const p of phases.sort()) {
-    const f = `artifacts/${p}/${stem}.desktop.png`
+    const f = `artifacts/${p}/${stem}.${project}.png`
     if (existsSync(f)) return f
   }
   return null
@@ -204,7 +219,7 @@ async function main() {
         console.log(`  --   ${name.padEnd(30)} no app capture — ${pair.note ?? ''}`)
         continue
       }
-      const shot = await findAppShot(pair.app)
+      const shot = await findAppShot(pair.app, pair.project ?? 'desktop')
       if (!shot) {
         missing.push({ name, note: `expected artifacts/phase-*/${pair.app}.desktop.png — run verify:browser` })
         console.log(`  MISS ${name.padEnd(30)} ${pair.app}.desktop.png not found`)

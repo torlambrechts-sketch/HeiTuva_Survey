@@ -171,6 +171,47 @@ async function pickSurvey(page: Page, title: string) {
   await page.getByRole('heading', { name: 'Resultater', level: 1 }).waitFor()
 }
 
+/**
+ * F6 — walk the respondent questionnaire to the end and submit it.
+ *
+ * WRITTEN AS A LOOP RATHER THAN A FIXED NUMBER OF CLICKS, because the step
+ * count is a property of the seeded survey and a literal would silently stop
+ * mid-questionnaire the day a question is added — the capture would still
+ * succeed and would photograph the wrong screen, which is the failure this
+ * manifest has hit before under a different name.
+ *
+ * Each step answers the first answerable control it finds so «Neste» is not
+ * refused by a required question, then advances. `respondent/required-blocked`
+ * is the capture that proves the refusal works; this one exists to get past it.
+ */
+async function submitRespondent(page: Page, surveyComment?: string) {
+  for (let guard = 0; guard < 40; guard++) {
+    const choice = page.locator('section button[aria-pressed]').first()
+    if (await choice.count()) {
+      await choice.click()
+    } else {
+      const text = page.locator('section textarea, section input[type="text"]').first()
+      if (await text.count()) await text.fill('Greit nok.')
+    }
+
+    const next = page.getByRole('button', { name: /^(Neste|Next)$/ })
+    if (await next.count()) {
+      await next.first().click()
+      await page.waitForTimeout(150)
+      continue
+    }
+    break
+  }
+
+  if (surveyComment !== undefined) {
+    const fb = page.getByLabel(/Hva synes du om undersøkelsen|What did you think of the survey/)
+    if (await fb.count()) await fb.first().fill(surveyComment)
+  }
+
+  await page.getByRole('button', { name: /^(Send inn svar|Submit answers)$/ }).first().click()
+  await page.getByText(/^(Takk!|Thank you!)$/).waitFor({ timeout: 15_000 })
+}
+
 export const ROUTES: RouteSpec[] = [
   {
     /*
@@ -449,6 +490,29 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        /* F6 — `/oppgaver?type=oppgaver`, the drawing's `oppgaver-oppgaver`.
+           The type rail is a URL parameter, so the default capture shows only
+           one of its three positions and the other two had never been walked. */
+        name: 'type-oppgaver',
+        setup: async (page) => {
+          await page.goto(`${new URL(page.url()).origin}/oppgaver?type=oppgaver`, {
+            waitUntil: 'networkidle',
+          })
+        },
+      },
+      {
+        /* F6 — `/oppgaver?type=tilbakemeldinger`, the drawing's
+           `oppgaver-tilbakemeldinger`. The `tom` state below already navigates
+           here and then narrows it to empty; this is the same route with its
+           rows, which is what the bundle draws. */
+        name: 'type-tilbakemeldinger',
+        setup: async (page) => {
+          await page.goto(`${new URL(page.url()).origin}/oppgaver?type=tilbakemeldinger`, {
+            waitUntil: 'networkidle',
+          })
+        },
+      },
+      {
         /* An expanded row, because «Interne notater» (M:0113), the six step
            chips and the reply box render only there — three quarters of what
            this phase built is behind one click. The seeded note on «Revisjon
@@ -497,6 +561,39 @@ export const ROUTES: RouteSpec[] = [
           await pickSurvey(page, 'Arbeidsmiljø')
           await page.getByRole('link', { name: /^(Kjør live|Run live)$/ }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/live'))
+        },
+      },
+      {
+        /*
+          F6 — THE REVEAL, AND THE MANIFEST'S OWN REASON FOR OMITTING IT WAS
+          WRONG.
+
+          The note above says «revealed» is not reachable on the demo seed
+          because the counter is hidden and the reveal refused BELOW k. Measured
+          2026-09-16, that is not what blocks it: `answered` comes from
+          `aggregate_results` over the ROUND (live/page.tsx:110-122), and the
+          seeded round has 12 responses against k=5 — so `belowThreshold` is
+          FALSE and the button is not disabled.
+
+          What actually blocks it is that the seeded session is CLOSED and
+          EXPIRED, so `open` is false and page.tsx:165 passes `session={null}`;
+          with no session there is no reveal control to click. The capture
+          therefore does what a presenter does — opens a session, then reveals —
+          and closes it again in teardown, because a session left open outlives
+          this capture and would photograph «live/default» with an active one.
+        */
+        name: 'revealed',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø')
+          await page.getByRole('link', { name: /^(Kjør live|Run live)$/ }).click()
+          await page.waitForURL((u) => u.pathname.endsWith('/live'))
+          await page.getByRole('button', { name: /^(Start live|Go live)$/ }).click()
+          await page.getByRole('button', { name: /^(Vis resultat|Show results)$/ }).click()
+          await page.getByRole('button', { name: /^(Skjul resultat|Hide results)$/ }).waitFor()
+        },
+        teardown: async (page) => {
+          const close = page.getByRole('button', { name: /^(Avslutt live|End live)$/ })
+          if (await close.count()) await close.first().click()
         },
       },
     ],
@@ -1294,6 +1391,72 @@ export const ROUTES: RouteSpec[] = [
           // notice rather than advancing.
           await page.getByRole('button', { name: 'Neste' }).click()
           await page.waitForTimeout(200)
+        },
+      },
+      {
+        /* F6 — the per-question comment box OPEN (`respondent-kommentar`).
+           C3 built it and no capture had ever opened it, so the drawing's two
+           comment states had no app half at all. The opener is a control with
+           its own label rather than a position, so this does not silently move
+           to another question when the seed changes. */
+        name: 'kommentar',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /Legg til en kommentar|Add a comment/ })
+            .first()
+            .click()
+          await page.getByPlaceholder(/Skriv en kort kommentar|Write a short comment/).first().waitFor()
+        },
+      },
+      {
+        /* F6 — the SAVED state (`respondent-kommentar-lagret`), which is the
+           one v6 removed the map for and whose meaning changed: `qcSaved` is a
+           derived boolean over `qcSavedText` now (CLAUDE.md's third kind of
+           bundle change). The app half has to exist for that to be checkable
+           at all. */
+        name: 'kommentar-lagret',
+        setup: async (page) => {
+          await page.getByRole('button', { name: /Legg til en kommentar|Add a comment/ })
+            .first()
+            .click()
+          const box = page.getByPlaceholder(/Skriv en kort kommentar|Write a short comment/).first()
+          await box.fill('Spørsmålet var litt uklart formulert.')
+          await page.getByRole('button', { name: /^(Lagre kommentar|Save comment)$/ }).first().click()
+          await page.getByText(/Kommentar lagret|Comment saved/).first().waitFor()
+        },
+      },
+    ],
+  },
+  {
+    /*
+      F6 — THE THANKS SCREEN, BOTH HALVES. `ThankYou` renders on `done`, and
+      `commentSent` is true only when a SURVEY-LEVEL comment actually went with
+      the submission — the bundle's `fbSent` state, which the app refuses to
+      fake (a confirmation of something that did not happen is a fabricated
+      value). So the two are genuinely two states and not one with a flag.
+
+      A SEPARATE ENTRY rather than two more states on `respondent`, because
+      submitting is terminal: every state after it on the same token would
+      photograph the thanks screen instead of the survey. The share token stays
+      answerable, which is what makes a second entry possible at all.
+    */
+    route: `/s/${DEMO_SHARE_TOKEN}`,
+    label: 'respondent-takk',
+    as: 'anon',
+    phase: 'phase-3',
+    states: [
+      {
+        name: 'default',
+        setup: async (page) => {
+          await submitRespondent(page)
+        },
+      },
+      {
+        name: 'sendt',
+        setup: async (page) => {
+          // The survey-level box (`fbTitle`) is what sets `commentSent`. It is
+          // the LAST card on the last step, so it is filled after the answers
+          // and before Send.
+          await submitRespondent(page, 'Undersøkelsen var grei, men litt lang.')
         },
       },
     ],
