@@ -383,6 +383,29 @@ authoritative in a way a stale document does not.
    «nothing yet», say so in the column comment and log it; if the answer is «a server action»,
    the phase that adds the column adds the action, and a test asserts it exists.
 
+   **AND A THIRD FACE, WHICH IS WORSE THAN BOTH AND EARNS ITS OWN LINE (G4, 2026-09-16, D221).
+   Tor: «That is not a control that does nothing — it is a control that TELLS THE USER it did
+   something.»**
+
+   > **A control whose COPY asserts the write it does not perform is a different class from
+   > decoration, and a worse one.**
+
+   The first two faces are silences: nothing stores it, or nothing reads it. A user meets them and
+   learns nothing either way — the switch moves, the page reloads, and the absence of effect is
+   invisible. **The third face SPEAKS.** v6's down-vote handler is `setState({ tvRated:"down" })`
+   and its own line is «Takk. **Spørsmålet er logget** slik at vi kan lære av det» (v6:9011).
+
+   The difference is what the user does next. Against decoration she suspects nothing and loses
+   nothing. Against this she **stops reporting the problem**, because she has been told it was
+   recorded — so the control does not merely fail to collect, it actively suppresses the thing it
+   pretends to collect. G2's four unread switches were dead weight; this one costs the feedback it
+   is named for.
+
+   So the test is not «does something store this» but «**does the copy claim more than the code
+   does**», and it is asked of the SENTENCE beside the control, not only of the handler. That is
+   the security-copy sweep pointed at a widget instead of at a page, and it is why the refusal
+   here is on the screen in words rather than a control quietly left out.
+
 **A GENERATED FILE IS REGENERATED, NEVER HAND-PATCHED — AND V6-3 PAID FOR THE RULE BY LUCK.**
 `types/database.ts` says «GENERATED — do not hand-edit» at the top, and the temptation it exists to
 refuse is precise: the compiler names ONE missing key, and adding that one key makes the error go
@@ -742,6 +765,47 @@ and what else belongs to that thing?»**
   was repaired by moving the rule to a column no cascade can withdraw, not by adding a fourth
   disjunct — so the fourth construct, whatever it is, does not need this rule rewritten again.
   Fix the column, not the predicate.
+
+## A RIGHT CONCLUSION CAN REST ON REASONING THAT IS NOT TRUE, AND ONLY MEASURING TELLS THEM APART
+
+**Added 2026-09-16 (Tor), after G4. «I read a substitution into an arrival.»**
+
+The instruction said v6 had **REPLACED** a generic `surveys:` entry in the shared `tuvaFor` map
+with the dedicated `svTuva` panel, and that the substitution was «the answer, or close to it». The
+conclusion it pointed at — *the global helper does not draw on `/undersokelser`* — is **correct**.
+The reasoning behind it is **not**: `grep -c` over the v5 bundle returns 0 for `tuvaFor` and 0 for
+every `tv*` identifier. **The helper is a v6 ARRIVAL. There was no v5 entry to replace.**
+
+What actually establishes the conclusion is two things inside v6 itself, neither of them a diff:
+`tvShow` excludes `["surveys","respond","splash","login"]` by name (v6:8965), and `tuvaFor`'s map
+has no `surveys` key at all (v6:6831-6882). Either alone is sufficient.
+
+**Why this is worth a section when nothing was built wrong.** Because nothing being built wrong is
+the trap. A conclusion that survives has no symptom, so the false reasoning under it is never
+disturbed — it gets quoted in the next brief, and the time after that it is load-bearing for a
+question the measurement would have answered differently. This file already records the same shape
+pointed at numbers («a carried number nobody re-derives is how a wrong one survives four phases»)
+and at capabilities («the call beside the claim»). This is the shape pointed at an ARGUMENT.
+
+**The rule, and it is cheap:**
+
+- **Check the premise even when you agree with where it lands.** «The drawing has probably already
+  decided this» is a hypothesis; the confirmation is a `grep`, not the fact that the answer looks
+  right.
+- **State which evidence the conclusion actually rests on.** «It rests on v6's own two exclusions,
+  not on a diff against v5» is one clause, and it is the difference between a finding somebody can
+  re-derive and one they have to take on trust.
+- **A correction that leaves the conclusion standing is still a correction.** Say it plainly rather
+  than quietly proceeding, because the reader's next question is built on the reasoning, not on the
+  answer.
+
+**And the companion, from the same phase, because it is the same shape one floor down (D225).**
+`verify:responsive` named two blockers; the geometry was measured exactly and the fix followed from
+it — and the count went from two to SEVEN. The measurement was *true about the two instances it
+named* and silent about the property. **A measurement that explains the instance is not the same as
+one that explains the class**, and the way to tell is to ask what the instance is an instance OF
+before fixing it. Here: not «the bubble is 3px too far left» but «a fixed corner over full-width
+content sits on whatever is under it».
 
 ## A CONTINUOUS RUN ON A SHARED BRANCH PAYS FOR WORK IT THROWS AWAY
 
