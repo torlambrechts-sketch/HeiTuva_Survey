@@ -4,15 +4,24 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { TUVA_ANSWERS, surveyIdIn, tuvaHref, tuvaKeyFor } from '@/lib/tuva/answers'
+import { TUVA_ANSWERS, TUVA_FALLBACK, surveyIdIn, tuvaHref, tuvaKeyFor } from '@/lib/tuva/answers'
 
 /**
- * G4 — Tuva, the global helper, mounted once by the shell (v6:5858-5930).
+ * G4/G5 — Tuva, the global helper, mounted once by the shell (v6:5858-5930).
  *
  * A fixed bubble at the bottom right that opens a 308px panel carrying a
- * headline, a line of context and up to three answers. It renders NOTHING on a
- * route the registry gives no entry, which is most of them — see
- * `lib/tuva/answers.ts` for which and why.
+ * headline, a line of context and up to three answers.
+ *
+ * ── IT IS ON EVERY PAGE, AND THAT IS AN OVERRULE (Tor, 2026-09-16) ─────────
+ *
+ * G4 shipped it with two silences: V6-5's four excluded screens and G4's own
+ * `TUVA_SUPPRESSED` for `/undersokelser`. **Both were overruled**: the helper
+ * is the same and present everywhere, and `/undersokelser` carries it BESIDE
+ * `svTuva` rather than instead of it. `lib/tuva/answers.ts` records which
+ * decision each half came from; the placement question the overrule opens —
+ * two Tuvas in one corner — is answered below, by measurement.
+ *
+ * The only thing that removes it now is the organisation's own switch.
  *
  * ── WHAT THE BUNDLE DRAWS THAT DOES NOT SHIP, AND WHY IT SAYS SO ───────────
  *
@@ -68,9 +77,13 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
   /** The screens whose answer has been read. Session-scoped on purpose. */
   const [seen, setSeen] = useState<string[]>([])
 
-  const key = tuvaKeyFor(pathname)
+  /* No screen is silent: a route the registry does not name still gets the
+     general answer. `tuvaKeyFor` itself returns null so the test can fail when
+     a new screen arrives uncovered — the fallback lives HERE, at the render,
+     and nowhere in the resolver. See the note on `tuvaKeyFor`. */
+  const key = tuvaKeyFor(pathname) ?? TUVA_FALLBACK
   // The switch is real (G2): off means no bubble at all, not a disabled one.
-  if (!tuvaOn || !key) return null
+  if (!tuvaOn) return null
 
   const surveyId = surveyIdIn(pathname)
   const answers = TUVA_ANSWERS[key]
@@ -148,14 +161,19 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
             ))}
           </div>
 
-          {/* «Kom i gang» — the one that is derived, on the screen that has it. */}
-          <Link
-            href="/oversikt"
-            onClick={() => setOpen(false)}
-            className="touch-44 mt-[10px] flex items-center rounded-[11px] border border-dashed border-line px-[13px] py-[9px] text-[11.5px] font-semibold text-mut no-underline"
-          >
-            {t('trackElsewhere')}
-          </Link>
+          {/* «Kom i gang» — the one that is derived, on the screen that has it.
+              Withheld ON Oversikt itself: since G5 the panel renders there too,
+              and a link whose whole content is «it is on Oversikt» pointing at
+              the page you are reading is not an answer. */}
+          {key === 'oversikt' ? null : (
+            <Link
+              href="/oversikt"
+              onClick={() => setOpen(false)}
+              className="touch-44 mt-[10px] flex items-center rounded-[11px] border border-dashed border-line px-[13px] py-[9px] text-[11.5px] font-semibold text-mut no-underline"
+            >
+              {t('trackElsewhere')}
+            </Link>
+          )}
 
           {/* The two refusals, stated rather than absent. */}
           <p className="mt-[10px] border-t border-line pt-[9px] text-[11px] leading-[1.45] text-mut">

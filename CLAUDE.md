@@ -1817,3 +1817,48 @@ ordering, not a regression.
 
 ## When ambiguous
 If the design bundle and this file conflict, this file wins on security, the bundle wins on visuals. If something is genuinely unspecified (e.g., a hover state, an error state the prototype lacks), choose the minimal consistent option and log it in `docs/DEVIATIONS.md` — do not invent features.
+
+## WHEN THE DRAWING AND A DECISION DISAGREE, ASK — IT WAS NOT MINE TO SETTLE
+
+**Added 2026-09-16 (Tor), overruling V6-5's four-screen exclusion and G4's
+`TUVA_SUPPRESSED`. «I have been taking those on reasoning and several of them were
+mine to raise, not mine to settle.»**
+
+> **When the bundle and a decision disagree, or when a screen would get different
+> treatment from its neighbours, ASK rather than decide.**
+
+The two overruled calls were not careless. Both were measured, both cited the
+drawing by line, and both had a written argument — «a helper that always has an
+opinion is one nobody believes», and «building both would put two bubbles in one
+corner». **That is exactly why the rule is needed: a well-reasoned decision is
+indistinguishable from a settled one once it is in the code**, and the next phase
+inherits it as a premise rather than as a question. A phase that guesses badly
+gets caught; a phase that guesses WELL does not, and the guess becomes load-bearing.
+
+The tell is in the shape of the call rather than in its difficulty:
+
+- **A screen treated unlike its neighbours is a product decision**, whatever it
+  looks like in the markup. «These four screens get no helper» reads as a
+  fidelity reading of `tvShow`'s exclusion list; it is a decision about what the
+  product is. Q123 already named this shape once — «a layout decision wearing a
+  naming decision's clothes».
+- **A refusal is mine; a scope is not.** Refusing a control because nothing
+  stores what it collects is a rule this file already states, and applying it is
+  the phase's job. Deciding WHERE a shipped control appears is not: nothing in
+  the invariants decides it, so it is preference, and preference is Tor's.
+- **«The drawing decides it twice» is an argument about the drawing, not about
+  the product.** Both overruled calls were right about v6 and are still right
+  about v6 — `tvShow` does exclude four screens, `tuvaFor` does lack a `surveys`
+  entry. CLAUDE.md's tie-breaker says the bundle wins on VISUALS. Which screens
+  carry a shared control is not a visual.
+
+**And the cost of asking is one paragraph in the report.** G4 already reported
+the `/undersokelser` measurement before building, under «MEASURE FIRST», and then
+settled the conclusion in the same breath rather than putting it back. The
+measurement was the expensive half and it was done; what was missing was the
+question mark at the end of it.
+
+The counterpart obligation, so this does not become a stall: **ask INSIDE the
+phase and keep building everything the answer does not block.** A question is not
+a reason to stop; it is a reason to state the assumption, build under it, and say
+plainly which way it was assumed so the answer costs an edit rather than a rebuild.

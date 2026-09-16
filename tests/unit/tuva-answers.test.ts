@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   TUVA_ANSWERS,
-  TUVA_SUPPRESSED,
+  TUVA_FALLBACK,
   TUVA_TABS,
   TUVA_TABS_ARE_REGISTERED,
   TUVA_TOP_LEVEL_HREFS,
@@ -16,7 +16,20 @@ import no from '../../messages/no.json'
 import en from '../../messages/en.json'
 
 /**
- * G4 — Tuva answers only where there is somewhere to go.
+ * G4/G5 — Tuva answers everywhere, and every answer lands somewhere real.
+ *
+ * **G5 inverted the central guard.** G4 asserted a SUPPRESSION LIST — the
+ * screens the helper stayed off. Tor overruled the exclusions (the helper is on
+ * every page), so the list is gone and the assertion is its opposite: **every
+ * route under `app/(app)` resolves to an answer key.** That is the stronger
+ * property, and the reason is what it does when the product changes — a
+ * suppression list is silent about a screen nobody thought of, and this fails
+ * on it.
+ *
+ * It can only fail because `tuvaKeyFor` has NO fallback: the general answer is
+ * applied at the render (`TuvaHelper`), not in the resolver. A resolver ending
+ * `return 'generell'` would make test 8 unfailable, which is exactly the shape
+ * G4 was caught committing one phase earlier.
  *
  * Tor: «a helper promising a screen we refused is worse than a helper with one
  * fewer answer.» The central test DERIVES the app's routes from the file system
@@ -128,33 +141,65 @@ describe('G4 — every Tuva answer lands somewhere that exists', () => {
     expect(missing, 'a key the panel builds by concatenation that does not resolve').toEqual([])
   })
 
-  it('8. a path with no entry gets NOTHING rather than a generic answer', () => {
-    /* V6-5's decision, standing: a helper that always has an opinion is one
-       nobody believes. */
-    expect(tuvaKeyFor('/oversikt')).toBeNull()
-    expect(tuvaKeyFor('/dashboard')).toBeNull()
-    expect(tuvaKeyFor('/rapporter')).toBeNull()
-    expect(tuvaKeyFor('/hjelp')).toBeNull()
+  it('8. EVERY app route resolves to an answer key — the inverted guard', () => {
+    /* Tor, 2026-09-16, overruling V6-5's four-screen exclusion and G4's
+       `TUVA_SUPPRESSED`: «THE HELPER IS THE SAME AND PRESENT ON EVERY PAGE. No
+       exclusions.» So the property is coverage, not silence.
+
+       Derived from the file system rather than listed, for the same reason
+       test 2 is: a list here would be an enumeration that goes stale exactly
+       when a screen ARRIVES, which is the case this exists to catch. */
+    const id = '11111111-2222-4333-8444-555555555555'
+    const uncovered = [...APP_ROUTES]
+      .map((r) => r.replace(/\/:id(?=\/|$)/, `/${id}`))
+      .filter((r) => tuvaKeyFor(r) === null)
+    expect(uncovered, 'a screen that arrived without an answer set').toEqual([])
+    expect(APP_ROUTES.size).toBeGreaterThan(25)
   })
 
-  it('9. /undersokelser gets nothing, because svTuva stands there', () => {
-    /* The drawing decides this twice: `tvShow` excludes "surveys" by name
-       (v6:8965) and `tuvaFor`'s map has no `surveys` entry (v6:6831-6882).
-       Building both would put two bubbles in one corner. */
-    /* THE DECLARATION IS WHAT IS ASSERTED, and the comment in the resolver
-       says why: deleting the suppression changes no behaviour today, because
-       nothing below it matches `/undersokelser` either. Proven — removing the
-       line left all twelve tests green, which is a guard that cannot fail. So
-       the list is the guard, and a future prefix rule cannot quietly claim
-       this route without failing here. */
-    expect(TUVA_SUPPRESSED).toContain('/undersokelser')
-    expect(tuvaKeyFor('/undersokelser')).toBeNull()
-    expect(tuvaKeyFor('/undersokelser?visning=kort')).toBeNull()
+  it('9. the resolver can still FAIL — it has no blanket fallback', () => {
+    /* The half that makes test 8 mean anything. If `tuvaKeyFor` ended with
+       `return 'generell'`, every conceivable path would resolve and test 8
+       could never go red. The general answer is applied at the RENDER instead
+       (`TuvaHelper`: `tuvaKeyFor(path) ?? TUVA_FALLBACK`), so no screen is
+       silent AND an uncovered one is still a red build. */
+    expect(tuvaKeyFor('/en-skjerm-som-ikke-finnes')).toBeNull()
+    expect(TUVA_FALLBACK).toBe('generell')
+    expect(TUVA_ANSWERS[TUVA_FALLBACK].length).toBeGreaterThan(0)
+    const helper = readFileSync('components/TuvaHelper.tsx', 'utf8')
+    expect(helper).toContain('?? TUVA_FALLBACK')
+  })
+
+  it('9b. the two overrules, stated as what now happens rather than as absence', () => {
     const id = '11111111-2222-4333-8444-555555555555'
-    expect(tuvaKeyFor(`/undersokelser/${id}/resultater`)).toBeNull()
-    // The two sub-routes that DO answer are the exceptions, named.
+    // V6-5's four excluded screens — each now has its own entry, not the
+    // fallback, because v6's `tuvaFor` map holds three of them by name.
+    expect(tuvaKeyFor('/oversikt')).toBe('oversikt')
+    expect(tuvaKeyFor('/dashboard')).toBe('dashboard')
+    expect(tuvaKeyFor('/rapporter')).toBe('rapporter')
+    // v6 has no entry for /hjelp, so it takes the general answer — DECLARED in
+    // the resolver rather than reached by fall-through.
+    expect(tuvaKeyFor('/hjelp')).toBe('generell')
+    // G4's suppression: the list screen now answers BESIDE svTuva.
+    expect(tuvaKeyFor('/undersokelser')).toBe('generell')
+    expect(tuvaKeyFor('/undersokelser/ny')).toBe('generell')
+    // And the survey's own tabs, which G4 left null for every tab but two.
+    expect(tuvaKeyFor(`/undersokelser/${id}/resultater`)).toBe('svdetail')
+    expect(tuvaKeyFor(`/undersokelser/${id}`)).toBe('svdetail')
     expect(tuvaKeyFor(`/undersokelser/${id}/bygg`)).toBe('bygg')
     expect(tuvaKeyFor(`/undersokelser/${id}/send`)).toBe('send')
+  })
+
+  it('9c. no answer set is dead — every key is reachable from a real route', () => {
+    /* The companion to test 8. Coverage says no screen lacks an answer; this
+       says no answer lacks a screen, so a key left behind by a route that was
+       renamed shows up here rather than sitting unread. */
+    const id = '11111111-2222-4333-8444-555555555555'
+    const reached = new Set(
+      [...APP_ROUTES].map((r) => tuvaKeyFor(r.replace(/\/:id(?=\/|$)/, `/${id}`))),
+    )
+    const orphans = Object.keys(TUVA_ANSWERS).filter((k) => !reached.has(k as never))
+    expect(orphans, 'an answer set no route resolves to').toEqual([])
   })
 
   it('10. the survey-scoped entries resolve only with a survey in scope', () => {
@@ -189,5 +234,9 @@ describe('G4 — every Tuva answer lands somewhere that exists', () => {
     const panel = readFileSync('components/TuvaHelper.tsx', 'utf8')
     expect(panel).toContain("href=\"/oversikt\"")
     for (const m of [NO, EN]) expect(m.tuva?.trackElsewhere).toBeTruthy()
+    /* G5 — and it is withheld ON Oversikt, where it would point at the page
+       being read. The condition is asserted because the link is now rendered on
+       a screen that did not have the panel before. */
+    expect(panel).toContain("key === 'oversikt' ? null :")
   })
 })

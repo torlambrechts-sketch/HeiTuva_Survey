@@ -7020,3 +7020,76 @@ the row's position after a reseed rather than the code.
 **Logged rather than fixed, because a phase gets one verification pass and one
 fix pass and this is the fix pass.** It is a real finding on a real screen and
 it belongs to whoever opens `SurveyTable` next, with the measurement above.
+
+### D227 — the helper is on every page, which is a DEPARTURE from v6 on five screens
+
+**G5, and it is a decision rather than a reading — Tor overruled two of mine.**
+
+The bundle draws the global helper on TEN screens and refuses it on the rest.
+Measured, both halves:
+
+```
+v6:8965  tvShow: … && ["surveys","respond","splash","login"].indexOf(st.screen) < 0
+v6:6831  tuvaFor's M = { dash, tasks, dashboard, reports, library, admin,
+                         svdetail, build, send, profile }   ← ten keys, no `surveys`
+```
+
+So v6 gives `/hjelp` no entry at all, and excludes `surveys` twice over. V6-5
+read that and refused four screens; G4 read it again and added `TUVA_SUPPRESSED`
+for `/undersokelser`. **Both readings are still correct about v6.** The product
+no longer follows them:
+
+| screen | v6 | ships |
+|---|---|---|
+| `/oversikt` | `dash` entry exists; V6-5 refused it | **built**, from v6's own copy |
+| `/dashboard` | `dashboard` entry exists; V6-5 refused it | **built**, from v6's own copy |
+| `/rapporter` | `reports` entry exists; V6-5 refused it | **built**, one answer repointed |
+| `/hjelp` | no entry at all | **general answer** |
+| `/undersokelser` | excluded by name AND absent from the map | **built, beside `svTuva`** |
+
+**Why it is logged rather than argued away.** CLAUDE.md's tie-breaker is that the
+bundle wins on visuals — and *which screens carry a shared control* is not a
+visual, it is what the product is. Recording it as a deviation keeps the two
+facts apart: v6 draws one Tuva at a time on nine screens, and we draw one Tuva on
+every screen and two on one. A fidelity question about this surface is answered
+against this row, not by re-reading `tvShow` and concluding the app is wrong.
+
+**The two Tuvas do not collide, and the reason is structural rather than a
+nudged offset.** `svTuva` is positioned inside the CONTENT FRAME — `absolute
+bottom-[18px] right-[18px]` in the list card when undocked, or the grid's right
+column when docked — and the global helper is `fixed` to the VIEWPORT corner,
+which at `xl` and above is in the page gutter beside the frame. Measured, eight
+states, `/undersokelser`, administrator:
+
+```
+1440  docked        global 1366,826 52x52   side 940,444 340x367    paint 0px²  hit44 0px²
+1440  docked, btm   global 1366,826         side 940,16             paint 0px²  hit44 0px²
+1440  undocked      global 1366,826         bubble 1207,529 54x54   paint 0px²  hit44 0px²
+1440  undocked, btm global 1366,826         bubble 1207,453         paint 0px²  hit44 0px²
+1360  docked        global 1286,826         side 900,443 340x367    paint 0px²  hit44 0px²
+1360  undocked      global 1286,826         bubble 1167,529         paint 0px²  hit44 0px²
+1281  docked        global 1207,826         side 861,444 340x367    paint 0px²  hit44 0px²
+1281  undocked      global 1207,826         bubble 1128,529         paint 0px²  hit44 0px²
+1280  docked        global 1206,826         side 860,444 340x367    paint 0px²  hit44 0px²
+1280  undocked      global 1206,826         bubble 1127,529         paint 0px²  hit44 0px²
+ 390  docked        global  318,2597        side  20,2208           paint 0px²  hit44 0px²
+ 390  undocked      global  318,485         bubble 297,388          paint 0px²  hit44 0px²
+```
+
+**1280px is the worst case and it was measured there on purpose**: it is the
+`xl` breakpoint, so it is the narrowest viewport at which the helper is `fixed`
+at all. The frame's right edge is at x=1200 and the bubble occupies 1206–1258 —
+**6px of clearance, inside an 80px gutter**, and the gutter only widens above
+1280 — measured rather than assumed, because «it only gets better» is the kind
+of claim that is usually true and occasionally not: frame edge 1200 / bubble
+1206 at 1280px, 1201 / 1207 at 1281px, 1240 / 1286 at 1360px, 1280 / 1366 at
+1440px. Below `xl` the helper is in flow (RESPONSIVE.md rules 6, 2 and 4, D225), so
+the question does not arise: at 390px undocked the two sit 43px apart vertically
+in normal flow.
+
+**No placement was changed**, because the measurement said none needed changing.
+That is worth stating rather than passing over: the instruction anticipated a
+collision, the collision is the obvious consequence of two corner-anchored
+bubbles, and it does not happen — because one of them is anchored to a card and
+the other to the window, and at every width where both are anchored at all, the
+card ends before the window does.
