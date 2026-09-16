@@ -33,6 +33,7 @@ import {
   replyToComment,
   setCommentHandled,
   setTaskDue,
+  setTaskShared,
   setWorklistView,
 } from './actions'
 import { TASK_ERROR_KEY } from './task-errors'
@@ -97,6 +98,11 @@ export type WorklistItem = {
   replies: { text: string; dateLabel: string }[]
   notes: WorklistNote[]
   corrects: string | null
+  /** G1 — `tasks.shared_with_respondents`, and whether it MAY be set. Two
+   *  fields rather than one because «off» and «cannot be turned on» are
+   *  different states and the panel says which. */
+  shared: boolean
+  shareable: boolean
 }
 
 /**
@@ -906,6 +912,63 @@ export function WorklistPanel({
                                 </button>
                               ) : null}
                             </div>
+                          ) : null}
+
+                          {/* G1 — the publication decision. Present on every
+                              task an editor can see, so «not shared» is visibly
+                              a choice rather than an absence; a generated task
+                              gets the REASON instead of a control, because the
+                              database refuses the flag there (Q72) and a toggle
+                              that always fails is worse than none. */}
+                          {canEdit && r.kind === 'task' ? (
+                            r.shareable ? (
+                              /* A BUTTON, not a checkbox. The first draft used
+                                 `<input type="checkbox">` and `verify:responsive`
+                                 reported an 18x18 hit area at both narrow widths
+                                 — correctly, and the useful part is WHY: measured,
+                                 that was the only checkbox input in the entire
+                                 application. Every other toggle here is a button
+                                 with `aria-pressed` and the bundle's pill, so the
+                                 fix is to stop being the exception rather than to
+                                 pad the exception up to 44px. */
+                              <button
+                                type="button"
+                                disabled={busy}
+                                aria-pressed={r.shared}
+                                onClick={() =>
+                                  run(() => setTaskShared({ id: r.id, shared: !r.shared }), 'wlSaved')
+                                }
+                                className="touch-44 mt-3 flex w-full cursor-pointer items-start gap-3 border-none bg-transparent p-0 text-left text-ink"
+                              >
+                                <span
+                                  aria-hidden
+                                  className="mt-0.5 flex h-[22px] w-[38px] flex-none rounded-full p-[3px]"
+                                  style={{
+                                    background: r.shared ? 'var(--ink)' : 'var(--sf2)',
+                                    justifyContent: r.shared ? 'flex-end' : 'flex-start',
+                                  }}
+                                >
+                                  <span className="block h-4 w-4 rounded-full bg-sf" />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block text-[12.5px] font-semibold">
+                                    {t('shareLabel')}
+                                  </span>
+                                  <span className="mt-0.5 block text-[12px] leading-[1.45] text-mut">
+                                    {t('shareHint')}
+                                    {r.status !== 'gjennomfort' &&
+                                    r.status !== 'effektvurdert' &&
+                                    r.status !== 'lukket'
+                                      ? ` ${t('shareOnlyDone')}`
+                                      : ''}
+                                  </span>
+                                </span>
+                              </button>
+                            ) : (
+                              <p className="mt-3 text-[12px] leading-[1.45] text-mut">
+                                {t('shareNotGenerated')}
+                              </p>
+                            )
                           ) : null}
 
                           {r.status === 'gjennomfort' ? (

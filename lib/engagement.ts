@@ -45,6 +45,21 @@ export type Engagement = {
   charity: string
   comments: CommentScope
   thank_you: string
+  /**
+   * G1 — «Hva skjer nå», the thanks screen's first card (v6:5519-5525).
+   *
+   * The bundle hard-codes it: «Resultatene legges fram i AMU 14. oktober, og
+   * lederne får sine tall samme uke» (v6:10078), a literal naming a committee
+   * and a date. Nothing could back that, so it is a per-survey field the
+   * editor writes — and the default is EMPTY rather than a plausible sentence,
+   * because a survey whose editor has not said what happens next has not said
+   * what happens next, and inventing one is the fabricated-value rule.
+   *
+   * Unlike `tasks.shared_with_respondents`, this needs no publication flag:
+   * the field is authored FOR the respondent, in a panel that says so. There
+   * is no audience to be surprised by.
+   */
+  next_steps: string
 } & Record<EngageToggle, boolean> & { mobile_first: boolean }
 
 /** Mirrors the column default in migration 20260902000003 exactly. */
@@ -62,6 +77,7 @@ export const ENGAGEMENT_DEFAULTS: Engagement = {
   mobile_first: true,
   one_question: true,
   thank_you: 'Takk! Vi deler hva vi gjør med svarene innen to uker.',
+  next_steps: '',
 }
 
 const isOneOf = <T extends readonly string[]>(list: T, v: unknown): v is T[number] =>
@@ -79,7 +95,7 @@ export function parseEngagement(raw: unknown): Engagement {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const bool = (k: EngageToggle | 'mobile_first') =>
     typeof r[k] === 'boolean' ? (r[k] as boolean) : ENGAGEMENT_DEFAULTS[k]
-  const str = (k: 'prize' | 'charity' | 'thank_you') =>
+  const str = (k: 'prize' | 'charity' | 'thank_you' | 'next_steps') =>
     typeof r[k] === 'string' ? (r[k] as string) : ENGAGEMENT_DEFAULTS[k]
 
   return {
@@ -89,6 +105,7 @@ export function parseEngagement(raw: unknown): Engagement {
     charity: str('charity'),
     comments: isOneOf(COMMENT_SCOPES, r.comments) ? r.comments : ENGAGEMENT_DEFAULTS.comments,
     thank_you: str('thank_you'),
+    next_steps: str('next_steps'),
     personal: bool('personal'),
     deadline: bool('deadline'),
     show_progress: bool('show_progress'),

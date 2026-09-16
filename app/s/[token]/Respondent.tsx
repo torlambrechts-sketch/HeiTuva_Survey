@@ -25,6 +25,7 @@ import {
 import { Shell } from './Shell'
 import { QuestionInput } from './QuestionInput'
 import { submitResponse } from './actions'
+import { ClosedLoop } from './ClosedLoop'
 import { CommentThread } from './CommentThread'
 import { PeerResults } from './PeerResults'
 
@@ -37,6 +38,8 @@ type Engage = {
   comments?: 'ingen' | 'lav' | 'alle'
   audience?: 'ansatte' | 'kunder'
   thank_you?: string
+  /** G1 — «Hva skjer nå». Empty until the editor writes one; see lib/engagement.ts. */
+  next_steps?: string
 }
 
 export function Respondent({
@@ -261,6 +264,10 @@ export function Respondent({
     return (
       <ThankYou
         thankYou={e.thank_you}
+        /* G1. Passed through rather than read in `ThankYou`, so the one place
+           that knows what `engage` contains stays the one place that reads it. */
+        nextSteps={e.next_steps ?? ''}
+        orgName={orgName}
         token={token}
         respondentKind={respondentKind}
         /* True only when a survey-level comment actually went with the
@@ -609,11 +616,15 @@ function ThankYou({
   onExitTest,
   onRestart,
   thankYou,
+  nextSteps = '',
+  orgName = '',
   token,
   respondentKind,
   commentSent = false,
 }: {
   thankYou?: string
+  nextSteps?: string
+  orgName?: string
   token: string
   respondentKind: 'person' | 'organisation'
   commentSent?: boolean
@@ -665,6 +676,15 @@ function ThankYou({
           </>
         ) : (
           <>
+            {/* G1 — «Hva skjer nå» and «Du sa · vi gjorde», in the bundle's own
+                order: both sit above the peer distribution (v6:5519-5546 come
+                before the `peerTitle` card at v6:5548).
+
+                In the NON-test branch only, for the same reason `CommentThread`
+                is: a dry run wrote nothing, so an opt-in from it would record a
+                preference nobody expressed, and «test på nytt» would toggle a
+                real column on a real invitation. */}
+            <ClosedLoop token={token} orgName={orgName} nextSteps={nextSteps} />
             <PeerResults token={token} respondentKind={respondentKind} />
             {/* C5 — the other half of the round trip. Renders nothing until a
                 manager has actually replied, so it never sits empty. In the

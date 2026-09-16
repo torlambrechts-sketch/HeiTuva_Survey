@@ -459,7 +459,10 @@
     "quizNotScoring": "Ikke poenggivende i quiz",
     "quizCorrectMark": "✓ riktig",
     "yes": "Ja",
-    "no": "Nei"
+    "no": "Nei",
+    "nextStepsLabel": "Hva skjer nå (vises til respondenten)",
+    "nextStepsHint": "Én eller to setninger om hva som skjer med svarene, og når. Står tomt hvis du ikke skriver noe — vi finner ikke på en dato.",
+    "nextStepsPlaceholder": "F.eks.: Resultatene legges fram i AMU i oktober, og lederne får sine tall samme uke."
   },
   "send": {
     "title": "Slik når den fram",
@@ -612,7 +615,10 @@
     "unitDay": "dag",
     "unitWeek": "uke",
     "unitMonth": "måned",
-    "impSuppressed": "{count} reservert"
+    "impSuppressed": "{count} reservert",
+    "wantsResultNone": "Ingen har bedt om det samlede resultatet ennå.",
+    "wantsResultSome": "{count, plural, =1 {Én respondent har bedt om det samlede resultatet.} other {# respondenter har bedt om det samlede resultatet.}}",
+    "wantsResultNote": "Du sender det selv når undersøkelsen er lukket. Adressene står på invitasjonene."
   },
   "results": {
     "title": "Resultater",
@@ -1464,7 +1470,14 @@
     "sheetFreeTextOrg": "Det du skriver vises sammen med virksomhetens navn.",
     "sheetRetentionLabel": "Sletting",
     "sheetRetentionMonths": "Svarene slettes automatisk etter {n} måneder.",
-    "sheetRetentionForever": "Svarene slettes ikke automatisk."
+    "sheetRetentionForever": "Svarene slettes ikke automatisk.",
+    "nextTitle": "Hva skjer nå",
+    "loopTitle": "Du sa · vi gjorde",
+    "loopLead": "Tiltak virksomheten har gjennomført og valgt å dele. Det er grunnen til at det er verdt å svare igjen.",
+    "loopNoDate": "dato ikke satt",
+    "optInOff": "Send meg det samlede resultatet",
+    "optInOn": "Vi har notert at du vil ha det samlede resultatet",
+    "optInNote": "Vi noterer ønsket på invitasjonen din — én av/på-verdi, ingenting som knytter deg til svarene dine. {virksomhet} sender resultatet selv når undersøkelsen er lukket."
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",
@@ -2215,7 +2228,11 @@
     "wlColNew": "Nytt",
     "wlColAwaitEffect": "Til effektvurdering",
     "wlScopeOpen": "Ubehandlet",
-    "wlSaved": "Lagret."
+    "wlSaved": "Lagret.",
+    "shareLabel": "Del med respondentene",
+    "shareHint": "Tittelen vises på takkeskjermen til alle som svarer i denne virksomheten. Ingen hjemmel, ingen ansvarlig, ingen frist — bare tittelen og datoen.",
+    "shareOnlyDone": "Deles først når tiltaket er gjennomført.",
+    "shareNotGenerated": "Et tiltak systemet har laget kan ikke deles: tittelen beskriver et funn, ikke noe som er gjort."
   },
   "help": {
     "title": "Hjelp og støtte",

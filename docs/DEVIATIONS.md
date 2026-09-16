@@ -6357,3 +6357,160 @@ segments off the filesystem and still could not see this: it iterates `SURVEY_TA
 hrefs never entered the registry. The new assertion sweeps `app/` and `components/` for any
 `/undersokelser/${…}/<segment>` literal and requires the segment to be a real directory. Proven RED
 first — it named both files — and `verify:browser` went **65 failures -> 0**, 223 captured.
+
+### D199 — «Du sa · vi gjorde» ships without the «du sa» half
+
+**v6:5528-5546 · G1 · Q209.**
+
+The bundle pairs every closed-loop item with a quote: «{{ s6.said }}» above the
+bold «{{ s6.did }}» (v6:5539-5540). The fixture behind it is three hand-written
+objects (v6:10079-10081). **The quote half is not built, and cannot be.**
+
+It is one respondent's own free text rendered to ANOTHER respondent, on a page
+whose reader has no role, no session and — for a share link or a QR voucher — no
+relationship to the organisation at all. Q72's sentence decides it without
+needing a new rule: show what was DONE, never what was found. A quote IS the
+finding.
+
+The heading keeps its name, because the SURFACE is still the closed loop: she
+answered, and this is what came of the last round. What changes is that the «du
+sa» half is the survey she just filled in rather than a sentence quoted back at
+her. Each row is the action alone — title, and the day it was done.
+
+### D200 — the thanks screen's «Hva skjer nå» is empty until an editor writes it
+
+**v6:5519-5525 · G1 · Q211.**
+
+The bundle's sentence is a literal: «Resultatene legges fram i AMU 14. oktober,
+og lederne får sine tall samme uke» (v6:10078). It names a committee and a date,
+and nothing in the schema could back either.
+
+`engage.next_steps` is the field, written by the Builder's engagement panel, and
+its default is `''` rather than a plausible sentence. **A survey whose editor has
+not said what happens next has not said what happens next**, and a substitute
+would be the fabricated-value rule: indistinguishable from a real one in review,
+and it survives into screenshots as though it were true. The card renders only
+when the field has content.
+
+### D201 — the result opt-in promises a note, not an email
+
+**v6:5522-5524 · G1 · Q210.**
+
+The bundle's label is «Send meg det samlede resultatet» and its handler is
+`setState` and nothing else (v6:10086) — the switch is drawn, and it is
+decoration.
+
+Ours writes `survey_invitations.wants_result`, and `/send` shows the editor how
+many people asked, so a person acts on it. **What is deliberately NOT built is a
+delivery path**, and the copy says so rather than implying one: «Vi noterer
+ønsket på invitasjonen din … {virksomhet} sender resultatet selv når
+undersøkelsen er lukket.» A label promising an email the product cannot send
+would be the same defect as the drawing's, with a database write attached.
+
+The control is absent entirely where there is no invitation — a share link, a QR
+voucher. There is no address to note it against and nowhere to send anything.
+Same predicate F-02 established for the reply box.
+
+### D202 — `tasks_source_ref_needs_kind` becomes one-directional
+
+**`M:0123` · the EIGHTH instance of the referential-maintenance family.**
+
+The constraint read `(source_kind = 'survey') = (source_ref is not null)` — a
+biconditional over a column the database reserves the right to null, since
+`tasks_source_ref_fkey` is `ON DELETE SET NULL`. Measured on the local stack
+before the change:
+
+```
+begin;
+delete from public.surveys
+ where id = (select source_ref from public.tasks where source_kind='survey' limit 1);
+ERROR:  new row for relation "tasks" violates check constraint
+        "tasks_source_ref_needs_kind"
+CONTEXT: SQL statement "UPDATE ONLY public.tasks SET source_ref = NULL ..."
+```
+
+**A survey carrying a blind-spot task could not be hard-deleted.** Erasing the
+ORGANISATION is unaffected (measured: `delete from organizations` succeeds), so
+no erasure path was broken and this was latent rather than live — all four hard
+`surveys` deletes in the product are rollback paths on a survey created seconds
+earlier, which has no generated task yet.
+
+`tasks_manual_has_no_source` is the half no cascade can withdraw: **a manual task
+never names a survey.** The half that goes is «a survey task must name one»,
+which is exactly the claim erasing the survey makes untrue. Fix the column, not
+the predicate. `tests/db/tasks.test.ts` asserts both directions and then performs
+the delete that used to be refused.
+
+### D203 — `/send` read «the» open round, and a survey can have two
+
+**G1's sweep, on a screen it touched. Predates G1.**
+
+`app/(app)/undersokelser/[id]/send/page.tsx` selected the open round with
+`.eq('status','open').maybeSingle()`. Nothing makes that at most one:
+`send_round` takes `max(round_no) + 1` and inserts at `open` (`M:0018:59-63`)
+**without closing the previous round**, and `pg_constraint` on `survey_rounds`
+holds only the status CHECK and two uniques — measured. The demo's own flagship
+survey has rounds 1 and 2 both open.
+
+With two rows `maybeSingle()` errors and the result is null, so `alreadyOpen` was
+FALSE and the «denne undersøkelsen er allerede sendt» banner **disappeared on
+exactly the surveys that had already been sent twice.** The guard switched itself
+off at the moment it was most warranted — the vacuous-value shape one screen over
+(«a gate that never reads the status code scores a 500 as a pass»).
+
+Fixed by reading the LATEST open round (`order by round_no desc, limit 1`), which
+is the size of the finding. Whether two open rounds should be possible at all is
+a question for whoever owns `send_round`, and is logged rather than answered
+here.
+
+### D204 — the `.desktop.png` pairing flaw in `verify:fidelity`
+
+**Found mid-run on 2026-09-16, by the person who wrote the script.**
+
+`findAppShot` looked for `<stem>.desktop.png` for every pair. That is right for
+twenty-three of the twenty-eight and wrong for the five respondent surfaces,
+which CLAUDE.md requires to be pixel-perfect at 380-420px: the composite put a
+phone-width drawing beside a 2880px desktop window and reported a difference that
+was the harness's, not the product's.
+
+`Pair` now carries `project?: 'desktop' | 'mobile'` and the five respondent rows
+declare `mobile`. **The general form is the enumeration shape in a file path**: a
+suffix that is correct for most rows reads as a property of rows.
+
+### D205 — the live-revealed manifest note was right and its reason was wrong
+
+**`tests/routes.manifest.ts`, corrected 2026-09-16.**
+
+The manifest said «revealed» was unreachable on the demo seed because the counter
+is hidden and the reveal refused BELOW k. Measured: `answered` comes from
+`aggregate_results` over the round (`live/page.tsx:110-122`) and the seeded round
+has 12 responses against k = 5, so `belowThreshold` is FALSE and the button is
+not disabled. What actually blocked it is that the seeded session is CLOSED and
+EXPIRED, so `open` is false and `page.tsx:165` passes `session={null}` — with no
+session there is no reveal control to click at all.
+
+**A correct claim with a wrong reason, and the reason is the only part anyone
+would have read.** Both belong in the record: a note that cites the k gate
+teaches the next reader that the k gate is in the way, and they will go and
+weaken the wrong thing.
+
+### D206 — a manifest state that WRITES must describe the end state, not the keystroke
+
+**Found by `verify:responsive` on 2026-09-16, twice in one run.**
+
+Two states blocked for the full 30-second timeout, both because their setup
+clicked a control unconditionally and both because the click had already
+happened:
+
+- `respondent-takk-invitert/resultat-onsket` — the opt-in writes a persistent
+  column, so the 390px run left it on and the 320px run waited for a label that
+  had become «Vi har notert».
+- `live/revealed` — starting a session writes a row, and the teardown is
+  best-effort and does not fire when the setup itself failed, so one bad run
+  leaves «Avslutt live» where the next is waiting for «Start live».
+
+A state's setup runs once per viewport, once per project and again after any
+failure. **So it has to say what should be true when it finishes, not which
+button to press**: wait for either label, click only the off one, then wait for
+the on one. Both are written that way now, and `verify:responsive` went from 224
+declared with 2 blockers to **242 of 242 measured, 0 findings, 0 blockers**.

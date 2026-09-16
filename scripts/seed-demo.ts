@@ -12,12 +12,15 @@ import {
   createShareLink,
   createSurvey,
   dropOrg,
+  hashToken,
   inviteOrganisations,
   inviteTo,
   submitResponses,
 } from '../tests/db/factories'
+import { ENGAGEMENT_DEFAULTS } from '../lib/engagement'
 import { anonClient, personaClient, serviceClient } from '../tests/db/clients'
 import {
+  DEMO_ANSWERED_TOKEN,
   DEMO_SHARE_TOKEN,
   GROUP_PRIMARY,
   GROUP_SECONDARY,
@@ -445,6 +448,60 @@ async function main() {
   // invitation token would answer once and then show the thank-you screen for
   // every later capture.
   await createShareLink(aboveRound.id, DEMO_SHARE_TOKEN)
+
+  /* G1 — A SPENT INVITATION, for the thanks-screen state a share link cannot
+     reach: the result opt-in is offered only where an invitation exists.
+
+     Answered here rather than left open, because `Respondent` opens straight on
+     the thanks screen when `already_responded` is true — so `/s/<token>` is a
+     repeatable capture of that screen, where an unspent token would be one. */
+  await svc.from('survey_invitations').insert({
+    /* On the LATEST round, not the first. `/send` reports the most recent open
+       round — a survey can have more than one, because `send_round` opens a new
+       one without closing the old — so an opt-in seeded onto round 1 would make
+       the editor's count read zero while the respondent's tick reads on. The
+       fixture has to put them on the same round or it demonstrates nothing. */
+    round_id: aboveRound2.id,
+    email: 'svart@nordisk-studio.test',
+    token_hash: hashToken(DEMO_ANSWERED_TOKEN),
+    channel: 'email',
+  })
+  await submitResponses([DEMO_ANSWERED_TOKEN], () => ({
+    [above.questions[0]!.id]: { value: 4 },
+  }))
+
+  /* G1 — AND ONE RESPONDENT WHO HAS ALREADY ASKED, so `/send`'s count has a
+     non-zero branch to show.
+
+     A SECOND invitation rather than setting the flag on the one above: that one
+     is DEMO_ANSWERED_TOKEN's, and the capture manifest photographs its opt-in
+     both off and on. Pre-ticking it would make the «off» state unreachable, and
+     the off state is the one every respondent meets first. */
+  await svc.from('survey_invitations').insert({
+    round_id: aboveRound2.id,
+    email: 'vil-ha-resultatet@nordisk-studio.test',
+    token_hash: hashToken('demo-wants-result-invitation-token'),
+    channel: 'email',
+    responded_at: new Date().toISOString(),
+    wants_result: true,
+  })
+
+  /* G1 — «Hva skjer nå» on the thanks screen. Written on ONE survey rather
+     than all of them, because the field's whole point is that it is empty until
+     an editor writes it: a seed that fills it everywhere would make the empty
+     state — the one every new survey starts in — unreachable in the demo and
+     invisible to the capture suite. This is the survey the share link points
+     at, so `/s/<DEMO_SHARE_TOKEN>` is the one that shows the card. */
+  await svc
+    .from('surveys')
+    .update({
+      engage: {
+        ...ENGAGEMENT_DEFAULTS,
+        next_steps:
+          'Resultatene legges fram for AMU i oktober, og hver leder får sine egne tall samme uke.',
+      },
+    })
+    .eq('id', above.id)
 
   const draft = await createSurvey(org.id, 'Utkast uten svar', [
     { type: 'scale', text: 'Et spørsmål som ikke er sendt ennå' },
@@ -1230,6 +1287,13 @@ async function main() {
      *  before Q175 — kept as the default so the eight rows above read
      *  unchanged. */
     owner?: 'redaktor'
+    /* G1 — `tasks.shared_with_respondents`. TWO of the three done tasks carry
+       it, and the third does NOT, deliberately: a fixture where every done task
+       is shared cannot show the difference between «not shared» and «cannot be
+       shared», which is the whole point of the control. And the harassment
+       investigation stays unshared at every status, because the seed is also
+       the demo and the demo is read as advice. */
+    share?: true
   }[] = [
     // NOTE the sources: none of these names a group, a question or a score.
     // Q72 decided what a task may contain, and the bundle's own fixture
@@ -1240,9 +1304,9 @@ async function main() {
     { title: 'Svar på innsynskrav', kind: 'innsynskrav', status: 'besluttet', law: 'apenhet', due: '2026-10-03' },
     { title: 'Revisjon hos leverandør', kind: 'leverandoroppfolging', status: 'pagar', law: 'apenhet', due: '2026-10-01' },
     // Awaiting effect assessment — `gjennomfort` is what the stat tile counts.
-    { title: 'Møtefrie torsdager', kind: 'tiltak', status: 'gjennomfort', due: '2026-10-15' },
+    { title: 'Møtefrie torsdager', kind: 'tiltak', status: 'gjennomfort', due: '2026-10-15', share: true },
     { title: 'Lønnskartlegging per stillingsgruppe', kind: 'tiltak', status: 'effektvurdert', law: 'likestilling', due: '2026-11-01' },
-    { title: 'Ny fadderordning for nyansatte', kind: 'tiltak', status: 'lukket', due: '2026-09-01' },
+    { title: 'Ny fadderordning for nyansatte', kind: 'tiltak', status: 'lukket', due: '2026-09-01', share: true },
     // Over frist — a past due date on an open task is the only way the «over
     // frist» tile is reachable.
     { title: 'Undersøkelse etter varsel', kind: 'undersokelsesplikt', status: 'pagar', law: 'trakassering', due: '2026-08-20' },
@@ -1280,6 +1344,10 @@ async function main() {
             : (ownerMember?.id ?? null),
         due_at: t.due,  // null where the fixture has no deadline (V5-2)
         status: t.status,
+        // G1. The trigger stamps `completed_at` on insert at a done status, so
+        // the respondent's card gets a real date without the fixture inventing
+        // one. NOT `due_at`: two of these rows are due in the future.
+        shared_with_respondents: t.share === true,
       })
       .select('id')
       .single()

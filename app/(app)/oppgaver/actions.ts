@@ -518,3 +518,51 @@ export async function setWorklistView(input: unknown): Promise<{ ok: boolean }> 
   revalidatePath('/oppgaver')
   return { ok: true }
 }
+
+/**
+ * G1 — «Del med respondentene». THE WRITER for `tasks.shared_with_respondents`.
+ *
+ * ── WHY THIS IS A PER-TASK DECISION AND NOT A STATUS FILTER ────────────────
+ *
+ * The respondent's «Du sa · vi gjorde» card renders task titles. The obvious
+ * design was a filter — manual source, done status — and it is not enough. This
+ * organisation's own register carries «Undersøkelse etter varsel» at `pagar`,
+ * one status change from the done band. Under a pure filter, recording that a
+ * harassment investigation FINISHED would publish that sentence to everyone
+ * holding a link to any survey here, including a share link with no addressee
+ * at all.
+ *
+ * So the write that publishes must be the write that MEANS to publish. This
+ * action is it, the column defaults false, and a title reaches a respondent only
+ * because somebody looked at it and said yes.
+ *
+ * ── THREE REFUSALS, AND TWO OF THEM ARE THE DATABASE'S ─────────────────────
+ *
+ *  - a `leser` cannot call it (here, and `tasks_upd` again underneath);
+ *  - a GENERATED task cannot be shared — `tasks_shared_is_manual` refuses it,
+ *    because such a task's title describes a finding (Q72). The panel says so
+ *    rather than offering a control that would fail;
+ *  - a task that is not yet done is shareable but not SHOWN: the flag is a
+ *    standing decision, and the RPC applies the status test at read time. That
+ *    way ticking the box early does the expected thing rather than nothing.
+ */
+const ShareInput = z.object({ id: z.string().uuid(), shared: z.boolean() })
+
+export async function setTaskShared(input: unknown): Promise<TaskResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const parsed = ShareInput.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('tasks')
+    .update({ shared_with_respondents: parsed.data.shared })
+    .eq('id', parsed.data.id)
+    .eq('org_id', viewer.orgId)
+  if (error) return { ok: false, error: fromDatabase(error.message) }
+
+  revalidatePath('/oppgaver')
+  return { ok: true }
+}

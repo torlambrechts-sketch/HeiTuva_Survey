@@ -30,3 +30,20 @@ export const GROUP_SECONDARY = 'Utvikling'
  * stored hashed, so a fixed plaintext is the only way a test can hold one.
  */
 export const DEMO_SHARE_TOKEN = 'demo-share-link-token-for-local-verification'
+
+/**
+ * G1 — a SPENT invitation token, for the one thanks-screen state a share link
+ * cannot reach.
+ *
+ * The result opt-in is offered only where an invitation exists (`can_opt_in`),
+ * because a share link has no address and nowhere to send anything. So the
+ * capture of that control needs an invitation token, and an invitation token
+ * answers once — which would make the state photographable exactly one time.
+ *
+ * It is SPENT ON PURPOSE. `Respondent` opens straight on the thanks screen when
+ * `already_responded` is true, and `app.resolve_token` still resolves a spent
+ * invitation while its round is open, so `/s/<this>` renders the thanks screen
+ * with the opt-in, repeatably, without submitting anything. Same dev/CI-only
+ * standing as DEMO_SHARE_TOKEN and DEMO_PASSWORD.
+ */
+export const DEMO_ANSWERED_TOKEN = 'demo-answered-invitation-token-for-local-verification'

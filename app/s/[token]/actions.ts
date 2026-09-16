@@ -191,3 +191,101 @@ export async function commentThread(token: unknown): Promise<Thread> {
   if (payload.error) return { comments: [] }
   return { comments: payload.comments ?? [] }
 }
+
+/**
+ * G1 — the closed loop, and her own opt-in state, in one call.
+ *
+ * ── WHAT THE RPC WILL NOT RETURN, AND WHY IT IS THE RPC THAT DECIDES ───────
+ *
+ * `get_closed_loop_for_token` returns a task's TITLE and the day it was done,
+ * and nothing else — no `law_ref` (which names a statutory duty this
+ * organisation is under), no owner, no status, no id. That is enforced in the
+ * function body rather than by this wrapper picking fields, because a wrapper
+ * that narrows a wide payload is one edit away from forwarding it.
+ *
+ * The bundle pairs each action with a QUOTE («{{ s6.said }}», v6:5539). That
+ * half is not built: it is one respondent's own free text rendered to another
+ * respondent, on a page whose reader has no role, no session, and — for a share
+ * link — no relationship to the organisation. Q72's sentence covers it exactly.
+ * Show what was DONE, never what was found; a quote IS the finding (D199).
+ */
+export type ClosedLoop = {
+  items: { title: string; when: string | null }[]
+  wantsResult: boolean
+  canOptIn: boolean
+}
+
+const EMPTY_LOOP: ClosedLoop = { items: [], wantsResult: false, canOptIn: false }
+
+function loopClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+}
+
+export async function closedLoop(token: unknown): Promise<ClosedLoop> {
+  const parsed = z.string().min(16).max(512).safeParse(token)
+  if (!parsed.success) return EMPTY_LOOP
+
+  const { data, error } = await loopClient().rpc('get_closed_loop_for_token', {
+    p_token: parsed.data,
+  })
+  if (error) {
+    console.error(`get_closed_loop_for_token failed: ${error.code ?? 'unknown'}`)
+    return EMPTY_LOOP
+  }
+  const r = (data ?? {}) as {
+    items?: { title: string; when: string | null }[]
+    wants_result?: boolean
+    can_opt_in?: boolean
+  }
+  return {
+    items: r.items ?? [],
+    wantsResult: r.wants_result === true,
+    canOptIn: r.can_opt_in === true,
+  }
+}
+
+/**
+ * G1 — «Send meg det samlede resultatet».
+ *
+ * ── THE WHOLE SECURITY ARGUMENT, BECAUSE IT IS SHORT ───────────────────────
+ *
+ * This is an address against an anonymous response, so the question is whether
+ * it writes anything that links her to her answers. It does not, and the reason
+ * is structural rather than careful:
+ *
+ *   - the write is ONE BOOLEAN on the invitation she already holds;
+ *   - that row already carries her address and already carries `responded_at`,
+ *     written at full precision by `submit_response` while the response itself
+ *     gets `date_trunc('hour', now())`. The strongest temporal link that will
+ *     ever exist is already there, by a design reminders require;
+ *   - the column has NO TIMESTAMP, so it adds no ordering that hour-truncation
+ *     removed;
+ *   - nothing in `responses` or `answers` is touched — asserted field by field
+ *     in `tests/db/closed-loop.test.ts` test 11, which is green only because
+ *     the write is confirmed to have happened first.
+ *
+ * Where there is no invitation — a share link, a QR voucher — there is nothing
+ * to write and nowhere to send it, so the RPC refuses and the control is never
+ * rendered. Same predicate F-02 established for the reply box.
+ */
+export async function setResultOptIn(token: unknown, want: unknown): Promise<boolean> {
+  const parsed = z
+    .object({ token: z.string().min(16).max(512), want: z.boolean() })
+    .safeParse({ token, want })
+  if (!parsed.success) return false
+
+  const { data, error } = await loopClient().rpc('set_result_optin', {
+    p_token: parsed.data.token,
+    p_want: parsed.data.want,
+  })
+  if (error) {
+    console.error(`set_result_optin failed: ${error.code ?? 'unknown'}`)
+    return false
+  }
+  const r = (data ?? {}) as { ok?: boolean; wants_result?: boolean }
+  return r.ok === true && r.wants_result === true
+}

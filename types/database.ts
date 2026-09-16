@@ -2254,6 +2254,7 @@ export type Database = {
           round_id: string
           sent_at: string | null
           token_hash: string
+          wants_result: boolean
         }
         Insert: {
           bounced_at?: string | null
@@ -2277,6 +2278,7 @@ export type Database = {
           round_id: string
           sent_at?: string | null
           token_hash: string
+          wants_result?: boolean
         }
         Update: {
           bounced_at?: string | null
@@ -2300,6 +2302,7 @@ export type Database = {
           round_id?: string
           sent_at?: string | null
           token_hash?: string
+          wants_result?: boolean
         }
         Relationships: [
           {
@@ -2627,6 +2630,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          completed_at: string | null
           corrects_task_id: string | null
           created_at: string
           due_at: string | null
@@ -2635,6 +2639,7 @@ export type Database = {
           law_ref: string | null
           org_id: string
           owner_member_id: string | null
+          shared_with_respondents: boolean
           source_kind: string
           source_ref: string | null
           source_round_id: string | null
@@ -2648,6 +2653,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          completed_at?: string | null
           corrects_task_id?: string | null
           created_at?: string
           due_at?: string | null
@@ -2656,6 +2662,7 @@ export type Database = {
           law_ref?: string | null
           org_id: string
           owner_member_id?: string | null
+          shared_with_respondents?: boolean
           source_kind?: string
           source_ref?: string | null
           source_round_id?: string | null
@@ -2669,6 +2676,7 @@ export type Database = {
           title: string
         }
         Update: {
+          completed_at?: string | null
           corrects_task_id?: string | null
           created_at?: string
           due_at?: string | null
@@ -2677,6 +2685,7 @@ export type Database = {
           law_ref?: string | null
           org_id?: string
           owner_member_id?: string | null
+          shared_with_respondents?: boolean
           source_kind?: string
           source_ref?: string | null
           source_round_id?: string | null
@@ -3213,6 +3222,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_closed_loop_for_token: { Args: { p_token: string }; Returns: Json }
       get_comment_thread: { Args: { p_token: string }; Returns: Json }
       get_heatmap: {
         Args: {
@@ -3342,6 +3352,10 @@ export type Database = {
       }
       set_comment_handled: {
         Args: { p_comment: string; p_handled: boolean }
+        Returns: Json
+      }
+      set_result_optin: {
+        Args: { p_token: string; p_want: boolean }
         Returns: Json
       }
       sign_duty: { Args: { p_duty: string; p_role_key: string }; Returns: Json }

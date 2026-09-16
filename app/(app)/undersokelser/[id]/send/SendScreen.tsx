@@ -60,6 +60,7 @@ export function SendScreen({
   suppressed,
   orgName,
   groups,
+  wantsResult,
   inheritedCadence,
   inheritedLegalRef,
   schedule: scheduleState,
@@ -101,6 +102,8 @@ export function SendScreen({
    * legal constraint — and a customer cannot tell an invented one from a real
    * one. Null when no pack governs the survey.
    */
+  /** G1 — how many holders of this round's invitations asked for the result. */
+  wantsResult: number
   inheritedCadence: Cadence | null
   /** The pack's legal reference, for the explanatory note. */
   inheritedLegalRef: string | null
@@ -856,6 +859,23 @@ export function SendScreen({
             <p className="mt-3 rounded-[10px] bg-sbg px-[13px] py-2.5 text-[12.5px] leading-[1.45]">
               {t('bestTime')}
             </p>
+
+            {/* G1 — THE READER FOR `survey_invitations.wants_result`.
+                Without this the thanks screen's checkbox would record a wish
+                nobody ever sees, which is the decoration the drawing ships:
+                `onRlOptIn` is `setState` and nothing else (v6:10086). Shown at
+                zero as well as above it, so «nobody asked» is a measurement
+                rather than a missing panel. */}
+            <div className="mt-3 rounded-[10px] border border-line px-[13px] py-2.5">
+              <p className="text-[12.5px] leading-[1.45]">
+                {wantsResult === 0
+                  ? t('wantsResultNone')
+                  : t('wantsResultSome', { count: wantsResult })}
+              </p>
+              {wantsResult > 0 ? (
+                <p className="mt-1 text-[12px] leading-[1.45] text-mut">{t('wantsResultNote')}</p>
+              ) : null}
+            </div>
 
             <button
               type="button"

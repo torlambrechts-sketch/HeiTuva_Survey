@@ -51,6 +51,9 @@ const EngagementInput = z.object({
   charity: z.string().max(200),
   comments: z.enum(['ingen', 'lav', 'alle']),
   thank_you: z.string().max(500),
+  /* G1. Longer than `thank_you` because it is a paragraph rather than a line,
+     and bounded anyway: it reaches /s/[token], which is read by strangers. */
+  next_steps: z.string().max(600),
   personal: z.boolean(),
   deadline: z.boolean(),
   show_progress: z.boolean(),

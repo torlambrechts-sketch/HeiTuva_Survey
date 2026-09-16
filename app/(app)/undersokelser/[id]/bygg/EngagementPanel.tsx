@@ -268,6 +268,32 @@ export function EngagementPanel({
               className={`${input} mt-2`}
             />
           </label>
+          {/* G1 — «Hva skjer nå» on the thanks screen. A TEXTAREA rather than an
+              input because the drawing's own example is a full sentence about a
+              committee and a week, and a one-line field would teach people to
+              write less than the card is for.
+
+              The hint says who reads it. That is what makes this field need no
+              publication flag while `tasks.shared_with_respondents` does: this
+              one is authored FOR the respondent and says so at the moment of
+              writing. */}
+          <label className="mt-[18px] block">
+            <span className="block text-[13px] font-semibold">{t('nextStepsLabel')}</span>
+            <span className="mt-[2px] block text-[13px] leading-snug text-mut">
+              {t('nextStepsHint')}
+            </span>
+            <textarea
+              value={value.next_steps}
+              onChange={(e) => onChange({ next_steps: e.target.value })}
+              disabled={disabled}
+              rows={2}
+              maxLength={600}
+              aria-label={t('nextStepsLabel')}
+              placeholder={t('nextStepsPlaceholder')}
+              className={`${input} mt-2 resize-y leading-[1.5]`}
+            />
+          </label>
+
           <p className="mt-[10px] text-[13px] text-mut">
             {questionCount > 8 ? t('expectedNoteLong') : t('expectedNote')}
           </p>

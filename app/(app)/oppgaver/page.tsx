@@ -73,7 +73,7 @@ export default async function WorklistPage({
     supabase
       .from('tasks')
       .select(
-        'id, title, kind, law_ref, source_kind, source_ref, owner_member_id, due_at, status, created_at, corrects_task_id',
+        'id, title, kind, law_ref, source_kind, source_ref, owner_member_id, due_at, status, created_at, corrects_task_id, shared_with_respondents',
       )
       .eq('org_id', viewer.orgId)
       .order('due_at', { ascending: true, nullsFirst: false }),
@@ -239,6 +239,11 @@ export default async function WorklistPage({
     status: r.status as TaskStatus,
     mine: r.owner_member_id !== null && r.owner_member_id === (me?.id ?? null),
     assessed: assessedSet.has(r.id),
+    /* G1. `shareable` is DERIVED from the same column the CHECK is over, so the
+       control appears exactly where the database would accept it. A separate
+       list of shareable kinds would be a second statement of one rule. */
+    shared: r.shared_with_respondents === true,
+    shareable: r.source_kind === 'manuell',
     handled: false,
     anonymous: false,
     hasThread: false,
@@ -272,6 +277,13 @@ export default async function WorklistPage({
       status: null,
       mine: false,
       assessed: false,
+      /* G1. A COMMENT is never shareable, and the reason is the one this whole
+         feature turns on: it is a respondent's own free text. «Du sa · vi
+         gjorde» shows what the organisation DID; a comment is what was said
+         (Q72, D199). Both false rather than optional, so the panel's branch has
+         no third state to accidentally fall into. */
+      shared: false,
+      shareable: false,
       handled: c.handled_at !== null,
       anonymous: c.is_anonymous,
       /*

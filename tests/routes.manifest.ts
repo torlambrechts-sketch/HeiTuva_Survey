@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { DEMO_SHARE_TOKEN } from './db/personas'
+import { DEMO_ANSWERED_TOKEN, DEMO_SHARE_TOKEN } from './db/personas'
 
 /**
  * The routes the harness captures, and the states each must be seen in.
@@ -583,13 +583,45 @@ export const ROUTES: RouteSpec[] = [
           this capture and would photograph «live/default» with an active one.
         */
         name: 'revealed',
+        /*
+          AND THE SECOND FINDING, FROM `verify:responsive` RATHER THAN FROM THE
+          CAPTURE RUN: the setup was not IDEMPOTENT, and this state MUTATES
+          STORED DATA.
+
+          It clicked «Start live» unconditionally. Starting a session writes a
+          row, so once a run leaves one open — the teardown is best-effort and
+          does not fire when the setup itself fails — every later run finds
+          «Avslutt live» where it is waiting for «Start live», and blocks for the
+          full 30s. Reported as `could not be measured`, which is what it was.
+
+          Same shape as `respondent-takk-invitert/resultat-onsket` in the same
+          sweep, and the rule is theirs jointly: **a manifest state that writes
+          must describe the END STATE, not the keystroke** — it is run once per
+          viewport, once per project and again after any failure.
+        */
         setup: async (page) => {
           await pickSurvey(page, 'Arbeidsmiljø')
           await page.getByRole('link', { name: /^(Kjør live|Run live)$/ }).click()
           await page.waitForURL((u) => u.pathname.endsWith('/live'))
-          await page.getByRole('button', { name: /^(Start live|Go live)$/ }).click()
-          await page.getByRole('button', { name: /^(Vis resultat|Show results)$/ }).click()
-          await page.getByRole('button', { name: /^(Skjul resultat|Hide results)$/ }).waitFor()
+
+          const start = page.getByRole('button', { name: /^(Start live|Go live)$/ })
+          const end = page.getByRole('button', { name: /^(Avslutt live|End live)$/ })
+          await Promise.race([
+            start.waitFor({ timeout: 15_000 }),
+            end.waitFor({ timeout: 15_000 }),
+          ])
+          if (await start.count()) await start.click()
+
+          // The reveal is a toggle, so the same reasoning applies one control
+          // down: «Skjul resultat» means it is already revealed.
+          const show = page.getByRole('button', { name: /^(Vis resultat|Show results)$/ })
+          const hide = page.getByRole('button', { name: /^(Skjul resultat|Hide results)$/ })
+          await Promise.race([
+            show.waitFor({ timeout: 15_000 }),
+            hide.waitFor({ timeout: 15_000 }),
+          ])
+          if (await show.count()) await show.click()
+          await hide.waitFor({ timeout: 15_000 })
         },
         teardown: async (page) => {
           const close = page.getByRole('button', { name: /^(Avslutt live|End live)$/ })
@@ -1457,6 +1489,55 @@ export const ROUTES: RouteSpec[] = [
           // the LAST card on the last step, so it is filled after the answers
           // and before Send.
           await submitRespondent(page, 'Undersøkelsen var grei, men litt lang.')
+        },
+      },
+    ],
+  },
+  {
+    /*
+      G1 — the thanks screen as an INVITED respondent sees it, which is the only
+      way to photograph the result opt-in.
+
+      `can_opt_in` is false for a share link, on purpose: there is no address and
+      nowhere to send anything. So the state above — which uses DEMO_SHARE_TOKEN —
+      captures «Hva skjer nå» and «Du sa · vi gjorde» and cannot capture the
+      checkbox. This token belongs to a SPENT invitation, so the page opens on the
+      thanks screen with nothing to submit, repeatably.
+    */
+    route: `/s/${DEMO_ANSWERED_TOKEN}`,
+    label: 'respondent-takk-invitert',
+    as: 'anon',
+    phase: 'phase-3',
+    states: [
+      { name: 'default' },
+      {
+        name: 'resultat-onsket',
+        /*
+          IDEMPOTENT, AND THE FIRST DRAFT WAS NOT.
+
+          It clicked «Send meg det samlede resultatet» unconditionally, which is
+          correct exactly once: the opt-in writes a PERSISTENT column on the
+          invitation, so the 390px run left it on and the 320px run then waited
+          thirty seconds for a label that had become «Vi har notert». The gate
+          reported it as a blocker, which is what it was.
+
+          The lesson is the state's, not the gate's: a manifest state that
+          MUTATES stored data is run once per viewport and once per suite, so it
+          has to describe the end state rather than the keystroke. This waits for
+          whichever label is on screen and clicks only when it is the off one.
+        */
+        setup: async (page) => {
+          const on = page.getByRole('button', { name: /Vi har notert|We have noted/ })
+          const off = page.getByRole('button', { name: /Send meg det samlede|Send me the summarised/ })
+          await Promise.race([
+            on.waitFor({ timeout: 15_000 }),
+            off.waitFor({ timeout: 15_000 }),
+          ])
+          if (await off.count()) await off.click()
+          // The tick renders only after the write is CONFIRMED, so waiting for
+          // the pressed label waits for the round trip rather than for an
+          // optimistic flip.
+          await on.waitFor({ timeout: 15_000 })
         },
       },
     ],

@@ -338,11 +338,73 @@ describe('(Q72) what a task may reference, and what it may not', () => {
     ])
   })
 
-  it('source_kind and source_ref cannot disagree', async () => {
-    const { error } = await svc.from('tasks').insert({
-      org_id: orgId, title: `Uenig kilde ${stamp}`, kind: 'tiltak', source_kind: 'survey',
+  it('a MANUAL task may not name a survey — and the other direction is deliberately open', async () => {
+    /*
+      RESTATED BY G1 (`M:0123`), NOT WEAKENED — the eighth instance of the
+      referential-maintenance family, and the reason is worth the paragraph.
+
+      This read `(source_kind = 'survey') = (source_ref is not null)`, a
+      BICONDITIONAL over a column the database reserves the right to null:
+      `tasks_source_ref_fkey` is ON DELETE SET NULL. Measured before the change,
+      on the local stack:
+
+          delete from public.surveys where id = <a survey with a blind-spot task>;
+          ERROR: new row for relation "tasks" violates check constraint
+                 "tasks_source_ref_needs_kind"
+          CONTEXT: SQL statement "UPDATE ONLY public.tasks SET source_ref = NULL ..."
+
+      A survey carrying a generated task could not be hard-deleted. The half that
+      survives is the half no cascade can withdraw; the half that went is the one
+      erasing the survey makes untrue. Fix the column, not the predicate.
+    */
+    const { data: own } = await svc
+      .from('surveys').select('id').eq('org_id', orgId).limit(1).single()
+    const manual = await svc.from('tasks').insert({
+      org_id: orgId, title: `Uenig kilde ${stamp}`, kind: 'tiltak',
+      source_kind: 'manuell', source_ref: own!.id,
     })
-    expect(error?.message ?? '', 'the CHECK binds them together').toMatch(/tasks_source_ref_needs_kind/)
+    expect(manual.error?.message ?? '', 'a manual task was allowed to name a survey')
+      .toMatch(/tasks_manual_has_no_source/)
+
+    // Permitted, because a cascade must be able to produce it.
+    const orphan = await svc.from('tasks').insert({
+      org_id: orgId, title: `Foreldreløs kilde ${stamp}`, kind: 'tiltak', source_kind: 'survey',
+    })
+    made.push(`Foreldreløs kilde ${stamp}`)
+    expect(orphan.error, 'a survey task with no survey must be reachable by cascade').toBeNull()
+  })
+
+  it('and the delete that used to be refused now succeeds', async () => {
+    // The PROOF that the restatement bought something, rather than only that the
+    // constraint changed. A survey with a generated task attached is erased; the
+    // task survives with a null source, which is what «no record may be left
+    // pointing at something that stopped existing under it» actually means.
+    const { data: s2 } = await svc
+      .from('surveys')
+      .insert({
+        org_id: orgId,
+        title: `Slettbar ${stamp}`,
+        respondent_kind: 'person',
+        anonymity: 'anonymous',
+      })
+      .select('id')
+      .single()
+    made.push(`Generert ${stamp}`)
+    const created = await svc.from('tasks').insert({
+      org_id: orgId, title: `Generert ${stamp}`, kind: 'tiltak',
+      source_kind: 'survey', source_ref: s2!.id,
+    })
+    expect(created.error).toBeNull()
+
+    const gone = await svc.from('surveys').delete().eq('id', s2!.id)
+    expect(gone.error?.message ?? null, 'the survey still cannot be deleted').toBeNull()
+
+    const { data } = await svc
+      .from('tasks')
+      .select('source_kind, source_ref')
+      .eq('title', `Generert ${stamp}`)
+      .single()
+    expect(data).toEqual({ source_kind: 'survey', source_ref: null })
   })
 
   it('THE REGISTER CARRIES NO GATED VALUE — asserted over the columns, not the rows', () => {

@@ -459,7 +459,10 @@
     "quizNotScoring": "Not scored in a quiz",
     "quizCorrectMark": "✓ correct",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "nextStepsLabel": "What happens next (shown to the respondent)",
+    "nextStepsHint": "One or two sentences about what happens to the answers, and when. Left blank if you write nothing — we do not invent a date.",
+    "nextStepsPlaceholder": "For example: The results go to the working environment committee in October, and managers get their own figures the same week."
   },
   "send": {
     "title": "How it reaches them",
@@ -612,7 +615,10 @@
     "unitDay": "day",
     "unitWeek": "week",
     "unitMonth": "month",
-    "impSuppressed": "{count} opted out"
+    "impSuppressed": "{count} opted out",
+    "wantsResultNone": "Nobody has asked for the summarised result yet.",
+    "wantsResultSome": "{count, plural, =1 {One respondent has asked for the summarised result.} other {# respondents have asked for the summarised result.}}",
+    "wantsResultNote": "You send it yourself once the survey is closed. The addresses are on the invitations."
   },
   "results": {
     "title": "Results",
@@ -1464,7 +1470,14 @@
     "sheetFreeTextOrg": "What you write is shown with the organisation’s name.",
     "sheetRetentionLabel": "Deletion",
     "sheetRetentionMonths": "Answers are deleted automatically after {n} months.",
-    "sheetRetentionForever": "Answers are not deleted automatically."
+    "sheetRetentionForever": "Answers are not deleted automatically.",
+    "nextTitle": "What happens now",
+    "loopTitle": "You said · we did",
+    "loopLead": "Actions the organisation has completed and chosen to share. That is why it is worth answering again.",
+    "loopNoDate": "no date set",
+    "optInOff": "Send me the summarised result",
+    "optInOn": "We have noted that you want the summarised result",
+    "optInNote": "We note the request on your invitation — one on/off value, nothing that ties you to your answers. {virksomhet} sends the result themselves once the survey is closed."
   },
   "surveyNav": {
     "back": "Back to surveys",
@@ -2215,7 +2228,11 @@
     "wlColNew": "New",
     "wlColAwaitEffect": "Awaiting effect assessment",
     "wlScopeOpen": "Unhandled",
-    "wlSaved": "Saved."
+    "wlSaved": "Saved.",
+    "shareLabel": "Share with respondents",
+    "shareHint": "The title appears on the thank-you screen for everyone who answers in this organisation. No legal basis, no owner, no deadline — just the title and the date.",
+    "shareOnlyDone": "Shared only once the action has been carried out.",
+    "shareNotGenerated": "An action the system generated cannot be shared: its title describes a finding, not something that was done."
   },
   "help": {
     "title": "Help and support",

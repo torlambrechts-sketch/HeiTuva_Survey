@@ -432,10 +432,25 @@ refused, at commit; deleting the organisation is allowed, because by commit time
 points at the group. **The rule is never "this row is sacred"; it is "no record may be
 left pointing at something that stopped existing under it".**
 
-This has now been rediscovered SEVEN separate times: D50, D51, D57, the duty-archive case,
+This has now been rediscovered EIGHT separate times: D50, D51, D57, the duty-archive case,
 V2-3b's FK pair — which then bit a second time in the same migration, when an audit trigger
-on a lifted objection tried to write a row for an organisation already erased — V2-9's, and
-Q137's.
+on a lifted objection tried to write a row for an organisation already erased — V2-9's,
+Q137's, and **D202's, which is the first one found by ASKING THE QUESTION rather than by a
+symptom.**
+
+**D202 is worth the sentence because nothing was broken yet.** G1 needed a CHECK over
+`tasks`, and choosing which column to write it over meant asking this file's own question —
+*which of the columns this rule names can be changed by something other than the code I am
+looking at?* — of the columns already there. `tasks_source_ref_needs_kind` was
+`(source_kind = 'survey') = (source_ref is not null)`, a biconditional over a column that is
+`ON DELETE SET NULL`. One probe confirmed it: a survey carrying a blind-spot task could not be
+hard-deleted. Erasing the ORGANISATION still worked, and all four hard `surveys` deletes in the
+product are rollback paths on a survey seconds old, so it was LATENT — it would have surfaced,
+far from the trigger, the first time anyone deleted a sent survey.
+
+**Seven of these arrived as a symptom in a distant place. This one arrived as an answer to the
+question, before there was a symptom, and the probe cost one transaction.** That is the
+argument for asking it at the moment a rule is written rather than the moment a delete fails.
 
 **Q137'S IS THE FIRST WHERE THE MAINTENANCE IS DONE BY A WORKER RATHER THAN BY THE DATABASE, AND
 THE FIRST WHERE THE GUARD INVERTED INTO ITS OWN OPPOSITE.** The construct is a TRIGGER SCOPE:
@@ -1426,6 +1441,46 @@ either direction**, which is the proof rather than the total:
 5a3 holds at **81 of 112** — 65 RLS tables + 47 SECURITY DEFINER functions, zero unproven. Q208
 adds no table and no definer function: a registry, a message and a page are not catalogue surfaces.
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**G1 TOOK IT TO 1551 ACROSS 116 FILES AND 5a3 TO 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one added line, one raised, and
+nothing else moved in either direction**, which is the proof rather than the total:
+
+```
+1538 across 115
+ + 12  tests/db/closed-loop.test.ts   new — the loop's key set, the CHECK, and the opt-in's negative test
+ +  1  tests/db/tasks.test.ts 32 -> 33  the biconditional RESTATED, plus the delete that used to be refused
+= 1551 across 116
+```
+
+**AND THE STARTING NUMBER IS 1538 WHERE THE PARAGRAPH ABOVE SAYS 1537 — a movement nobody
+recorded, found because this arithmetic did not close.** `git log -p -- tests/expected-counts.json`
+names it in one line: `932d9b4` (D198) raised `tests/unit/survey-tabs.test.ts` 9 -> 10 with the
+source sweep for invented `<Link>` segments, and no prose followed the manifest. Recorded rather
+than quietly absorbed, because it is this rule's own failure mode arriving three paragraphs after
+the rule — *«what must never happen is a number moving with nobody able to say why»* — and because
+the same reconciliation caught a stale total in the I2 paragraph by the same route. **The honest
+reading of an arithmetic that does not close is «one of these is stale», not «the parts are
+strange».** The sum is derivable in one command and that is the number to trust:
+`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`.
+
+The tasks entry moved by ONE while one of its tests changed sides: the old assertion required
+`tasks_source_ref_needs_kind`, a constraint `M:0123` removes, and what replaced it asserts both
+directions of the half that survives AND performs the erasure the old rule made impossible.
+**A file's count is not a record of what it checks; the diff is.**
+
+5a3 goes **81 of 112 → 81 of 114** — 65 RLS tables (42 checked, 23 allowlisted) plus **49**
+SECURITY DEFINER functions (39 checked, 10 allowlisted), zero unproven. The denominator rose by
+exactly `get_closed_loop_for_token` and `set_result_optin`, and **the checked number correctly held**:
+both grant `execute` to `anon` by necessity — a respondent holds a link, never a session — so both are
+allowlisted beside `submit_response` and `get_comment_thread`, with reasons that cite the numbered
+tests rather than asserting anything. The commands: `npm run census:write` for the first pair, and
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for the second.
+
+**And `verify:responsive` is 242 of 242 measured, 0 findings, 0 blockers** — up from 224 declared
+with 2 blockers, one of which had been red since F6 and neither of which was about a screen. See
+D206: both were manifest states that WRITE, clicking a control unconditionally that a previous
+viewport had already clicked. `verify:browser` captured 241 of 241 with 0 failures.
 
 **AND THE RUN IS ONLY 115 FILES IF `SUPABASE_DB_URL` POINTS AT THE LOCAL STACK.** `.env.local` sets
 it to the PRODUCTION host, which no Claude Code container can reach (see the settled conclusion

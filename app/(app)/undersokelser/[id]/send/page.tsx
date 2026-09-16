@@ -61,16 +61,46 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
         .select('id', { count: 'exact', head: true })
         .eq('survey_id', id),
       supabase.from('groups').select('id, name').eq('org_id', viewer.orgId).order('name'),
+      /* THE LATEST open round, not «the» open round.
+         ── FOUND BY G1, AND IT PREDATES G1 ───────────────────────────────────
+         This was `.eq('status','open').maybeSingle()`, which assumes a survey
+         has at most one open round. Nothing makes that true: `send_round` takes
+         `max(round_no) + 1` and inserts at `open` (M:0018:59-63) WITHOUT closing
+         the previous one, and `survey_rounds` has no constraint against two —
+         measured, `pg_constraint` holds only the status CHECK and two uniques.
+         The demo's own flagship survey has rounds 1 and 2 both open.
+         With two rows `maybeSingle()` errors and `openRound` is NULL, so
+         `alreadySent` — the banner warning that this survey has already gone
+         out — DISAPPEARED on exactly the surveys that had gone out twice. The
+         guard switched itself off at the moment it was most warranted, which is
+         the «a vacuous value satisfies the check» shape one screen over. */
       supabase
         .from('survey_rounds')
         .select('id, round_no, status')
         .eq('survey_id', id)
         .eq('status', 'open')
+        .order('round_no', { ascending: false })
+        .limit(1)
         .maybeSingle(),
       // V2-3b · Q60. Readable by every member on purpose: a redaktør about to
       // send needs to know why the count is lower than the group.
       supabase.from('suppressions').select('email').eq('org_id', viewer.orgId),
     ])
+
+  /* G1 — HOW MANY RESPONDENTS ASKED FOR THE SUMMARISED RESULT.
+     This read is what makes the thanks screen's opt-in a feature rather than
+     decoration: the respondent records a wish, and this is the place a person
+     sees it and acts. A COUNT rather than a list, because the count is what the
+     editor needs to decide whether to send, and the addresses are already on
+     the invitations one screen away. `inv_sel` is `can_edit_survey`, so a leser
+     reads nothing here at all. */
+  const { count: wantsResult } = openRound
+    ? await supabase
+        .from('survey_invitations')
+        .select('id', { count: 'exact', head: true })
+        .eq('round_id', openRound.id)
+        .eq('wants_result', true)
+    : { count: 0 }
 
   // The live series (Q22, Q23). Read through RLS as the viewer — since M:0044's
   // predicate swap a leser reads it too, which is what puts the ↻ chip on their
@@ -174,6 +204,7 @@ export default async function SendPage({ params }: { params: Promise<{ id: strin
               }
             : null
         }
+        wantsResult={wantsResult ?? 0}
         inheritedCadence={inheritedCadence}
         // Q48(b): the statute reference from next-intl, keyed by the
         // registry key — the column is still there and still canonical, but
