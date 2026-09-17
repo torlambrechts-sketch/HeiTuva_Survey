@@ -1921,3 +1921,26 @@ has not run is not a gate that passed.
 overflow, no controls, no overlaps — so `controls=0` on a full application screen is the only
 trace a 500 leaves there. 202 is a screen; 0 would have been the finding.
 
+**THE G6 FIX PASS TOOK IT TO 1609 ACROSS 121 FILES AND 5a3 IS UNMOVED AT 81 OF 114.**
+`git diff tests/expected-counts.json` is the command — **one line raised and nothing else moved
+in either direction**:
+
+```
+1608 across 121
+ +  1  tests/unit/tuva-answers.test.ts 16 -> 17   the helper hides under a modal, both halves
+= 1609 across 121
+```
+
+Measured on a full local run: **121 files, 1609 tests, 0 failed**, the manifest sum exactly.
+
+**AND THE GATE THAT FOUND THE DEFECT IS THE ONE I HAD NOT RUN.** G5 and G6 were reported green
+on `verify:responsive`, `verify:i18n` and the census; `verify:visual` was never among them, and
+it is the one that failed in CI — twice, on both phase heads. The failure was real: G5's «no
+exclusions» put the helper on a full-viewport modal where it was present and unreachable at both
+widths (D230).
+
+**So the reporting rule this file already states for cancelled jobs applies to SKIPPED ones too:
+«11 gates done» counts the ones that did not run.** A phase report must name which of the seven
+executed rather than implying all of them did, and «green» said of a gate nobody started is the
+same false claim as «green» said of a gate that was cancelled.
+
