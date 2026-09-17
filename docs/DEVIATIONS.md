@@ -7885,10 +7885,38 @@ deleting that would turn a fixture's convenience into data loss. Proven both way
 leaves the table at 0, and a run against a planted real row (`value 4.44, source 'ekte kilde
 2026'`) leaves that row byte-identical with the fixture's `enps` row gone.
 
+### AND THE LEAK WAS LOAD-BEARING FOR A GATE — the half that makes this a chain rather than an instance
+
+`verify:responsive`'s first run after the fix reported **two blockers**, both
+`resultater/bransje-valgt` «could not be measured: waiting for getByRole('link', { name: 'Teknologi
+og IT' })». That industry chip renders only when `benchmarks` has rows. **So a manifest state had
+been depending on the leak to exist at all** — it photographed, at both viewports, on every run
+since Q134, a screen that only a test's missing teardown could produce.
+
+**And the sharper half: the leaked source `'Testfixtur, k-surface.test.ts'` PASSES `isSourced`.**
+Q134 wrote that guard to keep invented comparison figures away from a customer, and its own comment
+states the limit honestly — it can only refuse a source that DECLARES itself provisional, in the
+words its regex happens to hold. «Testfixtur» is not one of them. **The guard worked, and the only
+benchmark row that existed was one it did not recognise as fake.** Not widened here: adding
+«fixture» to the list would be one more entry in an enumeration, and `isSourced`'s own comment
+already says the durable half is the seed shipping no numbers — which it does not, and now nothing
+else does either.
+
+**The state is REMOVED rather than re-seeded.** A sourced benchmark is a content decision, and
+inventing one is the exact defect Q134 closed. **So the benchmark comparison now has no reachable
+demo state, and that is Q134's honest consequence rather than a regression** — it has been true
+since Q134 and was masked for months by two rows nobody meant to keep.
+
 **Not built into a gate.** The apparatus is frozen, and the honest note is that no mechanical check
 here would be cheap: the property is «a shared row is left as it was found», which needs a
 before/after over the whole suite. The derivation above is the thing to re-run, and it is two
 commands.
+
+**What makes it a measurement rather than an anecdote** is the 28 / 39 / 37 split — and
+`branding.test.ts`, whose header already said *«everything this file writes is put back in
+`afterAll`, because the demo organisation's branding is what the reference screenshots and
+`verify:respondent` render»*. Somebody had the thought and wrote it beside one file; what was
+missing was the sweep that asks it of all of them.
 
 ---
 
@@ -7926,6 +7954,19 @@ and it is an enumeration doing duty as a property — **which is precisely what 
 the narrow-row example three paragraphs above it.** The specification has now done it twice, in one
 section, and the second time it blocks a v7 adoption rather than licensing a defect.
 
-**Not edited here.** `docs/RESPONSIVE.md` is a specification and CLAUDE.md makes anything it does
-not cover a stop-and-ask; rewriting the clause to unblock my own phase would be answering my own
-question. Q245 is the ask, and this is the part of it that is a fact rather than a preference.
+**Not edited by me when it was found.** `docs/RESPONSIVE.md` is a specification and CLAUDE.md makes
+anything it does not cover a stop-and-ask; rewriting the clause to unblock my own phase would have
+been answering my own question. Q245 was the ask, and this was the part of it that is a fact rather
+than a preference.
+
+**CHANGED 2026-09-17, by Tor's instruction, and the form of the change is the point.** *«Do not
+delete the clause. Give it its boundary: no nested cards, EXCEPT the survey shell card, which is
+drawn and applies to those four screens. The rule still protects against invented nesting; it stops
+forbidding a drawn one. Record that the reason expired rather than that the rule was wrong.»*
+
+So the clause now names the exception, its geometry, the four screens it applies to and the fact
+that nothing nests a third level inside it — and it carries the measurement that retired its old
+reason. **The rule was never wrong; its premise stopped being true**, which is a different sentence
+and the one a future reader needs, because «the bundle contains no X» is the kind of claim that
+expires silently every time a handoff arrives. A rule stated only by its premise has no boundary to
+fall back on when the premise goes.

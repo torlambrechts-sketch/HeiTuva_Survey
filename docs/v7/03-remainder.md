@@ -7,7 +7,9 @@ a question about a SPECIFICATION rather than about a screen.
 Tor's instruction on reading it: *«anything the drawing draws but no decision covers gets DECIDED,
 not carried. A list that survives a phase becomes a list nobody owns.»* So every section below now
 ends in one of four states — **BUILT**, **ALREADY TRUE**, **REFUSED** (with the reason), or
-**ASKED** (one item, named) — and nothing is left as a description.
+**ASKED** (one item, named) — and nothing is left as a description. **As of the third revision there
+is no ASKED item left:** § 5's was answered by changing the specification it was blocked on, so every
+section is BUILT, ALREADY TRUE, REFUSED or DECIDED-with-a-scope.
 
 Bundle citations are `v7:<n>` against `4d8fde3aea0f56e481bfe2416c811f96` (10558 lines) and `v6:<n>`
 against the seventh handoff (10152 lines).
@@ -174,39 +176,61 @@ explicitly.
 
 ---
 
-## 5. THE «HEADER CARDS» ON SEND AND RESULTATER — ASKED (Q245), and this section was wrong twice
+## 5. THE SURVEY SHELL CARD — DECIDED: ADOPT, and the specification was changed to permit it
 
-**They are not header cards.** Both are the WHOLE SCREEN wrapped in one bordered card: a header row
-on `--sf`, then a `border-top` body on `--bg` that holds the rest of the screen and closes with
-`border-radius:0 0 19px 19px` (v7:4942, v7:5738). Written from the header lines without reading to
-the closing div — the third correction this file has had to make to itself, and the same cause each
-time.
+**This section was wrong twice, and both errors were found by measuring rather than by reading
+again.**
 
-**And the pattern is not v7's.** `grep -c 'border-radius:0 0 19px 19px'`:
+**(a) They are not header cards.** Both Send and Resultater wrap the WHOLE SCREEN in one bordered
+card: a header row on `--sf`, then a `border-top` body on `--bg` that holds the rest of the screen
+and closes with `border-radius:0 0 19px 19px` (v7:4942, v7:5738). Written from the header lines
+without reading to the closing div — the third correction this file has had to make to itself.
+
+**(b) The pattern is not v7's.** `grep -c 'border-radius:0 0 19px 19px'`:
 
 | v5 | v6 | v7 |
 |---|---|---|
 | 0 | **15** | **18** |
 
-It arrived a handoff earlier; v7 adds three. *A figure found while reading a new bundle is not
-thereby the new bundle's* — the fourth instance of that in this tranche.
+*A figure found while reading a new bundle is not thereby the new bundle's* — the fourth instance of
+that in this tranche.
 
-**Where it lands, swept over every screen marker** (`<sc-if value="{{ isX }}">` + the card signature
-within 14 lines): exactly **four screens** — `isBuild` (v7:508), `isSvDetail` (1269), `isSend`
-(4907) and `isResults` (5716). Every app-level screen — Surveys, Dashboard, Reports, Tasks, Library,
-Admin, Profile, Help — has none. **So it is not two headers and not an inconsistency: it is «the
-survey's own screens are one object», applied to the four of them.**
+**Where it lands, swept over every screen marker** (`<sc-if value="{{ isX }}">` plus the card
+signature within 14 lines): exactly **four** — `isBuild` (v7:508), `isSvDetail` (1269), `isSend`
+(4907), `isResults` (5716). Every app-level screen — Surveys, Dashboard, Reports, Tasks, Library,
+Admin, Profile, Help — has none. **So it is not two headers and not an inconsistency: the survey's
+own screens are one object**, which Tor accepted as a meaningful distinction rather than decoration.
 
-**What blocks it is the specification, and that is the ask.** `docs/RESPONSIVE.md` § Data tables:
-*«Never nest a card in a card… the bundle contains no nested-card treatment and inventing one is
-restyling.»* The shell card wraps screens that are already full of cards, so adopting it needs that
-clause changed — and the clause's stated reason has expired (D247). Editing a specification to
-unblock my own phase would be answering my own question, so it is Q245.
+### The answer (Q245): adopt, and the ask was the SPECIFICATION
 
-**The one part decided on its own merits stays decided:** Resultater's «Bytt undersøkelse» keeps its
-VISIBLE label. v7 replaces it with an `aria-label`, which removes the label for everyone not using a
-screen reader, and `verify:responsive` counts controls rather than labels so no gate would report
-it. D244, unchanged, whatever happens to the card.
+`docs/RESPONSIVE.md` forbade it — *«Never nest a card in a card… the bundle contains no nested-card
+treatment and inventing one is restyling»* — and the shell card wraps screens already full of cards.
+Tor's instruction:
+
+> *«Change the specification. Do not delete the clause. Give it its boundary: no nested cards,
+> EXCEPT the survey shell card, which is drawn and applies to those four screens. The rule still
+> protects against invented nesting; it stops forbidding a drawn one. Record that the reason expired
+> rather than that the rule was wrong.»*
+
+Done: the clause now names the exception, its geometry, the four screens, and the fact that nothing
+nests a third level inside it, and it carries the measurement that retired its premise (D247).
+
+### NOT BUILT IN V7-5, and the scope is measured so nobody re-derives it
+
+Three things the measurement settled — see Q245 for the full statement:
+
+1. **Nine of our routes, not four.** v7's `isSvDetail` is one screen whose twelve pills are our
+   eight tab ROUTES, so «the four» is `/bygg` plus all eight survey tabs.
+2. **The header half already exists.** `SurveyContextBar` renders a bordered `--sf` card on all nine
+   routes today, above the body. The change is joining the two, not adding a card: one component
+   gains a body slot, nine pages pass children instead of a sibling.
+3. **Below `md` the padding collapses to the page gutter** (`px-0 md:px-[22px]`), because the body's
+   22px inset would cost 44px of content width at 320px on the tightest screens in the product, and
+   the drawing has nothing below 1280px.
+
+The reason it is a phase rather than this one's tail is the third point: a `verify:responsive` fix
+pass across nine routes is the risk, and V7-5 had already spent its passes. It is the top item in
+the project inventory, for sequencing.
 
 ---
 
