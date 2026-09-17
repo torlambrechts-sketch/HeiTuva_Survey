@@ -1910,3 +1910,14 @@ no table and no definer function: a context provider, a resolver default and one
 not catalogue surfaces.
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
 
+**And the two browser gates, run against the reshaped `/undersokelser` because it changed shape:**
+`verify:responsive` is **242 declared, 242 measured, 0 skipped, 0 findings, 0 blockers**, and
+`verify:i18n` is **34 routes clean over 1639 messages checked** — the first run of that gate since
+G5 added forty-two `tuva.*` keys and G6 a forty-third, which is worth saying because a gate that
+has not run is not a gate that passed.
+
+**The sanity read this file asks for, taken rather than skipped:** `/undersokelser` reports
+`controls=202` at 390px and 320px. An error page scores PERFECTLY on `verify:responsive` — no
+overflow, no controls, no overlaps — so `controls=0` on a full application screen is the only
+trace a 500 leaves there. 202 is a screen; 0 would have been the finding.
+

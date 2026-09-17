@@ -7152,3 +7152,21 @@ true on both the 54px button and the 34px panel avatar, and the per-screen face
 is a decision not to build rather than a gap waiting for files. A phase that
 wants it later needs the PNGs first, and the registry already carries the
 per-screen key it would hang on.
+
+### D226 — RE-MEASURED CLEAN BY G6's SWEEP, AND STILL LOGGED
+
+`undersokelser/row-menu @320px` («Slett» over «Flere valg», 411px²) was logged at G4's fix pass
+for whoever opens `SurveyTable` next. G6's run of the same gate reports:
+
+```
+ok  undersokelser/row-menu  390px  controls=203  small=0  overlaps=0
+ok  undersokelser/row-menu  320px  controls=203  small=0  overlaps=0
+```
+
+**This is not a fix and is not recorded as one.** G6 touched the bubble, not the popover, and
+D226's own note says the geometry depends on where the row sits and that a reseed had most
+likely moved it. So the honest statement is that **the condition is not reproducing on this
+fixture**, which is a different claim from «the cause was removed» and reads identically in a
+green log. The deviation stays open with this measurement beside it, so the next reader knows
+the gate has been clean once and why that is not sufficient.
+
