@@ -7222,3 +7222,99 @@ and the rule above does not reach that case. A nav drawer that leaves the page
 behind it focusable is the exact problem `ModalLayer` was built for, so this is
 a real finding — and it is not this fix's size. It belongs to whoever opens
 `MobileNav` next, with the measurement above.
+
+---
+
+## D231 — SEVEN EMPIRICAL FIGURES IN SHIPPED COPY, FOUND BY THE SWEEP AND NOT BY A GATE (V7-0, 2026-09-17)
+
+**The bundle's claim-set sweep is step 7 of ADDING A BUNDLE, and it earned itself again — on OUR
+copy rather than on the bundle's.**
+
+The plan named «snitt 58 % svar» on the Send channel cards as a figure seen in the new bundle.
+Measured, `snitt` occurs **16 times in v6 and 16 times in v7** and the `channelCards` line is
+byte-identical (`v6:9720` = `v7:10020`). It is not a v7 arrival. **It is ours**, in
+`messages/{no,en}.json` and in production's `ui_messages`, on `SendScreen.tsx:344`.
+
+Seven keys, fourteen rows, all Q181's class — a claim about the world, shipped as fact, carrying a
+figure a customer could check, with nothing in this repository sourcing it:
+`send.chEmailDesc`, `send.chLinkDesc`, `send.chQrDesc`, `send.chSmsDesc`, `send.bestTime`,
+`builder.expectedNoteLong`, `results.insightRate`.
+
+**Two of the seven are sharper than the rest.**
+
+- **`send.bestTime`** was «Foreslått: tirsdag 09:15 — 62 % åpner innen en time». It reports an
+  OPEN RATE. This account has no transactional webhooks at all — the same fact D133 records for
+  `bounced_at`, and the reason `subtabs.ts`'s `malgruppe/levering` refusal says «no open tracking
+  exists at all». **A figure from a signal the product structurally cannot observe.**
+- **`results.insightRate`** is the one where the figure STAYS and the sentence was still wrong.
+  «Under 70 %» is our own trigger — `aggregate_results` fires `low_response_rate` at `< 0.7`
+  (`supabase/migrations/20260906000041_empty_group_is_not_a_number.sql:182`) — which is Q181's
+  stated exception. But «blir gruppetall usikre» attributed the consequence to the wrong
+  mechanism: what governs group figures is **k**, and low participation matters because it pushes
+  cells under that threshold. **A figure can be ours and the clause beside it still false.**
+
+`send.chSmsDesc` is worth a line for a third reason: SMS is a flagged channel that has never sent
+anything, so «snitt 71 %» was an average over zero sends.
+
+**AND IT WAS TWO EDITS, NOT ONE — the fourth instance of the rule CLAUDE.md already states.** All
+fourteen rows existed in production's `ui_messages` carrying the old values, as GLOBAL rows
+(`org_id is null`) with no org-scoped override on any of them — checked before writing, because an
+organisation's override is their edit. The UPDATE matched on the old value as well as the key, so
+it is idempotent; 14 of 14 returned. **The evidence is the comparison, not the apply:** the same
+fingerprint over the repo's two JSON files and over production's fourteen rows,
+`c1694771f5310c0e1edef81821373e28`, with `count(*) filter (where value ~ '[0-9]+ ?%')` = 2 on both
+sides and both of them `insightRate`'s «70 %».
+
+**Nothing mechanical could have caught this.** `verify:copy` is about the k threshold;
+`verify:i18n` matches Norwegian on English pages; no test referenced any of the seven keys. The
+gates protect the schema and the data, and this is the sentence CLAUDE.md writes beside step 7:
+**nothing mechanical protects prose.**
+
+The full sweep, including the bundle figures that do NOT ship and why, is
+`docs/v7/01-claim-sweep.md`.
+
+## D232 — `expectedResponseRate` IS AN INVENTED MODEL RENDERED AS A NUMBER (V7-0, 2026-09-17) — RAISED, NOT DECIDED
+
+Following D231's `expectedNoteLong` to its source turned a copy finding into a different class of
+one. `lib/engagement.ts:128-140` is eleven hard-coded constants — base 42, `+7` personal, `+5`
+deadline, `+3` progress, `+4` one-question, `+9` reveal-results, `+8`/`+11`/`+4` incentive, `−12`
+over eight questions, clamped 10–92 — rendered as a percentage under «forventet svar»
+(`EngagementPanel.tsx:75, 87`).
+
+**Every one of those constants is a claim about respondent behaviour, and nothing in this product
+measures any of them.** CLAUDE.md's never-fabricate rule names exactly this: a fake value is worse
+than a gap, because it is indistinguishable from a real one in review.
+
+**«Rundt 12 prosentpoeng» was literally `r -= 12` read out loud.** The copy was not the defect; the
+copy was the model speaking. D231's rewrite now describes the estimate rather than the world,
+which is true under any outcome — and it is a smaller repair than the thing deserves.
+
+**Raised rather than decided**, under the standing rule: removing a shipped panel's headline figure
+would un-build something, and which of the three options applies (drop the number, label it as the
+drawing's rule of thumb on the screen, or source it from `survey_rounds` + `survey_invitations` +
+`responses`) is a scope call. No decision covers it —
+`grep -n "expectedResponseRate\|forventet svar" DECISIONS.md docs/DEVIATIONS.md` returns nothing.
+**Building under the assumption that the panel stays untouched**; nothing in V7-1 to V7-3 depends
+on the answer.
+
+## D233 — THE `info` BLOCK'S SEED TEXT IS AN ANONYMITY PROMISE, AND IT ARRIVES THROUGH A FIXTURE (V7-0, 2026-09-17) — LOGGED FOR V7-3
+
+`v7:6871` seeds the new `info` content block with «Svarene brukes til å forbedre arbeidsmiljøet.
+Ingen ser hva du har svart alene — resultatene vises bare samlet.»
+
+A seeded default is shipped text, and this one is a claim about who sees what, on a surface a
+respondent reads. Measured against the product it is true for an anonymous survey under k and
+**false in three reachable cases**: a **named** survey (`surveys.anonymity`), where the response is
+linked by construction; a **comment**, which carries `invitation_id` (QR-2) and is why the closed
+loop can reply at all; and **quiz mode**, whose leaderboard is a per-person surface by design.
+
+**This is the invariant-3 corollary arriving through a FIXTURE rather than through a feature**, and
+it is the reason the corollary is worded as it is: the phase that carries it onto the respondent
+screen will be doing it on purpose and for a good reason. V7-3 chooses the seed; the safe options
+are an empty body or a sentence that says nothing about who sees what.
+
+**And its sibling is a promise rather than a falsehood:** «Innholdsblokker teller ikke som spørsmål
+og gir ingen data» is honoured by the bundle at fifteen-odd `filter(q => !q.block)` call sites, and
+ours would have to honour it in three places the drawing has no equivalent of — the aggregation
+RPCs, the exports, and `survey_questions`' `position` uniqueness. **«Gir ingen data» is a claim
+about `aggregate_results`, not about a renderer.**
