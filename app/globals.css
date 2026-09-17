@@ -215,3 +215,28 @@
   border-bottom-right-radius: 15px;
 }
 
+/* ── TUVA IS HIDDEN WHILE A MODAL COVERS THE VIEWPORT ──────────────────────
+   G6 fix pass. G5 put the helper on every screen, and `/undersokelser/ny` IS a
+   full-viewport overlay: Wizard.tsx is `fixed inset-0 z-[80]` and the helper is
+   `z-60`, so she was present and UNREACHABLE at both 1440px and 390px —
+   `elementFromPoint` at the bubble's own centre returned somebody else. At
+   mobile she also sat in flow behind it, adding 78px (24px margin + a 54px
+   bubble) of page height nothing could use. That is what broke
+   `veiviser-formal-mobile`: 1130 -> 1208.
+
+   DERIVED FROM `inert`, NOT FROM A LIST OF MODALS. `ModalLayer` already marks
+   every other body child `inert` while an overlay is open — not focusable, not
+   hit-testable, not exposed to assistive tech — so the accessibility half was
+   already right and only the LAYOUT was wrong. Hanging the rule on that
+   attribute means a fourth modal using `ModalLayer` gets this without an edit
+   here, and no route is excluded by name: Tor's «no exclusions» stands, and a
+   modal simply takes precedence over what is behind it.
+
+   `MobileNav`'s drawer is `fixed inset-0 z-[70]` and does NOT use `ModalLayer`,
+   so the helper stays reachable behind it. Logged rather than widened into —
+   a nav drawer that leaves the page behind it focusable is the problem
+   `ModalLayer` was built for, and it is not this fix's size (D230). */
+[inert] .tuva-helper {
+  display: none;
+}
+

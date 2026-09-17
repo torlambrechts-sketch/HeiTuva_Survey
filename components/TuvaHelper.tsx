@@ -126,7 +126,7 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
          1440px canvas is authoritative and the pixel bar applies. The 52px
          bubble and 22px insets are the drawing's, unchanged, where they are
          the drawing's to set. */
-      className="mt-6 flex flex-col items-end gap-[10px] xl:fixed xl:bottom-[22px] xl:right-[22px] xl:z-[60] xl:mt-0"
+      className="tuva-helper mt-6 flex flex-col items-end gap-[10px] xl:fixed xl:bottom-[22px] xl:right-[22px] xl:z-[60] xl:mt-0"
     >
       {open ? (
         <div className="max-h-[calc(100vh-110px)] w-[308px] max-w-[76vw] overflow-y-auto rounded-[17px] border border-line bg-sf px-[18px] py-[17px] shadow-[0_14px_34px_rgba(25,21,16,.16)]">

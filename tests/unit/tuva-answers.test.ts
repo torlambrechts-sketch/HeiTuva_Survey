@@ -308,4 +308,34 @@ describe('G4 — every Tuva answer lands somewhere that exists', () => {
     const layout = readFileSync('app/(app)/layout.tsx', 'utf8')
     expect(layout).toContain('<TuvaSlotProvider>')
   })
+
+  it('15. the helper is HIDDEN while a modal covers the viewport — both halves', () => {
+    /* G6 fix pass. G5's «no exclusions» put the helper on `/undersokelser/ny`,
+       which IS a full-viewport overlay: `Wizard.tsx` is `fixed inset-0 z-[80]`
+       and the helper is `z-60`, so she was present and UNREACHABLE at 1440px
+       AND 390px — `elementFromPoint` at the bubble's own centre returned
+       somebody else. At mobile she also sat in flow behind it, adding 78px
+       (24px margin + a 54px bubble) of page height, which is what broke
+       `veiviser-formal-mobile`: 1130 -> 1208.
+
+       The rule hangs on the `inert` that `ModalLayer` ALREADY sets on every
+       other body child, so it is derived from the overlay being open rather
+       than from a list of modals or a list of routes — a fourth modal using
+       `ModalLayer` gets it with no edit, and Tor's «no exclusions» stands
+       because no route is named.
+
+       BOTH HALVES ARE ASSERTED because either alone is silent: the rule
+       without the class styles nothing, and the class without the rule hides
+       nothing. That is this file's own «a control is a setting only if
+       something writes it AND something reads it», pointed at CSS. */
+    const helper = readFileSync('components/TuvaHelper.tsx', 'utf8')
+    expect(helper, 'the hook the rule selects on').toContain('className="tuva-helper ')
+
+    const css = readFileSync('app/globals.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(css, 'the rule that hides it').toMatch(/\[inert\]\s+\.tuva-helper\s*\{[^}]*display:\s*none/)
+
+    // And the mechanism it depends on is still what ModalLayer does.
+    const layer = readFileSync('components/ModalLayer.tsx', 'utf8')
+    expect(layer, 'ModalLayer must still inert its siblings').toContain("setAttribute('inert'")
+  })
 })

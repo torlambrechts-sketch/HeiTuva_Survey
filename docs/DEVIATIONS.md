@@ -7170,3 +7170,55 @@ fixture**, which is a different claim from «the cause was removed» and reads i
 green log. The deviation stays open with this measurement beside it, so the next reader knows
 the gate has been clean once and why that is not sufficient.
 
+
+### D230 — Tuva is hidden under a modal, derived from `inert`; MobileNav's drawer is not
+
+**G6's fix pass, and the finding that CI caught rather than a stale picture.**
+
+G5's «no exclusions» put the helper on `/undersokelser/ny`, which **is** a
+full-viewport overlay — `Wizard.tsx` is `fixed inset-0 z-[80]` and the helper is
+`z-60`. Measured on the built server, both widths:
+
+```
+1440px  dialogZ=80  bubble present  wrapper fixed  z-60    -> covered by <div>
+ 390px  dialogZ=80  bubble present  wrapper static z-auto  -> covered by <div>
+```
+
+`elementFromPoint` at the bubble's own centre returns something else at both. So
+she was **present and unreachable**, and at mobile she also sat in flow behind
+the modal adding **78px** of page height (24px margin + a 54px bubble) — which
+is exactly what broke `veiviser-formal-mobile`, 1130 → 1208.
+
+**It was not one screen, and the sweep is why that is known.** Four overlays sit
+above `z-60` and cover `inset-0`: `Wizard.tsx` (80), `Builder.tsx` (70),
+`ReportSidePanel.tsx` (70), `MobileNav.tsx` (70). Reporting the instance CI
+happened to photograph would have been an enumeration of one.
+
+**The fix is derived from what already exists.** `ModalLayer` — used by three of
+the four — portals to `document.body` and marks every other body child `inert`:
+not focusable, not hit-testable, not exposed to assistive tech. **So the
+accessibility half was already correct and only the LAYOUT was wrong.** The rule
+is therefore one selector on that attribute:
+
+```css
+[inert] .tuva-helper { display: none; }
+```
+
+A fourth modal using `ModalLayer` gets it with no edit here, and **no route is
+excluded by name** — Tor's «no exclusions» stands, and a modal simply takes
+precedence over what is behind it. Both halves are asserted by test 15, each
+proven RED on its own: weaken the rule to `opacity` and it fails on the rule;
+drop the class and it fails on the hook.
+
+**The proof the fix is right rather than the picture being re-recorded:
+`verify:visual` passes 12 of 12 with the baseline UNTOUCHED.** The wizard is
+back to the height it was recorded at, because the thing that made it taller was
+a control nobody could use. A regenerated baseline was produced first, opened,
+found to contain no bubble at all — and reverted.
+
+**LOGGED, NOT FIXED: `MobileNav`'s drawer does not use `ModalLayer`.** It is
+`fixed inset-0 z-[70]` with no `inert`, so the helper stays reachable behind it
+and the rule above does not reach that case. A nav drawer that leaves the page
+behind it focusable is the exact problem `ModalLayer` was built for, so this is
+a real finding — and it is not this fix's size. It belongs to whoever opens
+`MobileNav` next, with the measurement above.
