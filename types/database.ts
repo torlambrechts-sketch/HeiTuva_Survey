@@ -44,6 +44,16 @@
  *
  * Noted so the next reader can tell the two apart: a large diff on a one-column
  * migration looks like a mistake until somebody says which half is which.
+ *
+ * Regenerated 2026-09-17 (V7-3) against the local stack at migration HEAD, and
+ * THE DIFF IS EXACTLY ONE ADDITION — `survey_blocks`, 47 lines, Row/Insert/
+ * Update/Relationships, and nothing else moved in either direction.
+ *
+ * Recorded because a regeneration that changes only what you expected is itself
+ * a measurement, and the last two were not: V6-3's found four I2 worker
+ * functions that had been missing since M:0116, and F4's found a generator
+ * change masquerading as a schema one. This one found nothing stale, which is
+ * the first time that sentence has been true here.
  */
 export type Json =
   | string
@@ -2080,6 +2090,53 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_blocks: {
+        Row: {
+          body: string | null
+          caption: string | null
+          created_at: string
+          id: string
+          media_key: string | null
+          position: number
+          survey_id: string
+          title: string | null
+          type: "section" | "info" | "img" | "video" | "fact" | "rule"
+          url: string | null
+        }
+        Insert: {
+          body?: string | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          media_key?: string | null
+          position: number
+          survey_id: string
+          title?: string | null
+          type: "section" | "info" | "img" | "video" | "fact" | "rule"
+          url?: string | null
+        }
+        Update: {
+          body?: string | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          media_key?: string | null
+          position?: number
+          survey_id?: string
+          title?: string | null
+          type?: "section" | "info" | "img" | "video" | "fact" | "rule"
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_blocks_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
         ]
