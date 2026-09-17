@@ -4,6 +4,7 @@ import {
   BLOCKS,
   BLOCK_TYPES,
   buildFlow,
+  flowCounts,
   flowToLists,
   forStorage,
   moveInFlow,
@@ -190,5 +191,54 @@ describe('V7-3 — one order over two kinds', () => {
     expect(code).toMatch(/position: flowPos\(q, i\)/)
     // And `forStorage` is what reaches the row, not the raw draft.
     expect(code).toMatch(/\.\.\.forStorage\(draft\)/)
+  })
+})
+
+describe('V7-4 — what the flow is made of', () => {
+  const q = (id: string) => ({ id })
+  const blk = (id: string, type: BlockType, position: number) => ({
+    ...draft(type, { id }),
+    position,
+  })
+
+  it('13. counts questions, blocks and SECTIONS over one flow', () => {
+    const flow = buildFlow([q('q1'), q('q2'), q('q3')], [
+      blk('b1', 'section', 1),
+      blk('b2', 'info', 2),
+      blk('b3', 'section', 5),
+      blk('b4', 'rule', 6),
+    ])
+    expect(flowCounts(flow)).toEqual({ questions: 3, blocks: 4, sections: 2 })
+  })
+
+  it('14. «SEKSJONER» IS ZERO WHEN THERE ARE NONE — v7 draws 1 (Q241)', () => {
+    /* The bundle's own expression is `String(secs || 1)` (v7:10221), so a survey
+       with no section block draws «1 Seksjoner». That is a fabricated value in
+       the sense CLAUDE.md names — indistinguishable from a real one in review,
+       and it survives into a screenshot as though it were true.
+
+       Asserted from both sides: zero reads zero, and the chip's own source
+       carries no `|| 1` fallback for anyone to reintroduce. */
+    const noSections = buildFlow([q('q1')], [blk('b1', 'info', 1), blk('b2', 'rule', 2)])
+    expect(flowCounts(noSections).sections).toBe(0)
+    expect(flowCounts(noSections)).toEqual({ questions: 1, blocks: 2, sections: 0 })
+    // An empty flow is all zeroes, not all ones.
+    expect(flowCounts([])).toEqual({ questions: 0, blocks: 0, sections: 0 })
+
+    const builder = readFileSync('app/(app)/undersokelser/[id]/bygg/Builder.tsx', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\/\/[^\n]*/g, ' ')
+    expect(builder).toContain('counts.sections')
+    expect(builder).not.toMatch(/counts\.sections\s*\|\|/)
+  })
+
+  it('15. every chip label ships in BOTH languages', () => {
+    const missing: string[] = []
+    for (const key of ['flowChipQuestions', 'flowChipBlocks', 'flowChipSections']) {
+      for (const lang of ['no', 'en'] as const) {
+        if (!MESSAGES[lang]?.['builder']?.[key]) missing.push(`${lang}.builder.${key}`)
+      }
+    }
+    expect(missing, missing.join(', ')).toEqual([])
   })
 })

@@ -71,9 +71,41 @@ export async function createOrg(
       .single()
     if (mErr) throw new Error(`addMember(${m.email}): ${mErr.message}`)
 
-    await svc
-      .from('profiles')
-      .upsert({ user_id: userId, display_name: m.name ?? m.email, lang: 'no' })
+    /*
+      A FIXTURE MAY NOT RENAME A SHARED AUTH USER — V7-4, and it is D102's class
+      from the other side: not «a column with no writer», but a column whose
+      writer is a TEST.
+
+      `findOrCreateUser` resolves by ADDRESS, so a fixture org naming
+      `PERSONAS.administrator.email` reuses the demo administrator's auth user
+      and their one `profiles` row. This line was
+      `display_name: m.name ?? m.email`, upserted unconditionally — so
+      `tests/db/blocks.test.ts:67`, which adds that persona as a member and
+      gives no name because the test is about `send_round`'s authority and not
+      about anybody's name, rewrote «Tuva Berg» to `admin@nordiskstudio.test`.
+      `dropOrg` removes the organisation and leaves the profile, so the rename
+      OUTLIVED the fixture.
+
+      What it cost: `initialsOf` then rendered «A» instead of «TB» in the shell,
+      `verify:visual` failed `veiviser-formal.png`, and the cause was a test
+      that had passed. D241 recorded the symptom and left the writer unnamed.
+
+      So the fallback is for CREATION only. A caller who says a name sets it; a
+      caller who says nothing gets a profile if none exists — the address is all
+      there is to use — and an existing one is left exactly as it was.
+    */
+    if (m.name) {
+      await svc.from('profiles').upsert({ user_id: userId, display_name: m.name, lang: 'no' })
+    } else {
+      const { data: already } = await svc
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (!already) {
+        await svc.from('profiles').insert({ user_id: userId, display_name: m.email, lang: 'no' })
+      }
+    }
 
     created.push({ memberId: member.id, userId, email: m.email, role: m.role })
   }

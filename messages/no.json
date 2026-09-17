@@ -522,7 +522,10 @@
     "blkMediaWrongType": "Bare PNG, JPG og WEBP kan brukes.",
     "blkMediaFailed": "Bildet kunne ikke lagres. Prøv igjen.",
     "blkMediaAlt": "Bilde i innholdsblokken",
-    "blkMediaSaveFirst": "Lagre undersøkelsen først, så kan du legge til bildet."
+    "blkMediaSaveFirst": "Lagre undersøkelsen først, så kan du legge til bildet.",
+    "flowChipQuestions": "Spørsmål",
+    "flowChipBlocks": "Innhold",
+    "flowChipSections": "Seksjoner"
   },
   "send": {
     "title": "Slik når den fram",

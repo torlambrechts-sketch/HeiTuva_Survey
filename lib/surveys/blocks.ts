@@ -344,3 +344,34 @@ export function flowToLists<Q>(flow: FlowItem<Q>[]): {
   })
   return { questions, blocks }
 }
+
+/**
+ * ── WHAT THE FLOW IS MADE OF — one derivation, three counts ────────────────
+ *
+ * v7's `bFlowChips` (v7:10217) draws «Spørsmål N · Innhold N · Seksjoner N»
+ * above the flow, which is the drawing answering a question the builder only
+ * acquired when the flow gained a second kind of member: *what is in here?*
+ *
+ * ── «Seksjoner» SHIPS ITS REAL COUNT, INCLUDING ZERO ──────────────────────
+ *
+ * The bundle's own expression is `String(secs || 1)`, so a survey with no
+ * section block draws **«1 Seksjoner»**. That is a fabricated value in the
+ * sense CLAUDE.md names: indistinguishable from a real one in review, and it
+ * survives into a screenshot as though it were true. The floor is dropped and
+ * the chip states what is there (Q241).
+ *
+ * Derived here rather than counted at the call site, because three counts over
+ * two kinds is exactly the arithmetic F1's defect was made of, and a screen
+ * that counts for itself is a second answer waiting to disagree.
+ */
+export type FlowCounts = { questions: number; blocks: number; sections: number }
+
+export function flowCounts<Q>(flow: FlowItem<Q>[]): FlowCounts {
+  let questions = 0, blocks = 0, sections = 0
+  for (const entry of flow) {
+    if (entry.kind === 'question') { questions++; continue }
+    blocks++
+    if (entry.item.type === 'section') sections++
+  }
+  return { questions, blocks, sections }
+}

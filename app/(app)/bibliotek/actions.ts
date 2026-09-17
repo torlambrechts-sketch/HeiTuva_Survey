@@ -91,7 +91,12 @@ export async function createSurveyFromPack(packId: string): Promise<LibraryResul
   }
 
   revalidatePath('/undersokelser')
-  redirect(`/undersokelser/${survey.id}`)
+  /* V7-4 — `/bygg`, NAMED, not the survey index. «Bruk mal» has just created a
+     survey from a template, so the editor is what the person wants; there is
+     nothing to read yet. Saying so here rather than relying on where the index
+     happens to redirect is what let the index become derived (see
+     `undersokelser/[id]/page.tsx`). */
+  redirect(`/undersokelser/${survey.id}/bygg`)
 }
 
 /** Firmaets maler: flip a saved template between private and shared. */

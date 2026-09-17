@@ -62,6 +62,7 @@ export function PreviewPane({
   personDef,
   title,
   questions,
+  blockCount,
   surveyId,
   canTest,
   quizMode,
@@ -75,6 +76,10 @@ export function PreviewPane({
   personDef: string
   title: string
   questions: DraftQuestion[]
+  /** How many CONTENT BLOCKS the flow has. The preview does not list them —
+   *  v7's `previewQs` filters them out and so do we — but they count toward the
+   *  length, because reading one takes time. */
+  blockCount: number
   /** V2-7 — «Test undersøkelsen» (V2:894) needs the survey it opens. */
   surveyId: string
   /**
@@ -143,9 +148,16 @@ export function PreviewPane({
           ) : null}
           <div className="font-display text-[19px] font-bold leading-tight">{title}</div>
           <div className="mt-[2px] text-[13px] text-mut">
+            {/* V7-4 — the preview LISTS only questions (v7's `previewQs`
+                filters blocks out, and so do we), but its MINUTES count the
+                whole flow, because a block is something the respondent reads.
+                `previewMeta`'s own expression does the same (v7:10259). The
+                count and the estimate are therefore over two different
+                populations ON PURPOSE, which is why the estimate takes a named
+                object — see `estimatedMinutes`. */}
             {t('previewMeta', {
               count: questions.length,
-              mins: estimatedMinutes(questions.length),
+              mins: estimatedMinutes({ questions: questions.length, blocks: blockCount }),
             })}
           </div>
           {questions.map((q, i) => {

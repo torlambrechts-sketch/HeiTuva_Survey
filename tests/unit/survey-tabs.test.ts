@@ -204,6 +204,31 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
     expect(offenders, 'a link to a survey sub-route nobody built').toEqual([])
   })
 
+  it('the survey INDEX derives its target from the registry, not from a literal', () => {
+    /*
+      V7-4. The index used to redirect to a hard-coded `/bygg` under a comment
+      describing the pre-F5-2 world: «the survey context is a step rail over
+      Bygg / Send / Resultater, and Bygg is the first step». Both halves had
+      stopped being true — a correct line made wrong by its surroundings, which
+      is the shape this tranche met four times.
+
+      Asserted as a DERIVATION rather than as a destination: the test does not
+      say «it goes to /sporsmal», because that would be the same literal moved
+      into the test. It says the source reads the registry — so reordering
+      `SURVEY_TABS` moves the redirect and this test keeps holding.
+    */
+    const src = readFileSync('app/(app)/undersokelser/[id]/page.tsx', 'utf8')
+    const body = code(src)
+    expect(body).toContain('TAB_SEGMENT[SURVEY_TABS[0]]')
+    // And no literal segment survives in the redirect.
+    expect(body).not.toMatch(/redirect\(`\/undersokelser\/\$\{id\}\/[a-z]/)
+
+    // The one caller that used to depend on the index now names what it wants,
+    // so the index is free to mean «the survey's front door» and nothing else.
+    const lib = code(readFileSync('app/(app)/bibliotek/actions.ts', 'utf8'))
+    expect(lib).toMatch(/redirect\(`\/undersokelser\/\$\{survey\.id\}\/bygg`\)/)
+  })
+
   it('only tabs whose route exists are in the registry', () => {
     /*
       The rail may not promise a screen we decided against. `over` (Oversikt) is

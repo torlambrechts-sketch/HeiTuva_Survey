@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { DEMO_ANSWERED_TOKEN, DEMO_SHARE_TOKEN } from './db/personas'
+import { DEMO_ANSWERED_TOKEN, DEMO_BLOCKS_TOKEN, DEMO_SHARE_TOKEN } from './db/personas'
 
 /**
  * The routes the harness captures, and the states each must be seen in.
@@ -1394,6 +1394,31 @@ export const ROUTES: RouteSpec[] = [
     label: 'bibliotek-leser',
     as: 'leser',
     phase: 'phase-2',
+    states: [{ name: 'default' }],
+  },
+  {
+    /* V7-4 — THE CONTENT BLOCKS, PHOTOGRAPHED (closes D239).
+
+       V7-3c seeded «Med innholdsblokker» and its share token but added no
+       manifest state, because the apparatus was frozen for that phase — so the
+       block flow was openable and unmeasured. This project's own record says
+       what that costs: «a route nobody walks is a route nobody can measure»
+       (F5), and a seed that reaches a state no gate walks is better than psql
+       and worse than a capture.
+
+       ONE state is enough, and that is a property of the fixture rather than
+       luck: the seeded survey has `one_question: false`, so WHOLE-LIST mode
+       renders the section, the info block, the fact box and the divider on a
+       single screen — four of the six types in one capture, at both widths.
+
+       It is a SEPARATE survey from `DEMO_SHARE_TOKEN`'s, deliberately: that
+       one's baseline is what `verify:visual` compares against, and interleaving
+       blocks into it would have moved a reference every earlier phase was
+       judged against. */
+    route: `/s/${DEMO_BLOCKS_TOKEN}`,
+    label: 'respondent-innholdsblokker',
+    as: 'anon',
+    phase: 'phase-3',
     states: [{ name: 'default' }],
   },
   {

@@ -522,7 +522,10 @@
     "blkMediaWrongType": "Only PNG, JPG and WEBP can be used.",
     "blkMediaFailed": "The image could not be saved. Try again.",
     "blkMediaAlt": "Image in the content block",
-    "blkMediaSaveFirst": "Save the survey first, then you can add the image."
+    "blkMediaSaveFirst": "Save the survey first, then you can add the image.",
+    "flowChipQuestions": "Questions",
+    "flowChipBlocks": "Content",
+    "flowChipSections": "Sections"
   },
   "send": {
     "title": "How it reaches them",

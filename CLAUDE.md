@@ -381,6 +381,31 @@ authoritative in a way a stale document does not.
    the next reader sees why the parameter is absent rather than assuming nobody thought of it —
    an absent option looks identical to an oversight, and only a comment tells them apart.
 
+   **AND THE SEVENTH ANSWERS «A TEST DOES», WHICH IS THE WORST ANSWER OF THE THREE (V7-4, D241).
+   Tor named the class before it was found: «a fixture mutated by a test is the class D102 covers
+   from the other side.»**
+
+   `tests/db/factories.ts` upserted `display_name: m.name ?? m.email` unconditionally, and
+   `findOrCreateUser` resolves by ADDRESS — so a fixture org naming `PERSONAS.administrator.email`
+   reuses the demo administrator's auth user and their one `profiles` row. V7-3a's own
+   `blocks.test.ts` adds that persona and gives no name, because the test is about `send_round`'s
+   authority and not about anybody's name. **It renamed the demo administrator to their email, and
+   `dropOrg` leaves the profile behind: the rename outlived the fixture.** The shell's avatar read
+   «A», `verify:visual` failed a screen the phase had not touched, and the phase spent its fix pass
+   on a picture.
+
+   **Why «a test does» is worse than «nothing does» or «nothing reads it».** Both of those are
+   silences you can go looking for. A fixture write is invisible to every gate that reads the
+   column, **because it happens inside a suite that passed** — so the defect surfaces in a
+   DIFFERENT gate, on a different surface, attributed to whatever phase happened to be running.
+   Nothing in the failing gate's output points anywhere near the writer.
+
+   The fix is the factory and not the caller: passing a name in `blocks.test.ts` closes one caller
+   and leaves the shape, so the fallback is narrowed to CREATION — an existing profile is never
+   overwritten by a value the caller did not supply. **Ask the question of fixtures as well as of
+   migrations, and ask it in the direction of the SHARED object: what else holds a reference to the
+   row this fixture is about to write?**
+
    **THE QUESTION HAS TWO FACES AND IT IS ONE RULE (G2, 2026-09-16, D208). Tor: «I asked about
    storage, which is the visible gap in a DRAWING; in a PRODUCT the effect is.»**
 
@@ -2020,37 +2045,86 @@ a gap, and is why `tests/db/block-media.test.ts` reads the bucket off `storage.b
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for the
 second.
 
-### A SENTENCE CAN BECOME FALSE WITHOUT ANYONE TOUCHING IT — the same shape as a guard's, one floor over
+**V7-4 TOOK IT TO 1673 ACROSS 127 FILES AND 5a3 IS UNMOVED AT 82 OF 115.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **three lines raised, one added, nothing
+removed**, which is the proof rather than the total:
 
-**Added 2026-09-17, after V7-3. Tor, about `send_round`: «The error was already called
+```
+1664 across 126
+ +  3  unit/blocks.test.ts      12 -> 15   `flowCounts`, and «Seksjoner» refusing v7's floor
+ +  2  unit/quality.test.ts     22 -> 24   blocks in the estimate, and the rate the bundle contradicts
+ +  1  unit/survey-tabs.test.ts 10 -> 11   the survey index asserted as a DERIVATION
+ +  3  db/fixture-identity.test.ts  new    a fixture may not rename a shared auth user (D241)
+= 1673 across 127
+```
+
+Measured on a full local run with the CONFIGURED reporters, so `tests/census.ts` constructed:
+**127 files, 1673 tests, 0 failed**, the manifest sum exactly
+(`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`).
+
+5a3 holds at **82 of 115** — 66 RLS tables plus 49 SECURITY DEFINER functions, zero unproven. V7-4
+adds no table and no definer function: a derivation, a redirect, three chips and a manifest state
+are not catalogue surfaces, which is the correct reading rather than a gap.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**And `verify:responsive` is 244 declared, 244 measured, 0 skipped, 0 findings, 0 blockers** — up
+from 242 because V7-4 gave the respondent's content-block flow its first manifest coverage
+(`/s/<DEMO_BLOCKS_TOKEN>`, closing D239). The sanity read this file asks for, taken: that state
+reports `controls=8` at both widths, which is a screen; an error page reports 0.
+
+**AND `verify:reference` RAN FOR THE FIRST TIME SINCE v7 WAS INSTALLED — 35 captured, 0 failed, and
+FOUR of the 35 turned out not to be reproducible.** See D242 and D243: three are the bundle's own
+`uid()` (`Math.random()`, v7:6405) and one alternates between two layouts; separately, the bundle's
+webfonts fail TLS in this container, so **every `artifacts/reference-*` baseline is the drawing in
+fallback fonts** and the harness's `document.fonts.ready` wait is vacuous. The churn was reverted
+rather than committed, because committing either state makes a baseline a picture of one run.
+
+### A CORRECT THING BECOMES WRONG BECAUSE THE WORLD AROUND IT CHANGED, AND NO GATE IS LOOKING FOR THAT
+
+**Added 2026-09-17 (Tor), after V7-3 and V7-4. About `send_round`: «The error was already called
 `no_questions` — the name was right and the implementation was about to stop matching it. A guard
-can become untrue without anyone touching it.»**
+can become untrue without anyone touching it.» And on reading the second instance: «Put both in one
+entry.»**
 
-That is stated about a GUARD, and it happened twice in one tranche, the second time in COPY:
+> **Nothing was edited. The code was right when it was written, a collection it counts or a
+> registry it reads gained a member of a new kind, and it became wrong in place.**
 
-- **The guard.** `send_round`'s emptiness check was `jsonb_array_length(v_snapshot) = 0`, which
-  meant «no questions» only while the snapshot held nothing else. With blocks in it, a survey of six
-  info blocks and zero questions would have opened a round and mailed every recipient a link.
-- **The sentence.** `respondent.stepLabel` is «Spørsmål {step} av {total}» and it had read the
-  progress bar's own numbers since Phase 3. `total` became the flow's length, and a survey with
-  three questions and four blocks announced **«Spørsmål 1 av 7»**.
+`M:0127` added ONE table and produced FIVE instances in two phases. They are listed together
+because the family is the finding — one of them looks like carelessness, five look like a property
+of adding a kind:
 
-**Neither was edited. Both stopped being true because a denominator changed meaning underneath
-them** — and the second is worse to find, because a wrong guard eventually fires and a wrong
-sentence just gets read. `tsc`, eslint, the census and 1664 tests were all green on «Spørsmål 1 av
-7»; it was found by driving the flow and checking the arithmetic against the fixture.
+| where | correct when written | what made it wrong |
+|---|---|---|
+| `send_round`'s emptiness check | `jsonb_array_length(v_snapshot) = 0` meant «no questions» | the snapshot gained blocks, so six info blocks and zero questions would have opened a round and **mailed every recipient a link** |
+| `respondent.stepLabel` | «Spørsmål {step} av {total}» over the progress bar's numbers, since Phase 3 | `total` became the FLOW's length, so three questions and four blocks announced **«Spørsmål 1 av 7»** |
+| `moveQuestion` | moved a question within `questions`, which WAS the whole order | with a block in the flow it **hops the question over the block** — a reorder nobody asked for |
+| `estimatedMinutes(count)` | 0.6 min per question, two callers, a test pinning it | it takes a question count and nothing else, so a flow with four blocks **reports the length of the questions alone** |
+| `/undersokelser/[id]`'s redirect | `/bygg`, under «the rail is Bygg / Send / Resultater and Bygg is first» | F5-2 moved «Spørsmål» to the read view, so the survey's index **landed somewhere the registry no longer treats as its front door** |
 
-**The repair is the same both times, and it is this file's own rule:** count over the population the
-name says. v7 answers it in one expression (`v7:10440-10443`) with TWO labels — «Spørsmål N av M»
-over questions, «Les · steg N av M» over the flow — and the progress BAR stays over the flow,
-because a block IS a step the respondent walks through. It is a function in
-`lib/respondent/flow.ts` rather than two lines in a component **for F1's reason**: `PageHeader` has
-no `pct` prop, so a ratio over two populations cannot be expressed there; `stepLabelFor(flow, step)`
-is the same move aimed at a sentence.
+**NO GATE IS LOOKING FOR THIS, and that is the half worth remembering.** Every one of the five was
+green on `tsc`, eslint, the census and 1664 tests. A gate compares an output against a rule; here
+the rule itself has quietly stopped describing the thing. The two that were found were found by
+DRIVING the flow and checking the arithmetic against the fixture; the other three were found by
+reading the code the migration forced open.
 
-**So the question to ask of a shipped claim, whenever a collection it counts gains a second kind of
-member: does this sentence still name what it counts?** A guard at least has a symptom. A label has
-a reader.
+**The asymmetry that decides how hard to look:** a wrong guard eventually fires, and somebody sees
+a failure. **A wrong sentence just gets read.** «Spørsmål 1 av 7» would have shipped to every
+respondent of every survey with a content block, and nothing anywhere would have complained.
+
+**The repair is the same every time and it is this file's own rule: count over the population the
+name says.** v7 answers the label in one expression (`v7:10440-10443`) with TWO labels — «Spørsmål
+N av M» over questions, «Les · steg N av M» over the flow — and the progress BAR stays over the
+flow, because a block IS a step. `estimatedMinutes` now takes `{ questions, blocks }` as a NAMED
+object for F1's reason: positional numbers let a caller holding a flow pass its length as the
+question count, and a named one makes that unwriteable. `stepLabelFor(flow, step)` is the same move
+aimed at a sentence — `PageHeader` has no `pct` prop, and neither of these has a way to be formed
+over the wrong population from outside.
+
+**So the question to ask, whenever a collection gains a second kind of member:** *which shipped
+claims count it?* Not «which code touches the new table» — that list is short and obvious. The
+expensive list is the sentences, the guards and the redirects that were already correct, and the
+only way to it is to enumerate what the new kind is a member OF and then read every counter of that
+thing. `M:0127` is one table; five things counted it.
 
 ### AND `app.run_due_schedules` WAS THE FOURTH PATH NOBODY COUNTED — the first found while rewriting rather than by a symptom
 

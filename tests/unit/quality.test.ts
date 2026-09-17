@@ -182,9 +182,40 @@ describe('question type registry', () => {
   })
 
   it('estimates minutes the way the preview meta line does', () => {
-    expect(estimatedMinutes(0)).toBe(1)
-    expect(estimatedMinutes(1)).toBe(1)
-    expect(estimatedMinutes(5)).toBe(3)
-    expect(estimatedMinutes(10)).toBe(6)
+    /* The question rate is UNCHANGED at 0.6 — it has shipped since Phase 2 and
+       v7's `previewMeta` (v7:10259) agrees. These four are the original
+       assertions, restated against the named argument. */
+    expect(estimatedMinutes({ questions: 0 })).toBe(1)
+    expect(estimatedMinutes({ questions: 1 })).toBe(1)
+    expect(estimatedMinutes({ questions: 5 })).toBe(3)
+    expect(estimatedMinutes({ questions: 10 })).toBe(6)
+  })
+
+  it('V7-4: a CONTENT BLOCK adds to the length, at half a question', () => {
+    /* The defect this closes: the function took a question count and nothing
+       else, which was the whole of a survey until M:0127. A flow with three
+       questions and four blocks reported the length of three questions.
+
+       0.3 is `previewMeta`'s rate (v7:10259). `bMinutes` (v7:10208) says
+       0.4/0.25 for the same quantity, and the two cannot both be right — the
+       one adopted is the one whose QUESTION rate matches what the product
+       already ships, which is how the bundle's disagreement with itself was
+       settled rather than split. See Q240. */
+    expect(estimatedMinutes({ questions: 3, blocks: 4 })).toBe(3) // 1.8 + 1.2
+    expect(estimatedMinutes({ questions: 10, blocks: 0 })).toBe(6)
+    expect(estimatedMinutes({ questions: 10, blocks: 4 })).toBe(7) // 6 + 1.2
+    // Blocks alone still take time, and the floor of one minute holds.
+    expect(estimatedMinutes({ questions: 0, blocks: 1 })).toBe(1)
+    expect(estimatedMinutes({ questions: 0, blocks: 12 })).toBe(4)
+    // `blocks` is OPTIONAL, so the two pre-V7 call shapes agree exactly.
+    expect(estimatedMinutes({ questions: 7 })).toBe(estimatedMinutes({ questions: 7, blocks: 0 }))
+  })
+
+  it('V7-4: it refuses the rate the bundle contradicts itself with', () => {
+    /* `bMinutes`' 0.4/0.25 would give a DIFFERENT answer for the same flow, and
+       the point of pinning it is that a future reader copying the other v7 line
+       fails here rather than shipping a second estimate. */
+    const bMinutesRate = (q: number, b: number) => Math.max(1, Math.round(q * 0.4 + b * 0.25))
+    expect(estimatedMinutes({ questions: 10, blocks: 4 })).not.toBe(bMinutesRate(10, 4))
   })
 })

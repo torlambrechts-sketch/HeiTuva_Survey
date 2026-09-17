@@ -25,6 +25,7 @@ import {
   buildFlow,
   flowToLists,
   moveInFlow,
+  flowCounts,
   seededBlock,
   type BlockDraft,
   type BlockType,
@@ -216,6 +217,9 @@ export function Builder({
    * `app.guard_flow_position` enforces from the database's side.
    */
   const flow = buildFlow(draft.questions, draft.blocks)
+  /** V7-4 — one derivation for «what is in this flow», read by the chips and by
+   *  the length estimate so the two cannot disagree about the block count. */
+  const counts = flowCounts(flow)
 
   const writeFlow = (next: typeof flow) => {
     const lists = flowToLists(next)
@@ -700,6 +704,7 @@ export function Builder({
           personDef={personDef}
           title={draft.title}
           questions={draft.questions}
+          blockCount={draft.blocks.length}
           surveyId={surveyId}
           /* `locked` means the survey has been sent, which is exactly when a
              round exists to test against. A draft has none, and `mint_test_token`
@@ -778,9 +783,44 @@ export function Builder({
               aria-label={t('audience')}
               className="mt-1 w-full border-none bg-transparent py-3 text-[13.5px] text-mut outline-none disabled:opacity-60 md:py-0"
             />
+            {/* V7-4 — WHAT THE FLOW IS MADE OF (v7:10217's `bFlowChips`).
+
+                The drawing puts three counted chips above the flow, which is it
+                answering a question the builder only acquired when the flow
+                gained a second kind of member. They go here, in the row that
+                already states the survey's length, rather than in v7's new
+                header card: the card's other contents are the two-level rail
+                and the density switch, and both are blocked (see the phase
+                report). A card built around one row would be a frame with
+                nothing new in it.
+
+                «Seksjoner» states its REAL count including zero — v7's own
+                expression is `String(secs || 1)`, which draws «1 Seksjoner» for
+                a survey that has none. See `flowCounts`. */}
             <div className="mt-3 flex flex-wrap items-center gap-[10px]">
+              <span className="flex flex-wrap gap-[6px]">
+                {[
+                  { key: 'flowChipQuestions', value: counts.questions, bg: 'var(--ac)' },
+                  { key: 'flowChipBlocks', value: counts.blocks, bg: 'var(--ac2)' },
+                  { key: 'flowChipSections', value: counts.sections, bg: 'var(--sbg)' },
+                ].map((c) => (
+                  <span
+                    key={c.key}
+                    className="flex items-center gap-[7px] rounded-full px-3 py-[6px]"
+                    style={{ background: c.bg }}
+                  >
+                    <span className="text-[12.5px] font-bold">{c.value}</span>
+                    <span className="whitespace-nowrap text-[11.5px]">
+                      {t(c.key as 'flowChipQuestions')}
+                    </span>
+                  </span>
+                ))}
+              </span>
               <span className="text-[13px] text-mut">
-                {t('lengthNote', { count, mins: estimatedMinutes(count) })}
+                {t('lengthNote', {
+                  count,
+                  mins: estimatedMinutes({ questions: count, blocks: counts.blocks }),
+                })}
               </span>
               {tooLong ? (
                 <span className="rounded-full bg-ac3 px-3 py-[6px] text-[12.5px]">

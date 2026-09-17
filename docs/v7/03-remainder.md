@@ -1,227 +1,253 @@
-# V7-4 — the rest of the v7 bundle, as a LIST
+# V7-4 — the rest of the v7 bundle, DECIDED
 
-**2026-09-17.** Everything v7 draws, or the product has, that V7-1 to V7-3 did not touch. **A list,
-not a build**, so the sequencing is Tor's.
+**2026-09-17, revised the same day after running it.** The first version of this file was a LIST.
+Tor's instruction on reading it: *«anything the drawing draws but no decision covers gets DECIDED,
+not carried. A list that survives a phase becomes a list nobody owns.»* So every section below now
+ends in one of four states — **BUILT**, **ALREADY TRUE**, **REFUSED** (with the reason), or
+**ASKED** (one item, named) — and nothing is left as a description.
 
 Bundle citations are `v7:<n>` against `4d8fde3aea0f56e481bfe2416c811f96` (10558 lines) and `v6:<n>`
 against the seventh handoff (10152 lines).
 
 ---
 
-## 0. HOW THIS LIST WAS DERIVED, AND WHERE IT IS BLIND
+## 0. TWO CORRECTIONS TO THIS FILE'S OWN FIRST VERSION
 
-Three measurements, because one of them cannot see reversals and this file already records what that
-costs.
+Recorded rather than silently fixed, because both were written from a hunk header without reading
+both sides — the shape CLAUDE.md names as *a right conclusion resting on reasoning that is not
+true*, and in the second case the conclusion was wrong too.
 
-**a. The `sc-if` key sets.** 298 in v6, 318 in v7 — **23 arrivals, 3 departures**:
+**a. «A FIFTH BREADCRUMB, ON THE ARBEIDSLISTE» (old § 6) IS NOT A NEW BREADCRUMB.** `v6:3668` draws
+it identically — «Oversikt → Oppgaver og tilbakemeldinger» — and F3 already built it
+(`CRUMBS.tasks`). The only v7 change in that hunk is `padding-left:18px` on two containers. So the
+sentence «Q234 was decided against three instances of the trail. There are five» was **false**.
 
-```
-keys(){ grep -o 'sc-if value="{{ [a-zA-Z0-9_.]*' "$1" | sed 's/.*{{ //' | sort -u; }
-comm -13 <(keys v6) <(keys v7)   # 23
-comm -23 <(keys v6) <(keys v7)   #  3
-```
+Counted mechanically instead, `grep -n 'opacity:.5">→'` with each line's spans:
 
-| arrived (23) | what it is | state |
+| | v6 | v7 |
 |---|---|---|
-| `respondOne.rIsBlock` · `rBlockIsImg` · `rBlockIsVideo` · `rBlockIsRule` · `rBlockHasBody` · `rBlockHasCaption` | the respondent's block flow | **BUILT (V7-3c)** |
-| `q.blockFull` · `q.blockHasTitle` · `q.blockHasBody` · `q.blockHasCaption` · `q.blockHasMedia` · `q.blockHasUrl` · `q.blockIsRule` | the builder's block row | **BUILT (V7-3b)** |
-| `contentEmpty` | the content pane's empty state | **BUILT (V7-3b)** |
-| `tabContent` | the builder's FIFTH tab, as v7 places it | **§ 1 — not built** |
-| `q.compact` · `q.qFull` | the flow row's two densities | **§ 2 — not built** |
-| `q.badgeIsIcon` · `q.badgeIsNum` | the question row's number-or-icon badge | **§ 3 — not built** |
-| `sSecCh` · `sSecRec` · `sSecSender` · `sSecTime` | the send section filter | **REFUSED (Q235)** |
+| survey detail's back trail | 1158 | 1275 |
+| Undersøkelser · Innsikt · Rapporter · Handlinger · Bibliotek | 2127 · 2473 · 2797 · 3668 · 4616 | 2244 · 2542 · 2866 · 3737 · 4685 |
+| **build · send · resultater** | — | **511 · 4910 · 5719** |
 
-| departed (3) | state |
-|---|---|
-| `svTuvaFloat` · `svTuvaOpen` · `svTuvaSide` | **already reached independently by G5/G6** — `docs/v2/00-diff.md § 0.3f` records it as a confirmation with two riders |
+**v6 draws six, v7 draws nine, and the three arrivals are exactly the three Q234 refused.** There
+is no fourth or fifth instance and nothing reopens.
 
-**b. The line diff, because a key-set comparison is blind to substitution.** 92 changed regions,
-726 changed lines:
+**b. FOUR OF THE 23 «ARRIVALS» ARE NOT FEATURES AT ALL.** `q.qFull`, `q.blockFull`,
+`q.badgeIsNum` and `q.badgeIsIcon` exist because the bundle renders both kinds of flow row with
+ONE component and has to branch inside it (`badgeIsNum: !q.block, badgeIsIcon: !!q.block`,
+v7:10092). We render two components — `QuestionCard`, which shows `{index + 1}` at line 118, and
+`BlockCard`, which shows the type's icon chip. **The property the four keys express is already
+structurally true**, and building anything for them would have been implementing a branch we do
+not have because we do not need it.
+
+So the arrivals worth acting on are 19, not 23, and the derivation is: a key that exists only to
+distinguish two kinds inside one component is not a feature when the two kinds have their own
+components.
+
+---
+
+## 1. THE BUILDER'S HEADER CARD — the counts BUILT, the rail ASKED
+
+### BUILT: what the flow is made of (v7:10217)
+
+`bFlowChips` draws «Spørsmål N · Innhold N · Seksjoner N» — the drawing answering a question the
+builder only acquired when the flow gained a second kind of member. Three chips, real counts, one
+derivation (`flowCounts`, `lib/surveys/blocks.ts`), placed in the row that already states the
+survey's length rather than in a new card: the card's other contents are the rail and the density
+switch, and both are blocked, so a card around one row would be a frame with nothing new in it.
+
+**Two sub-decisions, both against the drawing (Q240, Q241):**
+
+- **«Seksjoner» states its real count, INCLUDING ZERO.** The bundle's own expression is
+  `String(secs || 1)` (v7:10221), so a survey with no section block draws «1 Seksjoner» — a
+  fabricated value in the sense CLAUDE.md names, indistinguishable from a real one in review.
+  Driven: the chips read «1 Spørsmål · 0 Innhold · 0 Seksjoner» on the seeded draft.
+- **The minute estimate counts blocks, at `previewMeta`'s rate and not `bMinutes`'.** And the
+  attribution matters more than the rate: **0.6 min per question is OURS**, shipped since Phase 2
+  in `estimatedMinutes` with a test pinning it, and `previewMeta` (v7:10259) agrees. `bMinutes`
+  (v7:10208) says `0.4/0.25` for the same quantity, so **the bundle disagrees with itself** and the
+  one adopted is the one whose question rate the product already states. *This is the third time
+  this tranche that a figure read as the new bundle's turned out to be ours.*
+
+  The real defect underneath was ours: `estimatedMinutes(count)` took a question count and nothing
+  else, which was the whole of a survey until M:0127 — **a correct function made incomplete by its
+  surroundings**, the fourth instance of that shape in this tranche. It now takes
+  `{ questions, blocks }` as a NAMED object, so a caller holding a flow cannot pass its length as
+  the question count, which is F1's two-population defect made unexpressible.
+
+### ASKED: the two-level rail
+
+**This is the one item I am not deciding, and the reason is a measurement.** On
+`screen === "build"` v7's subnav shows FOUR builder groups plus the «Undersøkelsen» exit — and
+**nothing else** (v7:8901-8906). The survey's own tabs are not on the rail while you are in the
+builder; the only way back is the exit, to `svdetail`.
+
+Our `/bygg` shows the **eight survey tabs**. Adopting v7's outer level means removing them from the
+builder and replacing them with four builder-group pills — so Send, Resultater and Målgruppe stop
+being one click from the editor.
+
+**It contradicts a decision that is three days old.** Q233 made «Bygger» an EXIT rather than a
+ninth tab and suppressed it on `/bygg`, because «an exit pointing at the page you are standing on
+is not an exit» — and that reasoning rests on the builder being ON the survey rail. v7's build
+screen says it is not. CLAUDE.md's standing rule covers exactly this: *when the bundle and a
+decision disagree, ASK*; and Tor's own boundary — *a refusal is mine; a scope is not* — puts «which
+pills appear on which screen» on his side.
+
+**Assumption I built under, so the answer costs an edit rather than a rebuild:** the survey rail
+stays as it is, and the builder's own four tabs stay in the right pane. Nothing in this phase
+depends on the answer.
+
+---
+
+## 2. THE FLOW ROW'S TWO DENSITIES — REFUSED, with the reason
+
+`flowViewChips` (v7:10187) and `flowGrid` (v7:10186) switch a two-column split and every row then
+renders under `q.compact` or `q.qFull`/`q.blockFull`. **Refused for this tranche, for two reasons
+that are both about the drawing rather than about effort:**
+
+1. **The switch lives in the header card's chip row**, beside `buildTabs` — so it arrives with § 1's
+   rail, which is asked. Building the switch somewhere else would be inventing a position.
+2. **Its own hint names a control we do not have.** `flowDragHint` (v7:10191) is «Dra i håndtaket
+   for å flytte, **eller bruk piltastene og «Flytt til»**. Kompakt visning gir overblikk i lange
+   undersøkelser.» The second clause is the keyboard path D235 refused the drag for lacking — so v7
+   itself pairs compact with a control that is a separate decision.
+
+The need is real (`LONG_SURVEY_THRESHOLD` exists for the same one). It belongs with § 1's card and
+the «Flytt til» control, as one piece of work rather than three.
+
+---
+
+## 3. THE QUESTION ROW'S BADGE — ALREADY TRUE
+
+See § 0b. `badgeIsNum` / `badgeIsIcon` is one component branching on kind; we have two components
+that already do it. Nothing to build, and the measurement is the answer.
+
+---
+
+## 4. THE BREADCRUMB ON BYGG / SEND / RESULTATER — REFUSED, and the count corrected
+
+Q234, Tor, 2026-09-17: *«Don't draw it — the context bar already says it.»* Unchanged, and now
+with a mechanical count beside it (§ 0a): v7 adds exactly three trails, all
+`Undersøkelser → {tittel} → <screen>`, all three inert spans replacing a 28px Playfair header, and
+`svdetail` keeps its back button (v7:1275) so they are an ADDITION rather than a replacement.
+
+On our screens the trail's words are already on the page twice — `SurveyContextBar`'s
+«← Undersøkelser» plus the title IS «Undersøkelser → {tittel}», and the subnav's current pill is
+the leaf. `crumbs.test.ts`'s negative list stands unedited and names two of the three paths
+explicitly.
+
+---
+
+## 5. THE HEADER CARDS ON SEND AND RESULTATER — one REFUSED, the rest deferred with § 1
+
+- **Send** (v7:4914-4942) — «Utsending», `sendChips`, the CTAs, and a readiness strip on `--sbg`
+  carrying a status dot, `sendReadyLine` and a «Velg målgrupper fra én populasjon» pill under
+  `sendBlocked`. **That refusal is one our screen already enforces** (the mixed-population guard),
+  stated further down the form. Moving it into a header is the same restructure as § 1's and waits
+  with it.
+- **Resultater** (v7:5721-5738) — the header becomes a card, the scope and threshold merge onto one
+  line, and the «Bytt undersøkelse» select moves into it **with an `aria-label` in place of a
+  visible `<label>`**. **That last change is REFUSED on its own merits**: replacing a visible label
+  with an accessible name removes the label for everyone who is not using a screen reader, and
+  `verify:responsive` counts controls rather than labels, so no gate would have reported it. The
+  card can arrive later; the label does not go.
+
+---
+
+## 6. (merged into § 0a and § 4)
+
+There was never a fifth breadcrumb. The section is kept as a numbered stub so the correction is
+visible to anyone who read the first version.
+
+---
+
+## 7. THE DRAG MECHANISM AND THE END DROP ZONE — REFUSED (D235)
+
+`paletteDrag` (v7:6801), `insertFlowAt` (v7:6808), `moveFlowTo` (v7:6818), the end drop zone
+(v7:10226-10236) and `draggable` on the palette's own buttons (v7:974). A drag with no keyboard
+equivalent is a control half this product's users cannot reach, and `docs/RESPONSIVE.md` has no
+pattern for one. If it is ever built, «Flytt til» (§ 2) is the keyboard half v7 itself names and
+both belong to one phase.
+
+---
+
+## 8. FOURTEEN `filter(q => !q.block)` GUARDS — ALREADY TRUE, and that is Q236's argument arriving as a measurement
+
+v7 adds the same clause at fourteen existing consumers — `sdBuild` (v7:7174), the length note
+(v7:9732-9735), `previewQs` (v7:10261), the logic rules (v7:10075), the comment box (v7:7751), the
+choice tiles (v7:7822), `attribRows.details` (v7:10534), `resultBlocks` (v7:10550-10551) and the
+rest. **Under two tables every one is a no-op**: `survey_questions` does not contain blocks, so
+there is nothing to filter. Listed so a future reader diffing the bundles does not mistake fourteen
+absent filters for fourteen gaps.
+
+---
+
+## 9. `/undersokelser/[id]` — BUILT: it means the survey's front door, derived
+
+It redirected to a hard-coded `/bygg` under a comment describing the pre-F5-2 world («the survey
+context is a step rail over Bygg / Send / Resultater, and Bygg is the first step»). Both halves had
+stopped being true — the fifth instance of *a correct line made wrong by its surroundings*.
+
+Now `TAB_SEGMENT[SURVEY_TABS[0]]`: the registry already decides which tab is first, so reordering
+it moves the redirect. And the ONE caller that depended on the index — the library's «Bruk mal»,
+measured as the only one — names `/bygg` itself, because it has just created a survey from a
+template and there is nothing to read yet. The test asserts the DERIVATION rather than the
+destination, so it keeps holding when the registry is reordered; proven RED against the literal.
+
+---
+
+## 10. THE BLOCK FLOW IS PHOTOGRAPHED NOW — BUILT, closes D239
+
+One manifest state on `/s/<DEMO_BLOCKS_TOKEN>`. **One is enough by a property of the fixture rather
+than by luck**: the seeded survey has `one_question: false`, so whole-list mode renders the section,
+the info block, the fact box and the divider on a single screen — four of the six types, at both
+widths. A separate survey from `DEMO_SHARE_TOKEN`'s, so no `verify:visual` baseline moves.
+
+---
+
+## 11. THE TWO «UNVERIFIABLES» — both SETTLED
+
+- **The bundle's missing assets.** v7 references `<image-slot>` (v7:5403) and `tuva/faces/f07.png`
+  and no asset directory accompanied the upload. **Settled, not open:** V7-3c's image block serves
+  the CUSTOMER'S OWN upload through our route, so no bundle asset is needed by anything we ship.
+  The `<image-slot>` is the drawing's placeholder component; the faces are its fixture. Nothing to
+  request.
+- **Whether v7 supersedes v6 or explores beside it.** Settled by installation: it is the eighth
+  handoff, `docs/v2/00-diff.md § 0.3f` governs per surface, and `verify:reference`'s target is
+  derived from the last `BUNDLES` entry. The file still does not say so itself; the project's
+  answer is the one that binds.
+
+---
+
+## 12. AND ONE THING THE RUN FOUND THAT NO SECTION PREDICTED
+
+**Four of the 35 v7 baselines are not reproducible, and `verify:reference` cannot see it.**
+Re-rendering the same bundle changed `live`, `live-revealed`, `send` and `undersokelser`; a second
+run flipped `undersokelser` back to the committed hash exactly. Measured:
 
 ```
-diff -u0 <(sed 's/^[ \t]*//' v6) <(sed 's/^[ \t]*//' v7) | grep -c '^@@'   # 92
+live            731 px differ, bbox 54 x 18     "no/qblmm" -> "no/q5obh"
+live-revealed   656 px differ, bbox 54 x 18     the same join code
+send           1206 px differ, bbox 93 x 25
+undersokelser 256150 px differ (3.87 %), bbox 2640 x 1482 — alternates between TWO states
 ```
 
-That is what found §§ 4, 5, 6 and 8 below — **none of which arrives as a new key.** § 4 is a
-breadcrumb replacing a page header, § 5 is the same header rebuilt as a card, § 6 is a fifth
-breadcrumb on a screen nobody was looking at, and § 8 is fourteen `filter(q => !q.block)` guards
-added at existing consumers.
+The three small ones are `uid()` (v7:6405, `"q" + Math.random().toString(36)`) — **the only
+`Math.random()` in the bundle**, and both `new Date(...)` calls are fixed literals, so there is no
+clock dependence. `undersokelser`'s whole-content difference is a layout race: the first table
+separator sits at device row 832 in one state and 915 in the other, an 83 px shift with identical
+text, so something above it is 41.5 CSS px taller in one render.
 
-**c. Where this list is still blind.** It reports what the DRAWING changed. It does not report a v7
-identifier whose MEANING moved while its spelling held — the `qcSaved` shape — because that is not
-a mechanical operation. The one protection that reaches it is the reference harness's
-pairwise-distinct check, and `npm run verify:reference` has not been re-run since V7-0 installed the
-bundle. Worth one run before anything here is built.
+**The churn was REVERTED rather than committed.** Committing either state would make the baseline a
+picture of one run instead of a picture of the drawing — the same trap as re-rendering an older set
+under a newer Chromium. The gate's distinctness check is real and clean (35 files, 35 distinct
+hashes, verified independently); what it cannot do is notice that a capture is not stable.
 
----
-
-## 1. THE BUILDER'S RAIL BECAME TWO LEVELS, AND EVERY LABEL CHANGED
-
-**The largest item on this list, and the one V7-3b deliberately did not do** (D234).
-
-v6:9847-9852 is a flat five: `Generelt · Legg til · Metodikk · Innstillinger · Vis`. v7:10192-10202
-is a **context-dependent rail that shows only the current GROUP's siblings**, with the outer level
-in the shell subnav (v7:8901-8906) and the inner level in the page:
-
-| subnav group (v7:8901-8906) | in-page pills (v7:10195-10198) |
-|---|---|
-| Bygg | «Spørsmål» · **«Innhold»** |
-| Metodikk | «Merknader · N» *or* «Ingen merknader» |
-| Innstillinger | «Kjøremodus» · «Personvern og frekvens» |
-| Forhåndsvis | «Slik ser den ut» |
-
-And the card around it is new (v7:521-551): a 20px-radius panel whose header carries `bBoxTitle`
-(«Flyt» / «Metodikk» / «Forhåndsvisning» / «Innstillinger», v7:10211), a `buildTabs` chip group,
-`bFlowChips` — three counted chips, «Spørsmål N · Innhold N · Seksjoner N» (v7:10217) — `bMinutes`,
-the density switch, «Bibliotek» and a guarded «Gå til utsending».
-
-**What makes it a phase rather than an edit:** it relabels every builder tab, splits one rail into
-two levels across two files, and adds a header card that owns four counts. V7-3b put the content
-palette beside the question palette instead, which is one control in the pane the editor is already
-in; moving it into «Innhold» is one line once this rail exists.
-
-**Two things to decide before building it**, both measured:
-- `bFlowChips`'s «Seksjoner» is `secs || 1` (v7:10221) — **an invented floor.** A survey with no
-  section blocks draws «1 Seksjoner». Never-fabricate applies.
-- `bMinutes` is `qn*0.4 + bn*0.25` (v7:10208) and `previewMeta` is `qn*0.6 + bn*0.3` (v7:10259).
-  **Two different estimates of the same survey's length, in one bundle**, and D232 already decided
-  what to do with an unmeasured figure the customer can check.
-
----
-
-## 2. THE FLOW ROW HAS TWO DENSITIES
-
-`flowViewChips` is `[["full","Full"],["compact","Kompakt"]]` (v7:10187) and `flowGrid` switches the
-two-column split with it (v7:10186). Every flow row then renders under `q.qFull` / `q.compact`
-(question) or `q.blockFull` (block), so **compact is a second rendering of every row**, not a CSS
-change.
-
-`flowDragHint` (v7:10191) states the reason: «Kompakt visning gir overblikk i lange undersøkelser.»
-That is a real need — `LONG_SURVEY_THRESHOLD` exists in `bygg/types.ts` for the same one.
-
-Its cost is the drag mechanism, which **V7-3b refused** (D235): the hint's own first clause is «Dra i
-håndtaket for å flytte, eller bruk piltastene og «Flytt til»» — so v7 itself offers a keyboard path,
-`«Flytt til»`, that we do not have. A phase that builds compact should decide whether it also builds
-that, because the hint names both.
-
----
-
-## 3. THE QUESTION ROW'S BADGE
-
-`q.badgeIsNum` / `q.badgeIsIcon` (arrived in v7). The flow row's leading badge is the question's
-POSITION NUMBER for a question and the type's ICON for a block, where v6 had one treatment. Small,
-self-contained, and it belongs with § 1 or § 2 rather than alone.
-
----
-
-## 4. THE PAGE HEADER ON BYGG / SEND / RESULTATER BECAME A BREADCRUMB
-
-**The one item that reverses a measured decision rather than extending one, and Tor has already
-refused it once** (Q234, 2026-09-17): «Don't draw it — the context bar already says it.»
-
-| screen | v6 removed | v7 added |
-|---|---|---|
-| build | `v6:509-518` | `v7:509-511` |
-| send | `v6:4840-4844` | `v7:4909-4910` |
-| results | `v6:5580-5585` | `v7:5717-5719` |
-
-Three inert spans, «Undersøkelser → {tittel} → Bygger», no `onClick` and no link, replacing a 28px
-Playfair header — and `svdetail` KEEPS its back button (v7:1272), so it is an ADDITION to the work
-screens rather than a replacement of the back control.
-
-**Listed rather than closed**, because § 6 found a FIFTH location after Q234 was decided, and a
-refusal decided over three instances is worth re-reading against five. `crumbs.test.ts`'s negative
-list still names `/undersokelser/abc-123/bygg` and `/undersokelser/abc-123/send` explicitly, so
-implementing this fails a shipped test **on purpose** — which is the test doing its job and the
-reason it needs a decision before a phase rather than a red gate during one.
-
----
-
-## 5. THE THREE WORK SCREENS GAINED A HEADER CARD
-
-Independent of § 4's breadcrumb, and it is the same shape three times:
-
-- **Build** (v7:521-551) — § 1.
-- **Send** (v7:4914-4942) — «Utsending», `sendChips`, «Gå til bygger», the send button, and then a
-  READINESS STRIP on `--sbg`: a status dot, `sendReadyLabel`, `sendReadyLine`, and a
-  «Velg målgrupper fra én populasjon» pill under `sendBlocked`. **That last one is a real
-  refusal our screen already enforces** — the mixed-population guard — currently stated further
-  down the form.
-- **Results** (v7:5721-5738) — «Resultater» with `{resultsScope} · {resultsThresholdLine}` merged
-  onto one line under it, and the «Bytt undersøkelse» select moved INTO the header with an
-  `aria-label` in place of a visible `<label>`. **The label change is a decision, not a copy:** an
-  `aria-label` on a select removes the visible text, and `verify:responsive` counts controls, not
-  labels.
-
----
-
-## 6. A FIFTH BREADCRUMB, ON THE ARBEIDSLISTE
-
-`v7:3736-3738` — «Oversikt → Oppgaver og tilbakemeldinger», the same three inert spans, on a screen
-neither the four claims nor the review's § 2 mentioned. **Found by the line diff, not by the key
-diff**, because a breadcrumb is markup and carries no `sc-if`.
-
-It matters for § 4: Q234 was decided against three instances of the trail. There are five.
-
----
-
-## 7. THE DRAG MECHANISM AND THE END DROP ZONE
-
-`paletteDrag` (v7:6801), `insertFlowAt` (v7:6808), `moveFlowTo` (v7:6818), `dropEndOver` /
-`dropEndBd` / `dropEndBg` / `dropEndLabel` / `onDropEnd` (v7:10226-10236), and `draggable` on the
-question palette's own buttons (v7:974).
-
-**Refused in V7-3b with the reasoning written down** (D235): a drag with no keyboard equivalent is a
-control half this product's users cannot reach, and `docs/RESPONSIVE.md` has no pattern for one. It
-is on this list because a refusal is not an absence — if it is ever built, `«Flytt til»` (§ 2) is the
-keyboard half v7 itself names, and both belong to one phase.
-
----
-
-## 8. FOURTEEN `filter(q => !q.block)` GUARDS WE GOT FOR FREE
-
-v7 adds the same clause at fourteen existing consumers — `sdBuild` (v7:7174), the length note and
-«for lang» (v7:9732-9735), `previewQs` (v7:10261), the logic rules (v7:10075), the comment box
-(v7:7751), the choice tiles (v7:7822), `attribRows.details` (v7:10534), `resultBlocks` (v7:10550-10551)
-and the rest.
-
-**Under two tables every one of them is a no-op**, which is Q236's whole argument arriving as a
-measurement: `survey_questions` does not contain blocks, so nothing needs filtering. Listed so that
-a future reader diffing the bundles does not mistake fourteen absent filters for fourteen gaps.
-
----
-
-## 9. `/undersokelser/[id]` STILL REDIRECTS INTO THE EDITOR
-
-`app/(app)/undersokelser/[id]/page.tsx:12-15` redirects to `/bygg`, and its doc comment still
-describes the pre-V6-2 world. F5-2 moved «Spørsmål» to the read view with the builder one click
-further on (`lib/surveys/tabs.ts:60-63`), so the survey's own index lands somewhere the tab registry
-no longer treats as its front door.
-
-Not a defect — the route resolves and the rail lights «Spørsmål» through `TAB_ALIAS` — but § 1's
-two-level rail and § 4's breadcrumb both name a screen in their leaf, so **what
-`/undersokelser/[id]` MEANS should be decided rather than inherited.**
-
----
-
-## 10. TWO THINGS THAT ARE NOT V7's AND ARE OPEN ANYWAY
-
-- **No manifest state photographs a content block.** The apparatus is frozen, so V7-3c seeded the
-  flow (`/s/<DEMO_BLOCKS_TOKEN>`) and added no state. One state in whole-list mode would cover the
-  section, the image, the video card and the divider in a single screen. See **D239**.
-- **`npm run verify:reference` has not run since v7 was installed.** V7-0 added the `BUNDLES` entry
-  and committed `artifacts/reference-v7/`, and the pairwise-distinct check is the only thing in this
-  project that has ever caught a handoff removing a state (v6's `qcSaved`). v7 removes three keys.
-
----
-
-## 11. AND THE TWO THINGS THAT REMAIN UNVERIFIABLE
-
-Unchanged from `docs/v7/00-review.md § 4`, restated because neither has been resolved:
-
-- **Whether v7's `<image-slot>` and `tuva/faces/f07.png` reference assets that were never handed
-  over.** No asset directory accompanied the upload. V7-3c's image block needs no bundle asset — it
-  serves the customer's own upload — so this is now only a question about the drawing's fixtures.
-- **Nothing in the bundle says whether it supersedes v6 or explores beside it.** It is installed as
-  the eighth handoff and `docs/v2/00-diff.md § 0.3f` governs per surface, which is the project's
-  answer; the file itself still does not say.
+**And a second thing the same probe established:** the bundle's Google Fonts stylesheet and its
+unpkg React both fail `ERR_CERT_AUTHORITY_INVALID` in this container, `document.fonts.size` is 0,
+and `fc-list` finds no Playfair or DM Sans locally. **Every `artifacts/reference-*` baseline is
+therefore rendered in fallback fonts**, and the harness's `await page.evaluate(() =>
+document.fonts.ready)` is vacuous — `document.fonts.check()` returns true when there is no
+`@font-face` to load. That is a property of the environment rather than a defect in the drawing,
+and it is worth writing down because every pixel comparison against these baselines inherits it.

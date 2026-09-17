@@ -7670,3 +7670,151 @@ wrong with one image and fixing the stale label alone would leave a flaky baseli
 RED** with both causes measured, not as unrun and not as green. CLAUDE.md already says «green» said
 of a gate nobody started is the same false claim as «green» said of a cancelled one; this adds the
 third case — a gate that ran, failed, and failed for something that is not the phase's.
+
+### CLOSED, AND ONE CLAUSE ABOVE WAS WRONG — THE WRITER IS A TEST (2026-09-17, later the same day)
+
+Tor: «Chase that writer when you next touch the manifest — a fixture mutated by a test is the class
+D102 covers from the other side.» Chased. **It is not the manifest.**
+
+**THE CORRECTION FIRST.** The paragraph above says the rename happens «during the run, by something
+in the manifest walk (`profil/saved` clicks «Lagre endringer», which posts the whole form)». That
+was a hypothesis with a plausible mechanism and it is **false**. `saveProfile` writes the form's own
+`display_name`, whose default is `profile?.display_name ?? viewer.displayName` — so posting that
+form re-writes the name that is already there. It cannot introduce an address. Recorded rather than
+replaced, because a reasoned guess reads exactly like a measurement once it is in a document, and
+this file's own rule is that a right conclusion resting on untrue reasoning is still a correction.
+
+**THE WRITER, MEASURED.** Four writers touch `profiles.display_name`
+(`grep -rn display_name app/ lib/ scripts/ tests/ supabase/ | grep -v select`), and exactly one can
+produce an email address: **`tests/db/factories.ts:76`, `display_name: m.name ?? m.email`, upserted
+unconditionally.** `findOrCreateUser` resolves by ADDRESS, so a fixture org naming
+`PERSONAS.administrator.email` reuses the demo administrator's auth user and their single `profiles`
+row. **`tests/db/blocks.test.ts:67` — V7-3a's own test — adds that persona as a member and gives no
+name**, because the test is about `send_round`'s authority and not about anybody's name. So it
+renamed the demo administrator to their address, and `dropOrg` deletes the organisation and leaves
+the profile: **the rename outlived the fixture.**
+
+**AND THE FLIP THAT HAD TO BE EXPLAINED BEFORE ANY OF THIS COULD BE TRUSTED.** `verify:visual` was
+green again with nothing fixed, which is not an outcome to accept. Measured, per pixel, current
+render against the committed baseline:
+
+```
+differing region   x 565-964   y 43-53   3097 px raw, 1397 above the 0.2 YIQ threshold
+allowed at 0.001   1296 px
+avatar region      no differing pixel at all
+```
+
+**One region, and it is the NAV LABEL, not the avatar.** The avatar matched because the profile had
+been re-seeded to «Tuva Berg» by a later `seed:demo`; the label difference sits just inside
+Playwright's tolerance because its comparator discounts anti-aliased pixels. So **cause 2 was
+order-dependent exactly as recorded, and cause 1 was a stale baseline the gate could not report.**
+That is a seventh member of «green for something that structurally could not be seen», and the
+thing unseen is a deliberate copy change from four days earlier.
+
+**THE FIX IS THE FACTORY, NOT THE CALLER.** Passing a name in `blocks.test.ts` closes one caller and
+leaves the shape — the next test that names a persona without a name does it again. So the address
+fallback is narrowed to CREATION: a caller who says a name sets it, a caller who says nothing gets a
+profile only if none exists, and an existing one is left exactly as it was. `prefer the shape where
+the wrong thing cannot be expressed`, aimed at a fixture.
+
+`tests/db/fixture-identity.test.ts` (3) states it, and test 2 was **proven RED first against the old
+line, with the defect's own value**: `expected 'admin@nordiskstudio.test' to be 'Tuva Berg'`. Test 3
+exists because the fix must not silently delete the behaviour callers without a persona rely on.
+
+**THE BASELINE IS REGENERATED, and now it is the right thing to do.** D241's own plan was «make the
+writer stop, re-run, LOOK at the picture, and only then commit it», and all four steps are done in
+that order. The diff against the committed file is **one region, 3097 px, x 565-964 y 43-53, and
+nothing else moved** — no layout shift, no font change, no avatar. The new picture was opened and
+read: the nav says «Handlinger», the avatar «TB», the wizard's four steps and six purpose cards are
+intact. `verify:visual` is **12 of 12 green** on it.
+
+---
+
+## D242 — FOUR OF THE 35 v7 BASELINES ARE NOT REPRODUCIBLE, AND THE GATE CANNOT SEE IT (2026-09-17)
+
+`verify:reference` had not run since V7-0 installed the bundle, which is why V7-4 ran it first. It
+reported **35 captured, 0 failed, 4 skipped** and its pairwise-distinct check is real and clean —
+verified independently, 35 files and 35 distinct md5s. **And four of the 35 files changed on a
+re-render of the same bundle.**
+
+Measured rather than eyeballed, with a per-pixel diff:
+
+```
+live            731 px differ   bbox 54 x 18     "no/qblmm" -> "no/q5obh"
+live-revealed   656 px differ   bbox 54 x 18     the same join code
+send           1206 px differ   bbox 93 x 25
+undersokelser 256150 px differ  bbox 2640 x 1482  (3.87 %) — ALTERNATES between two states
+```
+
+A second run flipped `undersokelser` back to the committed hash **exactly**, which is what turns
+this from «something drifted» into «it has two states».
+
+**The three small ones are `uid()`** — v7:6405, `"q" + Math.random().toString(36).slice(2,8)`, the
+only `Math.random()` in the bundle. Both `new Date(...)` calls are fixed literals (`2026, 8, 7`),
+so there is no clock dependence; the crop reads the changed characters directly.
+
+**`undersokelser`'s is a layout race, not fonts and not the clock.** The first table separator sits
+at device row 832 in one state and 915 in the other — an 83 px shift, 41.5 CSS px, with identical
+text — so something above it is one row-height taller in one render. Consistent with the card
+header's controls wrapping in one state and not the other.
+
+**THE CHURN WAS REVERTED, NOT COMMITTED, and that is the decision.** Committing either state makes
+the baseline a picture of one run rather than a picture of the drawing — the same trap CLAUDE.md
+already names for re-rendering an older set under a newer Chromium. So `artifacts/reference-v7/`
+stays as V7-0 captured it and as V7-1…V7-3 were judged against.
+
+**What the gate cannot do is notice this.** It asserts that two SCREENS do not render identically
+within one bundle, which caught v6's `qcSaved`. It does not assert that one screen renders
+identically twice, and it has no reason to — a second render per screen would double the runtime of
+the slowest gate in the project. Logged for whoever unfreezes the apparatus; the cheap version is
+to re-render the four named screens only.
+
+---
+
+## D243 — EVERY REFERENCE BASELINE IS RENDERED IN FALLBACK FONTS (2026-09-17)
+
+Found by the same probe, and it is a property of the environment rather than of the drawing.
+
+The bundle loads Playfair Display, DM Sans, Bricolage Grotesque and Poppins from
+`fonts.googleapis.com`. Measured in this container:
+
+```
+requestfailed  ERR_CERT_AUTHORITY_INVALID  https://fonts.googleapis.com/css2?family=...
+requestfailed  ERR_CERT_AUTHORITY_INVALID  https://unpkg.com/react@18.3.1/umd/react.production.min.js
+document.fonts.size            0
+document.fonts.check('500 22px "Playfair Display"')   true
+fc-list | grep -ic playfair   0
+```
+
+So: **no `@font-face` is ever registered, no Playfair or DM Sans exists locally, and every
+`artifacts/reference-*` capture is therefore the drawing in generic `serif` / `sans-serif`.** The
+headings still LOOK right, because `var(--fd,'Playfair Display',serif)` falls back to a serif — the
+substitution is plausible, which is exactly why nobody noticed.
+
+**And the harness's font wait is vacuous here.** `await page.evaluate(() => document.fonts.ready)`
+resolves immediately when there is nothing loading, and `document.fonts.check()` returns TRUE when
+no `@font-face` needs to match — so the one line that looks like it guarantees typography
+guarantees nothing. That is the «a gate looking for something wrong in the output cannot
+distinguish nothing-wrong from no-output» shape, aimed at a wait rather than at a measurement.
+
+**Not fixed here**, for two reasons: the apparatus is frozen, and the fix is an environment
+decision rather than a code one (vendor the four families into the bundle directory, or trust the
+proxy CA in the browser context). Recorded because **every pixel comparison against these
+baselines inherits it**, and a future session that gets the fonts loading will see all 35 change at
+once and must not read that as a design change.
+
+---
+
+## D244 — v7 MOVES A VISIBLE LABEL INTO AN `aria-label`, AND THAT HALF IS REFUSED (2026-09-17)
+
+v7:5721-5738 rebuilds the Resultater header as a card and moves the «Bytt undersøkelse» select
+into it **with an `aria-label` in place of the visible `<label>`** (v6:5587-5596 had both).
+
+The card can arrive with § 1's restructure. **The label change does not.** An accessible name is
+not a label: replacing the visible one removes it for everyone who is not using a screen reader,
+which is most people using the screen. And no gate would have reported it —
+`verify:responsive` counts controls, not labels, and `verify:i18n` reads rendered text, which an
+`aria-label` still provides.
+
+Recorded as a refusal rather than a deferral, so the next phase building that card does not adopt
+it by copying the markup.

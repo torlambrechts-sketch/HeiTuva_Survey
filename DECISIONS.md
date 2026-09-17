@@ -1116,3 +1116,28 @@ invention with extra steps.
 > the silent pg_cron job never did, so **a scheduled survey with zero questions could open an
 > empty round and mail every recipient a link to it.** It is fixed in M:0127, in the same
 > migration that had to rewrite the function anyway.
+
+## Q240–Q242 — V7-4: the remainder, decided rather than carried (2026-09-17)
+
+| # | Subject | Decision | Why |
+|---|---|---|---|
+| **Q240** | v7's minute estimate for a flow | **BLOCKS COUNT, at `previewMeta`'s 0.3 — and `bMinutes`' 0.4/0.25 is REFUSED because the bundle disagrees with itself.** The signature becomes `{ questions, blocks }`, a named object. | **The attribution matters more than the rate, and it is the third time this tranche.** 0.6 min per question is OURS — `estimatedMinutes` has shipped it since Phase 2 with a test pinning it, two callers agreeing — and v7's `previewMeta` (v7:10259) states the same 0.6. `bMinutes` (v7:10208) states `qn*0.4 + bn*0.25` for the same quantity, so the drawing cannot be right twice; the one adopted is the one whose question rate the product already ships, which settles the contradiction rather than splitting it. **The defect underneath was ours:** the function took a question count and nothing else, which was the whole of a survey until M:0127 — a correct function made incomplete by its surroundings, and the fourth of five such instances (see CLAUDE.md's entry). The argument is an OBJECT for F1's reason: a caller holding a flow would otherwise pass its length as `questions` and count the blocks twice, which is the two-population defect with a new subject. `tests/unit/quality.test.ts` pins both rates and asserts the refused one gives a different answer, so a future reader copying the other v7 line fails a test rather than shipping a second estimate. |
+| **Q241** | v7's «Seksjoner» chip | **THE REAL COUNT, INCLUDING ZERO.** `flowCounts` has no floor and the chip has none either. | The bundle's own expression is `String(secs || 1)` (v7:10221), so a survey with no section block draws **«1 Seksjoner»**. That is the never-fabricate rule's exact case: indistinguishable from a real one in review, and it survives into a screenshot as though it were true. Proven RED from BOTH directions — the floor put back in `flowCounts`, and then put back at the chip instead — because a guard that only watches the derivation can be defeated at the call site. Driven: «1 Spørsmål · 0 Innhold · 0 Seksjoner» on the seeded draft, and «1 · 2 · 1» after adding a Seksjon and a Tekst. |
+| **Q242** | `/undersokelser/[id]` | **THE SURVEY'S FRONT DOOR, DERIVED** — `TAB_SEGMENT[SURVEY_TABS[0]]`, not a literal. The one caller that depended on it names `/bygg` itself. | It redirected to a hard-coded `/bygg` under a comment describing the pre-F5-2 world; both halves had stopped being true, which is the fifth instance of the same shape. Measured before deciding: exactly ONE place linked here, the library's «Bruk mal», and it wants the EDITOR — there is nothing to read on a survey made from a template a second ago. So the caller states its intent and the index is free to mean one thing. The test asserts the DERIVATION rather than the destination, so reordering `SURVEY_TABS` moves the redirect and the test keeps holding; proven RED against the literal. |
+
+**AND ONE ITEM IS ASKED RATHER THAN DECIDED — v7's two-level builder rail.**
+
+Measured, `v7:8901-8906`: on `screen === "build"` the subnav shows **four builder groups plus the
+«Undersøkelsen» exit and nothing else.** The survey's own tabs are not on the rail while you are in
+the builder. Ours shows eight, so adopting it means Send, Resultater and Målgruppe stop being one
+click from the editor.
+
+**It contradicts Q233, which is three days old.** That decision made «Bygger» an EXIT rather than a
+ninth tab and suppressed it on `/bygg` because «an exit pointing at the page you are standing on is
+not an exit» — and the reasoning rests on the builder being ON the survey rail. v7's build screen
+says it is not. CLAUDE.md's standing rule is exactly this case, and Tor's own boundary puts «which
+pills appear on which screen» on his side: *a refusal is mine; a scope is not.*
+
+Built under the assumption that the survey rail stays, with the builder's four tabs where they are.
+Nothing in V7-4 depends on the answer, so it costs an edit rather than a rebuild. See
+`docs/v7/03-remainder.md § 1`.

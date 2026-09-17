@@ -233,9 +233,42 @@ export const NEW_QUESTION_TEXT: Record<QuestionType, string> = {
 }
 
 /**
- * Estimated minutes for a question count, from the bundle: 0.6 min each, never
- * below 1. Used by the length note and the preview meta line, which must agree.
+ * Estimated minutes for a survey's FLOW — questions at 0.6 min, content blocks
+ * at 0.3. Used by the length note, the preview meta line and the flow card,
+ * which must agree.
+ *
+ * ── V7-4: THIS WAS CORRECT AND BLOCKS MADE IT INCOMPLETE ───────────────────
+ *
+ * It took a question COUNT and nothing else, which was the whole of a survey
+ * until M:0127. A flow with three questions and four blocks then reported the
+ * length of three questions — **a correct function made wrong by its
+ * surroundings**, which is this tranche's recurring shape: `send_round`'s
+ * `no_questions`, the respondent's «Spørsmål 1 av 7», `moveQuestion` hopping a
+ * question over a block, and the survey index redirecting into the editor.
+ * Nothing was edited in any of the four.
+ *
+ * ── THE RATE IS OURS, AND THE BUNDLE DISAGREES WITH ITSELF ABOUT IT ────────
+ *
+ * v7 states this quantity TWICE, with two different rates:
+ *
+ *   `previewMeta`  (v7:10259)   qn*0.6 + bn*0.3
+ *   `bMinutes`     (v7:10208)   qn*0.4 + bn*0.25
+ *
+ * **0.6 is already ours** — this function has shipped it since Phase 2, with a
+ * test pinning it — and `previewMeta` agrees. So the arrival is not a figure,
+ * it is a SECOND figure for a quantity that already had one, in a drawing that
+ * cannot both be right. `previewMeta`'s is adopted because its question rate is
+ * the one the product already states; `bMinutes`' 0.4/0.25 is refused as the
+ * bundle contradicting itself (Q240).
+ *
+ * ── THE ARGUMENT IS AN OBJECT, AND THAT IS F3's RULE ───────────────────────
+ *
+ * `{ questions, blocks }` rather than two positional numbers: a caller holding
+ * a FLOW would otherwise pass its length as `questions` and count the blocks
+ * twice, which is F1's two-population defect with a new subject. Named, the
+ * wrong thing cannot be written — the same reason `PageHeader` has no `pct`
+ * prop and `rateOf` takes `{ measured, total }`.
  */
-export function estimatedMinutes(questionCount: number): number {
-  return Math.max(1, Math.round(questionCount * 0.6))
+export function estimatedMinutes(flow: { questions: number; blocks?: number }): number {
+  return Math.max(1, Math.round(flow.questions * 0.6 + (flow.blocks ?? 0) * 0.3))
 }
