@@ -19,7 +19,13 @@ import { chromium, type Page } from '@playwright/test'
 import { serveCdnFromCache } from './cdn-cache'
 
 /**
- * FOUR bundles, all rendered, all kept (DECISIONS Q18, extended by Q52).
+ * EIGHT bundles, all rendered, all kept (DECISIONS Q18, extended by Q52).
+ *
+ * **THIS SAID «FOUR» THROUGH v4, v5, v6 AND v7** — a carried number nobody
+ * re-derived, of exactly the kind this project has now recorded three times
+ * («61 of 83», the I2 census total, G1's 1537). It is corrected here rather
+ * than quietly, and the command that re-derives it goes beside it:
+ * `grep -c "^    key: '" scripts/verify/reference.ts`.
  *
  * `design-reference/` is the first handoff and remains the reference for
  * Phase 1–7 work AS BUILT: a fidelity question about a screen no later phase
@@ -135,6 +141,33 @@ const BUNDLES: Bundle[] = [
     // — the state simply does not apply and the previous screen is captured
     // under the new name.
     out: 'artifacts/reference-v6',
+  },
+  {
+    key: 'v7',
+    role: 'eighth handoff — the target for every screen a v7 phase touches',
+    design: 'design-reference-v7/heituva-survey-app-design/project/HeiTuva.dc.html',
+    // No `splash`, no `bruksomrader`, for the FIFTH handoff running. Both
+    // surfaces stay v2's.
+    //
+    // `support.js` and `image-slot.js` are v6's, byte-identical to v5's
+    // (951ae391… and ffd58db3… in both), because a one-file handoff re-issues
+    // neither. Copied forward rather than symlinked so each bundle directory
+    // stays a complete, frozen record of what its phases rendered against.
+    //
+    // THE `until` CHECK WAS RUN, NOT ASSUMED — and v7 is the second handoff to
+    // remove keys, so the question was live. Three `sc-if` keys are gone
+    // (`svTuvaFloat`, `svTuvaOpen`, `svTuvaSide`: v6 draws both svTuva
+    // placements at v6:2414-2455, v7 draws neither and keeps the script that
+    // computes them). None of the three is a state key this manifest sets.
+    // Measured over all seventeen keys the SCREENS entries below actually set:
+    // fifteen resolve in v7 with a count at or above v6's, and the remaining
+    // two — `billing` (10) and `mode` (8) — are SPLASH-ONLY and resolve in v2's
+    // splash file, which is the file the splash renders from. So no `until` is
+    // needed. The second half of the check is the pairwise-distinct hash guard
+    // below, which is what catches a removal this one cannot: without it the
+    // state simply would not apply and the previous screen would be captured
+    // under the new name.
+    out: 'artifacts/reference-v7',
   },
 ]
 

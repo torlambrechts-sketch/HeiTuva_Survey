@@ -81,8 +81,9 @@ Build the verification harness. This is infrastructure I will reuse every phase.
      the sixth handoff, the reference for screens a v5 phase built and no v6 phase
      touches. ONE FILE for the THIRD handoff running.
    /design-reference-v6/…/HeiTuva.dc.html   -> artifacts/reference-v6/<screen>.png
-     the seventh handoff, the TARGET for every screen a v6 phase touches. ONE FILE for the
-     FOURTH handoff running — which is now simply what a handoff is.
+     the seventh handoff, the reference for screens a v6 phase built and no v7 phase
+     touches. ONE FILE for the FOURTH handoff running — which is now simply what a
+     handoff is.
      AND THE FIRST HANDOFF TO REMOVE KEYS: 34 gone (28 uitest, 6 survey-list). `since`
      assumes screens are ADDED, so both halves of the removal check were run — every state
      key the manifest sets still resolves (14 of 15; the 15th is splash-only and lives in
@@ -91,6 +92,17 @@ Build the verification harness. This is infrastructure I will reuse every phase.
      came back identical to plain `respondent`, because v6 turned `qcSaved` from a keyed
      map into a boolean over a new `qcSavedText` — a key that survived with a different
      meaning, which no key-set diff can see.
+   /design-reference-v7/…/HeiTuva.dc.html   -> artifacts/reference-v7/<screen>.png
+     the eighth handoff, the TARGET for every screen a v7 phase touches. ONE FILE for the
+     FIFTH handoff running; `support.js` and `image-slot.js` are v6's, byte-identical to
+     v5's, because a one-file handoff re-issues neither.
+     THE SECOND HANDOFF TO REMOVE KEYS, so the removal check was run again rather than
+     assumed: three `sc-if` keys are gone (`svTuvaFloat`, `svTuvaOpen`, `svTuvaSide` —
+     v7 draws neither svTuva placement and keeps the script that computes them), none of
+     them a state key the manifest sets. All seventeen keys the manifest sets resolve:
+     fifteen in v7 at or above v6's count, and `billing` (10) and `mode` (8) in v2's
+     splash file, which is the file the splash renders from. The 35 captured PNGs are
+     pairwise distinct, 35 files / 35 hashes, 0 failed.
      Screens are declared per bundle (`since`), so a screen whose file this bundle lacks
      is skipped rather than captured from the wrong page. `since` assumes screens are
      ADDED and not removed; v5 removes eight `sc-if` keys, so that was CHECKED rather
@@ -145,7 +157,8 @@ to prove your own implementation is wrong. Assume it is until evidence says othe
 Re-read CLAUDE.md and the phase scope in CLAUDE_CODE_PROMPTS.md. Re-read the relevant
 markup in the bundle that governs the screen (Q18, extended by Q52), which is read off
 the per-surface table in docs/v2/00-diff.md section 0.3 rather than inferred:
-/design-reference-v6/… for anything a v6 phase touches, /design-reference-v5/… for
+/design-reference-v7/… for anything a v7 phase touches, /design-reference-v6/… for
+screens v6 built and v7 does not touch, /design-reference-v5/… for
 screens v5 built and v6 does not touch, /design-reference-v4/… for
 screens v4 built and v5 does not touch, /design-reference-v3/… for screens v3 built and
 v4 does not touch, /design-reference-v2/… for screens v2 built and no later phase

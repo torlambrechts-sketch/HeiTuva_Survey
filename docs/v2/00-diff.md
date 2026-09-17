@@ -1042,3 +1042,96 @@ strings across three decisions did not.** The useful statement is that a handoff
 `since: 'v3'`, so it renders for v3, v4, v5 AND v6. Its state patch now sets BOTH the pre-v6 keyed
 `qcSaved` map and v6's `qcSavedText` scalar, because a regeneration of an older set by name must
 keep working. Each model reads its own and ignores the other.
+
+## 0.3f — v7, the eighth handoff: THE FIRST TIME THE DRAWING AND THE IMPLEMENTATION REACHED THE SAME DECISION SEPARATELY (measured V7-0, 2026-09-17)
+
+`HeiTuva.dc_6.html` · md5 **`4d8fde3aea0f56e481bfe2416c811f96`** · **10558 lines** · **318
+distinct `sc-if` keys**. Against v6 (`7c25573daee30103642ccf67781b44f4`, 10152 lines, 298 keys):
+**+23 added, −3 removed**, net +20, +406 lines.
+
+The command is the same one § 0.3e states, beside the claim:
+`grep -o '<sc-if value="{{[^}]*}}"' <file> | sort -u | wc -l`, and `comm -13` / `comm -23` over
+the two sorted sets for the arrivals and the departures.
+
+### THE THREE DEPARTURES ARE ONE SURFACE, AND IT IS A CONFIRMATION RATHER THAN A CHANGE
+
+`svTuvaFloat`, `svTuvaOpen`, `svTuvaSide`. v6 draws BOTH svTuva placements on the Undersøkelser
+list — the floating bubble at `v6:2414-2437` and the docked side column at `v6:2439-2455`. **v7
+draws neither.** All ten remaining `svTuva*` occurrences sit at `v7:9312-9335`, inside the script,
+which opens at `v7:6096`: **zero in the markup.** The panel is computed and rendered nowhere — the
+same shape as `repTabs`, which F3 read as the bundle stating a re-parent by leaving a dead key
+behind.
+
+And in its place, two edits that are unmistakably deliberate:
+
+| | v6 | v7 |
+|---|---|---|
+| `tvShow`'s exclusion list | `["surveys","respond","splash","login"]` (`v6:8965`) | `["respond","splash","login"]` (`v7:9263`) — **`surveys` removed** |
+| `tuvaFor`'s keys | 10, no `surveys` (`v6:7062ff`) | **11, with a `surveys` entry** (`v7:7103-7108`) |
+
+**That is G5 and G6 — the global helper on every screen, and ONE bubble on `/undersokelser`
+carrying svTuva's content — arrived at independently by the designer, days after Tor overruled
+V6-5's four-screen exclusion and G4's `TUVA_SUPPRESSED` on his own reasoning.** Q219–Q229 are
+confirmed, not disturbed, and nothing in the product changes because of this row.
+
+**It is recorded as a CONFIRMATION because that is the rare thing here.** Every earlier row of this
+section is a change to absorb or a claim to refuse; this is the first time a handoff and the
+implementation have reached the same decision separately. Two riders keep it honest:
+
+- **The reasoning G6 used is still the reasoning G6 used.** It was measured against v6 — where two
+  round buttons existed with six differences, two of them the accessible name — and v7 did not
+  exist when it was made. What establishes the conclusion NOW is v7's own two edits. «A right
+  conclusion can rest on reasoning that is not true»: the conclusion stands and the evidence under
+  it has changed, and saying so is cheaper than letting the old argument be quoted forward.
+- **v7's `surveys` answer set contains a deep link to a screen we decided against.** Its third tip
+  is `["Se hvem som mangler","Feltarbeid per undersøkelse", go({ screen:"svdetail",
+  sdTab:"feltarbeid" })]` (`v7:7108`). Q178's standing constraint — *a deep link must resolve or it
+  is not drawn* — refuses it, and F5's registry test would too. **The drawing agreeing with us on
+  one decision is not the drawing being governed by our decisions**, which is exactly what § 0.3e
+  said of v6's four honoured refusals and seven unhonoured ones.
+
+### THE ARRIVALS ARE THREE FEATURES, NOT TWENTY-THREE KEYS
+
+- **Content blocks — 19 of the 23.** Builder side: `tabContent`, `contentEmpty`, `q.compact`,
+  `q.qFull`, `q.blockFull`, `q.blockHasBody`, `q.blockHasCaption`, `q.blockHasMedia`,
+  `q.blockHasTitle`, `q.blockHasUrl`, `q.blockIsRule`, `q.badgeIsIcon`, `q.badgeIsNum`. Respondent
+  side: `respondOne.rIsBlock`, `rBlockHasBody`, `rBlockHasCaption`, `rBlockIsImg`, `rBlockIsRule`,
+  `rBlockIsVideo`.
+- **The Send section filter — 4.** `sSecCh`, `sSecRec`, `sSecSender`, `sSecTime` (`v7:10386-10389`),
+  gating sections at `v7:4945`, `4961`, `5046`, `5096`, `5109`, `5129`, `5139`.
+
+### AND TWO REVERSALS NO KEY MOVED FOR
+
+Read off the changed lines rather than the key sets, which is what this file's own rule asks for:
+
+- **The `svdetail` rail went from ELEVEN pills to TWELVE.** `v6:8629` is the array without
+  `["bygger","Bygger"]`; `v7:8922` adds it, with an explicit `&& k !== "bygger"` that forces it
+  never to light.
+- **The `resultat` sub-rail went from SIX sub-tabs to FOUR.** `v6:7141` is
+  `matrise · sporsmal · sammenlign · runder · fordeling · frisvar`; `v7:7397` drops `runder` and
+  `fordeling`. **The bundle's 27 sub-tabs are now 25** — and the drawing has itself dropped
+  `fordeling`, which F5-3 refused on the grounds that distribution and free text are rendered
+  INSIDE «Per spørsmål» rather than beside it.
+
+A third, which is a restructure rather than a reversal: **the builder's own tab rail became two
+levels and every label changed.** `v6:9847-9852` is a flat five — Generelt · Legg til · Metodikk ·
+Innstillinger · Vis. `v7:10192-10202` shows only the current GROUP's siblings — Bygg → «Spørsmål ·
+Innhold», Innstillinger → «Kjøremodus · Personvern og frekvens», Metodikk → «Merknader · N»,
+Forhåndsvis → «Slik ser den ut» — with the four groups carried by the shell subnav (`v7:8901-8906`).
+
+### § 0.3 governance row — v7 (added V7-0)
+
+| surface | judged against | why |
+|---|---|---|
+| Subnav registry (all seven rendering arms), survey work screens, content blocks, Send sections | **v7** | every screen a v7 phase touches |
+| Undersøkelser list, survey detail's eight built tabs, the nine sub-tabs, Metodikk panel | **v7** | v6 built them and v7 redraws them — the twelfth pill, the breadcrumbs, the four-item `resultat` rail |
+| Arbeidsliste, Integrasjoner, shell footer | v5 | v5 built them; no v7 phase touches them |
+| Oversikt module grid, workspace chip, layout-note chip | v4 | v4 built them; no later phase touches them |
+| Tuva — the global helper, its panel, its per-screen answers | **v7 confirms v6** | v7 removes svTuva's markup and adds a `surveys` entry, which is what G5/G6 already shipped |
+| Splash, Bruksområder | **v2** | v3, v4, v5, v6 AND v7 were all ONE-FILE handoffs — five running |
+
+**And the governance note this bundle forces**, the counterpart of v6's: `respondent-kommentar-lagret`
+is still `since: 'v3'` and still sets both the pre-v6 `qcSaved` map and v6's `qcSavedText` scalar.
+`qcSaved` is 6 and `qcSavedText` 5 in BOTH v6 and v7, so the v6 model stands and the entry needed no
+edit — checked rather than assumed, because that is the entry a key-set diff has already failed on
+once.
