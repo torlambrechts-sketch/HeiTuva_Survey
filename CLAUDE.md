@@ -1258,6 +1258,75 @@ and treat a manifest that did not move as a finding rather than as confirmation.
 gate never constructed is the «green for something that structurally could not be seen» shape with
 the gate itself as the thing unseen.
 
+### A PLAUSIBLE EXPLANATION, WRITTEN DOWN, STOPS BEING CHECKED — THE ONE THAT WAS NEVER MEASURED AT ALL
+
+**Added 2026-09-17 (Tor), after V7-4's D241. «A hypothesis with a plausible mechanism, and once it
+was in a document it read like a fact.»**
+
+Every instance under «the thing measured was not the thing claimed» is a MEASUREMENT that measured
+the wrong object: the Docker daemon, the stale `next-server`, the catch-all inside a comment, the
+reporter that deleted the census. There was a call in each one, and the call was honest.
+
+**This is the other failure, and it has no call in it at all.**
+
+> **A cause that was never measured, only reasoned, is indistinguishable from a measured one the
+> moment it is written down — and a document is where reasoning goes to stop being questioned.**
+
+D241 recorded that the demo administrator's `display_name` was rewritten «during the run, by
+something in the manifest walk (`profil/saved` clicks «Lagre endringer», which posts the whole
+form)». It had a mechanism, it named a file, it was consistent with the timestamps, and it was
+**false**: `saveProfile` writes the form's own `display_name`, whose default is
+`profile?.display_name ?? viewer.displayName`, so posting that form re-writes the name already
+there and cannot introduce an address.
+
+The real writer was `tests/db/factories.ts:76`, `display_name: m.name ?? m.email`, upserted
+unconditionally over a `profiles` row shared by address — and V7-3a's own `blocks.test.ts` named the
+demo administrator without a name, because the test is about `send_round`'s authority and not about
+anybody's name. **`dropOrg` deletes the organisation and leaves the profile, so the rename outlived
+the fixture.** That is D102's question from the other side: not «who writes this column» answered
+«nothing», but answered **«a test does, and it does not clean up after itself»** — and a fixture
+that LEAVES SOMETHING BEHIND is harder to find than one that never reaches a state, because the
+evidence is in a suite that passed.
+
+**Why the false half was never disturbed:** the conclusion it supported — «do not regenerate the
+baseline, the value depends on run order» — was CORRECT, and a correct conclusion has no symptom.
+This file already records that shape for arguments («a right conclusion can rest on reasoning that
+is not true»). What is new is the medium: **the reasoning had been promoted into a numbered
+deviation**, where the next reader inherits it as an established cause rather than as a guess.
+
+**The rule, and it is one sentence:** *a cause goes into a document with the call that established
+it, or with the word «hypothesis» in the sentence.* «Probably the manifest walk» and «measured: four
+writers touch this column, one can produce an address» are the same length.
+
+### AND THE COMPANION: THE TOLERANCE IS WHAT HID IT — a gate green over a baseline it knew was wrong
+
+The same incident supplies the **seventh instance of «green for something that structurally could
+not be seen»**, and it is the first where the thing doing the hiding was the gate's own tolerance.
+
+`verify:visual` went RED → GREEN with no fix. Measured per pixel, current render against the
+committed baseline:
+
+```
+the ONLY differing region   x 565-964   y 43-53
+                            3097 px raw, 1397 above the 0.2 YIQ threshold
+allowed at maxDiffPixelRatio 0.001 on 1440x900   1296 px
+the avatar region           no differing pixel at all
+```
+
+Two separate things, and only one of them was ever a defect:
+
+- **The avatar** matched again because a later `seed:demo` had restored «Tuva Berg». Order-dependent
+  exactly as recorded.
+- **The nav label** is `Q171`'s deliberate change, four days old. The baseline still says «Oppgaver
+  og tilbakemeldinger»; the product says «Handlinger». **It is inside tolerance** — pixelmatch
+  discounts anti-aliased pixels, and one nav word behind a modal overlay does not clear 0.1 % of a
+  1440×900 page.
+
+**So a screenshot gate can be green over a picture it would fail if the difference were one word
+longer.** Every other member of this family is a gate that could not SEE the thing; this one saw it
+and scored it as within budget. The reading habit that catches it is the one this file already
+states for `controls=0`: **a gate that goes green without a fix is a finding, not a relief.**
+
 ### AN EXISTENCE PROBE ANSWERS THE QUESTION YOU ASKED; A FINGERPRINT ANSWERS THE ONE YOU DID NOT
 
 **Added 2026-09-16, after a prod sync whose stated distance was three migrations and whose real
@@ -2078,6 +2147,38 @@ FOUR of the 35 turned out not to be reproducible.** See D242 and D243: three are
 webfonts fail TLS in this container, so **every `artifacts/reference-*` baseline is the drawing in
 fallback fonts** and the harness's `document.fonts.ready` wait is vacuous. The churn was reverted
 rather than committed, because committing either state makes a baseline a picture of one run.
+
+**V7-5 TOOK IT TO 1684 ACROSS 128 FILES AND 5a3 IS UNMOVED AT 82 OF 115.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one added line and nothing else moved in
+either direction**, which is the proof rather than the total:
+
+```
+1673 across 127
+ + 11  tests/unit/flow-row.test.ts   new — the dot's five outcomes, the move targets, the dropped clause
+= 1684 across 128
+```
+
+Measured on a full local run with the CONFIGURED reporters: **128 files, 1684 tests, 0 failed**, the
+manifest sum exactly
+(`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`).
+
+5a3 holds at **82 of 115** — 66 RLS tables plus 49 SECURITY DEFINER functions, zero unproven. V7-5
+adds no table and no definer function: a component, a derivation and nine message keys are not
+catalogue surfaces.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**AND `verify:responsive` WENT 246 DECLARED -> 244, WHICH IS THE PHASE'S SECOND FINDING.** The first
+run reported **2 blockers**, both `resultater/bransje-valgt` «could not be measured: waiting for
+getByRole('link', { name: 'Teknologi og IT' })» — and the cause was V7-5's own fix. That industry
+chip renders only when `benchmarks` has rows; the seed ships none (Q134 deleted six invented
+figures); **the rows came from `k-surface.test.ts`, which upserted two into that global table and
+had no teardown at all.** The state had been photographing a screen only a test's leak could
+produce, and the leaked source `'Testfixtur, k-surface.test.ts'` **passes `isSourced`** — so the
+guard Q134 built against invented comparison figures was walked through by a fixture. The state is
+removed rather than replaced, because a sourced benchmark is a content decision and inventing one is
+the defect Q134 closed (D245). 244 of 244 measured, 0 findings, 0 blockers; `verify:browser` 243
+captured, 0 failed (one state added, one removed); `verify:i18n` clean over 1682 messages;
+`verify:visual` 12 of 12.
 
 ### A CORRECT THING BECOMES WRONG BECAUSE THE WORLD AROUND IT CHANGED, AND NO GATE IS LOOKING FOR THAT
 

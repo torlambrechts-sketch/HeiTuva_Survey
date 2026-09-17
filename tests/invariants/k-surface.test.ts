@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { admin, anon, asUser, uniq } from '../helpers'
 import { hashToken } from './fixture'
@@ -173,6 +173,32 @@ async function buildKSurface() {
   }
 }
 
+/**
+ * V7-4 — THE ONE WRITE IN THIS FILE THAT HAS NO ORGANISATION TO LEAK INTO.
+ *
+ * This suite leaks its orgs on purpose: every fixture is `uniq()`-named on a
+ * disposable local stack, nothing is dropped, and RLS keeps 56 abandoned
+ * tenants from meaning anything to each other. **`benchmarks` is not
+ * org-scoped**, so the upsert below is the single write here that reaches a row
+ * every organisation reads — and it had no teardown at all.
+ *
+ * Measured before the fix: `select * from public.benchmarks` returned exactly
+ * these two rows and nothing else, `source = 'Testfixtur, k-surface.test.ts'`.
+ * The seed leaves the table EMPTY on purpose (Q134 removed six invented
+ * industry figures that were being rendered to customers as a comparison bar),
+ * so after any db run the product's entire benchmark registry was this
+ * fixture — and `get_benchmarks` renders it.
+ *
+ * That is D241's class, and D241's own repair: **capture, write, restore.** The
+ * rows exist while the file runs and the table is left as it was found, so a
+ * screen that renders benchmarks locally renders the product's real state
+ * rather than this file's.
+ */
+const BENCH_INDUSTRY = 'Teknologi og IT'
+const BENCH_METRICS = ['engagement_avg', 'enps'] as const
+type BenchmarkRow = { industry: string; metric_key: string; value: number; source: string | null }
+let benchBefore: BenchmarkRow[] = []
+
 beforeAll(async () => {
   ctx = await buildKSurface()
 
@@ -184,12 +210,31 @@ beforeAll(async () => {
      seeded fixtures also silently changes meaning the day the seed changes,
      which is what happened here — so owning the row is the better shape
      regardless of why the seed moved. */
+  const { data: found } = await admin()
+    .from('benchmarks')
+    .select('industry, metric_key, value, source')
+    .eq('industry', BENCH_INDUSTRY)
+    .in('metric_key', BENCH_METRICS as unknown as string[])
+  benchBefore = (found ?? []) as BenchmarkRow[]
+
   await admin().from('benchmarks').upsert([
-    { industry: 'Teknologi og IT', metric_key: 'engagement_avg', value: 3.9,
+    { industry: BENCH_INDUSTRY, metric_key: 'engagement_avg', value: 3.9,
       source: 'Testfixtur, k-surface.test.ts' },
-    { industry: 'Teknologi og IT', metric_key: 'enps', value: 12,
+    { industry: BENCH_INDUSTRY, metric_key: 'enps', value: 12,
       source: 'Testfixtur, k-surface.test.ts' },
   ], { onConflict: 'industry,metric_key' })
+}, 120_000)
+
+afterAll(async () => {
+  /* Restore rather than delete: the upsert may have OVERWRITTEN a real row, and
+     deleting it would turn a fixture's convenience into data loss. Whatever was
+     found goes back; if nothing was found the table returns to empty. */
+  await admin()
+    .from('benchmarks')
+    .delete()
+    .eq('industry', BENCH_INDUSTRY)
+    .in('metric_key', BENCH_METRICS as unknown as string[])
+  if (benchBefore.length) await admin().from('benchmarks').insert(benchBefore)
 }, 120_000)
 
 /** Unwraps a jsonb-returning RPC, failing loudly rather than yielding `{}`. */

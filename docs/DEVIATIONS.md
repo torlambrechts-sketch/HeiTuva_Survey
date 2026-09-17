@@ -7818,3 +7818,114 @@ which is most people using the screen. And no gate would have reported it —
 
 Recorded as a refusal rather than a deferral, so the next phase building that card does not adopt
 it by copying the markup.
+
+---
+
+## D245 — THE FIXTURE-TEARDOWN SWEEP: 39 WRITE SITES, 28 UNOWNED TABLES, ONE REAL LEAK (2026-09-17)
+
+Tor, after D241: *«chase the class D241 opened while it is fresh: any other fixture that writes to
+a shared row and survives its own teardown. factories.ts:76 was one; derive the rest rather than
+assuming it was alone.»* Derived. **It was not alone, and the second one is worse in kind.**
+
+### The derivation, so it can be re-run rather than believed
+
+`dropOrg` deletes one row from `organizations`; everything that reaches a fixture through a
+REQUIRED foreign-key chain to that row goes with it. Everything else outlives every teardown. So
+the set is computed from the catalogue, not listed:
+
+```sql
+-- every public table with no REQUIRED fk path to organizations
+select conrelid::regclass, confrelid::regclass, bool_and(a.attnotnull)
+from pg_constraint c join unnest(c.conkey) k on true
+join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k
+where c.contype = 'f' group by 1,2;          -- then transitive closure over the REQUIRED edges
+```
+
+**38 tables are owned; 28 are not** — `audit_events`, `benchmarks`, `brand_accents`,
+`dashboard_presets`, `demo_requests`, `duty_definitions`, `feature_flags`, `help_articles`(+
+translations), `live_stopwords`, `method_rules`, `profiles`, `quality_rules`, `question_bank`,
+`report_section_types`, `report_templates`, `segment_fields`, `task_kinds`, `template_packs`(+
+translations), `theme_rules`, `ui_messages`, `use_cases`, `worklist_notes`, the four `workspace*`
+tables. Grepping `tests/` for writes against those 28, with comments stripped: **39 write sites.**
+
+### Triage — and 37 of the 39 were already right
+
+| site | what it is | verdict |
+|---|---|---|
+| `help.test.ts` × 2 | a leser, an outsider and an ADMINISTRATOR attempting a write | negative tests; both assert the row **did not move** |
+| `use-cases.test.ts` × 5 | probe packs | tracks its own keys in `made` and deletes them in `afterAll` — with a comment saying it must clean up after the outcome it PREVENTS, not the one it expects |
+| `invariants.test.ts` × 10 | `ui_messages` overrides | every write carries a throwaway org's id, and the one UPDATE is the negative test on the shipped row; `zz_test*` deleted inline |
+| `branding.test.ts` | a bad hex into `brand_accents` | negative test; and the file's header already states the property — *«everything this file writes is put back in `afterAll`, because the demo organisation's branding is what the reference screenshots render»* |
+| `dashboard-layouts.test.ts` | a preset naming an unoffered panel | negative test |
+| `administration.test.ts` × 4 | `audit_events` | append-only BY DESIGN and org-scoped, so a reseed removes them; the file says so |
+| `invariants.test.ts` | one `demo_requests` row per run, through `request_demo` | **a boundary case:** it grows without bound, but the table has no read policy at all and no screen renders it. Left, and named here so it is a decision. |
+| **`k-surface.test.ts`** | **two rows into `benchmarks`** | **THE LEAK.** |
+
+### The leak, and why it is worse than D241's in kind
+
+`k-surface.test.ts` upserts `Teknologi og IT / engagement_avg = 3.9` and `enps = 12` with
+`source = 'Testfixtur, k-surface.test.ts'`, **and the file has no `afterAll` at all.** Measured
+before the fix, `select * from public.benchmarks` returned **exactly those two rows and nothing
+else**: the seed leaves the table empty on purpose, because **Q134 removed six invented industry
+figures that were being rendered to customers as a comparison bar with a developer note admitting
+the number was made up.** So after any db run, the product's entire benchmark registry was this
+fixture, and `get_benchmarks` renders it.
+
+D241's leak changed a NAME. This one **re-creates the exact defect a decision had deleted** — a
+fabricated figure in a comparison, which is the «never fabricate data in the UI» invariant's own
+subject. It is local and CI only; production's table is untouched.
+
+**The sharpest way to state the finding:** this suite leaks its organisations deliberately — 56
+abandoned tenants on the local stack, `uniq()`-named, RLS keeping them from meaning anything to
+each other. **In a file that leaks by design, the one write that mattered is the one with no
+organisation to leak into.**
+
+**Fixed by capture-write-restore**, not by delete: the upsert may have overwritten a real row, and
+deleting that would turn a fixture's convenience into data loss. Proven both ways — a clean run
+leaves the table at 0, and a run against a planted real row (`value 4.44, source 'ekte kilde
+2026'`) leaves that row byte-identical with the fixture's `enps` row gone.
+
+**Not built into a gate.** The apparatus is frozen, and the honest note is that no mechanical check
+here would be cheap: the property is «a shared row is left as it was found», which needs a
+before/after over the whole suite. The derivation above is the thing to re-run, and it is two
+commands.
+
+---
+
+## D246 — THE COMPACT ROW'S KIND PILL USES OUR TYPE NAMES, NOT v7's SECOND SET (2026-09-17)
+
+v7's compact row carries `typeShort` (v7:10086) — a THIRD naming of the thirteen question types:
+«Ord» for likert, «Ansikt» for smiley, «0–10» for enps, «Skyv», «Liste», «Bilde», «Felt». The
+product already names all thirteen, in `TYPE_OPTION_KEY`, and that is what the type `<select>` two
+rows above shows.
+
+**The pill uses the existing names.** A second naming of one thing is the divergence generator this
+file records under other headings — one rule, four implementations — and the two sets would have to
+be kept in step by somebody remembering. The cost is width: «Nedtrekksliste» against «Liste». Driven
+at 1440px the rows read «Skala · tall», «Seksjon», «Fritekst», «Skillelinje», «Skala · 0–10 (eNPS)»
+and the label column still ellipsises normally.
+
+**Reversible in one line** if the shorter set is wanted: it is a message lookup, not a structure.
+Recorded because it is a copy decision against the bundle, and the bundle wins on visuals — the
+argument for overriding it here is that this is a NAMING, and the product had already named them.
+
+---
+
+## D247 — `docs/RESPONSIVE.md`'s NESTED-CARD CLAUSE IS NOW FALSE, AND IT IS THE SAME SHAPE AS ITS OWN NARROW-ROW EXAMPLE (2026-09-17)
+
+The spec says, under § Data tables:
+
+> **Never nest a card in a card.** Where the table already sits on a card surface, the rows keep the
+> surface they have; **the bundle contains no nested-card treatment and inventing one is
+> restyling.**
+
+The rule is fine. **Its stated reason has expired:** v7 wraps four whole screens in a bordered card
+whose body is full of cards (see Q245), and v6 already did it 15 times. «The bundle contains no
+nested-card treatment» was a true statement about the bundles that existed the day it was written,
+and it is an enumeration doing duty as a property — **which is precisely what D129 recorded about
+the narrow-row example three paragraphs above it.** The specification has now done it twice, in one
+section, and the second time it blocks a v7 adoption rather than licensing a defect.
+
+**Not edited here.** `docs/RESPONSIVE.md` is a specification and CLAUDE.md makes anything it does
+not cover a stop-and-ask; rewriting the clause to unblock my own phase would be answering my own
+question. Q245 is the ask, and this is the part of it that is a fact rather than a preference.

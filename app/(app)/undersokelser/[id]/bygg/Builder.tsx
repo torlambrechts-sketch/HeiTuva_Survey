@@ -21,6 +21,8 @@ import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
 import { BlockCard } from './BlockCard'
 import { BlockPalette } from './BlockPalette'
+import { CompactFlowRow } from './CompactFlowRow'
+import { flowDot } from '@/lib/surveys/flow-row'
 import {
   buildFlow,
   flowToLists,
@@ -135,6 +137,18 @@ export function Builder({
   const tm = useTranslations('method')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
   const [advanced, setAdvanced] = useState(false)
+  /**
+   * V7-5 — the flow's density (`st.flowCompact`, v7:10185).
+   *
+   * Component state and nothing else, deliberately. It is a VIEW preference
+   * with an immediate reader — the render below — so it satisfies both faces of
+   * D208's rule without a column: something writes it, something reads it, and
+   * the effect is the thing you are looking at. Persisting it would make it a
+   * setting, which would need a writer, a reader and a decision about whose
+   * preference it is; none of that is what «give me an overview of this long
+   * survey for a minute» asks for.
+   */
+  const [compact, setCompact] = useState(false)
   const [tab, setTab] = useState<Tab>('add')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -249,6 +263,11 @@ export function Builder({
     }))
 
   const moveFlowItem = (from: number, delta: number) => writeFlow(moveInFlow(flow, from, from + delta))
+  /* V7-5 — «Flytt til plass». `moveInFlow` has always taken an ABSOLUTE target,
+     so the arrows are the special case of this and not the other way round: no
+     second reorder path is introduced by offering it, and the deferred
+     `app.guard_flow_position` still checks the stored result either way. */
+  const moveFlowTo = (from: number, to: number) => writeFlow(moveInFlow(flow, from, to))
 
   const duplicateBlock = (id: string) =>
     setDraft((d) => {
@@ -758,7 +777,15 @@ export function Builder({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.35fr_.9fr]">
+      {/* V7-5 — `flowGrid` (v7:10186) re-proportions the split in compact view:
+          the flow list takes 2.4fr against the editor's .85fr, where full is
+          1.35fr / .9fr. Both values are the drawing's, and `full`'s is what this
+          screen already shipped. */}
+      <div
+        className={`grid grid-cols-1 items-start gap-5 ${
+          compact ? 'xl:grid-cols-[2.4fr_.85fr]' : 'xl:grid-cols-[1.35fr_.9fr]'
+        }`}
+      >
         <div className="flex flex-col gap-[14px]">
           <div className="rounded-2xl border border-line bg-sf p-5 shadow-card">
             {/* These two inputs are borderless and transparent by design, so
@@ -828,6 +855,51 @@ export function Builder({
                 </span>
               ) : null}
             </div>
+            {/* V7-5 — THE DENSITY SWITCH (`flowViewChips`, v7:10187).
+
+                Placed here rather than in v7's new header card for the same
+                reason the three chips are: the card's only other content was
+                the two-level rail, which Q243 refused. v7 puts the switch in
+                the chip row, so the chip row is where it goes — and ours is
+                this one.
+
+                Only the true half of `flowDragHint` ships. See
+                `CompactFlowRow`: the sentence about dragging a handle would be
+                a claim about a control D235 refused. */}
+            {flow.length > 1 ? (
+              <div className="mt-3 flex flex-wrap items-center gap-[10px]">
+                <div
+                  role="group"
+                  aria-label={t('viewLabel')}
+                  className="flex flex-none gap-[3px] rounded-[11px] bg-sf2 p-[3px]"
+                >
+                  {([
+                    ['full', 'viewFull'],
+                    ['compact', 'viewCompact'],
+                  ] as const).map(([key, label]) => {
+                    const on = (compact ? 'compact' : 'full') === key
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCompact(key === 'compact')}
+                        aria-pressed={on}
+                        className="touch-44 cursor-pointer rounded-[9px] border-none px-[13px] py-[7px] text-[12.5px] font-semibold text-ink"
+                        style={{
+                          background: on ? 'var(--sf)' : 'transparent',
+                          boxShadow: on ? '0 1px 3px rgba(25,21,16,.14)' : 'none',
+                        }}
+                      >
+                        {t(label)}
+                      </button>
+                    )
+                  })}
+                </div>
+                {compact ? (
+                  <span className="text-[12.5px] text-mut">{t('flowCompactHint')}</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {flow.length === 0 ? (
@@ -839,6 +911,56 @@ export function Builder({
                and what the editor sees. Conflating them is how a reorder moves
                the wrong row. */
             flow.map((entry, slot) => {
+              if (compact) {
+                /* V7-5 — ONE ROW COMPONENT FOR BOTH KINDS, which is the
+                   correction V7-4 § 3 needed: `badgeIsNum`/`badgeIsIcon` are
+                   real for us HERE, because compacted the two kinds are one
+                   shape. The dot is derived in `lib/surveys/flow-row.ts` rather
+                   than assembled inline, so the next row cannot pick its own
+                   colours (F3's four-implementation shape). */
+                const qIndex =
+                  entry.kind === 'question' ? draft.questions.indexOf(entry.item) : -1
+                const dot = flowDot({
+                  kind: entry.kind,
+                  breach: entry.kind === 'question' ? breachOn(entry.item) : false,
+                  notes: methodNotesForDraft,
+                  position: qIndex,
+                })
+                const mine = methodNotesForDraft.filter((n) => n.position === qIndex)
+                const dotTitle =
+                  dot === 'block'
+                    ? tm('blockNoCheck')
+                    : dot === 'blocked'
+                      ? t('anonBreach')
+                      : mine.length
+                        ? mine
+                            .map(
+                              (n) =>
+                                `${n.severity === 'advarsel' ? tm('warning') : tm('suggestion')}: ${n.title}`,
+                            )
+                            .join(' · ')
+                        : tm('noneForQuestion')
+                return (
+                  <CompactFlowRow
+                    key={entry.item.id}
+                    item={
+                      entry.kind === 'block'
+                        ? { kind: 'block', block: entry.item }
+                        : { kind: 'question', question: entry.item, num: qIndex + 1 }
+                    }
+                    dot={dot}
+                    dotTitle={dotTitle}
+                    slot={slot}
+                    total={flow.length}
+                    disabled={disabled}
+                    onMove={(delta) => moveFlowItem(slot, delta)}
+                    onMoveTo={(to) => moveFlowTo(slot, to)}
+                    onRemove={() =>
+                      entry.kind === 'block' ? removeBlock(entry.item.id) : removeQuestion(qIndex)
+                    }
+                  />
+                )
+              }
               if (entry.kind === 'block') {
                 const b = entry.item
                 return (

@@ -1,6 +1,9 @@
-# V7-4 — the rest of the v7 bundle, DECIDED
+# V7-4 / V7-5 — the rest of the v7 bundle, DECIDED
 
-**2026-09-17, revised the same day after running it.** The first version of this file was a LIST.
+**2026-09-17, revised twice the same day.** The first version of this file was a LIST; the second
+decided everything but one item; **this third one answers that item and closes the two sections that
+were waiting on it** (§ 1's rail, § 2's density switch), leaving exactly one ASKED — and that one is
+a question about a SPECIFICATION rather than about a screen.
 Tor's instruction on reading it: *«anything the drawing draws but no decision covers gets DECIDED,
 not carried. A list that survives a phase becomes a list nobody owns.»* So every section below now
 ends in one of four states — **BUILT**, **ALREADY TRUE**, **REFUSED** (with the reason), or
@@ -11,10 +14,10 @@ against the seventh handoff (10152 lines).
 
 ---
 
-## 0. TWO CORRECTIONS TO THIS FILE'S OWN FIRST VERSION
+## 0. THREE CORRECTIONS TO THIS FILE'S OWN EARLIER VERSIONS
 
-Recorded rather than silently fixed, because both were written from a hunk header without reading
-both sides — the shape CLAUDE.md names as *a right conclusion resting on reasoning that is not
+Recorded rather than silently fixed, because all three were written from a hunk header or a first
+line without reading to the end of the construct — the shape CLAUDE.md names as *a right conclusion resting on reasoning that is not
 true*, and in the second case the conclusion was wrong too.
 
 **a. «A FIFTH BREADCRUMB, ON THE ARBEIDSLISTE» (old § 6) IS NOT A NEW BREADCRUMB.** `v6:3668` draws
@@ -43,19 +46,27 @@ not have because we do not need it.
 
 So the arrivals worth acting on are 19, not 23, and the derivation is: a key that exists only to
 distinguish two kinds inside one component is not a feature when the two kinds have their own
-components.
+components. **§ 3 now records the word that sentence needed** — «their own FULL components».
+
+**c. § 5's «HEADER CARDS» ARE WHOLE-SCREEN SHELLS, AND THE PATTERN IS v6's.** Both are the entire
+screen inside one bordered card, and `border-radius:0 0 19px 19px` occurs 0 times in v5, **15 in
+v6** and 18 in v7. Read from the header lines and attributed to the new bundle; measured, neither
+half held. See § 5.
 
 ---
 
-## 1. THE BUILDER'S HEADER CARD — the counts BUILT, the rail ASKED
+## 1. THE BUILDER'S HEADER CARD — the counts BUILT, the rail ANSWERED (Q243)
 
 ### BUILT: what the flow is made of (v7:10217)
 
 `bFlowChips` draws «Spørsmål N · Innhold N · Seksjoner N» — the drawing answering a question the
 builder only acquired when the flow gained a second kind of member. Three chips, real counts, one
 derivation (`flowCounts`, `lib/surveys/blocks.ts`), placed in the row that already states the
-survey's length rather than in a new card: the card's other contents are the rail and the density
-switch, and both are blocked, so a card around one row would be a frame with nothing new in it.
+survey's length rather than in a new card. **That reason has half expired and the placement still
+holds:** the card's other contents were the two-level rail and the density switch; Q243 refused the
+rail and Q244 built the switch — into this same row, which is v7's own adjacency. What remains of
+v7's card is the BORDER, and that belongs with § 5's shell card, whose scope is four screens rather
+than one row.
 
 **Two sub-decisions, both against the drawing (Q240, Q241):**
 
@@ -76,52 +87,76 @@ switch, and both are blocked, so a card around one row would be a frame with not
   `{ questions, blocks }` as a NAMED object, so a caller holding a flow cannot pass its length as
   the question count, which is F1's two-population defect made unexpressible.
 
-### ASKED: the two-level rail
+### ANSWERED (Q243): the survey rail stays, and v7's outer level is NOT adopted
 
-**This is the one item I am not deciding, and the reason is a measurement.** On
-`screen === "build"` v7's subnav shows FOUR builder groups plus the «Undersøkelsen» exit — and
-**nothing else** (v7:8901-8906). The survey's own tabs are not on the rail while you are in the
-builder; the only way back is the exit, to `svdetail`.
+**Tor, 2026-09-17.** On `screen === "build"` v7's subnav shows FOUR builder groups plus the
+«Undersøkelsen» exit and nothing else (v7:8901-8906); our `/bygg` shows the eight survey tabs. The
+measurement was right and the answer is no:
 
-Our `/bygg` shows the **eight survey tabs**. Adopting v7's outer level means removing them from the
-builder and replacing them with four builder-group pills — so Send, Resultater and Målgruppe stop
-being one click from the editor.
+> *«Adopting v7's four builder groups means Send, Resultater and Målgruppe stop being one click from
+> the editor — an editor writing a question would have to leave the builder to see who receives the
+> survey. That is a worse working surface, and the bundle draws it without knowing the rail
+> exists.»* Third time in V7 that the drawing assumes a structure the product does not have.
 
-**It contradicts a decision that is three days old.** Q233 made «Bygger» an EXIT rather than a
-ninth tab and suppressed it on `/bygg`, because «an exit pointing at the page you are standing on
-is not an exit» — and that reasoning rests on the builder being ON the survey rail. v7's build
-screen says it is not. CLAUDE.md's standing rule covers exactly this: *when the bundle and a
-decision disagree, ASK*; and Tor's own boundary — *a refusal is mine; a scope is not* — puts «which
-pills appear on which screen» on his side.
+So Q233 stands as written: «Bygger» is an exit BECAUSE the builder sits on the survey rail.
 
-**Assumption I built under, so the answer costs an edit rather than a rebuild:** the survey rail
-stays as it is, and the builder's own four tabs stay in the right pane. Nothing in this phase
-depends on the answer.
+**And the distinction that stops this returning as an omission:** the four builder groups may be
+worth having as an **inner** level inside the builder, and that is its own decision — it turns on
+whether the groups help, not on v7 having drawn them in the shell.
 
 ---
 
-## 2. THE FLOW ROW'S TWO DENSITIES — REFUSED, with the reason
+## 2. THE FLOW ROW'S TWO DENSITIES — BUILT (Q244), with «Flytt til plass»
 
-`flowViewChips` (v7:10187) and `flowGrid` (v7:10186) switch a two-column split and every row then
-renders under `q.compact` or `q.qFull`/`q.blockFull`. **Refused for this tranche, for two reasons
-that are both about the drawing rather than about effort:**
+V7-4 refused this for two reasons and **both have expired**, which is why it is built rather than
+re-deferred:
 
-1. **The switch lives in the header card's chip row**, beside `buildTabs` — so it arrives with § 1's
-   rail, which is asked. Building the switch somewhere else would be inventing a position.
-2. **Its own hint names a control we do not have.** `flowDragHint` (v7:10191) is «Dra i håndtaket
-   for å flytte, **eller bruk piltastene og «Flytt til»**. Kompakt visning gir overblikk i lange
-   undersøkelser.» The second clause is the keyboard path D235 refused the drag for lacking — so v7
-   itself pairs compact with a control that is a separate decision.
+1. «The switch lives in the header card's chip row, so it arrives with § 1's rail, which is asked.»
+   **Q243 answered the rail.** The chip row is ours and the switch goes in it, beside the three
+   counts — v7's own adjacency.
+2. «Its own hint names a control we do not have»: `flowDragHint` (v7:10191) says «…eller bruk
+   piltastene og «Flytt til»». **The answer is to build the pair the drawing pairs**, not to hold
+   both forever. `moveInFlow(flow, from, to)` has taken an ABSOLUTE target since V7-3b, so «Flytt
+   til plass» introduces no second reorder path — the arrows are its special case.
 
-The need is real (`LONG_SURVEY_THRESHOLD` exists for the same one). It belongs with § 1's card and
-the «Flytt til» control, as one piece of work rather than three.
+What ships: a Full/Kompakt segmented control (`flowViewChips`, v7:10187), one-line rows
+(`q.compact`, v7:759-782) with the badge, the status dot, an ellipsised label, the kind pill, the
+move select and ↑ ↓ ×, and `flowGrid`'s re-proportioning — `2.4fr/.85fr` compact against the
+`1.35fr/.9fr` this screen already shipped.
+
+**Three things deliberately not reproduced, each with its reason on the line:**
+
+- **The grab handle.** D235 refuses the drag. A `cursor:grab` ⠿ that cannot be grabbed is D221's
+  third face — a control whose appearance claims an ability the code does not have. The full cards
+  keep theirs because they keep the arrows beside it; a one-line row with a handle and no drag is
+  just a lie about a pixel.
+- **The first sentence of the hint.** Only «Kompakt visning gir overblikk i lange undersøkelser.»
+  ships, in both languages, and `flow-row.test.ts` test 9 asserts the drag clause is absent —
+  proven RED against v7's full sentence.
+- **`typeShort`.** The pill uses the product's own thirteen type names rather than v7's second,
+  shorter set. See D246; reversible in one line.
+
+**Driven, not merely tested** (five-item mixed flow, a throwaway draft, deleted afterwards): row 1
+→ last place, saved, reloaded, and the database's own positions read back `B0 Q1 B2 Q3 Q4` —
+contiguous across two tables, accepted by the deferred `app.guard_flow_position`, no console or HTTP
+errors.
 
 ---
 
-## 3. THE QUESTION ROW'S BADGE — ALREADY TRUE
+## 3. THE QUESTION ROW'S BADGE — ALREADY TRUE **of the full row**, and V7-4's sentence needed that word
 
-See § 0b. `badgeIsNum` / `badgeIsIcon` is one component branching on kind; we have two components
-that already do it. Nothing to build, and the measurement is the answer.
+V7-4 read `badgeIsNum` / `badgeIsIcon` as keys that exist only because the bundle renders both kinds
+of flow row with ONE component, and concluded the property was already structurally true because we
+have `QuestionCard` and `BlockCard`. **That is true of the FULL row and was silent about the compact
+one.**
+
+Compacted, the two kinds ARE one shape — same height, same columns, differing only in the badge and
+the tint — so `CompactFlowRow` is one component that branches, and the two keys are real for us
+there. Two components would have been two copies of one row, which is the shape that drifts.
+
+Recorded rather than quietly fixed: it is the enumeration shape again, inside a sentence that was
+itself correcting an enumeration. A property established about one rendering of a thing is not a
+property of the thing.
 
 ---
 
@@ -139,19 +174,39 @@ explicitly.
 
 ---
 
-## 5. THE HEADER CARDS ON SEND AND RESULTATER — one REFUSED, the rest deferred with § 1
+## 5. THE «HEADER CARDS» ON SEND AND RESULTATER — ASKED (Q245), and this section was wrong twice
 
-- **Send** (v7:4914-4942) — «Utsending», `sendChips`, the CTAs, and a readiness strip on `--sbg`
-  carrying a status dot, `sendReadyLine` and a «Velg målgrupper fra én populasjon» pill under
-  `sendBlocked`. **That refusal is one our screen already enforces** (the mixed-population guard),
-  stated further down the form. Moving it into a header is the same restructure as § 1's and waits
-  with it.
-- **Resultater** (v7:5721-5738) — the header becomes a card, the scope and threshold merge onto one
-  line, and the «Bytt undersøkelse» select moves into it **with an `aria-label` in place of a
-  visible `<label>`**. **That last change is REFUSED on its own merits**: replacing a visible label
-  with an accessible name removes the label for everyone who is not using a screen reader, and
-  `verify:responsive` counts controls rather than labels, so no gate would have reported it. The
-  card can arrive later; the label does not go.
+**They are not header cards.** Both are the WHOLE SCREEN wrapped in one bordered card: a header row
+on `--sf`, then a `border-top` body on `--bg` that holds the rest of the screen and closes with
+`border-radius:0 0 19px 19px` (v7:4942, v7:5738). Written from the header lines without reading to
+the closing div — the third correction this file has had to make to itself, and the same cause each
+time.
+
+**And the pattern is not v7's.** `grep -c 'border-radius:0 0 19px 19px'`:
+
+| v5 | v6 | v7 |
+|---|---|---|
+| 0 | **15** | **18** |
+
+It arrived a handoff earlier; v7 adds three. *A figure found while reading a new bundle is not
+thereby the new bundle's* — the fourth instance of that in this tranche.
+
+**Where it lands, swept over every screen marker** (`<sc-if value="{{ isX }}">` + the card signature
+within 14 lines): exactly **four screens** — `isBuild` (v7:508), `isSvDetail` (1269), `isSend`
+(4907) and `isResults` (5716). Every app-level screen — Surveys, Dashboard, Reports, Tasks, Library,
+Admin, Profile, Help — has none. **So it is not two headers and not an inconsistency: it is «the
+survey's own screens are one object», applied to the four of them.**
+
+**What blocks it is the specification, and that is the ask.** `docs/RESPONSIVE.md` § Data tables:
+*«Never nest a card in a card… the bundle contains no nested-card treatment and inventing one is
+restyling.»* The shell card wraps screens that are already full of cards, so adopting it needs that
+clause changed — and the clause's stated reason has expired (D247). Editing a specification to
+unblock my own phase would be answering my own question, so it is Q245.
+
+**The one part decided on its own merits stays decided:** Resultater's «Bytt undersøkelse» keeps its
+VISIBLE label. v7 replaces it with an `aria-label`, which removes the label for everyone not using a
+screen reader, and `verify:responsive` counts controls rather than labels so no gate would report
+it. D244, unchanged, whatever happens to the card.
 
 ---
 

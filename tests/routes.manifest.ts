@@ -1107,6 +1107,34 @@ export const ROUTES: RouteSpec[] = [
         },
       },
       {
+        /**
+         * V7-5 — the flow in COMPACT density, which no other state can reach.
+         *
+         * The switch renders only when the flow has more than one item, and
+         * every other builder state opens the org's DRAFT — «Utkast uten
+         * svar», one question, so `flow.length > 1` is false and the control
+         * is not on the page. **A state a gate cannot reach is a state nobody
+         * checks**, which is V1-6's hole exactly.
+         *
+         * So this one names the survey that HAS a mixed flow: «Med
+         * innholdsblokker», three questions and four blocks. It is `aktiv`, so
+         * the rows render read-only — which is the honest limit of this state
+         * and is stated here rather than discovered: the capture proves the
+         * row's LAYOUT at both widths and the arrows' disabled styling, and
+         * the enabled reorder is proven by `flow-row.test.ts` plus the driven
+         * round trip recorded in the phase report.
+         */
+        name: 'kompakt',
+        setup: async (page) => {
+          await page.getByLabel('Søk i undersøkelser…').fill('Med innholdsblokker')
+          await page.waitForURL((u) => (u.searchParams.get('sok') ?? '').length > 0)
+          await page.getByRole('link', { name: BUILD_LINK }).first().click()
+          await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
+          await page.getByRole('button', { name: /^(Kompakt|Compact)$/ }).first().click()
+          await page.locator('select[aria-label]').first().waitFor()
+        },
+      },
+      {
         // The Settings tab was never captured or measured until now: the
         // Builder's states were default/avansert/vis only, so the readiness
         // checks, the logic list and the whole engagement panel — the largest
@@ -1671,15 +1699,33 @@ export const ROUTES: RouteSpec[] = [
           await page.waitForLoadState('load')
         },
       },
-      {
-        name: 'bransje-valgt',
-        setup: async (page) => {
-          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
-          await page.getByRole('link', { name: 'Teknologi og IT' }).click()
-          await page.waitForURL((u) => u.searchParams.get('bransje') === 'Teknologi og IT')
-          await page.waitForLoadState('load')
-        },
-      },
+      /**
+       * V7-5 — `bransje-valgt` IS REMOVED, AND THE REASON IS THE FINDING.
+       *
+       * It clicked «Teknologi og IT», an industry chip that renders only when
+       * `benchmarks` has rows. **The seed ships none**: Q134 deleted six
+       * invented industry figures because they were being rendered to a
+       * customer as a comparison bar with a developer note admitting the number
+       * was made up, and `isSourced` was written to refuse their like.
+       *
+       * The chip existed anyway, on every run, because `tests/invariants/
+       * k-surface.test.ts` upserted two rows into that global table and had no
+       * teardown — and the db suite runs before the browser gates. **This state
+       * photographed a screen only a test's leak could produce** (D245).
+       *
+       * Worse, and the sharper half: the leaked rows carried
+       * `source = 'Testfixtur, k-surface.test.ts'`, which `isSourced` ACCEPTS —
+       * its regex can only refuse a source that declares itself provisional in
+       * the words it happens to hold, exactly as its own comment says. So the
+       * guard Q134 built against invented comparison figures was walked through
+       * by a fixture.
+       *
+       * Not replaced, because there is nothing true to replace it with: a
+       * sourced benchmark is a content decision and inventing one is the defect
+       * Q134 closed. The benchmark comparison therefore has NO reachable demo
+       * state until real figures exist — which is the honest consequence of
+       * Q134 and was masked for four months.
+       */
     ],
   },
   {
