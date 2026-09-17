@@ -1202,6 +1202,37 @@ the dependencies this project has actually hit, and the next thing assumed will 
 When that happens the remedy is the rule first and a row second — never the row alone, because a
 list of capabilities to test can only ever be as long as the last surprise.
 
+### `--reporter=dot` SILENTLY REMOVED EVERY CENSUS CHECK IN A SESSION — THE ONE THAT HID THE MEASUREMENT ITSELF
+
+**Added 2026-09-17 (Tor), after V7-1. «The eleventh instance of «the thing measured was not the
+thing claimed», and the only one that hid the measurement itself rather than falsifying it.»**
+
+`vitest.config.ts:33` is `reporters: ['default', new CensusReporter()]`. **Passing `--reporter=dot`
+on the command line REPLACES that array**, so the census reporter never constructs and never runs.
+Every `npx vitest run --reporter=dot` in this session — and they were most of them, because the dot
+output is short — ran with the floor check absent.
+
+> **A reporter is not decoration. `tests/census.ts` IS a gate, and it rides on the reporter list.**
+> `--reporter=<x>` overrides; `--reporter=dot --reporter=./tests/census.ts` would add. The short
+> form is the one that reads harmless.
+
+**Every other instance of this shape falsified a measurement; this one deleted it.** The Docker row
+reported a true fact about the wrong object. The stale `next-server` measured the right property on
+the wrong build. The ad-hoc catch-all matched inside a comment. In each the output was WRONG and a
+reader could in principle disbelieve it. Here the output was *absent*, and absence in a test run
+reads as «nothing to say» rather than as «nobody looked» — there is no line to be suspicious of.
+
+**It was caught by arithmetic, not by reading a flag.** `CENSUS_WRITE=1` was set, the run reported
+122 files / 1615 tests, and `git diff tests/expected-counts.json` came back EMPTY when it should
+have carried a new line. The honest reading of «the manifest did not move and it had to» is «the
+mechanism did not run», which is the same reconciliation habit that caught the stale I2 total and
+G1's 1537.
+
+**So: run the full suite with the configured reporters when a number is going to be written down**,
+and treat a manifest that did not move as a finding rather than as confirmation. A green run whose
+gate never constructed is the «green for something that structurally could not be seen» shape with
+the gate itself as the thing unseen.
+
 ### AN EXISTENCE PROBE ANSWERS THE QUESTION YOU ASKED; A FINGERPRINT ANSWERS THE ONE YOU DID NOT
 
 **Added 2026-09-16, after a prod sync whose stated distance was three migrations and whose real
