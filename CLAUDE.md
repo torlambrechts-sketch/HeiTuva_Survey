@@ -1886,3 +1886,27 @@ fallback». **The file's count moved by two while the property it states was inv
 no table and no definer function: a registry, a component and forty-two message keys are not
 catalogue surfaces, which is the correct reading rather than a gap.
 `npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
+**G6 TOOK IT TO 1608 ACROSS 121 FILES AND 5a3 IS UNMOVED AT 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one line raised and nothing else moved
+in either direction**, which is the proof rather than the total:
+
+```
+1606 across 121
+ +  2  tests/unit/tuva-answers.test.ts 14 -> 16   the one-bubble sweep, and the slot's two halves
+= 1608 across 121
+```
+
+Measured on a full local run: **121 files, 1608 tests, 0 failed**, the manifest sum exactly.
+
+**And `survey-scopes.test.ts` did NOT move while the assertion inside it inverted** — it still
+reads 12. Its Tuva-placement test said «defaults to the SIDE column, which is the drawing's
+default» and now says the opposite, with the column's reachability asserted beside it, because a
+default that has flipped is only safe if the alternative is still there. **A file's count is not a
+record of what it checks**, for the fourth phase running.
+
+5a3 holds at **81 of 114** — 65 RLS tables + 49 SECURITY DEFINER functions, zero unproven. G6 adds
+no table and no definer function: a context provider, a resolver default and one message key are
+not catalogue surfaces.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.
+
