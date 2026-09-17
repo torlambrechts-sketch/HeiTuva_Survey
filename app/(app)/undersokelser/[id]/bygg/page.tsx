@@ -94,6 +94,28 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     config: (q.config ?? {}) as QuestionConfig,
   }))
 
+  /* V7-3 — the content blocks, read in the same call shape and ordered the same
+     way. `position` is the FLOW index, shared with the questions above and
+     guarded by `app.guard_flow_position` (M:0127), so the Builder can derive the
+     mixed list without a second source of truth about the order. */
+  const { data: blockRows, error: bError } = await supabase
+    .from('survey_blocks')
+    .select('id, type, title, body, caption, url, media_key, position')
+    .eq('survey_id', id)
+    .order('position')
+  if (bError) throw new Error(`builder blocks read failed: ${bError.message}`)
+
+  const blocks = (blockRows ?? []).map((b) => ({
+    id: b.id,
+    type: b.type,
+    title: b.title ?? '',
+    body: b.body ?? '',
+    caption: b.caption ?? '',
+    url: b.url ?? '',
+    mediaKey: b.media_key,
+    position: b.position,
+  }))
+
   /* B3 — the bank the picker overlay offers (V2:650-693).
      Read here rather than in the client so the overlay holds no query and no
      service key: `bank_sel` is `org_id is null or app.is_org_member(org_id)`,
@@ -212,6 +234,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
     // a missing key must not render a switch as off and then save it off.
     engage: parseEngagement(survey.engage),
     questions,
+    blocks,
   }
 
   return (

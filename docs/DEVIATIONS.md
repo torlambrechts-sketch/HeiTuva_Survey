@@ -7393,3 +7393,53 @@ og gir ingen data» is honoured by the bundle at fifteen-odd `filter(q => !q.blo
 ours would have to honour it in three places the drawing has no equivalent of — the aggregation
 RPCs, the exports, and `survey_questions`' `position` uniqueness. **«Gir ingen data» is a claim
 about `aggregate_results`, not about a renderer.**
+
+## D234 — V7-3: THE CONTENT PALETTE IS BESIDE THE QUESTION PALETTE, NOT IN v7's FIFTH BUILDER TAB (2026-09-17)
+
+v7 draws «Legg til innhold» in the builder's RIGHT STICKY COLUMN, shown when
+`buildTab === "content"` (`v7:800-819`, gated by `tabContent` at `v7:10206`) — a **fifth builder
+tab**, reached through a two-level rail whose outer level is the shell subnav
+(`Bygg · Metodikk · Innstillinger · Forhåndsvis`, `v7:8901-8906`) and whose inner level is
+«Spørsmål · Innhold» (`v7:10195`).
+
+**That restructure is a different piece of work and it is on V7-4's list.** It relabels every one
+of the builder's four tabs — Generelt → «Kjøremodus», Innstillinger → «Personvern og frekvens»,
+Vis → «Slik ser den ut» — and splits the rail in two.
+
+So the palette ships in the `add` pane, beside the question palette: **one control, in the place
+the other half of the same job already lives.** Inventing a fifth tab here to hold it would be a
+sub-tab nobody drew in that position, which is the do-not-invent rule, and it would then have to be
+un-invented when the real restructure arrives.
+
+Recorded rather than left to be read as unfinished, with the restructure named so the next phase
+MOVES it rather than discovering it.
+
+## D235 — V7-3: THE BLOCK ROW'S ARROWS SHIP AND ITS DRAG DOES NOT (2026-09-17)
+
+v7 makes every flow row `draggable` with `onDragStart` / `onDragOver` / `onDrop` / `onDragEnd`
+(`v7:721`, `v7:760`), adds a palette drag (`paletteDrag`, `v7:6801`), an insert-at-index
+(`insertFlowAt`, `v7:6808`), a move-to-target (`moveFlowTo`, `v7:6818`) and an end drop zone
+(«Dra hit for å legge nederst»).
+
+**The arrows ship and the drag does not.** A drag with no keyboard equivalent is a control half
+this product's users cannot reach, and `docs/RESPONSIVE.md` — which is a specification and the only
+licence to invent below 1280px — has no pattern for one. The drawing's own row carries «Flytt opp»
+and «Flytt ned» beside the handle (`v7:731-732`), so **the reachable half is what it draws too**;
+what is missing is the second, unreachable way to do the same thing.
+
+The handle's glyph and `cursor:grab` are kept, because the row is drawn with one and looks wrong
+without it. It moves nothing on its own — which is the honest version of a decoration, and it is
+recorded here rather than left for someone to find by pulling on it.
+
+**And `moveQuestion` LEFT WITH THE CHANGE, which is the part worth keeping.** It moved a question
+within `questions`, and that was the whole order while one table owned it. With a block in the
+flow, moving a question one place in its own array **hops it over the block** — the two swap slots
+and the block does not move, a reorder nobody asked for. Both kinds go through `moveFlowItem` now,
+so there is one way to move anything, and eslint named the dead function rather than leaving it to
+be found later.
+
+**Driven, not inferred** (a fresh build on :3126, redaktør, a draft survey): the palette renders
+with its six buttons and its empty note, two blocks added and titled save to `survey_blocks`, and
+one click of the first block's «Flytt opp» moves it from position 1 to 0 while the question moves
+from 0 to 1 — **both tables renumbered in one save with no collision**, which is what
+`app.guard_flow_position`'s deferral exists for. Zero page errors throughout.

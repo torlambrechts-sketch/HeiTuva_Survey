@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
+import { BLOCK_TYPES, forStorage, type BlockDraft } from '@/lib/surveys/blocks'
 import { isNewQuestion } from './types'
 
 export type BuilderResult =
@@ -18,6 +19,9 @@ export type BuilderResult =
 
 const QuestionInput = z.object({
   id: z.string().min(1).max(80),
+  /** V7-3 — the index in the FLOW. Optional: absent it falls back to the
+   *  array index, which is what it meant before blocks existed. */
+  position: z.number().int().min(0).max(399).optional(),
   type: z.enum(QUESTION_TYPE_KEYS as [string, ...string[]]),
   text: z.string().max(500),
   help: z.string().max(500),
@@ -63,12 +67,40 @@ const EngagementInput = z.object({
   mobile_first: z.boolean(),
 })
 
+/**
+ * V7-3 — a content block on its way in.
+ *
+ * `mediaKey` is accepted but NEVER trusted as a path: it is an opaque key the
+ * upload action minted, and `forStorage` drops it for any type but `img`. The
+ * bound is the same 80 the question ids get, because it is an id and not a
+ * user's sentence.
+ */
+const BlockInput = z.object({
+  id: z.string().min(1).max(80),
+  type: z.enum(BLOCK_TYPES as unknown as [string, ...string[]]),
+  title: z.string().max(200),
+  body: z.string().max(4000),
+  caption: z.string().max(300),
+  url: z.string().max(2000),
+  mediaKey: z.string().max(200).nullable(),
+  /** The index in the FLOW, not in the block array. See `position` below. */
+  position: z.number().int().min(0).max(399),
+})
+
 const DraftInput = z.object({
   surveyId: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
   audience: z.string().trim().max(200),
   engage: EngagementInput,
+  /**
+   * `position` is the question's index in the FLOW and is optional: absent, it
+   * falls back to the array index, which is what every caller before V7-3 meant
+   * and what every test still sends. Present, it is the one order questions and
+   * blocks share — `app.guard_flow_position` (M:0127) refuses a collision at
+   * COMMIT, so the two arrays cannot disagree about who owns a slot.
+   */
   questions: z.array(QuestionInput).max(200),
+  blocks: z.array(BlockInput).max(200).default([]),
 })
 
 /**
@@ -88,7 +120,7 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
 
   const parsed = DraftInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'invalid' }
-  const { surveyId, title, audience, engage, questions } = parsed.data
+  const { surveyId, title, audience, engage, questions, blocks } = parsed.data
 
   const supabase = await createClient()
 
@@ -124,6 +156,15 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
     return { ok: false, error: 'failed' }
   }
 
+  const { data: existingBlocks, error: blockReadError } = await supabase
+    .from('survey_blocks')
+    .select('id')
+    .eq('survey_id', surveyId)
+  if (blockReadError) {
+    console.error(`saveDraft: existing blocks read failed: ${blockReadError.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
   const keptIds = new Set(questions.filter((q) => !isNewQuestion(q.id)).map((q) => q.id))
   const removed = (existing ?? []).map((r) => r.id).filter((id) => !keptIds.has(id))
   if (removed.length) {
@@ -134,16 +175,45 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
     }
   }
 
+  const keptBlocks = new Set(blocks.filter((b) => !isNewQuestion(b.id)).map((b) => b.id))
+  const removedBlocks = (existingBlocks ?? []).map((r) => r.id).filter((id) => !keptBlocks.has(id))
+  if (removedBlocks.length) {
+    const { error } = await supabase.from('survey_blocks').delete().in('id', removedBlocks)
+    if (error) {
+      console.error(`saveDraft: block delete failed: ${error.message}`)
+      return { ok: false, error: 'failed' }
+    }
+  }
+
   const ids: Record<string, string> = {}
 
-  // Positions are unique per survey (deferrable), so a reorder that swaps two
-  // rows is fine inside one statement but not across separate ones. Updates go
-  // first to a temporary negative position, then to the real one.
+  /** The question's slot in the flow. Absent means «the array index», which is
+   *  what it meant before blocks shared the order. */
+  const flowPos = (q: { position?: number }, i: number) => q.position ?? i
+
+  /**
+   * ── WHY EVERY EXISTING ROW GOES NEGATIVE FIRST, IN BOTH TABLES ───────────
+   *
+   * Each Supabase call is its own transaction, so `position` has to be
+   * collision-free at every statement boundary and not merely at the end.
+   *
+   * `unique (survey_id, position)` is deferrable and was enough while one table
+   * owned the order: park the questions on negatives, then assign upward.
+   * **`app.guard_flow_position` is deferrable too but it spans TWO tables**, so
+   * parking only the questions would leave a block sitting on a slot a question
+   * is about to claim — and the collision would be refused at that statement's
+   * commit, with the symptom being a save that fails on a reorder.
+   *
+   * With every existing row of both tables parked on a distinct negative, each
+   * real position is claimed exactly once and no boundary can collide. The
+   * negatives are distinct because they are derived from the FLOW index, which
+   * is distinct across both kinds by construction.
+   */
   for (const [i, q] of questions.entries()) {
     if (isNewQuestion(q.id)) continue
     const { error } = await supabase
       .from('survey_questions')
-      .update({ position: -(i + 1) })
+      .update({ position: -(flowPos(q, i) + 1) })
       .eq('id', q.id)
       .eq('survey_id', surveyId)
     if (error) {
@@ -151,11 +221,23 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
       return { ok: false, error: 'failed' }
     }
   }
+  for (const b of blocks) {
+    if (isNewQuestion(b.id)) continue
+    const { error } = await supabase
+      .from('survey_blocks')
+      .update({ position: -(b.position + 1) })
+      .eq('id', b.id)
+      .eq('survey_id', surveyId)
+    if (error) {
+      console.error(`saveDraft: block reposition failed: ${error.message}`)
+      return { ok: false, error: 'failed' }
+    }
+  }
 
   for (const [i, q] of questions.entries()) {
     const row = {
       survey_id: surveyId,
-      position: i,
+      position: flowPos(q, i),
       type: q.type as never,
       text: q.text,
       help: q.help || null,
@@ -186,6 +268,51 @@ export async function saveDraft(input: unknown): Promise<BuilderResult> {
         .eq('survey_id', surveyId)
       if (error) {
         console.error(`saveDraft: update failed: ${error.message}`)
+        return { ok: false, error: 'failed' }
+      }
+    }
+  }
+
+  /**
+   * V7-3 — the blocks, after the questions and in the same order space.
+   *
+   * `forStorage` clears the fields the type does not use rather than sending
+   * whatever the editor last typed: a block whose type changed from `video` to
+   * `info` would otherwise still carry a `url`, and
+   * `survey_blocks_url_is_video` would refuse the save — at SAVE time, on a
+   * field the editor can no longer see. The CHECK is right; the editor has to
+   * agree with it before it gets there.
+   */
+  for (const b of blocks) {
+    const draft: BlockDraft = {
+      id: b.id,
+      type: b.type as BlockDraft['type'],
+      title: b.title,
+      body: b.body,
+      caption: b.caption,
+      url: b.url,
+      mediaKey: b.mediaKey,
+    }
+    const row = { survey_id: surveyId, position: b.position, ...forStorage(draft) }
+    if (isNewQuestion(b.id)) {
+      const { data, error } = await supabase
+        .from('survey_blocks')
+        .insert(row as never)
+        .select('id')
+        .single()
+      if (error || !data) {
+        console.error(`saveDraft: block insert failed: ${error?.message}`)
+        return { ok: false, error: 'failed' }
+      }
+      ids[b.id] = data.id
+    } else {
+      const { error } = await supabase
+        .from('survey_blocks')
+        .update(row as never)
+        .eq('id', b.id)
+        .eq('survey_id', surveyId)
+      if (error) {
+        console.error(`saveDraft: block update failed: ${error.message}`)
         return { ok: false, error: 'failed' }
       }
     }

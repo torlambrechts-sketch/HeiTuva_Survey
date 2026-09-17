@@ -19,6 +19,16 @@ import { MethodPanel } from './MethodPanel'
 import type { Engagement } from '@/lib/engagement'
 import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
+import { BlockCard } from './BlockCard'
+import { BlockPalette } from './BlockPalette'
+import {
+  buildFlow,
+  flowToLists,
+  moveInFlow,
+  newBlock,
+  type BlockDraft,
+  type BlockType,
+} from '@/lib/surveys/blocks'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
@@ -141,7 +151,17 @@ export function Builder({
         title: current.title,
         audience: current.audience,
         engage: current.engage,
-        questions: current.questions,
+        /* THE FLOW'S POSITIONS, NOT THE ARRAY INDICES. Both arrays are cut
+           from one derived order, so the question at flow slot 3 sends 3 and
+           the block at slot 4 sends 4 — and `app.guard_flow_position` has
+           nothing to refuse. Sending array indices instead is the defect that
+           makes the guard fire on a perfectly ordinary save. */
+        questions: buildFlow(current.questions, current.blocks).flatMap((e, position) =>
+          e.kind === 'question' ? [{ ...e.item, position }] : [],
+        ),
+        blocks: buildFlow(current.questions, current.blocks).flatMap((e, position) =>
+          e.kind === 'block' ? [{ ...e.item, position }] : [],
+        ),
       })
       if (!result.ok) {
         setFailed(true)
@@ -180,6 +200,51 @@ export function Builder({
       questions: d.questions.map((q, i) => (i === index ? { ...q, ...patch } : q)),
     }))
 
+  /**
+   * ── V7-3: THE FLOW IS DERIVED, AND EVERY BLOCK OPERATION GOES THROUGH IT ──
+   *
+   * Questions keep their own array — every operation above indexes it — and the
+   * mixed list is rebuilt from the two whenever the editor reorders. That keeps
+   * one answer to «what position is this», which is the property
+   * `app.guard_flow_position` enforces from the database's side.
+   */
+  const flow = buildFlow(draft.questions, draft.blocks)
+
+  const writeFlow = (next: typeof flow) => {
+    const lists = flowToLists(next)
+    setDraft((d) => ({ ...d, questions: lists.questions, blocks: lists.blocks }))
+  }
+
+  const addBlock = (type: BlockType) => {
+    const block = newBlock(type, `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`)
+    // v7's own behaviour: «Blokken legges nederst i flyten» (v7:6882, and the
+    // pane says so), so it lands at the end and the arrows move it.
+    setDraft((d) => ({ ...d, blocks: [...d.blocks, { ...block, position: d.questions.length + d.blocks.length }] }))
+  }
+
+  const patchBlock = (id: string, patch: Partial<BlockDraft>) =>
+    setDraft((d) => ({
+      ...d,
+      blocks: d.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+    }))
+
+  const moveFlowItem = (from: number, delta: number) => writeFlow(moveInFlow(flow, from, from + delta))
+
+  const duplicateBlock = (id: string) =>
+    setDraft((d) => {
+      const src = d.blocks.find((b) => b.id === id)
+      if (!src) return d
+      const copy = {
+        ...src,
+        id: `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+        position: d.questions.length + d.blocks.length,
+      }
+      return { ...d, blocks: [...d.blocks, copy] }
+    })
+
+  const removeBlock = (id: string) =>
+    setDraft((d) => ({ ...d, blocks: d.blocks.filter((b) => b.id !== id) }))
+
   const addQuestion = (type: QuestionType) =>
     setDraft((d) => ({
       ...d,
@@ -203,15 +268,12 @@ export function Builder({
       ],
     }))
 
-  const moveQuestion = (index: number, delta: number) =>
-    setDraft((d) => {
-      const next = [...d.questions]
-      const target = index + delta
-      if (target < 0 || target >= next.length) return d
-      const [row] = next.splice(index, 1)
-      next.splice(target, 0, row!)
-      return { ...d, questions: next }
-    })
+  /* `moveQuestion` IS GONE, and that is V7-3's doing rather than a tidy-up.
+     It moved a question within `questions`, which was the whole order while one
+     table owned it. With a block in the flow, moving a question one place in
+     its own array hops it OVER the block — the two rows swap slots and the
+     block does not move, which is a reorder nobody asked for. Both kinds go
+     through `moveFlowItem` now, so there is one way to move anything. */
 
   const duplicateQuestion = (index: number) =>
     setDraft((d) => {
@@ -419,6 +481,11 @@ export function Builder({
               </div>
             )
           })}
+          {/* V7-3 — the content palette sits beside the question palette rather
+              than in v7's fifth builder tab, because that tab arrives with the
+              two-level rail restructure (V7-4's list) and inventing it here
+              would be a sub-tab nobody drew in that position. */}
+          <BlockPalette count={draft.blocks.length} disabled={disabled} onAdd={addBlock} />
         </div>
       ) : null}
 
@@ -677,10 +744,34 @@ export function Builder({
             </div>
           </div>
 
-          {count === 0 ? (
+          {flow.length === 0 ? (
             <p className="text-[13px] text-mut">{t('emptyQuestions')}</p>
           ) : (
-            draft.questions.map((q, i) => (
+            /* ONE LIST, TWO KINDS. `qIndex` is the question's index in its own
+               array — which every question operation still takes — while
+               `slot` is its place in the flow, which is what `position` means
+               and what the editor sees. Conflating them is how a reorder moves
+               the wrong row. */
+            flow.map((entry, slot) => {
+              if (entry.kind === 'block') {
+                const b = entry.item
+                return (
+                  <BlockCard
+                    key={b.id}
+                    block={b}
+                    slot={slot + 1}
+                    total={flow.length}
+                    disabled={disabled}
+                    onPatch={(patch) => patchBlock(b.id, patch)}
+                    onMove={(delta) => moveFlowItem(slot, delta)}
+                    onDuplicate={() => duplicateBlock(b.id)}
+                    onRemove={() => removeBlock(b.id)}
+                  />
+                )
+              }
+              const q = entry.item
+              const i = draft.questions.indexOf(q)
+              return (
               <QuestionCard
                 key={q.id}
                 quizMode={runMode === 'quiz'}
@@ -693,7 +784,7 @@ export function Builder({
                 disabled={disabled}
                 savedToBank={Boolean(banked[q.id])}
                 onChange={(patch) => patchQuestion(i, patch)}
-                onMove={(delta) => moveQuestion(i, delta)}
+                onMove={(delta) => moveFlowItem(slot, delta)}
                 onDuplicate={() => duplicateQuestion(i)}
                 onRemove={() => removeQuestion(i)}
                 onSaveToBank={() =>
@@ -709,7 +800,8 @@ export function Builder({
                   })
                 }
               />
-            ))
+              )
+            })
           )}
 
           <div className="mt-1 flex flex-wrap items-center gap-[10px]">

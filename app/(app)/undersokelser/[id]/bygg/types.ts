@@ -1,3 +1,4 @@
+import type { BlockDraft } from '@/lib/surveys/blocks'
 import type { Database } from '@/types/database'
 import type { QuestionType } from '@/lib/questions/registry'
 import type { Engagement } from '@/lib/engagement'
@@ -55,6 +56,17 @@ export type BuilderDraft = {
   /** surveys.engage — the engagement panel's settings, saved with the draft. */
   engage: Engagement
   questions: DraftQuestion[]
+  /**
+   * V7-3 — the content blocks, each carrying its FLOW position.
+   *
+   * Held separately rather than in one mixed array because every existing
+   * builder operation indexes `questions`, and the mixed list is DERIVED
+   * (`buildFlow` in `lib/surveys/blocks.ts`) for the one thing that needs it:
+   * rendering and reordering. `position` is the index in that derived flow, and
+   * `app.guard_flow_position` (M:0127) refuses a stored state that contradicts
+   * it.
+   */
+  blocks: (BlockDraft & { position: number })[]
 }
 
 export const NEW_ID_PREFIX = 'new:'
