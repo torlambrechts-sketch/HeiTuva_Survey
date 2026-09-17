@@ -1528,3 +1528,114 @@ the same function, read both bodies and apply the superset last — filename ord
 dependency order and it is the wrong proxy exactly when one migration was written against another.
 The sync above did this: M:0115..M:0119 in order, then **M:0121 re-applied** as the last word on
 `get_survey_for_token`.
+
+## 2026-09-17 — G5 + G6 prod sync: nothing to apply, and the ledger said 38
+
+**Prod head: `jmhhszsnjfqgclxzhciq`, ACTIVE_HEALTHY, eu-central-1.** The sync was
+authorised as one piece for G5 and G6; **no migration was applied, because measurement
+says none is outstanding.** The evidence, in the order the procedure asks for it.
+
+### The distance, measured by whole-catalogue comparison rather than by a version string
+
+| fingerprint | local | prod | |
+|---|---|---|---|
+| `fn_names` (app+public) | `779e19b4…` / **124** | `779e19b4…` / **124** | **identical** |
+| `fn_bodies` | `c57c1e16…` | `dd5774d6…` | 27 differ |
+| **`fn_bodies_nc`** (comments stripped) | **`0cb3b28d…`** | **`0cb3b28d…`** | **identical** |
+| `rls_tables` | `68561ab7…` / 93 | `c8968025…` / 91 | 2 differ |
+| ledger | `23fde276…` / 154 | `3ac735fc…` / 202 | — |
+
+**The two RLS tables are `storage.iceberg_namespaces` and `storage.iceberg_tables`** — a
+difference between the local CLI's storage-api and prod's, in a schema that is not ours.
+Every `public` and `app` table matches.
+
+**The 27 differing bodies are all comment residue**, which is what the third fingerprint is
+for: `fn_bodies_nc` matching exactly means no function differs in anything but comments.
+Verified on an instance rather than inferred from the aggregate — local
+`app.cadence_interval` carries **3** `--` comments, prod's carries **0**, and the SQL between
+them is identical. Last sync this was 25 of which 24 were residue; here it is 27 of 27.
+
+### THE LEDGER SAID 38 BEHIND AND THE LEDGER IS NOT THE MEASUREMENT
+
+`comm` against the repo's filenames: **38 repo versions absent from prod's ledger, and 86
+prod ledger rows that are not repo filenames at all.** Both numbers are artefacts — MCP
+`apply_migration` writes its own timestamp (`20260916134956`) rather than the file's — and
+this is the sharpest available demonstration of *«the ledger cannot be diffed against
+filenames»*. A sync driven off that number would have re-applied thirty-eight migrations
+over a database that already has them.
+
+### THE TWO FUNCTIONS THAT TWO PENDING MIGRATIONS EACH REPLACE
+
+Derived over every migration rather than from the instruction: **36 functions are defined by
+more than one migration, and 6 have at least one definer among the 38 the ledger called
+pending.** Two of those are last sync's trap:
+
+```
+public.get_survey_for_token   …0902000009 …0903000007 …0903000012 …0904000033 *M:0119 *M:0121
+app.enqueue_reminders         …0903000010 …0903000012 …0904000027 *M:0108 *M:0126
+```
+
+Probed on prod, both carry their LATEST definition — `get_survey_for_token` holds M:0119's
+thread key **and** M:0121's retention payload together, and `app.enqueue_reminders` holds
+M:0126's `'reminders'` join. **Had the ledger been believed, applying M:0119 after M:0121
+would have reverted F1's retention payload with a green apply and no error.**
+
+### Object probes for the rest of the window
+
+`method_rules` 1 · `organizations.survey_view` 1 · the closed-loop pair 2 ·
+`app.guard_run_mode_allowed` 1 · `tasks_source_ref_needs_kind` **0** (M:0123 removed it) ·
+`organizations.options` default =
+`jsonb_build_object('tuva',true,'quiz',true,'live',true,'klarsprak',true,'reminders',true,'sso',false,'brand_mail',true)`.
+
+### The data side the fingerprint cannot see — read, not accepted
+
+- **1 organisation, 1 of 1 carrying all seven option keys.** M:0125's merge backfill landed.
+- **1 of 1 still carrying `weekly_digest` and `allow_self_serve`.** That is Q216 working as
+  decided: the column KEEPS them and nothing reads them. Read rather than assumed, because
+  «the removal was non-destructive» is a claim about rows.
+- `survey_view` null: **0**. `retention_months` null: **0**.
+- **The load-bearing trigger order is `organizations_aa_merge_options`** — BEFORE UPDATE OF
+  `options`, and the `aa_` prefix is what makes it fire before `guard_sso` and
+  `mode_in_use`, since Postgres orders triggers by name. Present, correctly named, correctly
+  scoped. `guard_invitation_not_suppressed` is `BEFORE INSERT OR UPDATE OF email` — Q137's
+  column scope, intact. 5 cron jobs.
+
+### `ui_messages`: the value-changed set is EMPTY, so there was nothing to ask prod for
+
+Derived from git across `3be5fe4..HEAD` (G5 + G6), per key and per language:
+
+```
+messages/no.json:  added=43  VALUE-CHANGED=0  removed=0
+messages/en.json:  added=43  VALUE-CHANGED=0  removed=0
+```
+
+All 43 are in the `tuva` namespace. Prod holds **4252 rows and 0 in `tuva`**, one scope
+(global), langs da/en/no/sv. By D217/D218's overlay model a MISSING row falls through to the
+compiled bundle and is harmless; only a DIFFERING row overrides. **No key changed value, so
+no row can have gone stale, and no reseed is owed.** The procedure terminates here rather
+than being skipped.
+
+### Advisors — no new CATEGORY, and the counts grew by design
+
+Against the 2026-09-10 baseline in this file:
+
+| category | then | now |
+|---|---|---|
+| `anon_security_definer_function_executable` | 7 | **10** |
+| `authenticated_security_definer_function_executable` | 31 | **38** |
+| `rls_enabled_no_policy` | 4 | 4 (`answers`, `responses` — invariant 1; `demo_requests`, `entra_connections`) |
+| `extension_in_public` | 1 | 1 (`pg_net`) |
+| `auth_leaked_password_protection` | 1 | 1 (owner's to enable) |
+
+The three new anon-executable functions, derived from the migration that created each rather
+than from a diff of the old list: **`get_comment_thread`** (`M:0099`, C1) and
+**`get_closed_loop_for_token`** + **`set_result_optin`** (`M:0123`, G1). All three are
+token-validated — a respondent holds a link, never a session — and all three are 5a3
+allowlisted beside `submit_response` with reasons that cite numbered tests.
+
+### What is now true on prod that was not
+
+**Nothing.** That is the finding, and it is the correct outcome rather than a skipped step:
+G5 and G6 touched no `supabase/` path — verified per commit — and the schema was already in
+step through M:0126 from the previous sync. **The application code is what changes with G5
+and G6, and that ships with the Vercel deploy, not with a migration.**
