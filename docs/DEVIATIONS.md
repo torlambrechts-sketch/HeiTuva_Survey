@@ -7297,6 +7297,62 @@ drawing's rule of thumb on the screen, or source it from `survey_rounds` + `surv
 **Building under the assumption that the panel stays untouched**; nothing in V7-1 to V7-3 depends
 on the answer.
 
+### DECIDED (Tor, 2026-09-17): DROP THE NUMBER, KEEP THE PANEL'S REAL CONTROLS
+
+> «Eleven constants nobody has measured, and «rundt 12 prosentpoeng» was `r -= 12` read out loud.
+> That is not a copy defect — the copy was the model speaking. And **a prediction about the
+> customer's own data is the one form where she finds out it was wrong by acting on it**, which is
+> the objection that settled the reminder figure in V5.»
+
+Option 2 was refused with a reason worth keeping: **saying «the drawing's rule of thumb» admits the
+number is not measured and shows it anyway.** Option 3 — sourcing it from `survey_rounds` +
+`survey_invitations` + `responses` — is a feature rather than a repair and belongs in its own track.
+
+**Done:**
+
+- `expectedResponseRate` deleted from `lib/engagement.ts`; the reasoning stands where it was.
+- `EngagementPanel`'s header number gone, and the slot is NOT refilled. `questionCount` is gone
+  from the component's props too — it reached it for one reason, the `−12 over eight questions`
+  term, and a prop kept after its only reader is how a later phase concludes the panel still knows
+  something about length.
+- `builder.expectedAnswers`, `expectedNote` and `expectedNoteLong` removed from
+  `messages/{no,en}.json` AND their six rows deleted from production's `ui_messages`, because an
+  orphan row is a string the translation editor offers for a surface that no longer exists —
+  G2's «nothing reads it» shape in the copy layer. The replacement key `builder.engageNoEstimate`
+  needs no prod row: `overlay(BUNDLED, rows)` (`lib/i18n/messages.ts:80`) makes the compiled bundle
+  the base, so a missing row falls through (D218).
+- The refusal is ON the screen — «Vi viser ikke et anslag på svarprosent — vi har ingen målinger å
+  bygge det på.» — because this project's habit everywhere else is that an absent number reads as
+  one somebody did not finish.
+
+**THE ORDER: THE CONDITIONAL'S FALSE BRANCH, ANSWERED BY MEASUREMENT.** Tor asked for the order kept
+as a ranking *«if the drawing has one»*. It has **three orders and they disagree**:
+
+| where | order |
+|---|---|
+| layout (`v7:9950-9956`) | personal · deadline · showProgress · oneQuestion · revealResults · followUp |
+| arithmetic (`v7:9981-9982`) | revealResults 9 > personal 7 > deadline 5 > oneQuestion 4 > showProgress 3 > followUp 0 |
+| prose (`v7:9955`) | exactly ONE ordinal claim — revealResults is «den sterkeste driveren uten premie» |
+
+So the layout order is **not** the ranking, and the ranking lives in the arithmetic being deleted.
+**Reordering the toggles by those constants would be the deleted model surviving as a layout.** The
+drawn order stays — the bundle wins on visuals and an order is a visual — and the one ordinal
+sentence the drawing states in prose stays with it: `tRevealResultsDesc` claims «most» without
+claiming how much, which is exactly the line Tor drew.
+
+**AND THE OTHER FIVE TOGGLE DESCRIPTIONS WERE CHECKED AND STAND.** They ship
+(`tPersonalDesc` … `tFollowUpDesc`) and they are the drawing's rationales, so the sweep had to ask.
+Measured against Q181's own test — *«Each rule states the property without the number»*, with
+«Matriser gir flere ubesvarte spørsmål på mobil» kept as the worked example of what is defensible —
+**none of the six carries a figure and all six state a property.** `tPersonalDesc`'s «øker
+åpningsraten» was the one that looked like `bestTime`'s sin; it is not, because it names no number.
+Recorded because a sweep that changes nothing is still a measurement, and «I looked and they stand»
+is worth more than silence.
+
+**Six tests removed with the model** (`tests/unit/engagement.test.ts` 12 -> 8) and two guards put in
+their place, the first proven RED against a synthetic `lib/__probe232.ts` before being trusted. **A
+test that pins an invented number is a guard for the invention** — D158's shape from the other side.
+
 ## D233 — THE `info` BLOCK'S SEED TEXT IS AN ANONYMITY PROMISE, AND IT ARRIVES THROUGH A FIXTURE (V7-0, 2026-09-17) — LOGGED FOR V7-3
 
 `v7:6871` seeds the new `info` content block with «Svarene brukes til å forbedre arbeidsmiljøet.

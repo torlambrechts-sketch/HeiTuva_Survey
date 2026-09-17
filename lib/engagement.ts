@@ -125,19 +125,50 @@ export function parseEngagement(raw: unknown): Engagement {
  * model — the point is that it moves when the user changes a setting, which is
  * what makes the panel teach anything.
  */
-export function expectedResponseRate(e: Engagement, questionCount: number): number {
-  let r = 42
-  if (e.personal) r += 7
-  if (e.deadline) r += 5
-  if (e.show_progress) r += 3
-  if (e.one_question) r += 4
-  if (e.reveal_results) r += 9
-  if (e.incentive === 'lotteri') r += 8
-  if (e.incentive === 'alle') r += 11
-  if (e.incentive === 'veldedig') r += 4
-  if (questionCount > 8) r -= 12
-  return Math.max(10, Math.min(92, r))
-}
+/**
+ * ── THERE IS NO `expectedResponseRate`, AND THAT IS D232 ──────────────────
+ *
+ * This file used to export one, and `EngagementPanel` rendered it as «68 % ·
+ * forventet svar». It was eleven hard-coded constants — base 42, +7 personal,
+ * +5 deadline, +3 progress, +4 one-question, +9 reveal-results, +8/+11/+4
+ * incentive, −12 over eight questions, clamped 10–92 — and **nothing in this
+ * product measures any of them.** The drawing's guess, implemented, and
+ * labelled as an estimate of the customer's own data.
+ *
+ * Tor decided it (D232): *«a prediction about the customer's own data is the
+ * one form where she finds out it was wrong by acting on it»* — the same
+ * objection that cut Q182's reminder figure. Saying «the drawing's rule of
+ * thumb» on the screen was refused as worse than dropping it: it admits the
+ * number is not measured and shows it anyway.
+ *
+ * The COPY was not the defect. `builder.expectedNoteLong` said «over 8 spørsmål
+ * koster rundt 12 prosentpoeng», which was `r -= 12` read out loud — the model
+ * speaking. So the fix is the model, not the sentence.
+ *
+ * **What has value is below and is untouched:** the audience, the incentive, the
+ * six toggles and the comment scope are real choices with real consequences —
+ * `personal`, `deadline`, `show_progress`, `one_question`, `reveal_results` and
+ * `comments` all change what `/s/[token]` renders or what the invitation says.
+ *
+ * ── AND THE ORDER IS THE DRAWING'S, NOT A RANKING ─────────────────────────
+ *
+ * Tor asked for the order kept as a ranking «if the drawing has one». Measured,
+ * it has three orders and they disagree:
+ *
+ *   layout     (v7:9950-9956)  personal · deadline · showProgress · oneQuestion
+ *                              · revealResults · followUp
+ *   arithmetic (v7:9981-9982)  revealResults 9 > personal 7 > deadline 5
+ *                              > oneQuestion 4 > showProgress 3 > followUp 0
+ *   prose      (v7:9955)       exactly ONE ordinal claim — revealResults is
+ *                              «den sterkeste driveren uten premie»
+ *
+ * So the LAYOUT order is not the ranking, and the ranking lives in the
+ * arithmetic being deleted. Reordering the toggles by those constants would be
+ * the deleted model surviving as a layout. **The drawn order stays** (the bundle
+ * wins on visuals, and an order is a visual), and the one ordinal sentence the
+ * drawing states in prose stays with it — `tRevealResultsDesc` claims «most»
+ * without claiming how much, which is exactly the line Tor drew.
+ */
 
 /**
  * The incentive warning (HeiTuva.dc.html:3769). Prizes to employees colour the

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   ENGAGEMENT_DEFAULTS,
   ENGAGE_TOGGLES,
-  expectedResponseRate,
   incentiveWarns,
   parseEngagement,
   showsCharityField,
@@ -12,49 +13,64 @@ import {
 
 const with_ = (patch: Partial<Engagement>): Engagement => ({ ...ENGAGEMENT_DEFAULTS, ...patch })
 
-describe('expectedResponseRate', () => {
-  it('matches the design arithmetic for the column defaults', () => {
-    // 42 base + personal 7 + deadline 5 + show_progress 3 + one_question 4
-    // + reveal_results 9 = 70, no incentive, 4 questions.
-    expect(expectedResponseRate(ENGAGEMENT_DEFAULTS, 4)).toBe(70)
-  })
+/**
+ * D232 — THE SIX TESTS THAT WERE HERE ARE GONE WITH THE MODEL THEY TESTED.
+ *
+ * They asserted `expectedResponseRate`'s eleven constants — 42 base, +7, +5,
+ * +3, +4, +9, +8/+11/+4, -12, clamp 10-92 — faithfully and in detail. **A test
+ * that pins an invented number is a guard for the invention**, which is the
+ * same shape D158 recorded from the other side: the census fell, and the fall
+ * was correct.
+ *
+ * What replaces them is the property, in both directions, so the model cannot
+ * come back quietly.
+ */
+describe('D232 — no response-rate estimate is computed or shown', () => {
+  /** `lib/engagement.ts` documents its own refusal and therefore CONTAINS the
+   *  identifier it refuses. «A refusal named in a comment is found by a grep
+   *  over that comment», so this measures the code. */
+  const stripComments = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
 
-  it('is 42 with every lever off', () => {
-    const off = with_({
-      personal: false, deadline: false, show_progress: false,
-      one_question: false, reveal_results: false,
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name)
+      if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(p)
+      return /\.tsx?$/.test(e.name) ? [p] : []
     })
-    expect(expectedResponseRate(off, 1)).toBe(42)
-  })
 
-  it('adds the design bonus per incentive', () => {
-    const base = expectedResponseRate(ENGAGEMENT_DEFAULTS, 4)
-    expect(expectedResponseRate(with_({ incentive: 'lotteri' }), 4)).toBe(base + 8)
-    expect(expectedResponseRate(with_({ incentive: 'alle' }), 4)).toBe(base + 11)
-    expect(expectedResponseRate(with_({ incentive: 'veldedig' }), 4)).toBe(base + 4)
-  })
-
-  it('takes 12 points off above eight questions, and only above', () => {
-    expect(expectedResponseRate(ENGAGEMENT_DEFAULTS, 8)).toBe(70)
-    expect(expectedResponseRate(ENGAGEMENT_DEFAULTS, 9)).toBe(58)
-  })
-
-  it('clamps to the design range', () => {
-    const max = with_({ incentive: 'alle' })
-    expect(expectedResponseRate(max, 1)).toBeLessThanOrEqual(92)
-    const min = with_({
-      personal: false, deadline: false, show_progress: false,
-      one_question: false, reveal_results: false,
-    })
-    expect(expectedResponseRate(min, 40)).toBeGreaterThanOrEqual(10)
-  })
-
-  it('moves whenever any lever moves — the panel would teach nothing otherwise', () => {
-    for (const k of ENGAGE_TOGGLES) {
-      if (k === 'follow_up') continue // the design gives follow_up no weight
-      const flipped = with_({ [k]: !ENGAGEMENT_DEFAULTS[k] } as Partial<Engagement>)
-      expect(expectedResponseRate(flipped, 4), k).not.toBe(70)
+  it('no source file computes one — the identifier survives only in prose', () => {
+    const hits: string[] = []
+    for (const dir of ['lib', 'app', 'components']) {
+      for (const f of walk(dir)) {
+        if (stripComments(readFileSync(f, 'utf8')).includes('expectedResponseRate')) hits.push(f)
+      }
     }
+    expect(hits, `still computing an estimate: ${hits.join(', ')}`).toEqual([])
+
+    // Proven to FIRE rather than trusted: the same sweep over a synthetic line
+    // finds it, so an empty result means absence and not a broken matcher.
+    expect(stripComments('const r = expectedResponseRate(e, 4)')).toContain('expectedResponseRate')
+    expect(stripComments('/* expectedResponseRate */')).not.toContain('expectedResponseRate')
+  })
+
+  it('the three message keys are gone and the refusal ships in both languages', () => {
+    for (const lang of ['no', 'en']) {
+      const m = JSON.parse(readFileSync(`messages/${lang}.json`, 'utf8')) as {
+        builder: Record<string, string>
+      }
+      for (const k of ['expectedAnswers', 'expectedNote', 'expectedNoteLong']) {
+        expect(m.builder[k], `${lang}.builder.${k} still shipped`).toBeUndefined()
+      }
+      expect(m.builder['engageNoEstimate']?.length ?? 0).toBeGreaterThan(20)
+    }
+    // And the panel renders no percentage of its own, and no longer takes the
+    // prop that existed only for the deleted term.
+    const panel = stripComments(
+      readFileSync('app/(app)/undersokelser/[id]/bygg/EngagementPanel.tsx', 'utf8'),
+    )
+    expect(panel).not.toContain('{rate}')
+    expect(panel).not.toContain('questionCount')
   })
 })
 

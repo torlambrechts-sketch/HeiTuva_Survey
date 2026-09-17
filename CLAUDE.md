@@ -219,6 +219,36 @@ authoritative in a way a stale document does not.
      finding until the lines are read», one step earlier — before the count is
      written down.
 
+     **A FIGURE FOUND WHILE READING A NEW BUNDLE IS NOT THEREBY THE NEW BUNDLE'S**
+     (Tor, 2026-09-17, after V7-0's sweep). The instruction named «snitt 58 % svar» on the
+     Send channel cards as a figure seen in the new bundle. Measured, `snitt` occurs
+     **16 times in v6 and 16 times in v7** and the `channelCards` line is byte-identical
+     (`v6:9720` = `v7:10020`). It was not an arrival at all — it was **our shipped copy**,
+     in both languages, on `SendScreen.tsx:344`, and live in production's `ui_messages`.
+     Tor: «I read a figure in a new bundle and assumed the bundle brought it.»
+
+     This is the same shape as «the thing measured was not the thing claimed», pointed at
+     ATTRIBUTION rather than at a capability: reading a new document makes everything in
+     it feel new, and a sweep's whole job is to decide where a claim LIVES. So the split
+     the sweep must report is not «which figures are in this bundle» but **which are
+     arrivals, which are inherited, and which reached our own copy** — and the cheap test
+     is one `grep -c` against the previous bundle before the sentence is written.
+
+     The sweep's value here was not finding something in the drawing. It was that
+     re-reading the drawing's claims made somebody grep OUR message files for the same
+     shapes, and seven keys came back.
+
+     **AND A FIGURE CAN BE YOURS AND THE SENTENCE AROUND IT WRONG** — `results.insightRate`,
+     the sharpest of those seven. «Svarprosenten er {value} %. Under 70 % blir gruppetall
+     usikre.» The **70 is ours**: `aggregate_results` fires `low_response_rate` at `< 0.7`
+     (`supabase/migrations/20260906000041_empty_group_is_not_a_number.sql:182`), so Q181's
+     stated exception covers it — «Skala 0–10 på én rad names our own control's range and
+     stays». **The clause beside it was still false.** Nothing in the product makes group
+     figures «usikre» at 70 %; what governs group figures is **k**, and low participation
+     matters because it pushes cells under that threshold. So a sweep that clears a figure
+     is not finished: the figure and the consequence attached to it are two claims, and
+     only one of them was checked.
+
      **A HOST OR A URL IS A CLAIM, NOT A SPECIFICATION.** The sweep covers these too, and
      they are the easiest kind to implement by accident: a claim about who can see what
      reads as a promise and invites checking, while `heituva.no/s/…` reads as a fact and

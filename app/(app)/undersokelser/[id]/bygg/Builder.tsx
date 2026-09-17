@@ -577,7 +577,6 @@ export function Builder({
       {tab === 'settings' ? (
         <EngagementPanel
           value={draft.engage}
-          questionCount={count}
           disabled={disabled}
           onChange={patchEngagement}
         />

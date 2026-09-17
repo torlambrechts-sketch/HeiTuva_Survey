@@ -7,7 +7,6 @@ import {
   COMMENT_SCOPES,
   ENGAGE_TOGGLES,
   INCENTIVES,
-  expectedResponseRate,
   incentiveWarns,
   showsCharityField,
   showsPrizeField,
@@ -54,25 +53,26 @@ const input =
  * `comments` change how /s/[token] renders in Phase 3; `personal`, `deadline`
  * and `thank_you` change what the invitation says.
  *
- * The expected rate is the design's own arithmetic, in lib/engagement.ts so it
- * can be unit-tested rather than eyeballed. It is an illustrative estimate; its
- * job is to move when a choice changes, which is what makes the panel teach
- * anything.
+ * **It shows no estimated response rate, and D232 is why.** The number that used
+ * to sit in the header was eleven constants nothing measures; the reasoning is
+ * in `lib/engagement.ts` where the function was. The panel says so on the
+ * screen rather than leaving a silent gap.
  */
 export function EngagementPanel({
   value,
-  questionCount,
   disabled,
   onChange,
 }: {
   value: Engagement
-  questionCount: number
+  /* No `questionCount`. It reached this component for one reason — the deleted
+     estimate's `−12 over eight questions` term — and a prop kept after its only
+     reader is gone is how a later phase concludes the panel still knows
+     something about length. */
   disabled: boolean
   onChange: (patch: Partial<Engagement>) => void
 }) {
   const t = useTranslations('builder')
   const [open, setOpen] = useState(true)
-  const rate = expectedResponseRate(value, questionCount)
 
   return (
     <section className="rounded-2xl border border-line bg-sf p-[22px]">
@@ -81,11 +81,12 @@ export function EngagementPanel({
           <h2 className="font-display text-[21px] font-bold">{t('engageTitle')}</h2>
           <p className="mt-[2px] text-[13px] text-mut">{t('engageScopeNote')}</p>
         </div>
+        {/* D232 — THE NUMBER THAT WAS HERE IS GONE, AND THE SLOT IS NOT REFILLED.
+            v7:9979-9984 computes «68 % · forventet svar» from eleven constants
+            nothing measures. Tor: a prediction about the customer's own data is
+            the one form where she finds out it was wrong by acting on it. The
+            reasoning is in `lib/engagement.ts` beside the deleted function. */}
         <div className="flex items-center gap-3">
-          <span className="text-right">
-            <span className="block font-display text-2xl font-semibold leading-none">{rate} %</span>
-            <span className="block text-[11px] text-mut">{t('expectedAnswers')}</span>
-          </span>
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
@@ -294,9 +295,12 @@ export function EngagementPanel({
             />
           </label>
 
-          <p className="mt-[10px] text-[13px] text-mut">
-            {questionCount > 8 ? t('expectedNoteLong') : t('expectedNote')}
-          </p>
+          {/* Said on the screen rather than left out, which is this project's
+              habit for anything it refuses to show: Live names four unavailable
+              panels, Hjelp says status and chat are not set up, Målgruppe writes
+              its refused half into the page. A missing estimate reads as one
+              somebody did not finish; a refused one reads as a decision. */}
+          <p className="mt-[10px] text-[13px] text-mut">{t('engageNoEstimate')}</p>
         </div>
       ) : null}
     </section>

@@ -70,7 +70,7 @@
   "tests/unit/crumbs.test.ts": 5,
   "tests/unit/dashboard-layout.test.ts": 14,
   "tests/unit/dashboard-panels.test.ts": 5,
-  "tests/unit/engagement.test.ts": 12,
+  "tests/unit/engagement.test.ts": 8,
   "tests/unit/entra-graph.test.ts": 13,
   "tests/unit/feedback-mode.test.ts": 10,
   "tests/unit/fidelity-pairs.test.ts": 4,
