@@ -38,10 +38,12 @@ import { resolveSubnav, type MsgRef, type SubnavPill } from '@/lib/shell/subnav'
  * that never lights». Three of v7's four are `weight:700` at full opacity and
  * never pilled; that is the treatment below.
  *
- * **No exit ships yet** — the two rails that carry one are V7-2's — so this
- * branch is built and unreached. It is built anyway because the alternative is
- * that V7-2 adds the pill and inherits the filter treatment silently, which is
- * exactly the defect this type exists to make unrepresentable.
+ * **V7-2 ships the first exit** — the survey rail's «Bygger» — and it is the
+ * DORMANT one: v7 draws it `weight:"500"` at `.7`, a member of the set's array
+ * forced never to light by an explicit `&& k !== "bygger"` (`v7:8923`). The
+ * three bold exits are `.concat`-ed after their sets and do not ship yet, so
+ * both emphases exist here and only one is reached. The pill declares which;
+ * see `emphasis` in the registry for why it is declared rather than derived.
  */
 type Rendered = { pill: SubnavPill; on: boolean }
 
@@ -100,13 +102,14 @@ export function AppSubnav() {
               aria-current={on ? 'page' : undefined}
               className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[9px] border-none px-[13px] py-[7px] text-[13.5px] text-ink no-underline hover:bg-sf"
               style={{
-                // v7:8898, 8907, 8934 — an exit is never pilled, and it carries
-                // the drawing's own `weight:"700"` and `textOpacity:"1"`
-                // REGARDLESS of state, which is the property the old
-                // `currentHref === href` expression could not hold.
+                // An exit is never pilled, and its emphasis does not depend on
+                // state — which is the property the old `currentHref === href`
+                // expression could not hold. `bold` is v7:8898, 8907 and 8934;
+                // `dormant` is v7:8922-8928, where the drawing puts an exit
+                // inside the set's own array and forces it never to light.
                 background: on ? 'var(--sf)' : 'transparent',
-                fontWeight: on || exit ? 700 : 500,
-                opacity: on || exit ? 1 : 0.7,
+                fontWeight: on || (exit && pill.emphasis !== 'dormant') ? 700 : 500,
+                opacity: on || (exit && pill.emphasis !== 'dormant') ? 1 : 0.7,
               }}
             >
               {say(pill.label)}

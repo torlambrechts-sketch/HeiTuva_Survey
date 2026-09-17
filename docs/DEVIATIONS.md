@@ -6222,6 +6222,25 @@ listed rather than summarised.
 | `utsending` | 7 | none | four are already `/send`; Invitasjon is built INTO it; Leveranse is refused; Bølger is deferred |
 | `over` | 2 | none | the tab itself is decided-NOT-NOW |
 
+**V7-2 ADDENDUM — v7 DRAWS 25, NOT 27, AND D192 IS STILL RIGHT ABOUT v6.** The table above says
+«v6 draws 27 sub-tabs across seven rails», and it is a statement about v6, where it remains true.
+The eighth handoff dropped two: `v7:7397`'s `resultat` row is
+`matrise · sporsmal · sammenlign · frisvar` where `v6:7141` had all six — **`runder` and
+`fordeling` are gone**, so the count is 2+3+4+3+7+3+3 = **25**. The command is the one
+`docs/f5/00-plan.md` already states, pointed at the new file:
+`sed -n '7393,7400p' design-reference-v7/…/HeiTuva.dc.html | grep -o '\["[a-z]*","[^"]*"\]' | wc -l`.
+
+**The drawing has now itself dropped `fordeling`**, which F5-3 refused on the grounds that
+distribution and free text are rendered INSIDE «Per spørsmål» rather than beside it — the second
+time in this handoff that v7 arrives independently at a decision we had already taken (the first is
+§ 0.3f's svTuva). `runder` left with no note; the app renders the rounds panel inside the results
+screen (`ResultsScreen.tsx:389-397`), so nothing is lost. **Nothing in the product changes**: the
+`resultat` rail was refused entirely and still is, for the four reasons the table gives.
+
+Recorded as an addendum rather than by editing the row, because «27» is not wrong — it is a fact
+about a bundle that has stopped being the target. A figure true of the old bundle stays true of the
+old bundle, which is the converse of the shape V7-0 recorded.
+
 **A rail of one pill is not a rail**, which is what collapses `malgruppe` once
 two of its three are refused. That is the general rule the table hides.
 

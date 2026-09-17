@@ -101,6 +101,24 @@ export type SubnavPill = {
   label: MsgRef
   href: string
   kind: PillKind
+  /**
+   * V7-2 — HOW AN EXIT IS DRAWN, decided with the pill in front of us, which is
+   * what Q231 deferred to this phase.
+   *
+   * v7 draws its four exits in two emphases, and the property behind the split
+   * is POSITION: the three that are `.concat`-ed AFTER the set are
+   * `weight:"700"` at full opacity («Undersøkelsen» on send `v7:8898` and build
+   * `v7:8907`, «Bygger» on surveys `v7:8934`), and the one that is a MEMBER of
+   * the set's own array is `weight:"500"` at `.7`, forced by an explicit
+   * `&& k !== "bygger"` (`v7:8923`).
+   *
+   * Only the second kind ships — the survey rail's «Bygger» — so `emphasis` is
+   * declared per pill rather than derived from position. Deriving it would read
+   * elegant and would rest on a property measured over four instances of which
+   * one exists here; declaring it puts the drawing's line number beside the
+   * pill. Ignored on a `filter`, which takes its emphasis from being current.
+   */
+  emphasis?: 'bold' | 'dormant'
 }
 
 export type SubnavRail = {
@@ -276,12 +294,44 @@ export const SUBNAV: Entry[] = [
            property), so the pills are real routes and the current one is
            decided by the PATH SEGMENT. There is no parameter that can disagree
            with it. */
-        pills: SURVEY_TABS.map((tab) => ({
-          id: tab,
-          label: nav(SURVEY_TAB_NAV_KEY[tab]),
-          href: surveyTabHref(survey.surveyId, tab),
-          kind: 'filter' as const,
-        })),
+        pills: [
+          ...SURVEY_TABS.map((tab) => ({
+            id: tab,
+            label: nav(SURVEY_TAB_NAV_KEY[tab]),
+            href: surveyTabHref(survey.surveyId, tab),
+            kind: 'filter' as const,
+          })),
+          /* V7-2 — THE TWELFTH PILL, and it is an EXIT rather than a tab.
+             That distinction is the whole reason `kind` exists, and it is what
+             makes this compatible with F5-2 rather than a reversal of it.
+
+             F5-2 took the builder OFF the rail as a TAB: `v6:1377` puts «Åpne
+             byggeren» BESIDE the question table, which is the bundle saying
+             these are two screens, so «Spørsmål» points at the read view and
+             the builder is one click further on. v7 draws «Bygger» back into
+             the rail — and draws it as something that can never be current
+             (`v7:8923`'s `&& k !== "bygger"`). **The drawing is agreeing that
+             the builder is not one of the tabs, and adding a way to leave to
+             it.** A tab competes with «Spørsmål» for which screen you are on;
+             an exit cannot.
+
+             NOT DRAWN WHILE YOU ARE ALREADY THERE. `/bygg` is a survey route,
+             so this rail renders on it — and an exit pointing at the page you
+             are standing on is not an exit. v7 never meets this because `build`
+             is a different screen with a different rail; we meet it because
+             V6-2 kept the paths. */
+          ...(survey.tab === 'sporsmal' && /\/bygg(\/|$)/i.test(pathname)
+            ? []
+            : [
+                {
+                  id: 'bygger',
+                  label: nav('subnavSurveyBuilder'),
+                  href: `/undersokelser/${survey.surveyId}/bygg`,
+                  kind: 'exit' as const,
+                  emphasis: 'dormant' as const,
+                },
+              ]),
+        ],
         /* Null on `/live` and `/test`, which are survey routes with no pill. */
         currentId: survey.tab,
       }

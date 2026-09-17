@@ -204,11 +204,46 @@ describe('V7-1 — the subnav registry', () => {
        defect the type exists to make unrepresentable. */
     const c = code(component)
     expect(c).toMatch(/kind === 'exit'/)
-    // Emphasis is `on OR exit`, never `on` alone — that is the whole property.
-    expect(c).toMatch(/fontWeight: on \|\| exit/)
-    expect(c).toMatch(/opacity: on \|\| exit/)
+    /* Emphasis must depend on `exit`, never on `on` alone — that is the whole
+       property, and it is stated over both declarations rather than pinned to
+       one spelling. V7-1 asserted the literal `on || exit`; V7-2 added the
+       dormant qualifier and this went red on correct code, which is the guard
+       doing its job and the assertion being a spelling rather than a rule. */
+    for (const decl of c.match(/(fontWeight|opacity): [^,\n]+/g) ?? []) {
+      expect(decl, `emphasis ignores kind: ${decl}`).toMatch(/\bexit\b/)
+    }
+    expect((c.match(/(fontWeight|opacity): [^,\n]+/g) ?? []).length).toBe(2)
     // And the current pill is a filter by construction, not by convention.
     expect(c).toMatch(/pill\.kind === 'filter' && pill\.id === rail\.currentId/)
+  })
+
+  it('11. V7-2 — the survey rail carries the «Bygger» EXIT, and not on /bygg itself', () => {
+    const on = (seg: string) => rails(`/undersokelser/${ID}/${seg}`)!
+
+    /* Twelve drawn, eight tabs, and the twelfth is an exit rather than a ninth
+       tab — which is what makes it compatible with F5-2 rather than a reversal
+       of it. A tab competes with «Spørsmål» for which screen you are on; an
+       exit cannot, and v7 forces it never to light (`v7:8923`). */
+    const bygger = on('sporsmal').pills.find((p) => p.id === 'bygger')
+    expect(bygger, 'no «Bygger» pill on the survey rail').toBeDefined()
+    expect(bygger!.kind).toBe('exit')
+    expect(bygger!.emphasis).toBe('dormant')
+    expect(bygger!.href).toBe(`/undersokelser/${ID}/bygg`)
+    expect(on('sporsmal').pills.filter((p) => p.kind === 'filter')).toHaveLength(8)
+
+    // An exit pointing at the page you are standing on is not an exit. v7 never
+    // meets this because `build` is a different screen there; we meet it
+    // because V6-2 kept the paths.
+    expect(on('bygg').pills.some((p) => p.id === 'bygger'), 'exit to the current page').toBe(false)
+    // …and the rail still lights «Spørsmål» there, through TAB_ALIAS.
+    expect(on('bygg').currentId).toBe('sporsmal')
+
+    // It can never be the current pill — asserted by the registry itself, over
+    // every route, in test 3. Stated here too because this is the first pill
+    // that could make it false.
+    for (const seg of ['sporsmal', 'send', 'resultater', 'live']) {
+      expect(on(seg).currentId, seg).not.toBe('bygger')
+    }
   })
 
   it('10. the registry builds its pills FROM the registries, never from a literal list', () => {

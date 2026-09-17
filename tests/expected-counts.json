@@ -107,7 +107,7 @@
   "tests/unit/schedule-status.test.ts": 8,
   "tests/unit/sentry-scrub.test.ts": 8,
   "tests/unit/shell-footer.test.ts": 8,
-  "tests/unit/subnav.test.ts": 10,
+  "tests/unit/subnav.test.ts": 11,
   "tests/unit/subtabs.test.ts": 36,
   "tests/unit/survey-scopes.test.ts": 12,
   "tests/unit/survey-tabs.test.ts": 10,
