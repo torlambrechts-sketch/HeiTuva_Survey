@@ -25,10 +25,11 @@ import {
   buildFlow,
   flowToLists,
   moveInFlow,
-  newBlock,
+  seededBlock,
   type BlockDraft,
   type BlockType,
 } from '@/lib/surveys/blocks'
+import { MAX_MEDIA_BYTES, isMediaType } from '@/lib/surveys/media'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
@@ -44,8 +45,14 @@ import {
   type BuilderDraft,
   type DraftQuestion,
   type QuestionConfig,
+  isNewQuestion,
 } from './types'
-import { saveDraft, saveQuestionToBank, saveSurveyAsTemplate } from './actions'
+import {
+  saveDraft,
+  saveQuestionToBank,
+  saveSurveyAsTemplate,
+  uploadBlockMedia,
+} from './actions'
 
 /* V2:6472 — four, in this order: Generelt · Legg til · Innstillinger · Vis.
    The app carried three and stacked RunModePanel, QuizPanel, PolicyPanel and
@@ -216,7 +223,16 @@ export function Builder({
   }
 
   const addBlock = (type: BlockType) => {
-    const block = newBlock(type, `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`)
+    /* V7-3c — SEEDED, which is v7's own behaviour (`blockSeed`, v7:6869) and a
+       real feature rather than placeholder text: the palette promises «egen
+       tittel og innledning», so an editor gets a draft to edit. One seed is
+       refused — see D233 and `BLOCK_SEEDS` — because the `info` block's second
+       sentence promises anonymity the block cannot keep. */
+    const block = seededBlock(
+      type,
+      `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+      (key) => t(key as 'seedInfoTitle'),
+    )
     // v7's own behaviour: «Blokken legges nederst i flyten» (v7:6882, and the
     // pane says so), so it lands at the end and the arrows move it.
     setDraft((d) => ({ ...d, blocks: [...d.blocks, { ...block, position: d.questions.length + d.blocks.length }] }))
@@ -244,6 +260,36 @@ export function Builder({
 
   const removeBlock = (id: string) =>
     setDraft((d) => ({ ...d, blocks: d.blocks.filter((b) => b.id !== id) }))
+
+  /**
+   * V7-3c — the picture.
+   *
+   * The upload needs the block's ROW to exist, because `uploadBlockMedia` reads
+   * the survey id off it (a path is an authorisation claim and is never taken
+   * from the client). A block the editor has just added has a `new:` id and no
+   * row, so the card says «save first» rather than offering a control that
+   * would fail — the refusal is on the screen, in words, which is what this
+   * project does instead of a dead button.
+   */
+  const [mediaError, setMediaError] = useState<Record<string, string>>({})
+
+  const uploadMedia = async (id: string, file: File) => {
+    setMediaError((m) => ({ ...m, [id]: '' }))
+    if (!isMediaType(file.type)) {
+      setMediaError((m) => ({ ...m, [id]: t('blkMediaWrongType') }))
+      return
+    }
+    if (file.size > MAX_MEDIA_BYTES || file.size === 0) {
+      setMediaError((m) => ({ ...m, [id]: t('blkMediaTooBig') }))
+      return
+    }
+    const body = new FormData()
+    body.set('blockId', id)
+    body.set('file', file)
+    const result = await uploadBlockMedia(body)
+    if (result.ok) patchBlock(id, { mediaKey: result.mediaKey })
+    else setMediaError((m) => ({ ...m, [id]: t('blkMediaFailed') }))
+  }
 
   const addQuestion = (type: QuestionType) =>
     setDraft((d) => ({
@@ -766,6 +812,11 @@ export function Builder({
                     onMove={(delta) => moveFlowItem(slot, delta)}
                     onDuplicate={() => duplicateBlock(b.id)}
                     onRemove={() => removeBlock(b.id)}
+                    /* A `new:` id has no row yet, so there is nothing for the
+                       upload to read the survey id off. */
+                    saved={!isNewQuestion(b.id)}
+                    mediaError={mediaError[b.id] ?? ''}
+                    onUpload={(file) => void uploadMedia(b.id, file)}
                   />
                 )
               }

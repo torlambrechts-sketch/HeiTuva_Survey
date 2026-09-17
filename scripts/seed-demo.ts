@@ -21,6 +21,7 @@ import { ENGAGEMENT_DEFAULTS } from '../lib/engagement'
 import { anonClient, personaClient, serviceClient } from '../tests/db/clients'
 import {
   DEMO_ANSWERED_TOKEN,
+  DEMO_BLOCKS_TOKEN,
   DEMO_SHARE_TOKEN,
   GROUP_PRIMARY,
   GROUP_SECONDARY,
@@ -713,6 +714,98 @@ async function main() {
   const schedSurvey = await createSurvey(org.id, 'Planlagt utsending', [
     { type: 'scale', text: 'Hvordan går det?' },
   ], { status: 'utkast', audience: 'Hele selskapet' })
+
+  /* ── V7-3c — A SENT SURVEY WITH CONTENT BLOCKS IN ITS FLOW ────────────────
+
+     Its own survey, not the one `DEMO_SHARE_TOKEN` points at. Interleaving four
+     blocks into that one would have moved the baseline `verify:visual` compares
+     `/s/<DEMO_SHARE_TOKEN>` against — the failure the per-bundle baselines exist
+     to prevent, arriving through a fixture rather than through a handoff.
+
+     THE `info` BLOCK'S BODY IS NOT v7's SEED (D233). v7:6871 is «Svarene brukes
+     til å forbedre arbeidsmiljøet. Ingen ser hva du har svart alene —
+     resultatene vises bare samlet.» The second sentence is false on a NAMED
+     survey, false of a COMMENT (which carries `invitation_id`), and
+     structurally false in QUIZ MODE. The promise is made correctly by
+     `anonymityPromise`, derived from the survey's own mode; a block repeating it
+     in fixed words is a second answer that cannot be told it is wrong.
+
+     **And a fixture is the worst place to put it**, because nobody reads a seed:
+     the sentence arrives pre-approved, in a box that already has words in it, on
+     the surface where the person reading was promised something. So this seed
+     carries only the half that is true of every mode. */
+  const blocksSurvey = await createSurvey(org.id, 'Med innholdsblokker', [
+    { type: 'scale', text: 'Hvordan har du det i arbeidshverdagen?' },
+    { type: 'text', text: 'Er det noe du vil legge til?' },
+    { type: 'yesno', text: 'Har du lest informasjonen over?' },
+  ], { status: 'utkast', audience: 'Hele selskapet', createdBy: ownerRedaktor })
+
+  /* ONE ORDER OVER TWO TABLES, AND THE FACTORY DOES NOT LEAVE GAPS IN IT.
+
+     `createSurvey` numbers its questions 0, 1, 2 — which is right, and which is
+     NOT what this fixture assumed. The first version inserted blocks at 1, 2, 4
+     and 5 and `app.guard_flow_position` refused the whole seed at COMMIT:
+     «survey … already has an element at flow position 1 — questions and content
+     blocks share one order (M:0127)».
+
+     **That failure is the guard doing exactly its job**, and it is recorded here
+     rather than quietly fixed, because it is the second time in this tranche
+     that a fixture assumed a `position` the factory does not write (the first
+     was V7-3b's swap test). So the questions are moved to 0, 3 and 6 FIRST — one
+     UPDATE, which the deferred trigger lets pass through its intermediate state
+     — and the blocks then fill 1, 2, 4 and 5.
+
+     The result is a real interleave rather than an append, which is the case
+     worth seeding: it is the one a body-wide read of either table gets wrong. */
+  const { data: blockQs } = await svc
+    .from('survey_questions').select('id, position').eq('survey_id', blocksSurvey.id).order('position')
+
+  /* PARK ON NEGATIVES FIRST, then assign — the same sequence
+     `app/(app)/undersokelser/[id]/bygg/actions.ts` uses, and for the same
+     reason: `survey_questions_survey_id_position_key` is a plain UNIQUE and is
+     checked per statement, so renumbering in place collides with a row that has
+     not moved yet. It collided here on the SECOND attempt at this fixture —
+     «duplicate key value violates unique constraint» — because the factory
+     numbers its questions 1, 2, 3 and setting the middle one to 3 met the third
+     still sitting there.
+
+     Two fixtures, two wrong guesses about what `position` starts at. The trick
+     that works needs no guess at all: after parking, every target slot is free. */
+  for (const bq of blockQs ?? []) {
+    const { error } = await svc
+      .from('survey_questions').update({ position: -(bq.position + 1) }).eq('id', bq.id)
+    if (error) throw new Error(`seed block-survey park: ${error.message}`)
+  }
+  const flowSlots = [0, 3, 6]
+  for (const [i, bq] of (blockQs ?? []).entries()) {
+    const { error } = await svc
+      .from('survey_questions').update({ position: flowSlots[i]! }).eq('id', bq.id)
+    if (error) throw new Error(`seed block-survey question position: ${error.message}`)
+  }
+
+  const { error: blockErr } = await svc.from('survey_blocks').insert([
+    { survey_id: blocksSurvey.id, position: 1, type: 'section',
+      title: 'Om arbeidsmiljøet',
+      body: 'De neste spørsmålene handler om hvordan du har det i arbeidshverdagen.' },
+    { survey_id: blocksSurvey.id, position: 2, type: 'info',
+      title: 'Før du begynner',
+      // D233: v7's first sentence only. No anonymity promise in a fixture.
+      body: 'Svarene brukes til å forbedre arbeidsmiljøet.' },
+    { survey_id: blocksSurvey.id, position: 4, type: 'fact',
+      title: 'Tre ting å huske',
+      body: 'Du kan hoppe over spørsmål. Du kan svare på mobil. Du kan gå tilbake og endre.' },
+    { survey_id: blocksSurvey.id, position: 5, type: 'rule' },
+  ])
+  if (blockErr) throw new Error(`seed survey_blocks: ${blockErr.message}`)
+
+  const { data: blocksSend } = await asAdmin.rpc('send_round', {
+    p_survey: blocksSurvey.id,
+    p_channels: ['link'],
+    p_recipients: [],
+  })
+  const blocksRound = blocksSend as { round_id?: string; error?: string }
+  if (blocksRound?.error) throw new Error(`seed send_round (blocks): ${blocksRound.error}`)
+  await createShareLink(blocksRound.round_id!, DEMO_BLOCKS_TOKEN)
 
   const { data: schedResult } = await asAdmin.rpc('send_round', {
     p_survey: schedSurvey.id,

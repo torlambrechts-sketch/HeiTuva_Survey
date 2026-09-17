@@ -1986,6 +1986,85 @@ has not run is not a gate that passed.
 overflow, no controls, no overlaps — so `controls=0` on a full application screen is the only
 trace a 500 leaves there. 202 is a screen; 0 would have been the finding.
 
+**V7-1 TO V7-3 TOOK IT TO 1664 ACROSS 126 FILES AND 5a3 TO 82 OF 115.** The derivation, and
+`git log -p -- tests/expected-counts.json` is the command, because the tranche ran continuously and
+no single diff holds it — **five movements, one of them DOWN**, which is the proof rather than the
+total:
+
+```
+1609 across 121   (G6 fix pass)
+ -  4  unit/engagement.test.ts 12 -> 8   D232 — the estimator's four tests left WITH the estimator
+ + 10  unit/subnav.test.ts      new      V7-1 — the registry
+ +  1  unit/subnav.test.ts 10 -> 11      V7-2 — the twelfth pill
+ + 13  db/blocks.test.ts        new      V7-3a/b — M:0127, the unrepresentable answer
+ + 12  unit/blocks.test.ts      new      V7-3b — the registry and the flow
+ +  6  db/block-media.test.ts   new      V7-3c — the bucket, read off the catalogue
+ + 17  unit/respondent-flow.test.ts new  V7-3c — the partition, D233's seed, the step label
+= 1664 across 126
+```
+
+Measured on a bare reset plus all three seeds: **126 files, 1664 tests, 0 failed**, which is the
+manifest sum exactly
+(`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`).
+**The fall of four is the correct direction and is D158's shape**: `expectedResponseRate` was
+deleted, so its tests were the only consumer of a module nothing renders.
+
+5a3 goes **81 of 114 → 82 of 115** — 66 RLS tables plus 49 SECURITY DEFINER functions, 82 checked,
+33 allowlisted, zero unproven. The denominator rose by exactly `survey_blocks` and **the checked
+number rose with it**: the table is CHECKED rather than allowlisted, and PROVEN on a bare reset
+because the demo seed now carries four blocks (`anon=blocked outsider sees 0/4`).
+`M:0128`'s bucket and its four policies are **not** catalogue surfaces — `storage.objects` is not in
+`public` and neither sweep enumerates it — which is the same recorded limit of that gate rather than
+a gap, and is why `tests/db/block-media.test.ts` reads the bucket off `storage.buckets` and
+`pg_policies` itself. The commands: `npm run census:write` for the first pair, and
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'` for the
+second.
+
+### A SENTENCE CAN BECOME FALSE WITHOUT ANYONE TOUCHING IT — the same shape as a guard's, one floor over
+
+**Added 2026-09-17, after V7-3. Tor, about `send_round`: «The error was already called
+`no_questions` — the name was right and the implementation was about to stop matching it. A guard
+can become untrue without anyone touching it.»**
+
+That is stated about a GUARD, and it happened twice in one tranche, the second time in COPY:
+
+- **The guard.** `send_round`'s emptiness check was `jsonb_array_length(v_snapshot) = 0`, which
+  meant «no questions» only while the snapshot held nothing else. With blocks in it, a survey of six
+  info blocks and zero questions would have opened a round and mailed every recipient a link.
+- **The sentence.** `respondent.stepLabel` is «Spørsmål {step} av {total}» and it had read the
+  progress bar's own numbers since Phase 3. `total` became the flow's length, and a survey with
+  three questions and four blocks announced **«Spørsmål 1 av 7»**.
+
+**Neither was edited. Both stopped being true because a denominator changed meaning underneath
+them** — and the second is worse to find, because a wrong guard eventually fires and a wrong
+sentence just gets read. `tsc`, eslint, the census and 1664 tests were all green on «Spørsmål 1 av
+7»; it was found by driving the flow and checking the arithmetic against the fixture.
+
+**The repair is the same both times, and it is this file's own rule:** count over the population the
+name says. v7 answers it in one expression (`v7:10440-10443`) with TWO labels — «Spørsmål N av M»
+over questions, «Les · steg N av M» over the flow — and the progress BAR stays over the flow,
+because a block IS a step the respondent walks through. It is a function in
+`lib/respondent/flow.ts` rather than two lines in a component **for F1's reason**: `PageHeader` has
+no `pct` prop, so a ratio over two populations cannot be expressed there; `stepLabelFor(flow, step)`
+is the same move aimed at a sentence.
+
+**So the question to ask of a shipped claim, whenever a collection it counts gains a second kind of
+member: does this sentence still name what it counts?** A guard at least has a symptom. A label has
+a reader.
+
+### AND `app.run_due_schedules` WAS THE FOURTH PATH NOBODY COUNTED — the first found while rewriting rather than by a symptom
+
+`send_round` has refused a survey with no questions since Phase 3. **The silent pg_cron job never
+did**, so a scheduled survey with zero questions could open an empty round and mail every recipient
+a link to it. Fixed in `M:0127`, in the migration that had to replace the function anyway.
+
+This is the fourth time that function has been the path nobody counted (`M:0107`'s invitation
+derivation, Q137's guard scope, V2-5's snapshot on both auto-close paths), and **the first found by
+reading it while rewriting it rather than by a failure somewhere else.** The reason it keeps
+happening is worth the line: it does by itself, on a schedule, what a person does through
+`send_round` — so every property established about the interactive path has a second
+implementation that nobody is looking at.
+
 **THE G6 FIX PASS TOOK IT TO 1609 ACROSS 121 FILES AND 5a3 IS UNMOVED AT 81 OF 114.**
 `git diff tests/expected-counts.json` is the command — **one line raised and nothing else moved
 in either direction**:

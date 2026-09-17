@@ -48,8 +48,22 @@ export default async function ProfilePage() {
         <span className="flex h-16 w-16 flex-none items-center justify-center rounded-full bg-ac3 text-[22px] font-bold">
           {initialsOf(viewer.displayName)}
         </span>
-        <div className="flex-1">
-          <h1 className="font-display text-[28px] font-medium">{viewer.displayName}</h1>
+        {/* `min-w-0` AND `break-words`, and both are needed.
+
+            A display name can legitimately be an EMAIL ADDRESS:
+            `lib/auth/session.ts:90` falls back to `user.email` when neither the
+            profile nor the membership carries a name, which is the state of
+            anyone who signs up and never sets one. `admin@nordiskstudio.test`
+            is 338px at 28px display weight and has no space in it, so at 390px
+            the heading set the track and the whole page scrolled to 441px —
+            found by `verify:responsive`, on three states at two viewports.
+
+            `min-w-0` lets the flex track shrink; `break-words` lets the word
+            break when it is longer than the line. F3's rule is the reason both
+            are here: the widest reported element is usually the victim, and the
+            fix is the narrowest child that cannot shrink. */}
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words font-display text-[28px] font-medium">{viewer.displayName}</h1>
           {/* Design renders "Rolle · Gruppe · Firma"; the group segment is
               dropped when the member is in no group rather than showing an
               empty separator. */}

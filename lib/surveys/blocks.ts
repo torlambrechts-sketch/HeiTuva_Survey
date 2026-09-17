@@ -133,8 +133,82 @@ export type BlockDraft = {
   mediaKey: string | null
 }
 
+/**
+ * ── D233 — THE SEEDS, AND THE ONE SENTENCE THAT DOES NOT SHIP ─────────────
+ *
+ * v7 prefills a new block (`blockSeed`, v7:6869-6881), and that is a real
+ * feature rather than placeholder text: the palette's own description of a
+ * section is «Starter en ny del med egen tittel og innledning», so an editor
+ * who adds one gets a draft to edit rather than two empty boxes. The copy is
+ * the drawing's, verbatim, and it lives in `messages/*.json` because it is
+ * user-facing text.
+ *
+ * **ONE SEED IS REFUSED, AND IT IS THE `info` BLOCK'S SECOND CLAUSE.** v7:6871
+ * reads: «Svarene brukes til å forbedre arbeidsmiljøet. **Ingen ser hva du har
+ * svart alene — resultatene vises bare samlet.**»
+ *
+ * The second sentence is a promise the block cannot keep, and it is false in
+ * three reachable states of this product rather than one:
+ *
+ *  - **A NAMED survey.** `anonymity = 'named'` is a shipped mode; the manager
+ *    sees who answered what, by design, and the respondent is told so by the
+ *    anonymity sheet.
+ *  - **A COMMENT.** `survey_comments` carries `invitation_id` when the
+ *    feedback mode is named or the respondent chooses to be named (C3, QR-2) —
+ *    which is exactly the thing that makes a reply possible.
+ *  - **QUIZ MODE.** `app.guard_quiz_policy` REQUIRES named answers, so a quiz
+ *    is structurally the opposite of what the sentence says.
+ *
+ * **And the promise is already made, correctly, somewhere else.**
+ * `anonymityPromise` (`lib/respondent/anonymity-promise.ts`) derives it from
+ * the survey's own mode and threshold, which is why it is true on every one of
+ * them. A block repeating it in fixed words is a SECOND answer to a question
+ * that has one — and the second one cannot be told it is wrong.
+ *
+ * So the seed keeps the first sentence, which is true of every mode, and drops
+ * the second. An editor who wants to say something about anonymity can still
+ * type it; what does not happen is the product putting a false promise in her
+ * mouth by default. **A fixture that ships a false promise is worse than copy
+ * that does, because nobody reads a seed** — it arrives pre-approved, in a box
+ * that already has words in it, on the surface where the person reading was
+ * promised something.
+ */
+export type BlockSeed = { titleKey?: string; bodyKey?: string; captionKey?: string; url?: string }
+
+export const BLOCK_SEEDS: Record<BlockType, BlockSeed> = {
+  section: { titleKey: 'seedSectionTitle', bodyKey: 'seedSectionBody' },
+  // `seedInfoBody` is v7:6871's FIRST sentence only. See D233 above.
+  info: { titleKey: 'seedInfoTitle', bodyKey: 'seedInfoBody' },
+  img: { titleKey: 'seedImgTitle', captionKey: 'seedImgCaption' },
+  video: { titleKey: 'seedVideoTitle', captionKey: 'seedVideoCaption', url: 'https://' },
+  fact: { titleKey: 'seedFactTitle', bodyKey: 'seedFactBody' },
+  rule: {},
+}
+
 export function newBlock(type: BlockType, id: string): BlockDraft {
   return { id, type, title: '', body: '', caption: '', url: '', mediaKey: null }
+}
+
+/**
+ * A new block WITH the drawing's prefill. `say` resolves a `builder.*` key, so
+ * the seed is translated rather than Norwegian-in-the-registry — Q129's shape,
+ * which `verify:i18n` can only see when the string collides with a message it
+ * already holds.
+ */
+export function seededBlock(
+  type: BlockType,
+  id: string,
+  say: (key: string) => string,
+): BlockDraft {
+  const seed = BLOCK_SEEDS[type]
+  const fields = BLOCKS[type].fields
+  return {
+    ...newBlock(type, id),
+    title: fields.title && seed.titleKey ? say(seed.titleKey) : '',
+    body: fields.body && seed.bodyKey ? say(seed.bodyKey) : '',
+    caption: fields.caption && seed.captionKey ? say(seed.captionKey) : '',
+    url: fields.url && seed.url ? seed.url : '',
+  }
 }
 
 /**

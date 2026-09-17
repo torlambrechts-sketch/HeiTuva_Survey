@@ -7443,3 +7443,230 @@ with its six buttons and its empty note, two blocks added and titled save to `su
 one click of the first block's «Flytt opp» moves it from position 1 to 0 while the question moves
 from 0 to 1 — **both tables renumbered in one save with no collision**, which is what
 `app.guard_flow_position`'s deferral exists for. Zero page errors throughout.
+
+---
+
+## D236 — V7-3c: THE RESPONDENT'S PICTURE COMES THROUGH OUR OWN ROUTE, NOT A SIGNED URL (2026-09-17)
+
+`docs/v7/02-blocks-measurement.md § 4` weighed two ways to put an image on `/s/[token]` and
+recommended the first: **an opaque object key**, signed at render time, so no organisation
+identifier could reach somebody promised anonymity. Tor accepted it. It is not what shipped, and
+the reason is a measurement taken while building.
+
+**`next.config.ts` sets `img-src 'self' data: blob:`.** A Supabase signed URL is on the Supabase
+origin, not `'self'`, so an `<img>` pointed at one is **refused by the browser** — with a correct
+URL, a valid signature, a live object, and no picture. Shipping that would have been another entry
+in this project's longest list: green for something that structurally could not be seen.
+
+Two ways out, and only one of them costs nothing:
+
+- **Widen `img-src`** to the Supabase origin. One line, and it widens a global security header for
+  every route in the product to ship one block type.
+- **Serve the bytes from our own origin** — the measurement's own second option, «strongest, and
+  more to build». `'self'` already admits it, the CSP is untouched, and **no storage path reaches
+  any client at all.**
+
+The second shipped. `app/s/[token]/media/[blockId]/route.ts` resolves the token through the same
+`get_survey_for_token` the page uses, finds the block **in that round's snapshot** — so it never
+reads `survey_blocks`, and a later edit cannot change what a past respondent's link serves — and
+only then reads one object with the service role. `app/api/block-media/[blockId]/route.ts` does the
+editor's half through the **viewer's own session**, so `svmedia_obj_sel` is the rule and the handler
+is only the message.
+
+**The consequence for the path shape is the part that reads like a relaxation and is not.** Under a
+route the respondent's browser holds `/s/<token>/media/<block_id>` and the editor's holds
+`/api/block-media/<id>`, so the opacity requirement is met at the URL a browser actually has —
+which is strictly stronger than meeting it at the storage key. That frees the storage path to be
+`<survey_id>/<random>.<ext>`, and **that is what lets M:0128's four policies be a real predicate**
+(`app.can_edit_survey` over the first segment) instead of a bet that a uuid is unguessable. An
+opaque key would have left them with nothing to scope by.
+
+**SVG is refused, and that is a decision rather than an inheritance.** `org-logos` permits
+`image/svg+xml` — a logo is chosen by an administrator and rendered to managers. These objects are
+rendered to RESPONDENTS from a file a redaktør picked, and an SVG is a document that can carry
+script, so the bucket admits PNG, JPEG and WEBP only. `tests/db/block-media.test.ts` test 2 reads
+the allowlist off `storage.buckets` and asserts `org-logos` still permits it, so the difference
+stays visible as a choice about audience.
+
+**Driven, not inferred.** An upload through the administrator's own session was admitted; the same
+call with `image/svg+xml` was refused **by the bucket** («mime type image/svg+xml is not
+supported»), not by our own check. A browser walk of all seven steps at 400px served the picture
+at HTTP 200, `image/png`, and the `<img>` reported `naturalWidth` 1 — **it decoded**, which is F2's
+lesson (a composite of two broken-image icons passed twenty-eight times). Four refusals measured:
+a non-`img` block in the same round, a bad token, a block id from another survey, and the video
+block — 404 for every one. The editor route with no session gets a 307 to `/logg-inn`, which is the
+honest outcome for a logged-out editor.
+
+---
+
+## D237 — V7-3c: THE VIDEO IS A LINK THE RESPONDENT CHOOSES, NEVER AN EMBED (2026-09-17)
+
+`docs/v7/02-blocks-measurement.md § 4` flagged this as a stop-and-ask: an `<iframe>` or `<video>`
+on `/s/[token]` pointed at a URL an editor typed is **a third-party request made from the
+respondent's browser**, on the one surface this product has kept free of anything that could
+observe the person reading it — and it would be made whether or not she wants to watch.
+
+**It did not need asking, because the drawing does not embed.** v7:5406-5412 renders the video
+block as a card with a play triangle and «Spill av videoen» — a control, not a player. So a card
+is the fidelity-correct build and the only open question is what pressing it does. It opens the
+link in a new tab: the request is then **her own navigation**, made after she has seen where it
+goes, and `rel="noopener noreferrer"` keeps `/s/<token>` out of the `Referer` header. The CSP's
+`frame-src` admits nothing but Turnstile, so an embed could not have rendered without widening a
+global header for one block type.
+
+`safeVideoUrl` admits `https:` with a host and nothing else, and it is applied **at the parse**
+rather than at render — `lib/respondent/flow.ts` hands the component a checked url or null, so a
+refusal that would otherwise have to be remembered by every future renderer happens once. `http:`
+is refused because it would downgrade a page served under HSTS; `javascript:`, `data:` and `blob:`
+are refused because they are ways to make a link do something other than navigate. Parsed with
+`new URL` rather than pattern-matched, because a regex over a URL is a second implementation of a
+parser the platform ships.
+
+The card says «Åpnes i ny fane» under its label. A new tab that arrives unannounced is a surprise
+on a surface built to be predictable, and the note is one line.
+
+---
+
+## D238 — V7-3c: «SPØRSMÅL 1 AV 7» — A SENTENCE THAT BECAME FALSE WITHOUT ANYONE TOUCHING IT (2026-09-17)
+
+The step label is `respondent.stepLabel`, «Spørsmål {step} av {total}», and it had read the
+progress bar's own numbers since Phase 3. Blocks joined the flow, `total` became the flow's
+length, and a survey with three questions and four blocks announced **«Spørsmål 1 av 7»**.
+
+**This is the shape Tor named about `send_round` one phase earlier, arriving in copy instead of in
+code:** `jsonb_array_length(v_snapshot) = 0` meant «no questions» only while the snapshot held
+nothing else, and the error's NAME was already right. Here the sentence was right and its
+denominator changed meaning underneath it. Nothing was edited; the claim simply stopped being true.
+
+v7 settles it in one expression (`v7:10440-10443`) and the answer is **two labels, each counted
+over the population it names**:
+
+```js
+const qIdx = rq.filter((x,j) => j <= stepIdx && x.rIsQ).length
+const qTot = rq.filter(x => x.rIsQ).length
+if (cur.rIsBlock) return "Les · steg " + (stepIdx+1) + " " + of + " " + rq.length
+return "Spørsmål " + qIdx + " " + of + " " + qTot
+```
+
+So «Spørsmål N av M» counts QUESTIONS, a block step says «Les · steg N av M» over the flow, and the
+progress BAR stays over the flow (`stepPct`, `v7:10444`) because a block is a step the respondent
+walks through.
+
+**It is a function in `lib/respondent/flow.ts` rather than two lines in the component, for F1's
+reason.** F1 closed a defect where a ratio was formed over two different populations, and what made
+that closure structural was that `PageHeader` has no `pct` prop — there is nothing for a future
+screen to pass wrongly. `stepLabelFor(flow, step)` is the same move applied to a sentence: a screen
+hands over the flow and the step and receives a key with its numbers, so neither label can be
+formed over the wrong population from anywhere else.
+
+**Found by driving, not by a test.** The scripted probe reported «Spørsmål 1 av 6» and it read as
+correct until the arithmetic was checked against the fixture. A browser walk of all seven steps now
+shows «Spørsmål 1 av 3 · Les · steg 2 av 7 · Les · steg 3 av 7 · Spørsmål 2 av 3 · Les · steg 5
+av 7 · Les · steg 6 av 7 · Spørsmål 3 av 3», with the bar at 14 · 29 · 43 · 57 · 71 · 86 · 100 %.
+
+**And the block card's own step line was an invention, removed.** v7:5399-5433 draws no step text
+inside the block panel — «Les · steg N av M» IS `stepLabel`, in the progress row beside the bar.
+Putting it in the card as well printed the same sentence twice on one screen.
+
+---
+
+## D239 — V7-3c: THE BLOCK FLOW IS SEEDED BUT NOT PHOTOGRAPHED (2026-09-17)
+
+`scripts/seed-demo.ts` now builds «Med innholdsblokker» — three questions at flow positions 0, 3
+and 6, blocks at 1, 2, 4 and 5 — sends it, and gives it a fixed share token
+(`DEMO_BLOCKS_TOKEN`), so the respondent's block flow is openable in the demo organisation.
+
+**Its own survey, not the one `DEMO_SHARE_TOKEN` points at, and deliberately.** `verify:visual`
+compares `/s/<DEMO_SHARE_TOKEN>` against a rendered baseline, so interleaving four blocks into that
+survey would have moved a reference every earlier phase was judged against — the failure the
+per-bundle baselines exist to prevent, arriving through a fixture rather than through a handoff.
+
+**NO MANIFEST STATE WAS ADDED, and that is a limit rather than a completion.** The verification
+apparatus is frozen for this phase, so `verify:browser` and `verify:responsive` do not walk this
+route and no gate has photographed a content block at 390px. This project's own record says what
+that costs: a seed that reaches a state no gate walks is better than psql and worse than a capture.
+**Logged for the next phase**: one manifest state on `/s/<DEMO_BLOCKS_TOKEN>` would cover the
+section, the image, the video card and the divider in one screen, because whole-list mode renders
+the entire flow.
+
+The seed insert is also a check on M:0127's deferred cross-table guard: four blocks claiming
+positions 1, 2, 4 and 5 alongside questions at 0, 3 and 6 is a real interleave, and
+`app.guard_flow_position` admits it at COMMIT rather than only admitting the empty case.
+
+---
+
+## D240 — V7-3c's SWEEP: AN EMAIL ADDRESS IN A 28px HEADING, ON TWELVE STATES (2026-09-17)
+
+`verify:responsive` reported **twelve OVERFLOW findings on screens V7-3c does not touch** —
+`/profil` at 441px in a 390px viewport (three states, both viewports) and `/oversikt` at 381px in a
+320px one (six states). `git log -1` on both files is `cb85300` (G3).
+
+**Fixed here, under F3's rule: the phase that RUNS the sweep that finds a thing owns it**, whoever
+wrote the line — because a finding that belongs to «an earlier phase» belongs to no phase at all.
+
+**The cause is a WORD, not a layout rule**, which is W3's shape one more time. Measured element by
+element in a browser rather than inferred:
+
+```
+/profil   @390px  scrollWidth=440   h1  w=338  right=440  "admin@nordiskstudio.test"
+/oversikt @320px  scrollWidth=381   h1  w=361  right=381  "God dag, admin@nordiskstudio.test"
+```
+
+**A display name can legitimately BE an email address.** `lib/auth/session.ts:90` is
+`profile?.display_name || member.name || user.email` — so anyone who signs up and never sets a
+name gets their address in a 28px (`/profil`) or 31px (`/oversikt`) display heading, with **no space
+in it to break at**. That is a production state, not a fixture artefact, and no seed change makes it
+safe.
+
+Two classes, and **both fixes are needed**, which is F3's grid lesson: `min-w-0` lets the track
+shrink and `break-words` lets the word break when it is longer than the line. The widest reported
+elements were the `<h1>`, the meta line and the greeting subtitle — all block children of a track
+the heading had already widened, so three of the four reported elements were victims.
+
+Re-measured after the fix: **242 declared, 242 measured, 0 skipped, 0 findings, 0 blockers**, with
+every `profil` and `oversikt` row at `scrollWidth=390` and `320` exactly.
+
+---
+
+## D241 — `verify:visual` RAN RED, AND NEITHER CAUSE IS V7's (2026-09-17)
+
+One failure of twelve: `veiviser-formal.png`, **1317 pixels, ratio 0.01**. I opened the diff, the
+expected and the actual — F2's rule, because a composite of two broken-image icons once passed
+twenty-eight times — and the whole difference is in the nav bar behind the modal. Two causes:
+
+**1. A BASELINE STALE SINCE Q171.** Expected «Oppgaver og tilbakemeldinger»; actual «Handlinger».
+The label changed deliberately at `c68c453` (Q171 — «the surface is «Handlinger», and its heading
+follows the filter»), and `git log -1` on the snapshot is `2b0f412` (V5-1), which is EARLIER. So the
+picture has been wrong since Q171 and no completed `verify:visual` run has said so — G5 and G6 both
+failed it for D230's reason, and before that it was among the cancelled gates.
+
+**2. THE AVATAR: expected «TB», actual «A».** `initialsOf('admin@nordiskstudio.test')` is `A`. The
+baseline was captured when the demo administrator's `display_name` was «Tuva Berg» — which is what
+`scripts/seed-demo.ts` writes (`PERSONAS.administrator.name`, through
+`tests/db/factories.ts:76`). Measured on this run:
+
+```
+admin@nordiskstudio.test | admin@nordiskstudio.test | created 17:16:29 | updated 17:24:30
+admin@annenbedrift.test  | Even Aas                 | created 17:16:29 | updated 17:16:29
+redaktor@…               | Jonas Vik                | created 17:16:29 | updated 17:16:29
+```
+
+**Only the administrator's row was rewritten, eight minutes after the seed** — during the run, by
+something in the manifest walk (`profil/saved` clicks «Lagre endringer», which posts the whole
+form). The other three personas, which no manifest state saves, kept their names.
+
+**NOT REGENERATED, and that is the decision.** Regenerating would bake in `A` — a value that depends
+on run order — so the baseline would stop being a picture of the product and become a picture of
+one sequence. That is the same trap as re-rendering an older reference set under a newer Chromium.
+It is also why this is logged rather than fixed: the repair is to the MANIFEST (stop the state
+writing a name, or restore it after), the apparatus is frozen for this phase, and D206 already
+records this family — «manifest states that WRITE, clicking a control unconditionally».
+
+**For the next phase, in order:** make `profil/saved` restore `display_name`, re-run
+`verify:visual`, LOOK at the regenerated picture, and only then commit it. Two separate things are
+wrong with one image and fixing the stale label alone would leave a flaky baseline.
+
+**And the reporting rule this earns:** `verify:visual` is named in this phase's report as **RAN
+RED** with both causes measured, not as unrun and not as green. CLAUDE.md already says «green» said
+of a gate nobody started is the same false claim as «green» said of a cancelled one; this adds the
+third case — a gate that ran, failed, and failed for something that is not the phase's.

@@ -47,3 +47,21 @@ export const DEMO_SHARE_TOKEN = 'demo-share-link-token-for-local-verification'
  * standing as DEMO_SHARE_TOKEN and DEMO_PASSWORD.
  */
 export const DEMO_ANSWERED_TOKEN = 'demo-answered-invitation-token-for-local-verification'
+
+/**
+ * V7-3c — a share token for the survey that carries CONTENT BLOCKS.
+ *
+ * Its own survey rather than the one `DEMO_SHARE_TOKEN` points at, and
+ * deliberately so: `verify:visual` compares `/s/<DEMO_SHARE_TOKEN>` against a
+ * rendered baseline, so interleaving four blocks into that survey would have
+ * moved a reference every earlier phase was judged against — the failure the
+ * per-bundle baselines exist to prevent, arriving through a fixture.
+ *
+ * So this reaches the state without touching a baseline. **No manifest state
+ * was added for it**: the verification apparatus is frozen for this phase, so
+ * the seed makes the flow openable and photographing it is logged for the next
+ * one (D239). A seed that reaches a state no gate walks is still worth having —
+ * it is the difference between a feature a human can open and one reachable
+ * only from psql.
+ */
+export const DEMO_BLOCKS_TOKEN = 'demo-content-blocks-token-for-local-verification'

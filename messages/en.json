@@ -504,7 +504,25 @@
     "nextStepsHint": "One or two sentences about what happens to the answers, and when. Left blank if you write nothing — we do not invent a date.",
     "nextStepsPlaceholder": "For example: The results go to the working environment committee in October, and managers get their own figures the same week.",
     "runModeNotAllowed": "This organisation has turned the mode off. An administrator can turn it on under Administration → Options.",
-    "runModeOffHere": "Turned off for this organisation"
+    "runModeOffHere": "Turned off for this organisation",
+    "seedSectionTitle": "About the working environment",
+    "seedSectionBody": "The next questions are about how your working day feels.",
+    "seedInfoTitle": "Before you start",
+    "seedInfoBody": "The answers are used to improve the working environment.",
+    "seedImgTitle": "How the process works",
+    "seedImgCaption": "From answer to action in four steps",
+    "seedVideoTitle": "Short introduction",
+    "seedVideoCaption": "2 minutes on why we ask",
+    "seedFactTitle": "Three things to remember",
+    "seedFactBody": "You can skip questions. You can answer on your phone. You can go back and change.",
+    "blkMediaUpload": "Choose image",
+    "blkMediaReplace": "Replace image",
+    "blkMediaChosen": "The image is saved.",
+    "blkMediaTooBig": "The image is too large. 2 MB maximum.",
+    "blkMediaWrongType": "Only PNG, JPG and WEBP can be used.",
+    "blkMediaFailed": "The image could not be saved. Try again.",
+    "blkMediaAlt": "Image in the content block",
+    "blkMediaSaveFirst": "Save the survey first, then you can add the image."
   },
   "send": {
     "title": "How it reaches them",
@@ -1535,7 +1553,13 @@
     "loopNoDate": "no date set",
     "optInOff": "Send me the summarised result",
     "optInOn": "We have noted that you want the summarised result",
-    "optInNote": "We note the request on your invitation — one on/off value, nothing that ties you to your answers. {virksomhet} sends the result themselves once the survey is closed."
+    "optInNote": "We note the request on your invitation — one on/off value, nothing that ties you to your answers. {virksomhet} sends the result themselves once the survey is closed.",
+    "blockVideoPlay": "Play the video",
+    "blockVideoNewTab": "Opens in a new tab",
+    "blockVideoMissing": "The link to the video is missing.",
+    "blockRuleNext": "Now we move on to the next part.",
+    "blockImageMissing": "The image could not be shown.",
+    "blockReadStep": "Read · step {step} of {total}"
   },
   "surveyNav": {
     "back": "Back to surveys",

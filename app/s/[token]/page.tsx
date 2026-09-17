@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMergedMessages } from '@/lib/i18n/messages'
 import { ACTIVE_LOCALES, SOURCE_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales'
 import type { RespondentQuestion } from '@/lib/respondent/answers'
+import { respondentFlow } from '@/lib/respondent/flow'
 import { retentionOf } from '@/lib/surveys/retention'
 import { Respondent } from './Respondent'
 import { Closed } from './Closed'
@@ -169,7 +170,12 @@ export default async function RespondentPage({
         })}
         engage={survey.engage ?? {}}
         alreadyResponded={survey.already_responded}
-        questions={Array.isArray(survey.questions) ? survey.questions : []}
+        /* V7-3c — parsed HERE, on the server, and handed over as a decision.
+           `respondentFlow` is the only place that reads a snapshot entry's
+           `kind`, so the page, the flow and the media route cannot form three
+           answers to «is this a block». It is also where `media_key` stops:
+           the client is told THAT there is a picture, never where it is. */
+        flow={respondentFlow(survey.questions)}
       />
     </NextIntlClientProvider>
   )

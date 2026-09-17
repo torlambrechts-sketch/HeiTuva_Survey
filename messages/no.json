@@ -504,7 +504,25 @@
     "nextStepsHint": "Én eller to setninger om hva som skjer med svarene, og når. Står tomt hvis du ikke skriver noe — vi finner ikke på en dato.",
     "nextStepsPlaceholder": "F.eks.: Resultatene legges fram i AMU i oktober, og lederne får sine tall samme uke.",
     "runModeNotAllowed": "Virksomheten har slått av denne modusen. En administrator kan slå den på under Administrasjon → Valg.",
-    "runModeOffHere": "Slått av for denne virksomheten"
+    "runModeOffHere": "Slått av for denne virksomheten",
+    "seedSectionTitle": "Om arbeidsmiljøet",
+    "seedSectionBody": "De neste spørsmålene handler om hvordan du har det i arbeidshverdagen.",
+    "seedInfoTitle": "Før du begynner",
+    "seedInfoBody": "Svarene brukes til å forbedre arbeidsmiljøet.",
+    "seedImgTitle": "Slik ser prosessen ut",
+    "seedImgCaption": "Fra svar til tiltak i fire steg",
+    "seedVideoTitle": "Kort innføring",
+    "seedVideoCaption": "2 minutter om hvorfor vi spør",
+    "seedFactTitle": "Tre ting å huske",
+    "seedFactBody": "Du kan hoppe over spørsmål. Du kan svare på mobil. Du kan gå tilbake og endre.",
+    "blkMediaUpload": "Velg bilde",
+    "blkMediaReplace": "Bytt bilde",
+    "blkMediaChosen": "Bildet er lagret.",
+    "blkMediaTooBig": "Bildet er for stort. Maks 2 MB.",
+    "blkMediaWrongType": "Bare PNG, JPG og WEBP kan brukes.",
+    "blkMediaFailed": "Bildet kunne ikke lagres. Prøv igjen.",
+    "blkMediaAlt": "Bilde i innholdsblokken",
+    "blkMediaSaveFirst": "Lagre undersøkelsen først, så kan du legge til bildet."
   },
   "send": {
     "title": "Slik når den fram",
@@ -1535,7 +1553,13 @@
     "loopNoDate": "dato ikke satt",
     "optInOff": "Send meg det samlede resultatet",
     "optInOn": "Vi har notert at du vil ha det samlede resultatet",
-    "optInNote": "Vi noterer ønsket på invitasjonen din — én av/på-verdi, ingenting som knytter deg til svarene dine. {virksomhet} sender resultatet selv når undersøkelsen er lukket."
+    "optInNote": "Vi noterer ønsket på invitasjonen din — én av/på-verdi, ingenting som knytter deg til svarene dine. {virksomhet} sender resultatet selv når undersøkelsen er lukket.",
+    "blockVideoPlay": "Spill av videoen",
+    "blockVideoNewTab": "Åpnes i ny fane",
+    "blockVideoMissing": "Lenken til videoen mangler.",
+    "blockRuleNext": "Da går vi videre til neste del.",
+    "blockImageMissing": "Bildet kunne ikke vises.",
+    "blockReadStep": "Les · steg {step} av {total}"
   },
   "surveyNav": {
     "back": "Tilbake til undersøkelser",

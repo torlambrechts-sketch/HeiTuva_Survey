@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { ACTIVE_LOCALES, SOURCE_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales'
 import type { RespondentQuestion } from '@/lib/respondent/answers'
+import { respondentFlow, type FlowStep } from '@/lib/respondent/flow'
 import { retentionOf, type Retention } from '@/lib/surveys/retention'
 
 /**
@@ -33,7 +34,11 @@ export type LoadResult =
        *  preview's anonymity sheet and the respondent's are the same sheet. */
       retention: Retention
       engage: Record<string, unknown>
-      questions: RespondentQuestion[]
+      /** V7-3c — the FLOW, parsed by the same function `/s/[token]` uses, so
+       *  the preview cannot disagree with the real surface about what a
+       *  snapshot entry is. Q76's «all logikk kjører som for en ekte
+       *  respondent» applied to the block half. */
+      flow: FlowStep[]
       locale: Locale
       offeredLocales: Locale[]
     } }
@@ -97,7 +102,7 @@ export async function loadTestSurvey(token: string): Promise<LoadResult> {
             : { auto_delete: s.retention_auto_delete },
       }),
       engage: s.engage ?? {},
-      questions: s.questions ?? [],
+      flow: respondentFlow(s.questions),
       locale: (offered[0] ?? SOURCE_LOCALE) as Locale,
       offeredLocales: offered.length ? offered : [SOURCE_LOCALE as Locale],
     },

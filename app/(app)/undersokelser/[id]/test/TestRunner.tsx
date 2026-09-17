@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { Locale } from '@/lib/i18n/locales'
-import type { RespondentQuestion } from '@/lib/respondent/answers'
+import type { FlowStep } from '@/lib/respondent/flow'
 import type { Retention } from '@/lib/surveys/retention'
 import { Respondent } from '@/app/s/[token]/Respondent'
 import { loadTestSurvey } from './actions'
@@ -45,7 +45,7 @@ export function TestRunner({
     respondentKind: 'person' | 'organisation'
     retention: Retention
     engage: Record<string, unknown>
-    questions: RespondentQuestion[]
+    flow: FlowStep[]
     feedback_mode?: 'off' | 'anonymous' | 'named' | 'optional' | null
     /** M:0119 — carried so the preview tells the tester exactly what a real
      *  respondent on this token would be told about a reply. */
@@ -117,7 +117,7 @@ export function TestRunner({
       retention={survey.retention}
       engage={survey.engage}
       alreadyResponded={false}
-      questions={survey.questions}
+      flow={survey.flow}
       testMode
       onExitTest={exit}
     />

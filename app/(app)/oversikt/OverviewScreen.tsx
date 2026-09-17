@@ -142,9 +142,14 @@ export async function OverviewScreen({
   return (
     <main className="animate-enter pt-[26px]">
       <div className="flex flex-wrap items-end justify-between gap-5">
-        <div>
+        {/* `min-w-0` + `break-words` — the same defect as `/profil`'s heading and
+            the same cause. `greeting` interpolates the display name, which is
+            `user.email` for anyone who never set one (`lib/auth/session.ts:90`),
+            and «God dag, admin@nordiskstudio.test» is 361px with no break
+            opportunity. At 320px the page scrolled to 381px on all six states. */}
+        <div className="min-w-0">
           <div className="text-[12.5px] text-mut">{t('overline')}</div>
-          <h1 className="mt-[6px] font-display text-[31px] font-medium leading-[1.12] tracking-[-0.015em] xl:text-[40px]">
+          <h1 className="mt-[6px] break-words font-display text-[31px] font-medium leading-[1.12] tracking-[-0.015em] xl:text-[40px]">
             {greeting}
           </h1>
           <p className="mt-2 text-[14.5px] leading-[1.6] text-mut">

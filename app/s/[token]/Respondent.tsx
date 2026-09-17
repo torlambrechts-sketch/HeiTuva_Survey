@@ -7,6 +7,7 @@ import { anonymityPromise } from '@/lib/respondent/anonymity-promise'
 import type { Retention } from '@/lib/surveys/retention'
 import { AnonymitySheet } from './AnonymitySheet'
 import { QuestionComment } from './QuestionComment'
+import { RespondentBlock } from './RespondentBlock'
 
 /**
  * The key a SURVEY-LEVEL comment is held under before it is sent — the
@@ -22,6 +23,7 @@ import {
   type AnswerValue,
   type RespondentQuestion,
 } from '@/lib/respondent/answers'
+import { questionsOf, stepLabelFor, type FlowStep } from '@/lib/respondent/flow'
 import { Shell } from './Shell'
 import { QuestionInput } from './QuestionInput'
 import { submitResponse } from './actions'
@@ -57,7 +59,7 @@ export function Respondent({
   retention,
   engage,
   alreadyResponded,
-  questions,
+  flow,
   testMode = false,
   onExitTest,
 }: {
@@ -81,7 +83,14 @@ export function Respondent({
   retention: Retention
   engage: Record<string, unknown>
   alreadyResponded: boolean
-  questions: RespondentQuestion[]
+  /**
+   * V7-3c — THE ROUND'S FLOW, questions and content blocks in one sequence.
+   *
+   * Parsed on the server by `respondentFlow`, which is the only place that
+   * decides what a snapshot entry is. This component receives the decision
+   * rather than re-making it, so «is this a block» cannot get two answers.
+   */
+  flow: FlowStep[]
   /**
    * Q76 — the same flow, previewed. V2:3323's banner promises «All logikk kjører
    * som for en ekte respondent», so this component is NOT forked: the flag is
@@ -113,17 +122,43 @@ export function Respondent({
     return () => clearInterval(id)
   }, [])
 
-  /** One question per screen, or the whole list — the Builder's choice. */
+  /** One step per screen, or the whole list — the Builder's choice. */
   const oneAtATime = e.one_question !== false
-  const total = questions.length
-  const current = questions[step]
+
+  /*
+    V7-3c — A BLOCK IS A STEP, AND THE STEP COUNT COUNTS IT.
+
+    v7:10442 reads «Les · steg N av M» off the same `stepIdx` and the same
+    `rq.length` a question step uses, so a content block is one of the things
+    the respondent walks through rather than something between them. `total` is
+    therefore the FLOW's length.
+
+    What a block is NOT is a thing that can be answered, and every rule below
+    that touches answers is stated over `questions` — the flow's question half —
+    rather than over the flow. That split is the whole of this change: one
+    sequence for navigation, one list for validation.
+  */
+  const total = flow.length
+  const current = flow[step]
+  /* THERE IS NO WHOLE-SURVEY QUESTION LIST HERE, AND THAT IS THE POINT.
+
+     Everything that touches an answer reads `shownQuestions` — the questions on
+     the step in front of the respondent. The submit payload is built from
+     `answers`, whose only writer is `setValue`, whose only caller is a
+     `QuestionInput`. **So a content block cannot produce an answer key**: there
+     is no code path from a block to `answers`, which is the client-side half of
+     what `answers.question_id` makes true in the database. `questionsOf(flow)`
+     over the whole flow would have been a list nothing needed. */
+
   // Memoised because V2-10's first-shown clock depends on it: recomputed every
   // render, the effect below would re-run every render and the eslint rule says
   // so. The value is the same either way; the identity is what matters.
-  const shown = useMemo(
-    () => (oneAtATime ? (current ? [current] : []) : questions),
-    [oneAtATime, current, questions],
+  const shown = useMemo<FlowStep[]>(
+    () => (oneAtATime ? (current ? [current] : []) : flow),
+    [oneAtATime, current, flow],
   )
+  /** The questions ON SCREEN — what `blocked` and the required marks read. */
+  const shownQuestions = useMemo(() => questionsOf(shown), [shown])
 
   /**
    * V2-10, Q84 — when a question was FIRST SHOWN, per question.
@@ -141,8 +176,11 @@ export function Respondent({
   const shownAt = useRef<Record<string, number>>({})
   useEffect(() => {
     if (!quizMode) return
-    for (const q of shown) shownAt.current[q.id] ??= Date.now()
-  }, [quizMode, shown])
+    // Questions only. A block carries no answer, so it has no elapsed time to
+    // record — and recording anything about a step that is not an answer would
+    // be a measurement with no consumer.
+    for (const q of shownQuestions) shownAt.current[q.id] ??= Date.now()
+  }, [quizMode, shownQuestions])
 
   const setValue = (q: RespondentQuestion, value: AnswerValue) => {
     setMissing(false)
@@ -160,8 +198,9 @@ export function Respondent({
   const setExtra = (q: RespondentQuestion, key: 'comment' | 'follow_up', v: string) =>
     setAnswers((a) => ({ ...a, [q.id]: { ...a[q.id], value: a[q.id]?.value ?? '', [key]: v } }))
 
-  /** A required question blocks the step it is on, not the whole survey. */
-  const blocked = shown.some((q) => q.required && !isAnswered(answers[q.id]?.value))
+  /** A required question blocks the step it is on, not the whole survey. Read
+   *  over the step's QUESTIONS: a content block has nothing to require. */
+  const blocked = shownQuestions.some((q) => q.required && !isAnswered(answers[q.id]?.value))
 
   const submit = () => {
     if (blocked) {
@@ -288,7 +327,15 @@ export function Respondent({
     )
 
   const isLast = !oneAtATime || step === total - 1
+  /* The BAR is over the whole flow (`stepPct`, v7:10444) — a block is a step
+     the respondent walks through, so it moves the bar. */
   const pct = total ? Math.round(((step + 1) / total) * 100) : 0
+
+  /* Derived in `lib/respondent/flow.ts`, which is where the reasoning lives:
+     «Spørsmål N av M» counts QUESTIONS and a block step says «Les · steg N av
+     M» over the flow, and this component has no way to form either wrongly. */
+  const label = stepLabelFor(flow, step)
+  const stepLabel = t(label.key, { step: label.step, total: label.total })
 
   return (
     <Shell>
@@ -411,13 +458,21 @@ export function Respondent({
           >
             <div className="h-full bg-ac" style={{ width: `${pct}%` }} />
           </div>
-          <div className="whitespace-nowrap text-[13px] text-mut">
-            {t('stepLabel', { step: step + 1, total })}
-          </div>
+          <div className="whitespace-nowrap text-[13px] text-mut">{stepLabel}</div>
         </div>
       ) : null}
 
-      {shown.map((q) => {
+      {shown.map((entryStep) => {
+        if (entryStep.kind === 'block') {
+          return (
+            <RespondentBlock
+              key={entryStep.block.id}
+              block={entryStep.block}
+              token={token}
+            />
+          )
+        }
+        const q = entryStep.question
         const entry = answers[q.id]
         const low = isLowScore(q, entry?.value)
         // "arv" inherits the survey-level setting; a per-question 'pa'/'av'

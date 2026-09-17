@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { BLOCKS, type BlockDraft } from '@/lib/surveys/blocks'
+import { editorMediaHref } from '@/lib/surveys/media'
 
 /**
  * V7-3 — one content block in the builder's flow (v7:720-757).
@@ -33,6 +34,9 @@ export function BlockCard({
   onMove,
   onDuplicate,
   onRemove,
+  saved,
+  mediaError,
+  onUpload,
 }: {
   block: BlockDraft
   /** 1-based, for «Plass {n} av {total}». */
@@ -43,6 +47,15 @@ export function BlockCard({
   onMove: (delta: -1 | 1) => void
   onDuplicate: () => void
   onRemove: () => void
+  /**
+   * Whether this block has a ROW yet. `uploadBlockMedia` reads the survey id
+   * off the row — a path is an authorisation claim and is never taken from the
+   * client — so a block the editor has just added cannot be uploaded to. The
+   * card says so in words rather than offering a control that would fail.
+   */
+  saved: boolean
+  mediaError: string
+  onUpload: (file: File) => void
 }) {
   const t = useTranslations('builder')
   const spec = BLOCKS[block.type]
@@ -154,12 +167,61 @@ export function BlockCard({
       ) : null}
 
       {f.media ? (
-        /* v7:745-747 draws an `<image-slot>` drop target. THE UPLOAD IS V7-3c's
-           and lands on an opaque key; until a key exists the slot says so
-           rather than showing a tinted rectangle that looks like a picture
-           nobody chose — the never-fabricate rule applied to a placeholder. */
-        <div className="mt-[9px] flex h-[150px] items-center justify-center overflow-hidden rounded-[11px] border border-line bg-sf">
-          <span className="px-4 text-center text-[12.5px] text-mut">{t('blkMediaEmpty')}</span>
+        /* v7:745-747 draws an `<image-slot>` drop target.
+           THE PREVIEW IS A REQUIREMENT, NOT DECORATION: an editor who cannot
+           see what they uploaded cannot tell they uploaded the wrong picture.
+           It comes through `/api/block-media/<id>` rather than a Supabase
+           signed URL, because `img-src 'self'` in the CSP refuses that origin —
+           an `<img>` pointed at a signed URL is correct and renders nothing. */
+        <div className="mt-[9px]">
+          <div className="flex h-[150px] items-center justify-center overflow-hidden rounded-[11px] border border-line bg-sf">
+            {block.mediaKey ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- our own
+                 origin, behind the session; next/image would proxy it for no
+                 gain. `key` on the src busts the browser cache when the
+                 picture is replaced, which is the whole point of a preview. */
+              <img
+                key={block.mediaKey}
+                src={editorMediaHref(block.id)}
+                alt={t('blkMediaAlt')}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              /* No key yet. The design's empty treatment rather than a tinted
+                 rectangle that looks like a picture nobody chose — the
+                 never-fabricate rule applied to a placeholder. */
+              <span className="px-4 text-center text-[12.5px] text-mut">{t('blkMediaEmpty')}</span>
+            )}
+          </div>
+          {saved ? (
+            <label className="mt-2 inline-flex cursor-pointer items-center gap-2">
+              <span className="touch-44 rounded-[9px] border border-line bg-bg px-3 py-2 text-[12.5px] font-semibold text-ink">
+                {block.mediaKey ? t('blkMediaReplace') : t('blkMediaUpload')}
+              </span>
+              <input
+                type="file"
+                /* The same three the bucket admits (M:0128). SVG is refused on
+                   both sides: it is a document that can carry script and this
+                   object is rendered to respondents. `accept` is a hint the
+                   browser may ignore, so the action and the bucket check too. */
+                accept="image/png,image/jpeg,image/webp"
+                disabled={disabled}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) onUpload(file)
+                  e.target.value = ''
+                }}
+                className="sr-only"
+              />
+            </label>
+          ) : (
+            <p className="mt-2 text-[12px] leading-[1.4] text-mut">{t('blkMediaSaveFirst')}</p>
+          )}
+          {mediaError ? (
+            <p role="alert" className="mt-2 rounded-[9px] bg-ac3 px-3 py-2 text-[12.5px]">
+              {mediaError}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

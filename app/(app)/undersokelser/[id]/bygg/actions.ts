@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { QUESTION_TYPE_KEYS, specOf } from '@/lib/questions/registry'
 import { BLOCK_TYPES, forStorage, type BlockDraft } from '@/lib/surveys/blocks'
+import { MAX_MEDIA_BYTES, isMediaType, mediaPath } from '@/lib/surveys/media'
 import { isNewQuestion } from './types'
 
 export type BuilderResult =
@@ -16,6 +17,18 @@ export type BuilderResult =
       // survey that is not anonymous.
       error: 'forbidden' | 'invalid' | 'locked' | 'belowOrgFloor' | 'namedSurvey' | 'failed'
     }
+
+/**
+ * V7-3c — the upload's own result, rather than `BuilderResult` widened.
+ *
+ * `BuilderResult`'s success carries `ids`, which is the draft save's answer to
+ * «what did you create», and its error set is that save's vocabulary. An upload
+ * returns a key and can fail three ways. Two shapes rather than one loose one:
+ * there is nothing here for a caller to read that does not exist.
+ */
+export type MediaResult =
+  | { ok: true; mediaKey: string }
+  | { ok: false; error: 'forbidden' | 'invalid' | 'failed' }
 
 const QuestionInput = z.object({
   id: z.string().min(1).max(80),
@@ -70,10 +83,18 @@ const EngagementInput = z.object({
 /**
  * V7-3 — a content block on its way in.
  *
- * `mediaKey` is accepted but NEVER trusted as a path: it is an opaque key the
- * upload action minted, and `forStorage` drops it for any type but `img`. The
- * bound is the same 80 the question ids get, because it is an id and not a
- * user's sentence.
+ * `mediaKey` is accepted but NEVER trusted as a path: it is whatever
+ * `uploadBlockMedia` last returned for this block, and `forStorage` drops it
+ * for any type but `img`. **It is not validated as a path here and does not
+ * need to be** — M:0128's four policies scope by its first segment, so a key
+ * naming another survey is refused by the database on both the write and the
+ * read. The bound is 200 because it is a path and not a user's sentence.
+ *
+ * `url` is accepted as ANY string, deliberately. A video link is refused at
+ * RENDER — `safeVideoUrl` admits `https:` with a host and nothing else — rather
+ * than at save, because the editor types it a character at a time and the
+ * bundle's own seed is the bare `https://`. Refusing the save would throw away
+ * the rest of the draft to reject a URL that is one keystroke from valid.
  */
 const BlockInput = z.object({
   id: z.string().min(1).max(80),
@@ -757,4 +778,82 @@ export async function setQuizSettings(input: unknown): Promise<PolicyResult> {
 
   revalidatePath(`/undersokelser/${parsed.data.surveyId}/bygg`)
   return { ok: true }
+}
+
+/**
+ * V7-3c — the picture on an image block.
+ *
+ * ── THE PATH IS DERIVED SERVER-SIDE AND NEVER ACCEPTED FROM THE CLIENT ─────
+ *
+ * The same rule `uploadLogo` states: a path is an authorisation claim, and
+ * M:0128's four policies read the first segment as the survey id. The client
+ * sends a block id and a file; the survey comes from the block's own row, which
+ * RLS only shows to somebody who may edit it.
+ *
+ * The second segment is random rather than the block's id, so replacing a
+ * picture cannot be served from a cache of the old one and a DUPLICATED block
+ * cannot share an object with its original — `duplicateBlock` copies
+ * `mediaKey`, which is correct for «the same picture» and would be a
+ * co-ownership bug the moment either copy replaced it. **Each upload writes a
+ * new object**, so the two keys diverge the first time one of them changes.
+ *
+ * ── THE UPLOAD GOES THROUGH THE VIEWER'S SESSION, NOT THE SERVICE ROLE ─────
+ *
+ * `svmedia_obj_ins` is what admits it, resolving `app.can_edit_survey`. The
+ * `requireViewer` check here is what lets the screen say why; the policy is
+ * what makes it true. The bucket also enforces the size and the three raster
+ * MIME types (M:0128), so the two checks below are the message rather than the
+ * rule — and SVG is refused on both sides because it is a document that can
+ * carry script and this object is rendered to respondents.
+ *
+ * Returns the new key for the client to hold until the next `saveDraft`. The
+ * block row's `media_key` is written HERE as well, so a page reload before the
+ * next save does not lose the upload — the file is stored either way, and a
+ * stored object no row points at is the one outcome nothing can clean up.
+ */
+export async function uploadBlockMedia(formData: FormData): Promise<MediaResult> {
+  const viewer = await requireViewer()
+  if (viewer.role === 'leser') return { ok: false, error: 'forbidden' }
+
+  const blockId = formData.get('blockId')
+  const file = formData.get('file')
+  if (typeof blockId !== 'string' || !(file instanceof File)) {
+    return { ok: false, error: 'invalid' }
+  }
+  if (!isMediaType(file.type) || file.size === 0 || file.size > MAX_MEDIA_BYTES) {
+    return { ok: false, error: 'invalid' }
+  }
+
+  const supabase = await createClient()
+
+  // The survey comes from the ROW, not from the request. RLS shows this row
+  // only to somebody who may edit the survey, so a block id belonging to
+  // another organisation is simply absent.
+  const { data: block } = await supabase
+    .from('survey_blocks')
+    .select('id, survey_id, type')
+    .eq('id', blockId)
+    .maybeSingle()
+  if (!block || block.type !== 'img') return { ok: false, error: 'invalid' }
+
+  const key = mediaPath(block.survey_id, file.type, crypto.randomUUID())
+  const { error: upErr } = await supabase
+    .storage.from('survey-media')
+    .upload(key, file, { contentType: file.type })
+  if (upErr) {
+    console.error(`uploadBlockMedia failed: ${upErr.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  const { error } = await supabase
+    .from('survey_blocks')
+    .update({ media_key: key })
+    .eq('id', blockId)
+  if (error) {
+    console.error(`uploadBlockMedia could not record the key: ${error.message}`)
+    return { ok: false, error: 'failed' }
+  }
+
+  revalidatePath(`/undersokelser/${block.survey_id}/bygg`)
+  return { ok: true, mediaKey: key }
 }
