@@ -22,7 +22,13 @@ import en from '../../messages/en.json'
  * every pill still renders and every tab still works.
  */
 const page = readFileSync('app/(app)/bibliotek/page.tsx', 'utf8')
-const subnav = readFileSync('components/AppSubnav.tsx', 'utf8')
+/* V7-1 — THE RAIL MOVED AND THE PROPERTY DID NOT. It was built inside
+   `AppSubnav`; it is an entry in `lib/shell/subnav.ts` now, and the component
+   renders whatever the registry returns. The assertion below still says «the
+   rail is BUILT from the tab registry, not hand-written» — it just reads the
+   file where the building happens. Repointed rather than widened: dropping the
+   `LIBRARY_TABS.map` requirement would buy a green test and lose the guard. */
+const subnav = readFileSync('lib/shell/subnav.ts', 'utf8')
 /** The code, with `//` and block comments stripped. CLAUDE.md: a file that
  *  documents its own refusals contains the words it refuses — and this file's
  *  refusals are about a rail whose markup it must not contain. */
@@ -85,7 +91,16 @@ describe('Q172 — the tab set is one registry, read by both renderers', () => {
     // registry, because a hand-written array is exactly what the admin rail's
     // six-of-eight instance was.
     expect(code(subnav)).toMatch(/LIBRARY_TABS\.map/)
-    expect(code(subnav)).toMatch(/libraryTabHref\(resolveLibraryTab\(/)
+    /* The current pill is the PAGE'S OWN RESOLVER's answer, never the raw
+       parameter — otherwise `/bibliotek` and `/bibliotek?fane=maler` are one
+       screen with two spellings and only one of them looks selected.
+
+       This read `libraryTabHref(resolveLibraryTab(` until V7-1. The composition
+       existed because «current» was an HREF and had to be spelled the same way
+       twice; a rail that names its current pill by ID needs no round trip, so
+       the resolver stands alone. The property is unchanged and the shape that
+       could get it wrong is gone. */
+    expect(code(subnav)).toMatch(/currentId: resolveLibraryTab\(/)
   })
 
   it('the page keeps NO second copy of the rail — the condition the move rests on', () => {

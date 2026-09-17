@@ -3,19 +3,17 @@ import Link from 'next/link'
 import { Logo, Wordmark } from '@/components/Logo'
 import { AppNav } from '@/components/AppNav'
 import { AppSubnav } from '@/components/AppSubnav'
-import { LIBRARY_TABS, TAB_NAV_KEY, type LibraryTab } from '@/lib/library/tabs'
-import {
-  SURVEY_TABS,
-  TAB_NAV_KEY as SURVEY_TAB_NAV_KEY,
-  type SurveyTab,
-} from '@/lib/surveys/tabs'
+/* V7-1 — `AppSubnav` takes NO props. It used to take a fifteen-field `labels`
+   object built here out of four registries and three message namespaces, so a
+   new screen's rail needed an edit in three files. The rails are
+   `lib/shell/subnav.ts` now and resolve their own messages; the three imports
+   and two `getTranslations` calls that fed this went with them. */
 import { LangPicker } from '@/components/LangPicker'
 import { UserMenu } from '@/components/UserMenu'
 import { MobileNav } from '@/components/MobileNav'
 import { WideToggle } from '@/components/WideToggle'
 import { WorkspaceChip } from '@/components/WorkspaceChip'
 import { readWorkspace } from '@/lib/workspace/current'
-import { FILTERS, FILTER_KEY } from '@/app/(app)/undersokelser/keys'
 import { initialsOf, type Viewer } from '@/lib/auth/session'
 import type { Locale } from '@/lib/i18n/locales'
 
@@ -47,8 +45,6 @@ const NAV = [
 
 export async function AppHeader({ viewer }: { viewer: Viewer }) {
   const t = await getTranslations('nav')
-  const tReports = await getTranslations('reports')
-  const tSurveys = await getTranslations('surveys')
 
   const ws = await readWorkspace(viewer.orgId)
 
@@ -174,47 +170,7 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
         />
       </div>
     </header>
-      <AppSubnav
-        labels={{
-          insight: t('subnavInsight'),
-          dashboard: t('subnavDashboard'),
-          reports: t('subnavReports'),
-          /* F3 — the three Innsikt pills the app was missing. The labels are
-             the Rapporter screen's own (`reports.tab*`), moved with the control
-             rather than rewritten beside it. */
-          statutory: tReports('tabLov'),
-          templates: tReports('tabStandard'),
-          tasks: t('subnavTasks'),
-          all: t('subnavAll'),
-          onlyTasks: t('subnavOnlyTasks'),
-          feedback: t('subnavFeedback'),
-          library: t('subnavLibrary'),
-          /* Built FROM the registry rather than spelled out: a fourth library
-             tab then arrives with its label already wired, and cannot be added
-             with none. `TAB_NAV_KEY` is a `Record<LibraryTab, string>`, so the
-             cast is only next-intl's literal-key typing, not a widening. */
-          libraryTabs: Object.fromEntries(
-            LIBRARY_TABS.map((tab) => [tab, t(TAB_NAV_KEY[tab] as 'subnavTemplates')]),
-          ) as Record<LibraryTab, string>,
-          surveys: t('subnavSurveys'),
-          /* Built FROM the filter registry, so a fifth status arrives with its
-             label wired or not at all — the same derivation the library and
-             survey rails already use. */
-          surveyFilters: Object.fromEntries(
-            FILTERS.map((f) => [f, tSurveys(FILTER_KEY[f] as 'filterAll')]),
-          ),
-          survey: t('subnavSurvey'),
-          /* Same derivation, same reason — V6-2. The survey rail grows one tab
-             per phase (Metodikk, the four narrowings, Historikk), and each one
-             arrives with its label already wired or not at all. */
-          surveyTabs: Object.fromEntries(
-            SURVEY_TABS.map((tab) => [
-              tab,
-              t(SURVEY_TAB_NAV_KEY[tab] as 'subnavSurveyQuestions'),
-            ]),
-          ) as Record<SurveyTab, string>,
-        }}
-      />
+      <AppSubnav />
     </div>
   )
 }

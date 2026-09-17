@@ -2,235 +2,80 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { LIBRARY_TABS, libraryTabHref, resolveLibraryTab } from '@/lib/library/tabs'
-import {
-  SURVEY_TABS,
-  resolveSurveyPath,
-  surveyTabHref,
-  type SurveyTab,
-} from '@/lib/surveys/tabs'
+import { useTranslations } from 'next-intl'
+import { resolveSubnav, type MsgRef, type SubnavPill } from '@/lib/shell/subnav'
 
 /**
- * The subnav — v5's shell addition (V5:227-234).
+ * The subnav — v5's shell addition (V5:227-234), REBUILT ON A REGISTRY in V7-1.
  *
  * A `--sbg` strip attached under the header INSIDE the shell card, carrying an
  * 11px uppercase label and a rail of pills. The header squares its bottom
  * corners where this is present, which is what v5's `headRadius` is for.
  *
- * ── WHICH SCREENS, AND WHY NOT FIVE ────────────────────────────────────────
+ * ── THIS FILE NO LONGER KNOWS WHICH SCREENS HAVE A RAIL ───────────────────
  *
- * The bundle puts it on five: `uitest`, `admin`, `tasks`, `dashboard`,
- * `reports`. It ships on THREE, and each exclusion is a measurement rather than
- * a preference (D164):
+ * It had five `if (pathname === …)` branches and a fifteen-field `labels` prop
+ * that `AppHeader` filled. Both are gone: `lib/shell/subnav.ts` answers «which
+ * rail, which pills, which one is current», and this file renders it. **An
+ * eighth screen is a row in the registry and no edit here** — which is the
+ * whole point, and is F3's breadcrumb lesson applied to the surface F3 treated
+ * as one case.
  *
- *   * `uitest` is «Tabellvarianter», a table-variant playground. It is 28 of
- *     v5's 45 new states — re-measured in V5-2, because the first count split
- *     the set by NAME PREFIX and `hasSubtools` and the five `col*` toggles
- *     carry none; a prefix is not a location — and no phase builds it, so there
- *     is no screen for a subnav to sit on.
- *   * `admin` ALREADY HAS THIS NAVIGATION IN-PAGE. `AdminTabs` renders nine
- *     tabs; the bundle's subnav list for admin has SIX — it is missing Profil
- *     og avsender, Målgrupper and Språk. The bundle draws BOTH rails on that
- *     one screen, two lines apart, and its own in-page `adminTabs` has eight.
- *     So the six-item list is not a decision to remove three tabs; it is an
- *     enumeration of the tabs that existed when it was drawn — the fifth row of
- *     CLAUDE.md's table, one screen over. **Two controls doing one job, one of
- *     them three tabs out of date, is worse than one control.** If a later
- *     phase wants the subnav here, what it replaces is `AdminTabs` — it does
- *     not supplement it.
+ * The decisions about WHICH screens carry the rail have not changed and are
+ * written where they belong, in the registry's own entries: `admin`'s rail stays
+ * in the page (D164 — the bundle's six-item list is missing three tabs the app
+ * has, and two controls doing one job with one of them out of date is worse
+ * than one control), `bibliotek`'s is here by Tor's Q172, and the Innsikt
+ * rail's fifth pill is refused in writing rather than left as a gap.
  *
- * `dashboard` and `reports` are where it earns its place: the pills are
- * CROSS-SCREEN navigation between two routes that today are only reachable from
- * the header. That is new, and it is the reason to build the thing at all.
+ * ── TWO KINDS OF PILL, RENDERED DIFFERENTLY ───────────────────────────────
  *
- * ── AND A FOURTH THE BUNDLE DOES NOT PUT HERE (Q172) ───────────────────────
+ * A `filter` narrows or moves within the set the rail names, and lights when it
+ * is current. An `exit` LEAVES the set — v7 draws four of them, «Undersøkelsen»
+ * on send and build and «Bygger» on surveys and svdetail — and can never be
+ * current, so a renderer that decides emphasis by `current === id` gives every
+ * exit the inactive treatment. That is «a jump rendered as a filter is a pill
+ * that never lights». Three of v7's four are `weight:700` at full opacity and
+ * never pilled; that is the treatment below.
  *
- * `bibliotek` is drawn by v5 as an IN-PAGE pill rail (`libTabs`, v5:4082),
- * sitting beside the 28px «Bibliotek» heading; `subnavLabel` (v5:6320) has no
- * library branch. It is in this strip because Tor asked for it, which makes it
- * a decision rather than a reading of the handoff — recorded as Q172 and in
- * DEVIATIONS. The condition the `admin` paragraph above sets is met: the page
- * keeps NO second copy of the rail, so there is one control, not two.
- *
- * ── `subnavLabel` HAS FOUR BRANCHES FOR FIVE SCREENS ───────────────────────
- * `uitest` -> «Tabellvarianter», `tasks` -> «Arbeidsliste», `admin` ->
- * «Administrasjon», and everything ELSE -> «Innsikt», so `dashboard` and
- * `reports` share a label. Built as drawn; noted because «a label per screen»
- * is true of three of the five.
+ * **No exit ships yet** — the two rails that carry one are V7-2's — so this
+ * branch is built and unreached. It is built anyway because the alternative is
+ * that V7-2 adds the pill and inherits the filter treatment silently, which is
+ * exactly the defect this type exists to make unrepresentable.
  */
-type Item = { label: string; href: string }
+type Rendered = { pill: SubnavPill; on: boolean }
 
-export function AppSubnav({
-  labels,
-}: {
-  labels: {
-    insight: string
-    dashboard: string
-    reports: string
-    /* F3 — v6:8619 draws FIVE Innsikt pills, and the app drew two. The three
-       that were missing are the Rapporter screen's own tabs, which the drawing
-       carries here rather than in the page — `repTabs` (v6:8027) is defined in
-       v6's script and rendered NOWHERE in its markup, which is the bundle
-       stating the re-parent by leaving a dead key behind. */
-    statutory: string
-    templates: string
-    /* The fifth, «Bygger», is NOT drawn: it opens the editor on a fresh draft,
-       and in this app the editor is `?rapport=<id>` of a report that exists. A
-       deep link resolves or it is not drawn (V6-5's standing rule) — and the
-       affordance is already the «＋ Ny rapport» button in the «På tvers» card,
-       so drawing it would be two controls for one action as well. */
-    tasks: string
-    all: string
-    onlyTasks: string
-    feedback: string
-    library: string
-    /* Keyed by the registry rather than spelled out, so a fourth tab is a
-       compile error here and not a pill that silently never renders. */
-    libraryTabs: Record<(typeof LIBRARY_TABS)[number], string>
-    survey: string
-    surveyTabs: Record<SurveyTab, string>
-    /* F3 — the survey LIST's status rail. v6:8634 puts it in the shell and the
-       app had it as chips inside the page; there is one copy, here. */
-    surveys: string
-    surveyFilters: Record<string, string>
-  }
-}) {
+export function AppSubnav() {
   const pathname = usePathname()
   const params = useSearchParams()
 
-  let label: string | null = null
-  let items: Item[] = []
-  /* Which pill reads as current. Set by the branch that owns the screen rather
-     than derived afterwards: `/dashboard` and `/rapporter` are told apart by
-     their PATH, `/oppgaver` and `/bibliotek` by a search parameter, and a
-     single expression covering both kinds is where the third screen goes
-     wrong. */
-  let currentHref = pathname
+  /* Three namespaces, resolved here and chosen per pill by the registry's own
+     `MsgRef`. A bare key resolved in the wrong namespace renders as a raw key
+     on a shipped screen, which is the defect Tor found nine of behind seventeen
+     green gates — so the namespace travels WITH the key. */
+  const tNav = useTranslations('nav')
+  const tReports = useTranslations('reports')
+  const tSurveys = useTranslations('surveys')
+  const say = (m: MsgRef) =>
+    m.ns === 'reports'
+      ? tReports(m.key as 'tabLov')
+      : m.ns === 'surveys'
+        ? tSurveys(m.key as 'filterAll')
+        : tNav(m.key as 'subnavInsight')
 
-  if (pathname === '/dashboard' || pathname === '/rapporter') {
-    label = labels.insight
-    items = [
-      { label: labels.dashboard, href: '/dashboard' },
-      { label: labels.reports, href: '/rapporter?fane=mine' },
-      { label: labels.statutory, href: '/rapporter?fane=lov' },
-      { label: labels.templates, href: '/rapporter?fane=standard' },
-    ]
-    /* `/rapporter` with no `fane` IS `fane=lov` — `page.tsx` resolves an absent
-       or unknown value to 'lov', so the pill that looks current has to resolve
-       it the same way or the default tab reads as nothing selected. Same
-       failure the tasks rail needed a comment about, and the same fix: ask the
-       page's own resolver, not the raw parameter. */
-    if (pathname === '/rapporter') {
-      const fane = params.get('fane')
-      currentHref = `/rapporter?fane=${fane === 'standard' || fane === 'mine' ? fane : 'lov'}`
-    }
-  }
+  const rail = resolveSubnav(pathname, new URLSearchParams(params.toString()))
+  if (!rail) return null
 
-  /* F3 — Undersøkelser. v6:8634 draws the four status filters HERE, and the app
-     had three of them (no «Lukket») as chips inside the page. They are the
-     shell's now and the page keeps no copy: the condition this file already
-     sets for `admin` is that a shell rail may absorb an in-page one only when
-     its list is COMPLETE, and four of four is.
-
-     The search and the sort ride along, because losing a search by clicking a
-     status filter is a regression the drawing has no opinion about. */
-  if (pathname === '/undersokelser') {
-    label = labels.surveys
-    const carry = (f: string) => {
-      const next = new URLSearchParams()
-      if (f !== 'alle') next.set('filter', f)
-      const sok = params.get('sok')
-      const sorter = params.get('sorter')
-      if (sok) next.set('sok', sok)
-      if (sorter) next.set('sorter', sorter)
-      const qs = next.toString()
-      return qs ? `/undersokelser?${qs}` : '/undersokelser'
-    }
-    items = Object.keys(labels.surveyFilters).map((f) => ({
-      label: labels.surveyFilters[f]!,
-      href: carry(f),
-    }))
-    const f = params.get('filter') ?? 'alle'
-    currentHref = carry(f in labels.surveyFilters ? f : 'alle')
-  }
-
-  /* The Arbeidsliste's «Alt · Oppgaver · Tilbakemeldinger» rail (v5:6331-6335).
-     V5-1 left it to the screen because the filter was client state and a server
-     component cannot read one. V5-2 put the filter in the URL instead, which
-     both halves can read — so the rail is where the bundle draws it, and the
-     screen holds no second copy of it. The scope rail («Alle · Mine · Over
-     frist · Lovpålagt · Ubehandlet», v5:3179) stays inside the card, which is
-     also where the bundle draws that one. */
-  if (pathname === '/oppgaver') {
-    label = labels.tasks
-    items = [
-      { label: labels.all, href: '/oppgaver' },
-      { label: labels.onlyTasks, href: '/oppgaver?type=oppgaver' },
-      { label: labels.feedback, href: '/oppgaver?type=tilbakemeldinger' },
-    ]
-    /* `aria-current` on a query-string rail cannot be `pathname === href`: all
-       three pills share the path and would all read as current. The comparison
-       is over the parameter the screen actually filters on, and the absent
-       value is «alle» — the same resolution `WorklistPage` does, so the pill
-       that looks selected is the one that is. */
-    const type = params.get('type') ?? 'alle'
-    currentHref =
-      type === 'oppgaver'
-        ? '/oppgaver?type=oppgaver'
-        : type === 'tilbakemeldinger'
-          ? '/oppgaver?type=tilbakemeldinger'
-          : '/oppgaver'
-  }
-
-  /* Bibliotek — Q172. The bundle draws this rail IN-PAGE (v5:4082), beside the
-     «Bibliotek» heading, and its subnav has no library branch at all. Tor moved
-     it here so the library reads like the Arbeidsliste: the tab set in the
-     shell, the filter inside the card. A departure from the handoff, decided
-     rather than inferred, and the screen holds no second copy of the rail —
-     which is the condition `AppSubnav`'s own header sets for `admin`. */
-  if (pathname === '/bibliotek') {
-    label = labels.library
-    items = LIBRARY_TABS.map((tab) => ({
-      label: labels.libraryTabs[tab],
-      href: libraryTabHref(tab),
-    }))
-    // Same shape as the tasks rail, and the resolver is the page's own, so the
-    // default tab cannot be spelled two ways.
-    currentHref = libraryTabHref(resolveLibraryTab(params.get('fane')))
-  }
-
-  /* The survey's own rail — V6-2, and it is the RE-PARENT the whole tranche
-     turns on. v6 stops treating Bygg / Send / Resultater as three numbered
-     steps and makes them tabs on one survey (v6:1255-2096); its script builds
-     them in the same function as this strip's other rails (v6:8629), so this is
-     where they belong.
-
-     **The paths stay** (Tor): a survey has three phases with distinct state,
-     and a URL saying which one you are in is a property rather than an
-     implementation choice. So the pills are real routes and `aria-current` is
-     decided by the PATH SEGMENT — there is no parameter that can disagree with
-     it, which is the one failure mode the tasks and library rails each needed a
-     comment about.
-
-     `/live` and `/test` are survey routes with no pill. They resolve to a null
-     tab, so the rail renders with NOTHING current — «no pill is current» and
-     «the first pill is current» are different claims, and only the first is
-     true there. */
-  const survey = resolveSurveyPath(pathname)
-  if (survey) {
-    label = labels.survey
-    items = SURVEY_TABS.map((tab) => ({
-      label: labels.surveyTabs[tab],
-      href: surveyTabHref(survey.surveyId, tab),
-    }))
-    currentHref = survey.tab ? surveyTabHref(survey.surveyId, survey.tab) : ''
-  }
-
-  if (label === null) return null
+  const items: Rendered[] = rail.pills.map((pill) => ({
+    pill,
+    // An exit is never current — the registry's `railFaults` asserts it, and
+    // this expression could not express it wrongly even if it were not.
+    on: pill.kind === 'filter' && pill.id === rail.currentId,
+  }))
 
   return (
     <nav
-      aria-label={label}
+      aria-label={say(rail.label)}
       className="flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-b-[15px] border-t border-line bg-sbg py-2 pl-[18px] pr-3.5"
     >
       {/* `touch-cluster`, not a hand-picked gap. The pills are `py-[7px]` — 30px
@@ -244,23 +89,27 @@ export function AppSubnav({
           time: the constant belongs to the control, not to the pattern. */}
       <span className="touch-cluster flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
         <span className="mr-3 flex-none whitespace-nowrap text-[11px] uppercase tracking-[.09em] text-mut">
-          {label}
+          {say(rail.label)}
         </span>
-        {items.map((it) => {
-          const on = currentHref === it.href
+        {items.map(({ pill, on }) => {
+          const exit = pill.kind === 'exit'
           return (
             <Link
-              key={it.href}
-              href={it.href}
+              key={pill.id}
+              href={pill.href}
               aria-current={on ? 'page' : undefined}
               className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[9px] border-none px-[13px] py-[7px] text-[13.5px] text-ink no-underline hover:bg-sf"
               style={{
+                // v7:8898, 8907, 8934 — an exit is never pilled, and it carries
+                // the drawing's own `weight:"700"` and `textOpacity:"1"`
+                // REGARDLESS of state, which is the property the old
+                // `currentHref === href` expression could not hold.
                 background: on ? 'var(--sf)' : 'transparent',
-                fontWeight: on ? 700 : 500,
-                opacity: on ? 1 : 0.7,
+                fontWeight: on || exit ? 700 : 500,
+                opacity: on || exit ? 1 : 0.7,
               }}
             >
-              {it.label}
+              {say(pill.label)}
             </Link>
           )
         })}

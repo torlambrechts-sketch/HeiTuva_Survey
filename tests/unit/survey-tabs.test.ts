@@ -21,7 +21,9 @@ import en from '../../messages/en.json'
  * because every pill still renders and every tab still works.
  */
 const ID = '11111111-2222-4333-8444-555555555555'
-const subnav = readFileSync('components/AppSubnav.tsx', 'utf8')
+/* V7-1 — repointed at the registry the rail moved into. Same property, same
+   strictness, different file; see the note in `library-tabs.test.ts`. */
+const subnav = readFileSync('lib/shell/subnav.ts', 'utf8')
 const bar = readFileSync('app/(app)/undersokelser/[id]/SurveyContextBar.tsx', 'utf8')
 /** Code with `//` and block comments stripped. CLAUDE.md: a file that documents
  *  its own refusals contains the words it refuses, and this component's doc
@@ -106,9 +108,11 @@ describe('V6-2 — one registry, read by the rail and by the routes', () => {
   it('the subnav renders the registry rather than a list of its own', () => {
     expect(code(subnav)).toMatch(/SURVEY_TABS\.map/)
     expect(code(subnav)).toMatch(/resolveSurveyPath\(pathname\)/)
-    // `aria-current` comes from the PATH SEGMENT. A parameter read here would
-    // be a second source of truth for which tab is showing.
-    expect(code(subnav)).toMatch(/survey\.tab \? surveyTabHref\(/)
+    // The current pill comes from the PATH SEGMENT. A parameter read here would
+    // be a second source of truth for which tab is showing — so `currentId` is
+    // `survey.tab` and nothing else, including on /live and /test where it is
+    // null and no pill may light.
+    expect(code(subnav)).toMatch(/currentId: survey\.tab/)
   })
 
   it('the context bar keeps NO second copy of the rail — the condition the move rests on', () => {
