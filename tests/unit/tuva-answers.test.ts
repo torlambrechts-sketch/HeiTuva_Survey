@@ -235,8 +235,77 @@ describe('G4 — every Tuva answer lands somewhere that exists', () => {
     expect(panel).toContain("href=\"/oversikt\"")
     for (const m of [NO, EN]) expect(m.tuva?.trackElsewhere).toBeTruthy()
     /* G5 — and it is withheld ON Oversikt, where it would point at the page
-       being read. The condition is asserted because the link is now rendered on
-       a screen that did not have the panel before. */
-    expect(panel).toContain("key === 'oversikt' ? null :")
+       being read. G6 adds the second case: a screen that supplies its own body
+       through the slot gets its own content and not the shell's checklist link. */
+    expect(panel).toContain("key === 'oversikt' || slot ? null :")
+  })
+
+  it('13. ONE BUBBLE — exactly one round control announces itself as Tuva', () => {
+    /* Tor, 2026-09-16: «One product, one Tuva, and a screen should not have two
+       bubbles for two reasons.»
+
+       Measured BEFORE this changed, `/undersokelser` carried two round buttons
+       for one helper, differing in size (52 vs 54), background (`bg-sbg` vs
+       `bg-ac`), glyph («?» vs «T»), shadow, the unread dot — and, worst, **the
+       accessible name**: «Åpne Tuva» and «Vis eller skjul Tuva». Two controls
+       announced for one thing.
+
+       THE NAME IS RESOLVED THROUGH THE MESSAGES rather than matched in the
+       source, because no component contains the word: `aria-label={t('key')}`
+       is all that is written down. The first version of this test swept for
+       «Tuva» in the source and found ZERO — which would have reported a clean
+       tree either way, and was caught only by the expected value being a list
+       rather than a length. `(?<!\p{L})Tuva` is D113's rule: «HeiTuva» in
+       `Logo.tsx` is the brand and is not this control. */
+    const msg = NO as unknown as Record<string, Record<string, string>>
+    const namesTuva = (ns: string, key: string) =>
+      typeof msg[ns]?.[key] === 'string' && /(?<!\p{L})Tuva/u.test(msg[ns][key]!)
+    expect(namesTuva('tuva', 'openLabel'), 'the sweep cannot see its own subject').toBe(true)
+
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir)) {
+        const full = join(dir, e)
+        if (statSync(full).isDirectory()) walk(full)
+        else if (/\.tsx$/.test(full)) files.push(full)
+      }
+    }
+    walk('app')
+    walk('components')
+
+    const bubbles = files.filter((f) => {
+      const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      if (!src.includes('rounded-full')) return false
+      /* THE NAMESPACE IS PART OF THE KEY. Resolving `t('title')` against every
+         namespace at once made `Builder.tsx` and `Wizard.tsx` false positives —
+         their own `title` is not Tuva's, and some other namespace's is. A key
+         without its namespace is not a message. */
+      const spaces = [...src.matchAll(/useTranslations\('([A-Za-z0-9_]+)'\)/g)].map((m) => m[1]!)
+      for (const m of src.matchAll(/aria-label=\{?t\('([A-Za-z0-9_]+)'\)/g)) {
+        if (spaces.some((ns) => namesTuva(ns, m[1]!))) return true
+      }
+      return /aria-label="[^"]*(?<!\p{L})Tuva/u.test(src)
+    })
+    expect(bubbles, 'a second round control announcing itself as Tuva').toEqual([
+      'components/TuvaHelper.tsx',
+    ])
+  })
+
+  it('14. the shell reads the slot; the page publishes to it', () => {
+    /* The two halves of «one bubble whose content a screen may replace», each
+       asserted where it lives. Neither alone is the mechanism: a reader with no
+       publisher renders the registry answer forever, and a publisher with no
+       reader is a write nothing reads — this file's own standing question. */
+    const helper = readFileSync('components/TuvaHelper.tsx', 'utf8')
+    expect(helper).toContain('useTuvaSlot')
+    expect(helper).toContain('{slot}')
+
+    const placement = readFileSync('app/(app)/undersokelser/TuvaPlacement.tsx', 'utf8')
+    expect(placement).toContain('<TuvaSlot>')
+    // The second bubble is GONE from that file, not merely unused.
+    expect(placement).not.toContain('rounded-full')
+
+    const layout = readFileSync('app/(app)/layout.tsx', 'utf8')
+    expect(layout).toContain('<TuvaSlotProvider>')
   })
 })

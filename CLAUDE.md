@@ -1862,3 +1862,27 @@ The counterpart obligation, so this does not become a stall: **ask INSIDE the
 phase and keep building everything the answer does not block.** A question is not
 a reason to stop; it is a reason to state the assumption, build under it, and say
 plainly which way it was assumed so the answer costs an edit rather than a rebuild.
+
+**G5 TOOK IT TO 1606 ACROSS 121 FILES AND 5a3 IS UNMOVED AT 81 OF 114.** The derivation, and
+`git diff tests/expected-counts.json` is the command — **one line raised and nothing else moved
+in either direction**, which is the proof rather than the total:
+
+```
+1604 across 121
+ +  2  tests/unit/tuva-answers.test.ts 12 -> 14   tests 8 and 9 became 8, 9, 9b, 9c
+= 1606 across 121
+```
+
+Measured on a full local run: **121 files, 1606 tests, 0 failed**, which is the manifest sum
+exactly (`python3 -c "import json;print(sum(json.load(open('tests/expected-counts.json')).values()))"`).
+
+**And the two that were REPLACED are the phase**, which a count of +2 cannot show: test 8
+asserted «a path with no entry gets NOTHING» and test 9 asserted the suppression LIST, and both
+were the correct guards for a helper that stayed off five screens. They are now «every route
+under `app/(app)` resolves to an answer key» and «the resolver can still FAIL — it has no blanket
+fallback». **The file's count moved by two while the property it states was inverted.**
+
+5a3 holds at **81 of 114** — 65 RLS tables + 49 SECURITY DEFINER functions, zero unproven. G5 adds
+no table and no definer function: a registry, a component and forty-two message keys are not
+catalogue surfaces, which is the correct reading rather than a gap.
+`npm run verify:policy 2>&1 | grep -cE '^  (ok|NO DATA)'` against `grep -E 'enumerated'`.

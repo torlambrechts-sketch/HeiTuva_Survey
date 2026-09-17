@@ -34,8 +34,11 @@ export const SURVEY_TUVA_COOKIE = 'heituva.svtuva'
 export const SURVEY_VIEWS = ['liste', 'delt', 'kort'] as const
 export type SurveyView = (typeof SURVEY_VIEWS)[number]
 
-/** Where Tuva sits. `side` is v6's DEFAULT (`svTuvaSide: st.svTuvaDocked !==
- *  false`, v6:9014) and `bubble` is the alternate — the app had neither. */
+/** Where Tuva sits. Both placements are v6's (`svTuvaSide` v6:2438,
+ *  `svTuvaFloat` v6:2414) and they are MUTUALLY EXCLUSIVE — `svTuvaSide:
+ *  st.svTuvaDocked !== false` and `svTuvaFloat: st.svTuvaDocked === false` are
+ *  exact complements over one boolean, so the bundle can never draw both. The
+ *  app had neither until F4. */
 export const TUVA_PLACEMENTS = ['side', 'bubble'] as const
 export type TuvaPlacement = (typeof TUVA_PLACEMENTS)[number]
 
@@ -62,11 +65,23 @@ export function resolveSurveyView(
   return fromCookie ?? fromOrg ?? 'liste'
 }
 
-/** No column, so two steps rather than three — and the default is the
- *  DRAWING's: `svTuvaDocked !== false` means an unset value is the side
- *  column, not the bubble. */
+/**
+ * No column, so two steps rather than three.
+ *
+ * **THE DEFAULT IS `bubble`, AND THAT IS A DEPARTURE FROM THE DRAWING (Tor,
+ * 2026-09-16, D228).** v6's default is the side column — `svTuvaDocked !==
+ * false` makes an unset value `side` — and F4 followed it. Tor wants the
+ * floating bubble as what a person meets first.
+ *
+ * **It is a change of DEFAULT, not a removal.** The side column is still
+ * drawn, still reachable, and reached the way the drawing reaches it: the
+ * switch inside the bubble («Vis i egen spalte») writes `side` to this same
+ * cookie. What changed is one value here, not what the cookie can hold — so a
+ * person who has chosen the column keeps it, and one who has never chosen gets
+ * the bubble.
+ */
 export function resolveTuvaPlacement(cookieValue: string | null | undefined): TuvaPlacement {
-  return TUVA_PLACEMENTS.find((k) => k === cookieValue?.trim()) ?? 'side'
+  return TUVA_PLACEMENTS.find((k) => k === cookieValue?.trim()) ?? 'bubble'
 }
 
 /** Whether a value may be WRITTEN — the server-action boundary, kept beside the

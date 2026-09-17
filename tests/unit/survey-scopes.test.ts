@@ -121,13 +121,24 @@ describe('F4 — the view switcher and Tuva’s placement', () => {
     expect(resolveSurveyView('nonsense', 'nonsense')).toBe('liste')
   })
 
-  it('Tuva defaults to the SIDE column, which is the drawing’s default', () => {
-    /* v6:9014 `svTuvaSide: st.svTuvaDocked !== false` — unset means the docked
-       side column, and the bubble is the alternate. The app rendered neither. */
+  it('Tuva defaults to the BUBBLE — a changed default, not a removed column', () => {
+    /* G6, Tor 2026-09-16 (D228), overruling the drawing: v6:9014 is
+       `svTuvaSide: st.svTuvaDocked !== false`, so unset means the docked side
+       column there. Here unset means the bubble.
+
+       **The set is unchanged and that is the point.** A person who has chosen
+       the column still has it, because the cookie still holds `side` and the
+       switch inside the bubble still writes it. Only the value an ABSENT
+       cookie resolves to moved, which is what «change the default, not what it
+       can hold» means. An unknown cookie falls back the same way — a bad value
+       must not be able to pick the other placement. */
     expect(TUVA_PLACEMENTS).toEqual(['side', 'bubble'])
-    expect(resolveTuvaPlacement(undefined)).toBe('side')
+    expect(resolveTuvaPlacement(undefined)).toBe('bubble')
+    expect(resolveTuvaPlacement(null)).toBe('bubble')
+    expect(resolveTuvaPlacement('nonsense')).toBe('bubble')
+    // The column is still REACHABLE, which is the half a default cannot show.
+    expect(resolveTuvaPlacement('side')).toBe('side')
     expect(resolveTuvaPlacement('bubble')).toBe('bubble')
-    expect(resolveTuvaPlacement('nonsense')).toBe('side')
   })
 
   it('the write boundary and the reader share one set', () => {

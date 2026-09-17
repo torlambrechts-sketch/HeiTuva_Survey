@@ -2868,6 +2868,7 @@
     "libOwnLabel": "Company templates",
     "libValidatedDesc": "Start from a set someone has quality-assured",
     "libValidatedLabel": "Ready-made templates",
+    "mark": "T",
     "name": "Tuva",
     "noAsk": "Tuva does not answer questions you type. She points you onward from the screen you are on — that is all she can do without guessing at figures she does not have.",
     "noRating": "There is no thumbs up or down here yet: we have nowhere to store it, and a button that says «logged» without logging anything is worse than no button.",

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { TUVA_ANSWERS, TUVA_FALLBACK, surveyIdIn, tuvaHref, tuvaKeyFor } from '@/lib/tuva/answers'
+import { useTuvaSlot } from '@/components/TuvaSlot'
 
 /**
  * G4/G5 — Tuva, the global helper, mounted once by the shell (v6:5858-5930).
@@ -77,6 +78,13 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
   /** The screens whose answer has been read. Session-scoped on purpose. */
   const [seen, setSeen] = useState<string[]>([])
 
+  /* G6 — a screen may REPLACE the body of this panel. `/undersokelser`
+     publishes svTuva's analyst through `TuvaSlot`, so that screen has one
+     bubble carrying its own content rather than two bubbles side by side. The
+     chrome, the name, the close control and the two refusals are the same
+     either way: it is one component, with one accessible name. */
+  const slot = useTuvaSlot()
+
   /* No screen is silent: a route the registry does not name still gets the
      general answer. `tuvaKeyFor` itself returns null so the test can fail when
      a new screen arrives uncovered — the fallback lives HERE, at the render,
@@ -125,8 +133,10 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
           <div className="flex items-center gap-[10px]">
             <span
               aria-hidden
-              className="block h-[34px] w-[34px] flex-none rounded-full bg-sbg"
-            />
+              className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-sbg text-[13px] font-bold"
+            >
+              {t('mark')}
+            </span>
             <span className="flex-1 text-[13.5px] font-bold">{t('name')}</span>
             <button
               type="button"
@@ -138,34 +148,42 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
             </button>
           </div>
 
-          <p className="mt-[10px] text-[13px] leading-[1.55]">
-            {t(`${key}Headline` as 'bibliotekHeadline')}{' '}
-            <span className="text-mut">{t(`${key}Short` as 'bibliotekShort')}</span>
-          </p>
+          {slot ? (
+            /* The screen's own content, rendered by the screen. The shell
+               supplies the frame and knows nothing about what is in it. */
+            <div className="mt-[10px]">{slot}</div>
+          ) : (
+            <>
+              <p className="mt-[10px] text-[13px] leading-[1.55]">
+                {t(`${key}Headline` as 'bibliotekHeadline')}{' '}
+                <span className="text-mut">{t(`${key}Short` as 'bibliotekShort')}</span>
+              </p>
 
-          <div className="mt-3 flex flex-col gap-[2px]">
-            {answers.map((a) => (
-              <Link
-                key={a.stem}
-                href={a.href}
-                onClick={() => setOpen(false)}
-                className="touch-44 flex flex-col rounded-[11px] border border-line bg-bg px-[13px] py-[10px] no-underline"
-              >
-                <span className="text-[12.5px] font-bold text-ink">
-                  {t(`${a.stem}Label` as 'libValidatedLabel')}
-                </span>
-                <span className="mt-[2px] text-[11.5px] leading-[1.45] text-mut">
-                  {t(`${a.stem}Desc` as 'libValidatedDesc')}
-                </span>
-              </Link>
-            ))}
-          </div>
+              <div className="mt-3 flex flex-col gap-[2px]">
+                {answers.map((a) => (
+                  <Link
+                    key={a.stem}
+                    href={a.href}
+                    onClick={() => setOpen(false)}
+                    className="touch-44 flex flex-col rounded-[11px] border border-line bg-bg px-[13px] py-[10px] no-underline"
+                  >
+                    <span className="text-[12.5px] font-bold text-ink">
+                      {t(`${a.stem}Label` as 'libValidatedLabel')}
+                    </span>
+                    <span className="mt-[2px] text-[11.5px] leading-[1.45] text-mut">
+                      {t(`${a.stem}Desc` as 'libValidatedDesc')}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* «Kom i gang» — the one that is derived, on the screen that has it.
               Withheld ON Oversikt itself: since G5 the panel renders there too,
               and a link whose whole content is «it is on Oversikt» pointing at
               the page you are reading is not an answer. */}
-          {key === 'oversikt' ? null : (
+          {key === 'oversikt' || slot ? null : (
             <Link
               href="/oversikt"
               onClick={() => setOpen(false)}
@@ -191,9 +209,15 @@ export function TuvaHelper({ tuvaOn }: { tuvaOn: boolean }) {
         }}
         aria-label={t('openLabel')}
         aria-expanded={open}
-        className="relative h-[52px] w-[52px] cursor-pointer rounded-full border border-line bg-sbg text-[18px] font-bold text-ink shadow-[0_10px_24px_rgba(25,21,16,.18)]"
+        /* 54px and `--ac`, which is `svTuva`'s button (v6:2434) rather than the
+           global helper's (v6:5942) — because there is only one button now and
+           the one a person has been meeting on /undersokelser is the one that
+           stays. The per-screen FACE is not built: v6 names ten PNGs
+           (`tvFace` -> `tuva/faces/f<NN>.png`) and the handoff contains none of
+           them, so a monogram is what can be true. D229. */
+        className="relative h-[54px] w-[54px] cursor-pointer rounded-full border border-line bg-ac text-[18px] font-bold text-acf shadow-[0_10px_24px_rgba(25,21,16,.2)]"
       >
-        ?
+        {t('mark')}
         {unread ? (
           <span
             aria-hidden

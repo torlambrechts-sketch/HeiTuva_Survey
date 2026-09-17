@@ -748,10 +748,12 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
             </div>
           )}
 
-          {/* v6:2415 — the 76px spacer the bubble needs so it never covers the
-              last row. Only in the bubble placement, because in the side
-              placement there is no bubble to clear. */}
-          {tuvaOn && placement === 'bubble' ? <div className="h-[76px]" /> : null}
+          {/* G6 — the drawing's 76px spacer (v6:2415) is GONE with the bubble
+              it cleared. It existed because v6 anchors that button inside this
+              card; ours is anchored to the viewport by the shell, so there is
+              nothing here for it to cover. In the bubble placement this branch
+              now renders NO markup on the page at all — it publishes the
+              analyst to the shell's helper. */}
           {tuvaOn && placement === 'bubble' ? (
             <TuvaPlacementSwitch placement="bubble" labels={tuvaLabels}>
               <AnalystPanel analyst={analyst} bare />

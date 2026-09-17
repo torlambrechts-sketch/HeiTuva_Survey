@@ -7093,3 +7093,62 @@ collision, the collision is the obvious consequence of two corner-anchored
 bubbles, and it does not happen — because one of them is anchored to a card and
 the other to the window, and at every width where both are anchored at all, the
 card ends before the window does.
+
+### D228 — Tuva's default placement is the BUBBLE, overruling the drawing
+
+**G6, Tor's decision, 2026-09-16.** v6 makes the docked side column the default
+— `svTuvaSide: st.svTuvaDocked !== false` (v6:9014), so an unset value is
+`side` — and F4 followed it. Tor wants the floating bubble as what a person
+meets first.
+
+**It is a change of DEFAULT, not a removal, and the distinction is the whole
+edit.** `resolveTuvaPlacement` returns `'bubble'` for an absent or unrecognised
+cookie; `TUVA_PLACEMENTS` is unchanged; the side column is still drawn and still
+reached the way the drawing reaches it — «Vis i egen spalte» writes `side` to
+the same cookie (`heituva.svtuva`). So a person who has chosen the column keeps
+it, and one who has never chosen gets the bubble. One value moved, not what the
+cookie can hold.
+
+### D229 — one bubble, and the per-screen FACE is refused rather than pending
+
+**Two decisions from the same measurement, both Tor's.**
+
+**The two bubbles were two components, and the measurement is what settled it.**
+Before this change, `/undersokelser` carried both — `TuvaHelper`'s and
+`TuvaPlacement`'s — and they differed in six ways:
+
+| | `TuvaHelper` | `TuvaPlacement` |
+|---|---|---|
+| size | 52×52 | 54×54 |
+| background | `bg-sbg` | `bg-ac` |
+| glyph | «?» | «T» |
+| shadow | `0 10px 24px …,.18` | `0 10px 24px …,.2` |
+| unread dot | yes | no |
+| **accessible name** | **«Åpne Tuva»** | **«Vis eller skjul Tuva»** |
+
+The bundle has two as well (v6:5942, v6:2434) with the same kind of
+differences, **and it never shows them together** because `tvShow` excludes
+`surveys`. Once the helper is on every screen that arrangement stops being
+available, so the choice had to be made rather than inherited. Tor: «One
+product, one Tuva, and a screen should not have two bubbles for two reasons.»
+
+**What ships is one component, whose BODY a screen may replace.** The bubble is
+`TuvaHelper`'s alone, wearing svTuva's 54px `--ac` button because that is the
+one a person has been meeting on this screen; `/undersokelser` publishes its
+analyst into the panel through `components/TuvaSlot.tsx` and draws no button of
+its own. The dock switch travels with the published content, because the server
+action that writes the cookie belongs to that route and the shell must not
+import it. The drawing's 76px spacer (v6:2415) goes with the bubble it cleared:
+it existed because v6 anchors that button inside the list card, and ours is
+anchored to the viewport.
+
+**And the ten faces are refused, not deferred.** v6 gives every screen a face —
+`tvFace` resolves `tuvaFor(st).face` to `tuva/faces/f<NN>.png`, ten distinct
+files across the map, plus `f07` hard-coded in svTuva's two placements.
+Measured: `find . -name 'f07.png'` and `find . -type d -name faces` both return
+**nothing** — the handoff references ten image assets it does not contain, and
+neither does this repository. So one monogram («T», `tuva.mark`) is what can be
+true on both the 54px button and the 34px panel avatar, and the per-screen face
+is a decision not to build rather than a gap waiting for files. A phase that
+wants it later needs the PNGs first, and the registry already carries the
+per-screen key it would hang on.

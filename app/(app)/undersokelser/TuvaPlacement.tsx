@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 import type { TuvaPlacement } from '@/lib/surveys/view'
 import { setTuvaPlacement } from './actions'
+import { TuvaSlot } from '@/components/TuvaSlot'
 
 /**
  * F4 — WHERE TUVA SITS, and the switch between the two.
@@ -31,9 +32,12 @@ import { setTuvaPlacement } from './actions'
  * a server component — Q122's reasoning, decided once and applied to both
  * choices this screen carries. No column beside it: `M:0122` states why.
  *
- * The bubble's OPEN/SHUT is `useState` and not a cookie, for the same reason
- * the table's expanded row is: it answers «right now», not «how I like my
- * list».
+ * ── G6: THE BUBBLE MOVED TO THE SHELL, AND ONLY THE COLUMN IS DRAWN HERE ──
+ *
+ * The open/shut state went with it — it is `useState` in `TuvaHelper` for the
+ * same reason it was here: it answers «right now», not «how I like my list».
+ * What stays is the SIDE COLUMN and the two switches, because the cookie and
+ * the server action that writes it belong to this route.
  */
 export function TuvaPlacementSwitch({
   placement,
@@ -48,7 +52,6 @@ export function TuvaPlacementSwitch({
 }) {
   const router = useRouter()
   const [busy, start] = useTransition()
-  const [open, setOpen] = useState(true)
 
   const move = (to: TuvaPlacement) =>
     start(async () => {
@@ -93,47 +96,36 @@ export function TuvaPlacementSwitch({
     )
   }
 
+  /* G6 — THE BUBBLE IS NO LONGER DRAWN HERE.
+     Tor: «One product, one Tuva, and a screen should not have two bubbles for
+     two reasons.» Measured before the change, this screen had two round
+     buttons differing in size, colour, glyph, shadow, the unread dot AND the
+     accessible name — «Åpne Tuva» here, «Vis eller skjul Tuva» there — which
+     is two controls announced for one helper.
+
+     So the bubble placement now PUBLISHES its content to the shell's single
+     helper instead of drawing a second button. The dock switch travels with
+     the content, because the server action that writes the cookie lives in
+     this route and the shell must not import it.
+
+     The 76px spacer the drawing puts under the list (v6:2415) goes with it:
+     it existed so an absolutely positioned bubble would not cover the last
+     row, and the helper is anchored to the viewport rather than to the card. */
   return (
-    /* v6:2414 — the bubble is absolutely positioned inside the list card, which
-       is why the card is `relative` and carries a 76px spacer below its content
-       so the bubble never covers the last row. */
-    <div className="absolute bottom-[18px] right-[18px] z-[5] flex flex-col items-end gap-2.5">
-      {open ? (
-        <div className="w-[300px] max-w-[72vw] rounded-[17px] border border-line bg-sf px-[18px] py-[17px] shadow-[0_14px_34px_rgba(25,21,16,.16)]">
-          <div className="flex items-center gap-2.5">
-            <span
-              aria-hidden="true"
-              className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-sbg text-[13px] font-bold"
-            >
-              {labels.mark}
-            </span>
-            <span className="flex-1 text-[13.5px] font-bold">{labels.name}</span>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => move('side')}
-              aria-label={labels.toSide}
-              title={labels.toSide}
-              className="touch-44 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[9px] border border-line bg-bg p-0 text-ink"
-            >
-              {/* v6:2422 */}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M14 5h6v6M20 5l-7 7M10 19H4v-6M4 19l7-7" />
-              </svg>
-            </button>
-          </div>
-          <div className="mt-2.5">{children}</div>
-        </div>
-      ) : null}
+    <TuvaSlot>
+      {children}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label={labels.toggle}
-        className="touch-44 flex h-[54px] w-[54px] cursor-pointer items-center justify-center rounded-full border border-line bg-ac p-0 text-[18px] font-bold text-acf shadow-[0_10px_24px_rgba(25,21,16,.2)]"
+        disabled={busy}
+        onClick={() => move('side')}
+        className="touch-44 mt-[10px] flex w-full items-center gap-2 rounded-[11px] border border-dashed border-line px-[13px] py-[9px] text-[11.5px] font-semibold text-mut"
       >
-        {labels.mark}
+        {/* v6:2422 — the same icon the drawing puts on this switch. */}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M14 5h6v6M20 5l-7 7M10 19H4v-6M4 19l7-7" />
+        </svg>
+        {labels.toSide}
       </button>
-    </div>
+    </TuvaSlot>
   )
 }
