@@ -93,9 +93,17 @@ Build the verification harness. This is infrastructure I will reuse every phase.
      map into a boolean over a new `qcSavedText` — a key that survived with a different
      meaning, which no key-set diff can see.
    /design-reference-v7/…/HeiTuva.dc.html   -> artifacts/reference-v7/<screen>.png
-     the eighth handoff, the TARGET for every screen a v7 phase touches. ONE FILE for the
+     the eighth handoff, the reference for every screen a v7 phase built and no v8
+     phase touches. ONE FILE for the
      FIFTH handoff running; `support.js` and `image-slot.js` are v6's, byte-identical to
      v5's, because a one-file handoff re-issues neither.
+   /design-reference-v8/…/HeiTuva.dc.html   -> artifacts/reference-v8/<screen>.png
+     the ninth handoff, the TARGET for every screen a v8 phase touches — which is T2's
+     `dashboard` and T3's `surveys`, and nothing else. ONE FILE for the SIXTH handoff
+     running; `support.js` and `image-slot.js` are carried forward from v7, byte-identical
+     across v5, v6 and v7. The `until` check was RUN: all fourteen state keys this manifest
+     sets resolve in v8 at a count at or above v7's, and `billing`/`mode` are 0 in both
+     because they are splash-only.
      THE SECOND HANDOFF TO REMOVE KEYS, so the removal check was run again rather than
      assumed: three `sc-if` keys are gone (`svTuvaFloat`, `svTuvaOpen`, `svTuvaSide` —
      v7 draws neither svTuva placement and keeps the script that computes them), none of
@@ -157,8 +165,9 @@ to prove your own implementation is wrong. Assume it is until evidence says othe
 Re-read CLAUDE.md and the phase scope in CLAUDE_CODE_PROMPTS.md. Re-read the relevant
 markup in the bundle that governs the screen (Q18, extended by Q52), which is read off
 the per-surface table in docs/v2/00-diff.md section 0.3 rather than inferred:
-/design-reference-v7/… for anything a v7 phase touches, /design-reference-v6/… for
-screens v6 built and v7 does not touch, /design-reference-v5/… for
+/design-reference-v8/… for anything a v8 phase touches (`dashboard`, `surveys`),
+/design-reference-v7/… for screens v7 built and v8 does not touch,
+/design-reference-v6/… for screens v6 built and v7 does not touch, /design-reference-v5/… for
 screens v5 built and v6 does not touch, /design-reference-v4/… for
 screens v4 built and v5 does not touch, /design-reference-v3/… for screens v3 built and
 v4 does not touch, /design-reference-v2/… for screens v2 built and no later phase

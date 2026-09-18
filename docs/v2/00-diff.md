@@ -1135,3 +1135,127 @@ is still `since: 'v3'` and still sets both the pre-v6 `qcSaved` map and v6's `qc
 `qcSaved` is 6 and `qcSavedText` 5 in BOTH v6 and v7, so the v6 model stands and the entry needed no
 edit — checked rather than assumed, because that is the entry a key-set diff has already failed on
 once.
+
+---
+
+## 0.3g — v8, the ninth handoff: THE BUNDLE DROPS TWO THINGS WE SHIP, AND ONE OF THEM IS A DECISION (measured T2/T3, 2026-09-18)
+
+`HeiTuva.dc_5.html` · md5 **`b4e430eccd9cfac0105b8089b6ef206f`** · **11050 lines** · **335
+distinct `sc-if` keys**. Against v7 (`4d8fde3aea0f56e481bfe2416c811f96`, 10558 lines, 318 keys):
+**+21 added, −4 removed**, net +17, +492 lines.
+
+The command is the one § 0.3e states, beside the claim:
+`grep -o '<sc-if value="{{[^}]*}}"' <file> | sort -u | wc -l`, with `comm -13` / `comm -23` over
+the two sorted sets.
+
+### GOVERNANCE — v8's SCOPE IS TWO SCREENS
+
+Per § 0.3's standing rule, a handoff governs the surfaces its own phases touch. **v8's phases are
+T2 (`dashboard`) and T3 (`surveys`). Those two screens are judged against v8; every other screen
+keeps the bundle it was built from**, v7 included. A fidelity question about `bygg`, `send`,
+`resultater`, `rapporter`, `admin` or `respond` is still answered against the bundle that drew it,
+even though v8 contains those screens too.
+
+| surface | governed by | why |
+|---|---|---|
+| `dashboard` | **v8** | T2 |
+| `surveys` | **v8** | T3 |
+| everything else | unchanged | no v8 phase touches it |
+
+### THE FOUR DEPARTURES ARE ONE CONTROL, AND IT IS THE SAME SHAPE § 0.3f RECORDED
+
+`boxOn`, `listOn`, `rowsOn`, `shareOpen`.
+
+v7 computes three views for the Undersøkelser list at `v7:9240`:
+
+```
+rowsOn: (st.svView || "liste") === "liste",  listOn: st.svView === "delt",  boxOn: st.svView === "kort"
+```
+
+and draws all three — `v7:2418`, `v7:2357`, `v7:2511`. **v8 computes the same three and draws
+none of them**: each key occurs exactly once in v8, on that computation line, and **zero times in
+the markup**. `shareOpen` goes the same way — 12 occurrences in v7 with one in the markup
+(`v7:2273`), 11 in v8 with none, while `dashShareOpen` ARRIVES.
+
+That is precisely the shape § 0.3f recorded for `svTuva*`: a key computed and rendered nowhere,
+which F3 read as the bundle stating a change by leaving a dead key behind. Here it says two
+things:
+
+1. **The survey list is ONE table.** The card view and the split view are not drawn.
+2. **Sharing moved from the survey row to the dashboard** (`shareOpen` → `dashShareOpen`).
+
+### THE FIRST IS A PRODUCT DECISION AND IS NOT SETTLED HERE
+
+We ship `ViewSwitcher.tsx` and `SurveyCards.tsx`. **A drawing that stops drawing a control is not
+by itself an instruction to delete a working feature** — CLAUDE.md's tie-breaker gives the bundle
+visuals, and which views a product offers is not a visual. This is the class Tor ruled on twice
+(V6-5's four-screen exclusion, G4's `TUVA_SUPPRESSED`): *a screen treated unlike its neighbours is
+a product decision, and a well-reasoned guess becomes load-bearing precisely because it is never
+caught.*
+
+**Assumption built under, stated so the answer costs an edit and not a rebuild: the view switcher
+STAYS.** T1.11's «retire nothing» is the nearest governing instruction, and removing a shipped,
+tested view is the irreversible direction. T3 therefore narrows the TABLE to v8's geometry and
+leaves `ViewSwitcher`/`SurveyCards` untouched and reachable.
+
+### THE 21 ARRIVALS ARE A DASHBOARD MANAGEMENT LAYER, PLUS THREE SURFACES THIS TRANCHE DOES NOT TOUCH
+
+| group | keys | what it is |
+|---|---|---|
+| dashboard | `dashAddArmed` `dashCanDelete` `dashEdit` `dashNotRenaming` `dashRenaming` `dashShareOpen` | edit / rename / delete / share a dashboard — T2 |
+| pack detail | `isPackDetail` `pd.hasLegal` | the screen the E2 ranking measured as 0 changed / 16 ADDED |
+| panels | `pn.chooserEmpty` `pn.isChooser` `pn.isPanel` `pn.isSlot` `pn.scopeOpen` | the dashboard's panel chooser — T2 |
+| rounds | `r.canClose` `r.hasRecur` `r.hasShare` `r.isRecur` | round state on the survey row — T3 |
+| other | `isFrozen` `q.hasHelp` `s2.isMore` `s2.notMore` | frozen report, question help, a second-level «more» |
+
+**The dashboard's heading is the one reversal a key diff cannot see** and it is not geometry:
+v7:2547 is the fixed word «Innsikt» at 32px/600; **v8:2406 is `{{ dashTitle }}`, interpolated**, at
+27px/500 with `text-wrap:pretty`. A label became a title. Full measurement, including the
+declaration counts that show `dashboard` GREW by 270 declarations while `surveys` SHRANK by 242,
+is in `docs/fidelity/t2-t3-geometry-measurement.md`.
+
+### AND THIS IS THE NINTH `artifacts/reference-*` SET, WHICH D248 SAYS IS NOT COMPARED TO ANYTHING
+
+Recorded here rather than left for a later session to rediscover, because the note belongs with the
+governance row that creates the set. **D248: `verify:reference` rewrites every baseline in the
+target set on each run and stays green — it asserts that the captured screens are pairwise
+DISTINCT, and never compares a capture against its committed picture.** So a v8 baseline is a
+record of what the bundle rendered on the day it was committed, and the gate cannot tell you it has
+drifted since.
+
+Not fixed, and not to be fixed: the verification apparatus is frozen (D190). The consequence to
+carry is the reading habit, not a repair — **a green `verify:reference` is evidence that 35 screens
+rendered and differ from each other, and evidence of nothing else.** What does compare a rendering
+to a committed picture is `verify:visual`, against `artifacts/`; that is the gate a geometry change
+must be judged by.
+
+### THE SECURITY-COPY SWEEP OVER v8's PROSE — run once for this bundle, as the checklist requires
+
+**Eight prose strings are new in v8; four carry a claim word.** All four check out, and the split
+between arrival and inheritance was measured rather than assumed — the discipline V7-0 earned,
+where a figure read in a new bundle turned out to be our own shipped copy.
+
+| claim | where | verdict |
+|---|---|---|
+| «Alle undersøkelser dere har laget — aktive, utkast og lukkede» | `v8:2259`, T3's screen | **true.** `FILTERS` is `alle · aktiv · utkast · lukket` (`undersokelser/keys.ts:57`), `alle` matches everything, and the list is org-scoped by RLS. The drawing's three statuses are our three. |
+| «Ingen undersøkelser passer filteret» | `v8:2378` | empty state, asserts nothing |
+| «Alle tilgjengelige paneler ligger allerede på flaten» | `v8:2692`, T2's screen | self-referential — it describes the chooser's own contents |
+| «Lesevisning · ingenting opprettes før du trykker «Bruk malen»» | `v8:4733` | **logged, not checked against a product.** `packdetail` is not built and no v8 phase touches it, so there is nothing yet to contradict it. It is a claim about what the system does and belongs to whoever builds that screen. |
+
+**No fixed figure appears in the markup of either governed region.** Every number on `dashboard`
+(2389–2872) and `surveys` (2250–2388) is interpolated, so there is no invented count for T2 or T3
+to copy — which is the failure Q134 closed and D245 re-opened from a fixture.
+
+`minst` rises 5 → 6, and the arrival is **«minst ett panel før du fryser»** — a report-freeze
+precondition, not a threshold promise. Checked because the word carries the anonymity promise T1
+had just rebuilt, and a count rising next to that work is exactly the coincidence that reads as a
+finding.
+
+**ONE HOST CLAIM ARRIVES, AND IT IS ON T2's OWN SCREEN.** `heituva.no` goes 5 → 6, and the new
+occurrence is `dashShareLink: "heituva.no/d/" + …` (`v8:8988`), part of the dashboard sharing
+`dashShareOpen` introduces. **`heituva.no` is not HeiTuva's domain and never was; the production
+origin is `https://www.heituva.com`.** All six occurrences are inert inside the bundle — the split
+that matters is «reached shipped copy» versus «sits in a drawing» — but T2 builds precisely this
+panel, so the host is the one thing in it that must not be transcribed. The five inherited
+occurrences, `ikkesvar@heituva.no` among them, are unchanged from v7 and belong to surfaces v8
+does not govern.

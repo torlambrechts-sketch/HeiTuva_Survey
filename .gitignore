@@ -51,6 +51,7 @@ artifacts/*
 !artifacts/reference-v5/
 !artifacts/reference-v6/
 !artifacts/reference-v7/
+!artifacts/reference-v8/
 artifacts/.cdn-cache/
 test-results/
 playwright-report/

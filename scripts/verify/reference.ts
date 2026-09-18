@@ -169,6 +169,37 @@ const BUNDLES: Bundle[] = [
     // under the new name.
     out: 'artifacts/reference-v7',
   },
+  {
+    key: 'v8',
+    role: 'ninth handoff — the target for every screen a v8 phase touches (T2: dashboard, T3: surveys)',
+    design: 'design-reference-v8/heituva-survey-app-design/project/HeiTuva.dc.html',
+    // No `splash`, no `bruksomrader`, for the SIXTH handoff running. Both
+    // surfaces stay v2's, which is the only bundle that ever held them.
+    //
+    // `support.js` and `image-slot.js` are carried forward from v7 and are
+    // byte-identical across v5, v6 and v7 (951ae391… and ffd58db3… in all
+    // three, measured), because a one-file handoff re-issues neither. Copied
+    // rather than symlinked so each bundle directory stays a complete, frozen
+    // record of what its phases rendered against.
+    //
+    // THE `until` CHECK WAS RUN, NOT ASSUMED. All fourteen state keys the
+    // SCREENS manifest below actually sets resolve in v8 at a count at or
+    // above v7's:
+    //
+    //   adminTab 23→23  fbSent 8→8      libTab 15→16   liveRevealed 6→6
+    //   qcOpen 12→12    repEditing 30→32  repSide 14→15  repTab 25→26
+    //   screen 181→210  tfView 3→3      thanked 18→18  wizOpen 16→17
+    //
+    // `billing` (10) and `mode` (8) are 0 in v8 exactly as they are 0 in v7 —
+    // both are SPLASH-ONLY and resolve in v2's splash file, which is the file
+    // the splash renders from. So no `until` is needed.
+    //
+    // v8 REMOVES NOTHING this manifest depends on, but the counts above only
+    // prove arrival: the guard that catches a removal they cannot see is the
+    // pairwise-distinct hash check below, which is what caught v6's `qcSaved`
+    // becoming a different kind of value under an unchanged name.
+    out: 'artifacts/reference-v8',
+  },
 ]
 
 const WIDTH = 1440
