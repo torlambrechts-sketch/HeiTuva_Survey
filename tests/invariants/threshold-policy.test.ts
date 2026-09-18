@@ -215,8 +215,12 @@ describe('(Q91) the GATE honours the floor, not just the CHECK', () => {
     type Agg = { questions?: { question_id: string; insufficient_data?: boolean }[] }
     const cell = (d: Agg | null, q: string) => d?.questions?.find((c) => c.question_id === q)
 
-    const s = await personSurveyWithResponses('Gate to svar', 1)
-    await ctx.a.from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id)
+    // T1: set at CREATION, not after the first answer. `guard_threshold_immutable`
+    // now refuses a post-response change in either direction, so the old UPDATE
+    // silently left the survey at 5 and the cell stayed gated — the assertion
+    // below would have failed for the wrong reason.
+    const s = await personSurveyWithResponses('Gate to svar', 1, { k_threshold: 2 })
+    expect(s.survey.k_threshold, 'the survey was created at threshold 2').toBe(2)
 
     const one = (await ctx.adminU.client.rpc('aggregate_results', { p_survey: s.survey.id })).data as Agg | null
     expect(cell(one, s.q.id)?.insufficient_data, 'one answer stays gated at threshold 2').toBe(true)
@@ -492,13 +496,14 @@ describe('(Q17 #8) every aggregate path routes through app.k_for — none kept t
   })
 
   it('serves real data at n=3 when the survey policy is threshold 3, on every surface', async () => {
-    const s = await personSurveyWithResponses('Terskel-tre', 3)
-    // Set the survey's threshold to 3. Until app.k_for exists and every RPC
-    // consults it, this is where the phase fails: the column is absent now, and
-    // even once present, any RPC that kept app.k_threshold() returns
-    // insufficient_data at n=3 and trips the assertions below.
-    const lowered = await ctx.a.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id)
-    expect(lowered.error, 'threshold must be settable to the person floor').toBeNull()
+    // T1: the threshold is set AT CREATION, before anyone answers. It used to
+    // be set afterwards with an UPDATE, which invariant 1 condition 2 now
+    // refuses — `guard_threshold_immutable` — and that refusal is the point:
+    // lowering after answers exist is the retrieval mechanism the rule closes.
+    // Setting it up front is also what a real user does, so the fixture is
+    // closer to the product than it was.
+    const s = await personSurveyWithResponses('Terskel-tre', 3, { k_threshold: 3 })
+    expect(s.survey.k_threshold, 'the survey was created at the threshold under test').toBe(3)
 
     // A second round with three answers, so get_trends has two real points.
     const round2 = await insert(ctx.a, 'survey_rounds', {

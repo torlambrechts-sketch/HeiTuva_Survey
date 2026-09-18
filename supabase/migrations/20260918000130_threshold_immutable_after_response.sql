@@ -1,6 +1,7 @@
--- T1.0's amended invariant 1, in the database: the floor is 3 for a natural
--- person, the threshold and the kind are immutable once a response exists, and
--- the creator sets it.
+-- T1's amended invariant 1, in the database: the threshold and the respondent
+-- kind are immutable once a response exists, and the survey's creator sets the
+-- threshold. The floor stays 2 (Q91) and is now enforced in app.k_for as well
+-- as in the CHECK that already carried it.
 --
 -- ── WHAT ALREADY EXISTED, MEASURED BEFORE WRITING A LINE ───────────────────
 --
@@ -21,27 +22,21 @@
 --
 -- So this migration is the DIFFERENCE, not the feature. Four things.
 --
--- ── 1. THE FLOOR MOVES 2 -> 3, AND IT IS NOT A FREE CHANGE ─────────────────
+-- ── 1. THE FLOOR IS 2, AND IT ALREADY WAS ────────────────────────────────
 --
--- `surveys_k_threshold_floor` was `k_threshold >= 2 or respondent_kind =
--- 'organisation'` (M:0055, named `threshold_floor_two`). The amendment says 3.
+-- An earlier draft of this migration moved the floor to 3 and raised five local
+-- rows to match. That was wrong and is reverted here before anything ran
+-- against production: Q91 built and SHIPPED the k=2 tier — its own migration
+-- (M:0055 `threshold_floor_two`), fourteen message keys across both locales,
+-- five test files — and it is the LATER decision. Q17's «gulv 3» is superseded.
 --
--- THE k=2 TIER WAS A DECIDED FEATURE AND THIS RETIRES IT. Q91 built it
--- deliberately: fourteen message keys across both locales
--- (`policyTwoText`, `thresholdLineTwo`, `thresholdTwoWarning`,
--- `thresholdTwoGdpr`, `thresholdTwoAlternative`, `promiseAnonymousTwo`,
--- `promiseChooseTwo`), five test files and six source files. They are left in
--- place by this migration and become unreachable, not wrong — retiring the copy
--- is a separate edit, and deleting a promise tier in the same migration that
--- moves a constraint would make a regression unattributable.
+-- So this migration changes no CHECK at all. `surveys_k_threshold_floor` is
+-- already `k_threshold >= 2 or respondent_kind = 'organisation'`, and
+-- `organizations_default_k_threshold_range` is already `between 2 and 10`.
+-- Restating either here would be noise that reads like a change.
 --
--- EXISTING ROWS ARE RAISED, and that is the one place this migration does what
--- the rule it installs forbids. Condition 2 says the threshold is immutable
--- once a response exists; a floor that rejects rows already stored would make
--- the table unwritable instead. So the raise happens FIRST, once, as data
--- repair, and the trigger that forbids it is installed after. Raising is the
--- safe direction: a higher threshold shows strictly fewer cells, so no cell
--- that was suppressed becomes visible.
+-- NOTHING IS RETIRED. No data is rewritten. Production was never touched, and
+-- its distribution was read back to confirm it: six person surveys at 2.
 --
 -- ── 2. THE FLOOR IS APPLIED IN THE FUNCTION, NOT TRUSTED FROM THE COLUMN ───
 --
@@ -87,45 +82,26 @@
 --   surveys.policy_locked    WRITTEN by send_round and apply_pack_policy.
 --                            READ by this guard.
 
--- ── 1. raise existing rows, once, before the constraint that would reject them
-update public.surveys
-   set k_threshold = 3
- where respondent_kind = 'person' and k_threshold < 3;
-
-update public.organizations
-   set default_k_threshold = 3
- where default_k_threshold < 3;
-
-alter table public.surveys drop constraint if exists surveys_k_threshold_floor;
-alter table public.surveys
-  add constraint surveys_k_threshold_floor
-  check (k_threshold >= 3 or respondent_kind = 'organisation');
-
-alter table public.organizations drop constraint if exists organizations_default_k_threshold_range;
-alter table public.organizations
-  add constraint organizations_default_k_threshold_range
-  check (default_k_threshold >= 3 and default_k_threshold <= 10);
-
--- ── 2. the floor inside the function
+-- ── 1. the floor inside the function, as well as in the CHECK
 create or replace function app.k_for(p_survey uuid)
 returns int language sql stable security definer set search_path = public as $$
   -- The floor is applied HERE as well as in the CHECK, deliberately. Two
   -- mechanisms, not one: if the constraint is ever dropped by a migration
-  -- meaning well, every result read still refuses below 3 for a person.
+  -- meaning well, every result read still refuses below 2 for a person.
   -- An organisation is outside k entirely and returns 0 — attributed results
   -- are the read path there, not aggregation.
   select case when s.respondent_kind = 'organisation' then 0
-              else greatest(s.k_threshold, 3) end
+              else greatest(s.k_threshold, 2) end
   from public.surveys s where s.id = p_survey
 $$;
 
 comment on function app.k_for(uuid) is
   'The effective threshold for one survey: 0 for an organisation (outside k, '
-  'attributed results are the read path), otherwise greatest(k_threshold, 3). '
+  'attributed results are the read path), otherwise greatest(k_threshold, 2). '
   'The floor is applied here AND as a CHECK so that neither alone is the only '
   'mechanism. Every result RPC reads k through this function.';
 
--- ── 3. immutability once a response exists
+-- ── 2. immutability once a response exists
 create or replace function app.guard_threshold_immutable()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -142,6 +118,18 @@ begin
                from public.responses r
                join public.survey_rounds sr on sr.id = r.round_id
               where sr.survey_id = old.id) then
+    -- TWO messages, because the two columns are two different promises and the
+    -- reader needs to know which one refused. A single generic message made
+    -- `threshold-policy`'s kind test read as though the threshold rule had
+    -- fired on a respondent_kind change, which is the shape this project calls
+    -- «the thing measured was not the thing claimed» — one floor down, in an
+    -- error string.
+    if new.respondent_kind is distinct from old.respondent_kind then
+      raise exception 'respondent_kind_immutable_after_response'
+        using hint = 'A person has already answered this survey. Re-casting those answers as an '
+                     'organisation''s would change what the respondent was promised after the fact, '
+                     'and no path reclassifies a person survey as an organisation one.';
+    end if;
     raise exception 'threshold_immutable_after_response'
       using hint = 'A response already exists for this survey. Lowering the threshold afterwards '
                    'would turn a setting into a retrieval mechanism: wait for answers, lower, then '
@@ -165,7 +153,7 @@ comment on function app.guard_threshold_immutable() is
   'survey answered through a share link, a QR voucher or a test round was not '
   'covered at all.';
 
--- ── 4. who may set it: the creator, with no role gate on the threshold
+-- ── 3. who may set it: the creator, with no role gate on the threshold
 create or replace function app.guard_survey_policy()
 returns trigger language plpgsql security definer set search_path = '' as $fn$
 declare

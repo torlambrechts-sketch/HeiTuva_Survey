@@ -202,13 +202,19 @@ describe('Q90 — the organisation default binds, and the flag is its only excep
     await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
   })
 
-  it('with the flag ON, the same administrator CAN go below it — the flag is the exception', async () => {
-    await setFlag(true)
+  it('THERE IS NO FLAG: the organisation floor binds an administrator too, always', async () => {
+    // T1 removed `redaktor_may_lower`. This test used to set it ON and assert
+    // the administrator could then go below the organisation's default. The
+    // amended invariant 1 removes the switch — «no delegation switch, no enable
+    // step, no per-role gate beyond that» — so the floor now has no exception
+    // at all, which is what «a setting any single person can undercut is not a
+    // setting» meant in the first place.
+    await setFlag(true) // deliberately left ON: it must make no difference now
     const a = await adminClient()
     const { error } = await a.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
-    expect(error).toBeNull()
-    expect(await surveyK()).toBe(5)
-    await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
+    expect(error, 'the organisation floor binds even with the retired flag set').not.toBeNull()
+    expect(error!.message).toMatch(/below_org_floor/)
+    expect(await surveyK()).toBe(8)
   })
 
   it('the flag does not open the CHECK floor — a permission cannot grant past a constraint', async () => {
@@ -219,13 +225,18 @@ describe('Q90 — the organisation default binds, and the flag is its only excep
     expect(await surveyK()).toBe(8)
   })
 
-  it('with the flag ON, 2 IS reachable — Q91’s new floor, per survey', async () => {
-    await setFlag(true)
+  it('2 IS reachable — but through the ORGANISATION default, not through a flag', async () => {
+    // Q91's k=2 tier is intact and this proves it end to end. What changed is
+    // the ROAD to it: the survey floor (2, a CHECK) and the organisation floor
+    // (the org's own default) are two different rules, and with the flag gone
+    // a survey reaches 2 only where the organisation itself sits at 2.
+    await svc.from('organizations').update({ default_k_threshold: 2 }).eq('id', orgId)
     const a = await adminClient()
     const { error } = await a.from('surveys').update({ k_threshold: 2 }).eq('id', surveyId)
-    expect(error).toBeNull()
+    expect(error, 'k=2 must still be reachable — Q91 shipped that tier').toBeNull()
     expect(await surveyK()).toBe(2)
     await svc.from('surveys').update({ k_threshold: 8 }).eq('id', surveyId)
+    await svc.from('organizations').update({ default_k_threshold: 8 }).eq('id', orgId)
   })
 
   it('a statutory pack lands on the STRICTER of pack and organisation (Q58 greatest)', async () => {
@@ -313,6 +324,12 @@ describe('Q91 — 2 is reachable, except where a statutory pack locks the policy
   })
 
   it('the positive control: 2 IS accepted on a non-statutory survey in the same organisation', async () => {
+    // T1: the organisation floor is now unconditional, so the control has to
+    // lower the ORGANISATION first. Without this the refusal above would read
+    // as «a statutory pack refuses 2» when the real refusal was below_org_floor
+    // — the control proving the wrong thing is exactly what it exists to stop.
+    const { data: org0 } = await svc.from('organizations').select('default_k_threshold').eq('id', orgId).single()
+    await svc.from('organizations').update({ default_k_threshold: 2 }).eq('id', orgId)
     const { data: s } = await svc
       .from('surveys')
       .insert({ org_id: orgId, title: `Q91 ordinary ${Date.now()}`, status: 'utkast', anonymity: 'anonymous', respondent_kind: 'person', k_threshold: 5 })
@@ -324,6 +341,7 @@ describe('Q91 — 2 is reachable, except where a statutory pack locks the policy
     const { data: after } = await svc.from('surveys').select('k_threshold').eq('id', s!.id).single()
     expect(after!.k_threshold).toBe(2)
     await svc.from('surveys').delete().eq('id', s!.id)
+    await svc.from('organizations').update({ default_k_threshold: org0!.default_k_threshold }).eq('id', orgId)
   })
 
   it('1 is refused on the ordinary survey too — the CHECK is the last word', async () => {

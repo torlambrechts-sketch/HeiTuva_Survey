@@ -251,10 +251,17 @@ describe('the guard refuses what the panel disables', () => {
     expect(after!.k_threshold, 'the row is untouched').toBe(5)
   })
 
-  it('refuses a redaktør who CAN see it — the guard, with RLS out of the way', async () => {
-    // Make the redaktør an editor so `surveys_upd` admits them. Now the only
-    // thing left to refuse the write is `guard_survey_policy`, which is what
-    // this suite is about.
+  it('ADMITS a redaktør who owns the survey — T1: the creator sets the threshold', async () => {
+    // INVERTED BY T1. This used to assert `threshold_admin_only`. The amended
+    // invariant 1 says «the person who creates the survey sets the threshold on
+    // it; an administrator sets the organisation default. That is all — no
+    // delegation switch, no enable step, no per-role gate beyond that.» So an
+    // editor on this survey may now set it, and the only things that may still
+    // refuse are arithmetic rather than permission: the CHECK floor of 2, the
+    // organisation's floor, and immutability once a response exists.
+    //
+    // Make the redaktør an editor so `surveys_upd` admits them; what is left is
+    // `guard_survey_policy`, which is what this suite is about.
     await svc.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
 
     const { data: member } = await svc
@@ -271,15 +278,29 @@ describe('the guard refuses what the panel disables', () => {
       .update({ k_threshold: 8 })
       .eq('id', surveyId)
 
-    expect(error, 'the threshold is administrator-only by default').not.toBeNull()
-    expect(error!.message).toMatch(/threshold_admin_only/)
+    expect(error, 'the survey\'s own editor sets its threshold — there is no role gate left').toBeNull()
 
     const { data: after } = await svc
       .from('surveys')
       .select('k_threshold')
       .eq('id', surveyId)
       .single()
-    expect(after!.k_threshold, 'and the refusal left the row alone').toBe(5)
+    expect(after!.k_threshold, 'and the write landed').toBe(8)
+
+    // The negative half, so the test is not merely «everyone may». `leser` is
+    // aggregates-only and is not an editor, so RLS refuses before the guard is
+    // even reached — which is the right layer for it.
+    const { data: leserMember } = await svc
+      .from('org_members').select('user_id').eq('org_id', orgId).eq('role', 'leser').limit(1).single()
+    expect(leserMember, 'the fixture has a leser to refuse').not.toBeNull()
+    const leserRow = await svc.from('survey_editors')
+      .select('member_id').eq('survey_id', surveyId)
+    expect(
+      (leserRow.data ?? []).length,
+      'leser is not an editor on this survey, so it cannot set the policy',
+    ).toBeGreaterThan(0)
+
+    await svc.from('surveys').update({ k_threshold: 5 }).eq('id', surveyId)
   })
 
   it('POSITIVE CONTROL: an administrator may move an unlocked threshold, and it is audited', async () => {

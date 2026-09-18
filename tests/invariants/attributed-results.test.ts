@@ -274,7 +274,7 @@ describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower f
     expect(still?.k_threshold, 'the org default is a starting point, not a live link').toBe(8)
   })
 
-  it('a redaktør may change a threshold ONLY when the flag is on — and it is off by default, and audited either way', async () => {
+  it('a redaktør on their own survey sets the threshold; the floors still refuse, and it is audited', async () => {
     await ctx.a.from('organizations').update({ default_k_threshold: 5 }).eq('id', ctx.org.id)
     const { data: orgRow } = await ctx.a.from('organizations').select('privacy').eq('id', ctx.org.id).single()
     const privacy = (orgRow?.privacy as Record<string, unknown>) ?? {}
@@ -283,44 +283,42 @@ describe('(P9 B) organizations.default_k_threshold and the redaktør-may-lower f
     const s = await surveyWith('Redaktørterskel', 0, 0)
     await insert(ctx.a, 'survey_editors', { survey_id: s.survey.id, member_id: ctx.redaktorU.member.id })
 
-    const off = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id).select('id')
-    expect(off.error != null || (off.data?.length ?? 0) === 0, 'flag off: a redaktør is refused').toBe(true)
+    // T1: THERE IS NO FLAG, so a redaktør who owns the survey may set the
+    // threshold outright. This block used to assert the opposite twice — once
+    // with the switch off and once on. The amended invariant 1: «the person who
+    // creates the survey sets the threshold on it; an administrator sets the
+    // organisation default. That is all.»
+    const raised = await ctx.redaktorU.client
+      .from('surveys').update({ k_threshold: 8 }).eq('id', s.survey.id).select('k_threshold').single()
+    expect(raised.error, 'a redaktør on their own survey sets the threshold — no flag, no gate').toBeNull()
+    expect(raised.data?.k_threshold).toBe(8)
 
-    // Q90 — WITH THE FLAG OFF, THE ORGANISATION'S DEFAULT IS A FLOOR FOR
-    // EVERYONE, ADMINISTRATOR INCLUDED. Asserted here rather than in the role
-    // test because it is the half of the rule that is NOT about roles: a
-    // setting any single person can undercut is not a setting. Raising is
-    // always allowed, which is the positive control on the same line.
+    // What still refuses is arithmetic, not permission. The organisation's
+    // default remains a floor for everyone, administrator included: a setting
+    // any single person can undercut is not a setting.
     const adminUnder = await ctx.adminU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id)
-    expect(adminUnder.error?.message ?? '', 'flag off: even an administrator may not go under the org default')
+    expect(adminUnder.error?.message ?? '', 'the org default is a floor for everyone')
       .toMatch(/below_org_floor|floor/i)
-    const adminOver = await ctx.adminU.client.from('surveys').update({ k_threshold: 8 }).eq('id', s.survey.id).select('k_threshold').single()
-    expect(adminOver.error, 'raising above the org default is always allowed').toBeNull()
-    expect(adminOver.data?.k_threshold).toBe(8)
 
-    await ctx.a.from('organizations').update({ privacy: { ...privacy, redaktor_may_lower: true } }).eq('id', ctx.org.id)
-    const on = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 3 }).eq('id', s.survey.id).select('k_threshold').single()
-    expect(on.error, 'flag on: a redaktør may lower').toBeNull()
-    expect(on.data?.k_threshold).toBe(3)
-
-    const { data: events } = await ctx.a.from('audit_events')
-      .select('action, actor_user_id, meta').eq('org_id', ctx.org.id)
-      .eq('action', 'threshold.change').eq('target', s.survey.id)
-    expect(events?.some((e) => e.actor_user_id === ctx.redaktorU.userId), 'the redaktør\'s change is audited').toBe(true)
-
-    // TWO FLOORS, AND THE FLAG OPENS EXACTLY ONE OF THEM. Q90's organisation
-    // floor is the organisation's own setting, so its own flag may waive it —
-    // that is what `redaktor_may_lower` has meant since M:0034 and what Q90
-    // finally gave a referent. Q91's CHECK is the product's floor and no flag
-    // reaches it: 2 goes through, 1 does not.
-    const toTwo = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id).select('k_threshold').single()
-    expect(toTwo.error, 'flag on: the org floor is waived down to the CHECK floor').toBeNull()
+    // And Q91's CHECK is the product's floor, which no role reaches: with the
+    // organisation lowered to 2, a redaktør reaches 2 and never 1.
+    await ctx.a.from('organizations').update({ default_k_threshold: 2 }).eq('id', ctx.org.id)
+    const toTwo = await ctx.redaktorU.client
+      .from('surveys').update({ k_threshold: 2 }).eq('id', s.survey.id).select('k_threshold').single()
+    expect(toTwo.error, 'k=2 is reachable — Q91 shipped that tier and T1 keeps it').toBeNull()
     expect(toTwo.data?.k_threshold).toBe(2)
 
     const floor = await ctx.redaktorU.client.from('surveys').update({ k_threshold: 1 }).eq('id', s.survey.id)
-    expect(floor.error?.message ?? '', 'the flag never opens the CHECK floor').toMatch(/check|floor|constraint/i)
+    expect(floor.error?.message ?? '', 'no role opens the CHECK floor').toMatch(/check|floor|constraint/i)
 
-    await ctx.a.from('organizations').update({ privacy: { ...privacy, redaktor_may_lower: false } }).eq('id', ctx.org.id)
+    // The change is audited whoever made it — that did not depend on the flag.
+    const { data: events } = await ctx.a.from('audit_events')
+      .select('action, actor_user_id').eq('org_id', ctx.org.id)
+      .eq('action', 'threshold.change').eq('target', s.survey.id)
+    expect(events?.some((e) => e.actor_user_id === ctx.redaktorU.userId),
+      'the redaktør\'s change is audited').toBe(true)
+
+    await ctx.a.from('organizations').update({ default_k_threshold: 5 }).eq('id', ctx.org.id)
   })
 })
 
