@@ -1884,7 +1884,9 @@
     "bandPanels": "{n, plural, one {# panel på skjermen} other {# paneler på skjermen}}",
     "bandNoPanels": "Ingen paneler valgt ennå",
     "chipReports": "rapporter",
-    "chipPanels": "paneler i bruk"
+    "chipPanels": "paneler i bruk",
+    "metaSelection": "Utvalg",
+    "metaPrivacy": "Personvern"
   },
   "splash": {
     "langLabel": "Velg språk",

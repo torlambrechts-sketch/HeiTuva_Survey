@@ -11,6 +11,8 @@ import { PanelControls } from './PanelControls'
 import { PresetChooser } from './PresetChooser'
 import { CustomizeToggle } from './CustomizeToggle'
 import { thresholdLine as thresholdLineOf } from '@/lib/dashboard/threshold-line'
+import { selectionLine } from '@/lib/dashboard/selection-line'
+import { MetaBar } from './MetaBar'
 import { PageHeader, PARTICIPATION } from '@/components/PageHeader'
 import type { Measured } from '@/lib/surveys/participation'
 import type { LayoutFilters, PanelEntry } from '@/lib/dashboard/layout'
@@ -172,6 +174,24 @@ export async function DashboardScreen({
   // is true and reads as broken.
   const line = thresholdLineOf(trendK)
   const thresholdText = t(line.key, line.values as never)
+
+  /* T5.1 — v8's meta strip, carrying the two of its five cells that describe
+     real state. `MetaBar`'s own header records what the other three would need
+     and why rendering them would be an invention. */
+  const sel = selectionLine(layoutFilters, groups)
+  const metaCells = [
+    {
+      key: 'selection',
+      label: t('metaSelection'),
+      value: [t(sel.periodKey), sel.groupName ?? t('allGroups')].join(' · '),
+    },
+    {
+      key: 'privacy',
+      label: t('metaPrivacy'),
+      value: thresholdText,
+      note: t('thresholdScope'),
+    },
+  ]
 
   /**
    * One arm per key the registry offers on the dashboard. Exhaustive by
@@ -486,6 +506,8 @@ export async function DashboardScreen({
             card.
           - `{{ c.tint }}`, a per-card background the drawing supplies from its
             fixture and nothing here can derive. */}
+      <MetaBar cells={metaCells} />
+
       <div className="mt-4 grid gap-[14px] [grid-template-columns:repeat(auto-fit,minmax(185px,1fr))]">
         {stats.map((s) => (
           <div

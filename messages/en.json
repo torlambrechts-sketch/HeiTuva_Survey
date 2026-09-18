@@ -1884,7 +1884,9 @@
     "bandPanels": "{n, plural, one {# panel on screen} other {# panels on screen}}",
     "bandNoPanels": "No panels chosen yet",
     "chipReports": "reports",
-    "chipPanels": "panels in use"
+    "chipPanels": "panels in use",
+    "metaSelection": "Selection",
+    "metaPrivacy": "Privacy"
   },
   "splash": {
     "langLabel": "Choose language",

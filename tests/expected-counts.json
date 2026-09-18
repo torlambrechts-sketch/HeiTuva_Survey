@@ -90,6 +90,7 @@
   "tests/unit/mail-env.test.ts": 7,
   "tests/unit/marketing-guard.test.ts": 5,
   "tests/unit/member-status.test.ts": 7,
+  "tests/unit/meta-bar.test.ts": 7,
   "tests/unit/method-rules.test.ts": 11,
   "tests/unit/method-threshold.test.ts": 13,
   "tests/unit/onboarding.test.ts": 12,
