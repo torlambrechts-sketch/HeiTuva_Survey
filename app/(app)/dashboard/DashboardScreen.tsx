@@ -39,6 +39,7 @@ export async function DashboardScreen({
   customizeOpen,
   canEdit,
   layoutFilters,
+  meta,
   register,
   registerHref,
   duties,
@@ -77,6 +78,15 @@ export async function DashboardScreen({
    *  layout holds. They used to arrive as separate props too; passing the same
    *  fact twice is the drift shape this phase kept meeting, so there is one. */
   layoutFilters: LayoutFilters
+  /** F5 — the three meta cells that needed the entity. `hasDashboard` is false
+   *  for a layout that predates M:0132's backfill; the strip then shows only
+   *  the two cells that never depended on it. */
+  meta: {
+    ownerName: string | null
+    shares: { scope: string; role: string | null }[]
+    reportCount: number
+    hasDashboard: boolean
+  }
   /** Null when no organisation survey is in the selection — the panel then
    *  states that, rather than drawing three zeros (Q42's k=0 lesson one
    *  surface over: a real zero and an absent denominator look identical). */
@@ -179,7 +189,17 @@ export async function DashboardScreen({
      real state. `MetaBar`'s own header records what the other three would need
      and why rendering them would be an invention. */
   const sel = selectionLine(layoutFilters, groups)
+  /* F5 — all five of v8's cells (v8:2423-2431), each rendered only when it has
+     something true to say. «Eier» and «Delt med» and «Rapporter» became
+     answerable at M:0132/M:0134; before that T5 left them out rather than
+     invent them, and the three still drop out for a layout with no parent. */
+  const shareScope =
+    meta.shares.length === 0 ? null
+    : (meta.shares.find((sh) => sh.scope === 'role')?.role ?? 'link')
   const metaCells = [
+    ...(meta.ownerName
+      ? [{ key: 'owner', label: t('metaOwner'), value: meta.ownerName }]
+      : []),
     {
       key: 'selection',
       label: t('metaSelection'),
@@ -191,6 +211,30 @@ export async function DashboardScreen({
       value: thresholdText,
       note: t('thresholdScope'),
     },
+    ...(meta.hasDashboard
+      ? [
+          {
+            key: 'shared',
+            label: t('metaShared'),
+            // v8's three roles, verbatim from v8:8980-8982. `null` is «Ikke
+            // delt» — a real state now that a dashboard CAN be shared, where
+            // before the entity it was the only state the cell could ever hold.
+            value:
+              shareScope === null ? t('metaNotShared')
+              : shareScope === 'link' ? t('metaSharedLink')
+              : t(`metaRole_${shareScope}` as 'metaRole_leser'),
+          },
+          {
+            key: 'reports',
+            label: t('metaReports'),
+            value:
+              meta.reportCount === 0
+                ? t('metaReportsNone')
+                : t('metaReportsCount', { count: meta.reportCount }),
+            note: meta.reportCount === 0 ? undefined : t('metaReportsNote'),
+          },
+        ]
+      : []),
   ]
 
   /**

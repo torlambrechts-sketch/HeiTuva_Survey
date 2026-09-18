@@ -37,16 +37,65 @@ describe('T5.1 — «Utvalg» is derived, not composed at the call site', () => 
       expect(m[key]?.trim(), `dashboard.${key}`).toBeTruthy()
   })
 
-  it('omits the three cells that would state a fact we do not hold', () => {
+  it.each(['no', 'en'])('%s carries every F5 cell string', (lang) => {
+    const m = bag(lang === 'no' ? no : en, 'dashboard')
+    for (const key of [
+      'metaOwner', 'metaShared', 'metaNotShared', 'metaSharedLink',
+      'metaRole_administrator', 'metaRole_redaktor', 'metaRole_leser',
+      'metaReports', 'metaReportsNone', 'metaReportsCount', 'metaReportsNote',
+    ])
+      expect(m[key]?.trim(), `dashboard.${key}`).toBeTruthy()
+  })
+
+  it('the three entity cells render only when there IS an entity', () => {
+    // A layout predating M:0132's backfill has no parent, and the strip then
+    // shows the two cells that never needed one. The guard is that the source
+    // gates them on `meta.hasDashboard` rather than on a falsy value, because
+    // «no shares» and «no dashboard» are different states.
+    const src = readFileSync('app/(app)/dashboard/DashboardScreen.tsx', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(src).toContain('meta.hasDashboard')
+    expect(src).toContain("key: 'owner'")
+    expect(src).toContain("key: 'shared'")
+    expect(src).toContain("key: 'reports'")
+  })
+
+  it('«Eier» is never invented — no fallback name', () => {
+    // v8:8969 falls back to the literal «Tuva Berg». A name belonging to
+    // somebody else is worse than no name.
+    // COMMENT-STRIPPED: the comment beside the lookup names «Tuva Berg» in
+    // order to refuse it, and a grep over prose finds the word it forbids.
+    // This project has gone red on that four times.
+    const page = readFileSync('app/(app)/dashboard/page.tsx', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect(page).not.toContain('Tuva Berg')
+    expect(page).toContain('dashOwnerName')
+  })
+
+  it('«Rapporter» counts a RELATION, not a title match', () => {
+    // v8:8970 counts `r.frozen.from === t` — the dashboard's title. Rename it
+    // and the history empties. M:0134 gives reports a dashboard_id.
+    const page = readFileSync('app/(app)/dashboard/page.tsx', 'utf8')
+    expect(page).toContain("eq('dashboard_id', dashboardId)")
+    const actions = readFileSync('app/(app)/dashboard/actions.ts', 'utf8')
+    expect(actions, 'the freeze is the one writer').toContain('dashboardId: layout?.dashboard_id')
+  })
+
+  it('omits nothing now the entity exists — the old refusal is retired deliberately', () => {
     // «Eier» would be the viewer reading their own name, «Delt med» can only
     // ever say «Ikke delt» for a working layout, and «Rapporter · frosset
     // herfra» has no relation behind it — `reports` records no dashboard.
     // Asserted on the comment-stripped source, because MetaBar's own header
     // names all three in order to refuse them.
+    // MetaBar stays a pure presenter: it renders the cells it is handed and
+    // names none of them. That is what let T5 ship two and F5 ship five
+    // without touching it.
     const src = readFileSync('app/(app)/dashboard/MetaBar.tsx', 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const absent of ['dashOwner', 'dashSharedWith', 'dashRepCount', 'Ikke delt', 'frosset herfra'])
-      expect(src, `${absent} is not rendered`).not.toContain(absent)
+    for (const absent of ['dashOwner', 'dashSharedWith', 'dashRepCount'])
+      expect(src, `${absent} is v8's identifier, not ours`).not.toContain(absent)
+    expect(src).toContain('cells.map')
   })
 
   it('the strip carries v8 own declared geometry, each value from its own entry', () => {

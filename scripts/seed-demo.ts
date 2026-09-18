@@ -1305,6 +1305,68 @@ async function main() {
       },
     ])
     if (layoutError) throw new Error(`seed dashboard_layouts: ${layoutError.message}`)
+
+    /* F1/F2 — a VERSION and a SHARE, for the same reason the two layouts above
+       exist: 5a3 can only prove a policy that was asked to refuse a real row,
+       and both tables reported PROTECTED BUT UNPROVEN while they were empty.
+
+       The parent is the administrator's own working dashboard, created by
+       M:0132's backfill from the layout written a few lines up. Both rows are
+       written AS THE ADMINISTRATOR, so `dashver_ins` and `dashshare_ins` are
+       what admit them — a service-role insert seeds the row and proves nothing
+       about the policy guarding it.
+
+       THE VERSION CARRIES PANELS AND SPANS AND NO FIGURE, which is the whole
+       claim of that table: a restore re-fetches every number through the gate,
+       so an old version can never surface a cell the current threshold
+       suppresses. */
+    /* THE PARENT HAS TO BE CREATED HERE. M:0132's backfill was a ONE-TIME
+       migration over the rows that existed when it ran; `seed:demo` drops and
+       recreates the organisation, so its layouts arrive afterwards with no
+       parent. Measured, not assumed: the first run of this seed after M:0132
+       left `dashboards` empty in the demo org and 5a3 reported all three
+       tables PROTECTED BUT UNPROVEN, including `dashboards` itself. */
+    const { data: dashRows, error: dashError } = await asAdmin
+      .from('dashboards')
+      .insert([
+        { org_id: org.id, title: 'Ledergruppa', owner_id: null },
+        { org_id: org.id, title: 'Mitt oppsett', owner_id: adminUser.userId },
+      ])
+      .select('id, title, owner_id')
+    if (dashError) throw new Error(`seed dashboards: ${dashError.message}`)
+
+    for (const d of dashRows ?? []) {
+      const { error: linkError } = await asAdmin
+        .from('dashboard_layouts')
+        .update({ dashboard_id: d.id })
+        .eq('org_id', org.id)
+        .eq('title', d.title)
+      if (linkError) throw new Error(`link layout to dashboard: ${linkError.message}`)
+    }
+
+    const ownDash = (dashRows ?? []).find((d) => d.owner_id !== null) ?? null
+
+    if (ownDash) {
+      const { error: versionError } = await asAdmin.from('dashboard_versions').insert({
+        dashboard_id: ownDash.id,
+        version: 1,
+        panels: [
+          { key: 'trend', span: 3 },
+          { key: 'heatmap', span: 6 },
+        ],
+      })
+      if (versionError) throw new Error(`seed dashboard_versions: ${versionError.message}`)
+
+      // A role share, one of v8's three (v8:8980-8982). `leser` is the
+      // interesting one: it is the role whose reader must still meet every
+      // k-gate, which is what F3 proves.
+      const { error: shareError } = await asAdmin.from('dashboard_shares').insert({
+        dashboard_id: ownDash.id,
+        scope: 'role',
+        role: 'leser',
+      })
+      if (shareError) throw new Error(`seed dashboard_shares: ${shareError.message}`)
+    }
   }
 
   /* I1-2 — a SCIM connector, so the Integrasjoner screen has a state to render

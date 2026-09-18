@@ -96,7 +96,7 @@ export default async function DashboardPage({
     // for and what `tests/db/dashboard-layouts.test.ts` proves.
     supabase
       .from('dashboard_layouts')
-      .select('id, user_id, title, panels, filters')
+      .select('id, user_id, title, panels, filters, dashboard_id')
       .eq('org_id', viewer.orgId)
       .order('title'),
     // Org row wins over the global default; both are readable, so the "some
@@ -119,6 +119,43 @@ export default async function DashboardPage({
   // A member with no working row has not chosen yet: the design answers that
   // with the shipped presets, not an empty board (NEW:1042).
   const panels: PanelEntry[] = working ? readPanels(working.panels, offered) : []
+
+  /* F5 — the three meta-bar cells that needed the entity (M:0132/M:0134).
+     Each is a real read or it is absent: nothing here falls back to a name or
+     a count that would be true of something else. */
+  const dashboardId = working?.dashboard_id ?? null
+  const [{ data: dashRow }, { data: shareRows }, { count: frozenCount }] = await Promise.all([
+    dashboardId
+      ? supabase.from('dashboards').select('title, owner_id').eq('id', dashboardId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    dashboardId
+      ? supabase.from('dashboard_shares').select('scope, role').eq('dashboard_id', dashboardId)
+      : Promise.resolve({ data: [] as { scope: string; role: string | null }[] }),
+    dashboardId
+      ? supabase
+          .from('reports')
+          .select('id', { count: 'exact', head: true })
+          .eq('dashboard_id', dashboardId)
+          .is('deleted_at', null)
+      : Promise.resolve({ count: 0 }),
+  ])
+
+  /* «Eier», resolved from org_members and NEVER invented. v8 falls back to the
+     literal «Tuva Berg» (v8:8969) — a name belonging to somebody else is worse
+     than no name, so an owner this viewer cannot resolve yields null and the
+     cell does not render. RLS decides what resolves, which is also why the
+     lookup is a query rather than a join off `dashboards`. */
+  const { data: ownerRow } = dashRow?.owner_id
+    ? await supabase
+        .from('org_members')
+        .select('name, email')
+        .eq('org_id', viewer.orgId)
+        .eq('user_id', dashRow.owner_id)
+        .maybeSingle()
+    : { data: null }
+  const dashOwnerName = ownerRow?.name ?? ownerRow?.email ?? null
+  const dashShares = (shareRows ?? []) as { scope: string; role: string | null }[]
+  const dashReportCount = frozenCount ?? 0
   const needsSetup = !working
 
   // An organisation survey has no threshold (`app.k_for` returns 0), so the
@@ -398,6 +435,12 @@ export default async function DashboardPage({
       customizeOpen={tilpass !== undefined}
       canEdit={viewer.role === 'administrator' || viewer.role === 'redaktor'}
       layoutFilters={{ period, group_id: group, survey_ids: selected }}
+      meta={{
+        ownerName: dashOwnerName,
+        shares: dashShares,
+        reportCount: dashReportCount,
+        hasDashboard: dashboardId !== null,
+      }}
       register={register}
       registerHref={orgSurvey ? `/undersokelser/${orgSurvey.id}/resultater` : null}
       duties={duties}

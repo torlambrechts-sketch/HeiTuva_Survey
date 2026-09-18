@@ -1886,7 +1886,18 @@
     "chipReports": "rapporter",
     "chipPanels": "paneler i bruk",
     "metaSelection": "Utvalg",
-    "metaPrivacy": "Personvern"
+    "metaPrivacy": "Personvern",
+    "metaOwner": "Eier",
+    "metaShared": "Delt med",
+    "metaNotShared": "Ikke delt",
+    "metaSharedLink": "Delt med lenke",
+    "metaRole_administrator": "Administratorer",
+    "metaRole_redaktor": "Redaktører",
+    "metaRole_leser": "Lesere",
+    "metaReports": "Rapporter",
+    "metaReportsNone": "Ingen ennå",
+    "metaReportsCount": "{count, plural, one {# versjon} other {# versjoner}}",
+    "metaReportsNote": "frosset herfra"
   },
   "splash": {
     "langLabel": "Velg språk",

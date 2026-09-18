@@ -255,7 +255,7 @@ export async function freezeLayoutReport(title: string): Promise<{ ok: boolean }
 
   const { data: layout } = await supabase
     .from('dashboard_layouts')
-    .select('panels')
+    .select('panels, dashboard_id')
     .eq('org_id', viewer.orgId)
     .eq('user_id', viewer.userId)
     .eq('title', WORKING_TITLE)
@@ -282,5 +282,10 @@ export async function freezeLayoutReport(title: string): Promise<{ ok: boolean }
     title: z.string().trim().min(1).max(200).catch('Frosset dashboard').parse(title),
     baseTemplate: 'Dashboard',
     sections,
+    // F5 (M:0134). This is the ONLY writer of reports.dashboard_id, and it is
+    // what «Rapporter · frosset herfra» counts. `?? undefined` rather than
+    // `?? null` so a layout with no parent simply omits the field instead of
+    // asserting a null the schema would have defaulted anyway.
+    dashboardId: layout?.dashboard_id ?? undefined,
   })
 }

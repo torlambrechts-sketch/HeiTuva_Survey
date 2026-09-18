@@ -1886,7 +1886,18 @@
     "chipReports": "reports",
     "chipPanels": "panels in use",
     "metaSelection": "Selection",
-    "metaPrivacy": "Privacy"
+    "metaPrivacy": "Privacy",
+    "metaOwner": "Owner",
+    "metaShared": "Shared with",
+    "metaNotShared": "Not shared",
+    "metaSharedLink": "Shared by link",
+    "metaRole_administrator": "Administrators",
+    "metaRole_redaktor": "Editors",
+    "metaRole_leser": "Readers",
+    "metaReports": "Reports",
+    "metaReportsNone": "None yet",
+    "metaReportsCount": "{count, plural, one {# version} other {# versions}}",
+    "metaReportsNote": "frozen from here"
   },
   "splash": {
     "langLabel": "Choose language",

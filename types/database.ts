@@ -62,6 +62,19 @@
  * Second time in a row that nothing stale turned up, which is worth recording
  * for the same reason V7-3's was: a regeneration whose diff is only what you
  * expected is itself a measurement, and two of the four before it were not.
+ *
+ * Regenerated 2026-09-18 (F1) against the local stack at migration HEAD. The
+ * diff is THREE new tables — dashboards, dashboard_versions, dashboard_shares —
+ * plus dashboard_layouts.dashboard_id, and NOTHING was removed: 118 added
+ * lines, 0 deleted.
+ *
+ * Third regeneration in a row whose diff is only what was expected. Two of the
+ * four before them were not, so the sentence is worth writing each time.
+ *
+ * Regenerated again at F5 for reports.dashboard_id: 10 added, 0 removed.
+ *
+ * And at M:0135, which made both dashboard FKs COMPOSITE: 4 changed lines,
+ * the two Relationships rows gaining org_id. Nothing else moved.
  */
 export type Json =
   | string
@@ -227,6 +240,7 @@ export type Database = {
       dashboard_layouts: {
         Row: {
           created_at: string
+          dashboard_id: string | null
           filters: Json
           id: string
           org_id: string
@@ -237,6 +251,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dashboard_id?: string | null
           filters?: Json
           id?: string
           org_id: string
@@ -247,6 +262,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dashboard_id?: string | null
           filters?: Json
           id?: string
           org_id?: string
@@ -256,6 +272,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "dashboard_layouts_dashboard_id_fkey"
+            columns: ["dashboard_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id", "org_id"]
+          },
           {
             foreignKeyName: "dashboard_layouts_org_id_fkey"
             columns: ["org_id"]
@@ -330,6 +353,114 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      dashboard_shares: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dashboard_id: string
+          id: string
+          role: "administrator" | "redaktor" | "leser" | null
+          scope: string
+          token_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_id: string
+          id?: string
+          role?: "administrator" | "redaktor" | "leser" | null
+          scope: string
+          token_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_id?: string
+          id?: string
+          role?: "administrator" | "redaktor" | "leser" | null
+          scope?: string
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_shares_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dashboard_id: string
+          id: string
+          panels: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_id: string
+          id?: string
+          panels: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_id?: string
+          id?: string
+          panels?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_versions_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboards: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          owner_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          owner_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          owner_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboards_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demo_requests: {
         Row: {
@@ -1642,6 +1773,7 @@ export type Database = {
           base_template: string | null
           created_at: string
           created_by: string | null
+          dashboard_id: string | null
           deleted_at: string | null
           duty_id: string | null
           filters: Json
@@ -1660,6 +1792,7 @@ export type Database = {
           base_template?: string | null
           created_at?: string
           created_by?: string | null
+          dashboard_id?: string | null
           deleted_at?: string | null
           duty_id?: string | null
           filters?: Json
@@ -1678,6 +1811,7 @@ export type Database = {
           base_template?: string | null
           created_at?: string
           created_by?: string | null
+          dashboard_id?: string | null
           deleted_at?: string | null
           duty_id?: string | null
           filters?: Json
@@ -1699,6 +1833,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "org_members"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_dashboard_id_fkey"
+            columns: ["dashboard_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "reports_duty_id_fkey"

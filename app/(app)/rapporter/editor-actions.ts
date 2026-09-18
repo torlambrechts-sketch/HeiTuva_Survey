@@ -56,6 +56,12 @@ const CreateInput = z.object({
   sections: z.array(z.string().trim().min(1).max(64)).max(20),
   /** "Lag rapport" from a survey row starts the report already pointed at it. */
   surveys: z.array(Uuid).max(50).optional(),
+  /** F5 (M:0134) — set ONLY by `freezeLayoutReport`, the one path that turns a
+   *  dashboard into a report. Every other caller leaves it absent, which is the
+   *  true statement that no dashboard produced this one. It is what «Rapporter
+   *  · frosset herfra» counts; v8 counts by matching the dashboard's TITLE
+   *  (v8:8970), which empties the history on a rename. */
+  dashboardId: Uuid.optional(),
 })
 
 export async function createReport(input: z.input<typeof CreateInput>): Promise<EditorResult> {
@@ -122,6 +128,7 @@ export async function createReport(input: z.input<typeof CreateInput>): Promise<
       sections,
       filters: { surveys: ownSurveys, rounds: [], group: null },
       created_by: member?.id ?? null,
+      dashboard_id: parsed.data.dashboardId ?? null,
     })
     .select('id')
     .single()
