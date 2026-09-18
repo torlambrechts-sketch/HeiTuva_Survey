@@ -667,3 +667,71 @@ describe('(Q47) an organisation respondent learns nothing about the other organi
     expect((body.buckets ?? []).length, 'with a real distribution').toBeGreaterThan(0)
   })
 })
+
+/**
+ * T3.2 — v8's «Snitt» column, and the gate the drawing does not have.
+ *
+ * `scoreOf` (v8:8245) sums every scale answer and divides, returning «—» only
+ * when a survey has no scale question at all. There is no threshold in it, so
+ * built as drawn a survey with ONE response would publish that respondent's
+ * mean on a list row. `public.survey_scale_means` (M:0131) is that column with
+ * `app.aggregate_rows`' gate around it.
+ *
+ * These live here rather than in a file of their own because the fixture that
+ * proves a gate is the one above — a person survey with a settable threshold
+ * and a countable number of real submissions through `rpc.submit_response`.
+ */
+describe('(T3.2) the survey list mean is k-gated, unlike the drawing', () => {
+  const meanFor = async (orgId: string, surveyId: string) => {
+    // `ctx.a` is the SERVICE-key client and has no `auth.uid()`, so
+    // `app.is_org_member` is false for it and the function correctly returns
+    // nothing at all. The membership-scoped read is the authenticated user's,
+    // which is the client every other RPC assertion in this file uses.
+    const { data, error } = await ctx.adminU.client.rpc('survey_scale_means', { p_org: orgId })
+    expect(error).toBeNull()
+    const rows = (data ?? []) as { survey_id: string; mean: number | null }[]
+    const row = rows.find((r) => r.survey_id === surveyId)
+    expect(row, 'every survey in the org gets a row, mean or not').toBeTruthy()
+    return row!.mean
+  }
+
+  it('BELOW the threshold there is no mean at all — not a partial one, not the n', async () => {
+    const s = await personSurveyWithResponses('Snitt under', 4)
+    expect(await meanFor(ctx.org.id, s.survey.id)).toBeNull()
+  })
+
+  it('AT the threshold the mean appears, and it is the real one', async () => {
+    // Same fixture, one more respondent. Every submission answers the scale
+    // question with 4, so the mean is knowable independently of the function.
+    const s = await personSurveyWithResponses('Snitt over', 5)
+    expect(await meanFor(ctx.org.id, s.survey.id)).toBe(4)
+  })
+
+  it('the boundary is the survey OWN threshold, not a constant five', async () => {
+    // k=2 is reachable since Q91. Three answers would clear 5 nowhere, so if
+    // this returns a number the function is reading app.k_for and not a literal.
+    const s = await personSurveyWithResponses('Snitt k2', 3, { k_threshold: 2 })
+    expect(await meanFor(ctx.org.id, s.survey.id)).toBe(4)
+  })
+
+  it('a survey with no scale question is INDISTINGUISHABLE from a suppressed one', async () => {
+    // Invariant 1 condition 4, one level out: if «no scale questions» and «too
+    // few answered» rendered differently, the em dash would itself report on
+    // how many people answered.
+    const bare = await insert(ctx.a, 'surveys', {
+      org_id: ctx.org.id, title: uniq('Snitt uten skala'), status: 'aktiv', anonymity: 'anonymous',
+    })
+    await insert(ctx.a, 'survey_questions', {
+      survey_id: bare.id, position: 1, type: 'text', text: 'Fritekst',
+    })
+    expect(await meanFor(ctx.org.id, bare.id)).toBeNull()
+  })
+
+  it('anon may not execute it — read back from the catalogue, not from the grant line', async () => {
+    // A grant is a fact about the catalogue. `revoke ... from anon` alone would
+    // leave standing the grant anon INHERITS from PUBLIC, which this project
+    // has now written down three times and committed twice.
+    const { error } = await ctx.an.rpc('survey_scale_means', { p_org: ctx.org.id })
+    expect(error, 'an anonymous caller is refused').not.toBeNull()
+  })
+})

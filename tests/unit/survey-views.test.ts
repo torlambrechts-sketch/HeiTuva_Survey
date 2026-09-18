@@ -26,6 +26,11 @@ describe('F4 — one derivation, three views', () => {
     ownerName: null,
     ownerEmail: null,
     sentLabel: null,
+    // Required rather than optional on ListRowInput, for F1's reason: a caller
+    // that may omit it renders an em dash on a survey that HAS a mean, and
+    // nothing fails. The k-gating lives in M:0131, not here — this is the
+    // already-gated value arriving.
+    mean: null,
   }
 
   it('a row with no denominator has pct NULL — never 0, which is a different claim', () => {
@@ -173,5 +178,50 @@ describe('F4 — the row menu survived the three views', () => {
       .replace(/^\s*\/\/.*$/gm, '')
     const offenders = code.match(/\w+=\{\([^)]*\)\s*=>/g) ?? []
     expect(offenders, `page.tsx passes ${offenders.join(', ')} as a function prop`).toEqual([])
+  })
+})
+
+/**
+ * T3.1 — v8's five columns on the survey table.
+ *
+ * v7 drew six in flex; v8 declares five grid tracks and drops «Sendt» and
+ * «Eier» while adding «Snitt». The assertions read the COMMENT-STRIPPED source,
+ * because the constant's own doc block names both removed columns in order to
+ * explain where they went — «a refusal named in a comment is found by a grep
+ * over that comment», which has gone red on correct code three times here.
+ */
+describe('T3.1 — the survey table carries v8 five tracks, not v7 six', () => {
+  const source = () => {
+    const raw = readFileSync('app/(app)/undersokelser/SurveyTable.tsx', 'utf8')
+    return raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  }
+
+  it('declares v8 own track list, at both viewports', () => {
+    const src = source()
+    // The drawing's tracks verbatim (v8:2308, v8:2318), with the action column
+    // widened below `md` for the touch overlay and the drawing's 166 above it.
+    expect(src).toContain('minmax(220px,2.2fr)_118px_minmax(120px,1fr)_78px_210px')
+    expect(src).toContain('md:[grid-template-columns:minmax(220px,2.2fr)_118px_minmax(120px,1fr)_78px_166px]')
+    expect(src).toContain('min-w-[864px] md:min-w-[820px]')
+  })
+
+  it('renders exactly the five v8 headers and neither dropped one', () => {
+    const src = source()
+    for (const key of ['colSurvey', 'colStatus', 'colResponses', 'colAverage', 'colAction'])
+      expect(src, `${key} is a v8 column`).toContain(`labels.${key}`)
+    // Dropped from the ROW. Their message keys survive — nothing is retired —
+    // and both facts are still reachable on the survey detail.
+    for (const key of ['colSent', 'colOwner', 'noOwner'])
+      expect(src, `${key} is not drawn in the table any more`).not.toContain(`labels.${key}`)
+  })
+
+  it('the mean goes through `fmt`, so a suppressed survey renders the dash', () => {
+    const src = source()
+    expect(src).toContain('fmt(r.mean)')
+    // Never a raw number and never a zero: `fmt` maps null to DASH, and null is
+    // what M:0131 returns both below the threshold and for a survey with no
+    // scale question. The two must look the same.
+    expect(src).not.toMatch(/r\.mean\s*\?\?\s*0/)
+    expect(src).not.toMatch(/\{r\.mean\}/)
   })
 })

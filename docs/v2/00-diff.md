@@ -1184,7 +1184,7 @@ things:
 1. **The survey list is ONE table.** The card view and the split view are not drawn.
 2. **Sharing moved from the survey row to the dashboard** (`shareOpen` → `dashShareOpen`).
 
-### THE FIRST IS A PRODUCT DECISION AND IS NOT SETTLED HERE
+### THE FIRST IS A DRAWING ARTIFACT, NOT A REMOVAL — DECIDED BY TOR, 2026-09-18
 
 We ship `ViewSwitcher.tsx` and `SurveyCards.tsx`. **A drawing that stops drawing a control is not
 by itself an instruction to delete a working feature** — CLAUDE.md's tie-breaker gives the bundle
@@ -1193,10 +1193,20 @@ visuals, and which views a product offers is not a visual. This is the class Tor
 a product decision, and a well-reasoned guess becomes load-bearing precisely because it is never
 caught.*
 
-**Assumption built under, stated so the answer costs an edit and not a rebuild: the view switcher
-STAYS.** T1.11's «retire nothing» is the nearest governing instruction, and removing a shipped,
-tested view is the irreversible direction. T3 therefore narrows the TABLE to v8's geometry and
-leaves `ViewSwitcher`/`SurveyCards` untouched and reachable.
+**DECIDED: the view switcher STAYS, and v8's silence about it is to be read as a DRAWING
+ARTIFACT rather than as a removal.** T3 narrows the TABLE to v8's geometry and leaves
+`ViewSwitcher.tsx` and `SurveyCards.tsx` untouched and reachable.
+
+This is written here so the next phase does not re-derive it the other way. The evidence that
+invites the wrong reading is real and will still be there: `rowsOn`, `listOn` and `boxOn` are
+computed at `v8:9240` and drawn nowhere, which is the shape § 0.3f read as a deliberate
+re-parent for `svTuva*`. **The two are not the same case.** `svTuva` had a replacement in the
+same bundle — `tvShow` dropped `surveys` from its exclusions and `tuvaFor` gained a `surveys`
+entry — so the drawing said what the control had become. Nothing in v8 replaces the three
+views: the card and split layouts simply are not drawn, and a layout the drawing stops
+including is not thereby a layout the product stops offering. CLAUDE.md's tie-breaker gives the
+bundle VISUALS; which views a product offers is not a visual, and T1.11's «retire nothing»
+governs the rest.
 
 ### THE 21 ARRIVALS ARE A DASHBOARD MANAGEMENT LAYER, PLUS THREE SURFACES THIS TRANCHE DOES NOT TOUCH
 

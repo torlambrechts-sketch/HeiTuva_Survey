@@ -54,6 +54,14 @@
  * functions that had been missing since M:0116, and F4's found a generator
  * change masquerading as a schema one. This one found nothing stale, which is
  * the first time that sentence has been true here.
+ *
+ * Regenerated 2026-09-18 (T3.2) against the local stack at migration HEAD, and
+ * THE DIFF IS EXACTLY ONE ADDITION — `survey_scale_means`, 7 lines, Args and
+ * Returns, and nothing else moved in either direction.
+ *
+ * Second time in a row that nothing stale turned up, which is worth recording
+ * for the same reason V7-3's was: a regeneration whose diff is only what you
+ * expected is itself a measurement, and two of the four before it were not.
  */
 export type Json =
   | string
@@ -3446,6 +3454,13 @@ export type Database = {
         Args: { p_org: string }
         Returns: {
           responses: number
+          survey_id: string
+        }[]
+      }
+      survey_scale_means: {
+        Args: { p_org: string }
+        Returns: {
+          mean: number
           survey_id: string
         }[]
       }

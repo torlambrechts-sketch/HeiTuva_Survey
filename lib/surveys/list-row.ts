@@ -36,6 +36,17 @@ export type ListRowInput = RateRow & {
   /** The FIRST round's `opens_at`, already formatted by the page (which holds
    *  the locale). Null for a survey that has never been sent. */
   sentLabel: string | null
+  /**
+   * The survey's mean over its `scale` questions, from
+   * `public.survey_scale_means` (M:0131) — ALREADY K-GATED by the database.
+   *
+   * Null is the only thing this carries below the threshold, and it is also
+   * what a survey with no scale question carries. The two are deliberately
+   * indistinguishable here, because a client that could tell them apart could
+   * read «too few people have answered» off the em dash. v8's own derivation
+   * (`scoreOf`, v8:8245) has no threshold in it at all and is not reproduced.
+   */
+  mean: number | null
 }
 
 export type ListRow = ListRowInput & {

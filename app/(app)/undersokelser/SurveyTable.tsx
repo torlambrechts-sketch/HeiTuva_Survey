@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { fmt } from '@/lib/results/present'
 import type { ReactNode } from 'react'
 import { STATUS_BAR, STATUS_DOT, type ListRow } from '@/lib/surveys/list-row'
 import { STATUS_COLORS } from './keys'
@@ -34,6 +35,31 @@ import { STATUS_COLORS } from './keys'
  * where there is no owner there is no monogram and no title, rather than a
  * placeholder person.
  */
+/**
+ * v8's five declared grid tracks (v8:2308 header, v8:2318 row), in the
+ * drawing's own order: Undersøkelse · Status · Svar · Snitt · Handling.
+ *
+ *     minmax(220px,2.2fr) 118px minmax(120px,1fr) 78px 166px   gap 12px
+ *
+ * v7 drew six columns in flex — `flex-[2.2_1_200px]` and friends — and v8
+ * drops «Sendt» and «Eier» and adds «Snitt». Neither is lost: the first
+ * round's date and the owner are both on the survey detail
+ * (`SurveyDetail.tsx:99`, «eier {name}»), which is what made the removal
+ * safe to make. Their message keys stay, because nothing is retired.
+ *
+ * THE LAST TRACK IS 210px BELOW `md` AND THE DRAWING'S 166 ABOVE IT, and the
+ * arithmetic is the one already written into this file: five 30px controls
+ * with 44px hit areas need 14px between painted edges below 768px, so
+ * 5 × 30 + 4 × 14 = 206. The table's minimum carries the same 44px delta —
+ * v8's `min-width:820px` above md, 864 below it. A constant copied out of its
+ * context is CLAUDE.md row 10, and this one is not copied: it is re-derived
+ * for the viewport the touch overlay actually exists in.
+ */
+const COLS =
+  'grid items-center gap-3 ' +
+  '[grid-template-columns:minmax(220px,2.2fr)_118px_minmax(120px,1fr)_78px_210px] ' +
+  'md:[grid-template-columns:minmax(220px,2.2fr)_118px_minmax(120px,1fr)_78px_166px]'
+
 export function SurveyTable({
   rows,
   menus,
@@ -58,6 +84,7 @@ export function SurveyTable({
     colSent: string
     colStatus: string
     colOwner: string
+    colAverage: string
     colAction: string
     noSent: string
     noOwner: string
@@ -96,14 +123,13 @@ export function SurveyTable({
        352px² each. The column width is the fix; the control is a token and is
        not touched. */
     <div className="overflow-x-auto rounded-b-[19px]">
-      <div className="min-w-[804px] md:min-w-[760px]">
-        <div className="flex items-center gap-4 border-y border-line bg-bg px-[22px] py-[11px] text-[11px] uppercase tracking-[.09em] text-mut">
-          <span className="min-w-[150px] flex-[2.2_1_200px]">{labels.colSurvey}</span>
-          <span className="w-[84px] flex-none text-right">{labels.colResponses}</span>
-          <span className="w-[84px] flex-none">{labels.colSent}</span>
-          <span className="w-[92px] flex-none">{labels.colStatus}</span>
-          <span className="min-w-[110px] flex-[1.2_1_140px]">{labels.colOwner}</span>
-          <span className="w-[210px] flex-none text-right md:w-[166px]">{labels.colAction}</span>
+      <div className={`min-w-[864px] md:min-w-[820px]`}>
+        <div className={`${COLS} border-y border-line bg-bg px-[22px] py-[11px] text-[11px] uppercase tracking-[.09em] text-mut`}>
+          <span>{labels.colSurvey}</span>
+          <span>{labels.colStatus}</span>
+          <span className="text-right">{labels.colResponses}</span>
+          <span className="text-right">{labels.colAverage}</span>
+          <span className="text-right">{labels.colAction}</span>
         </div>
 
         {rows.map((r) => {
@@ -115,8 +141,8 @@ export function SurveyTable({
               className="border-b border-line"
               style={{ background: isOpen ? 'var(--bg)' : 'transparent' }}
             >
-              <div className="flex items-center gap-4 px-[22px] py-[14px]">
-                <span className="min-w-[150px] flex-[2.2_1_200px]">
+              <div className={`${COLS} px-[22px] py-[13px]`}>
+                <span className="min-w-0">
                   <Link
                     href={`/undersokelser/${r.id}/bygg`}
                     className="touch-44 block truncate text-[14px] font-semibold text-ink no-underline"
@@ -129,17 +155,20 @@ export function SurveyTable({
                 {/* The cell. With a denominator it is «n / m»; without one it is
                     the count and says so, because «6 / 30» would be a number
                     nobody chose. */}
-                <span className="w-[84px] flex-none whitespace-nowrap text-right text-[13.5px]">
+                <span className="min-w-0 whitespace-nowrap text-right text-[13.5px]">
                   {r.target === null
                     ? labels.responsesOnly.replace('{n}', String(r.responses))
                     : `${r.responses} / ${r.target}`}
                 </span>
 
-                <span className="w-[84px] flex-none whitespace-nowrap text-[12.5px] text-mut">
-                  {r.sentLabel ?? labels.noSent}
+                {/* «Snitt». `fmt` renders DASH for null, and null is what
+                    M:0131 returns both below the threshold and for a survey
+                    with no scale question — indistinguishable on purpose. */}
+                <span className="min-w-0 whitespace-nowrap text-right text-[13.5px]">
+                  {fmt(r.mean)}
                 </span>
 
-                <span className="w-[92px] flex-none">
+                <span className="min-w-0">
                   <span
                     className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-[11px] py-[5px] text-[11.5px] font-bold"
                     style={{ background: pill?.bg, color: pill?.fg }}
@@ -153,21 +182,7 @@ export function SurveyTable({
                   </span>
                 </span>
 
-                <span
-                  className="flex min-w-[110px] flex-[1.2_1_140px] items-center gap-[9px]"
-                  title={r.ownerEmail ?? undefined}
-                >
-                  {r.initials ? (
-                    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-sbg text-[11px] font-bold">
-                      {r.initials}
-                    </span>
-                  ) : null}
-                  <span className="min-w-0 truncate text-[13px]">
-                    {r.ownerName ?? labels.noOwner}
-                  </span>
-                </span>
-
-                <span className="touch-cluster flex w-[210px] flex-none items-center justify-end gap-1 md:w-[166px]">
+                <span className="touch-cluster flex min-w-0 items-center justify-end gap-1">
                   {(
                     [
                       [`/undersokelser/${r.id}/bygg`, labels.build, 'build'],

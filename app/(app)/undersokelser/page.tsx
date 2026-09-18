@@ -112,6 +112,20 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
     (countRows ?? []).map((c) => [c.survey_id, Number(c.responses)]),
   )
 
+  // v8's «Snitt» column. Same reasoning as the counts above and one step
+  // stronger: a mean is a RESULT, not participation, so it is gated as well as
+  // routed. `survey_scale_means` (M:0131) applies `app.k_for` per question and
+  // returns null where nothing qualifies — the drawing's own `scoreOf`
+  // (v8:8245) has no threshold in it and would publish a single respondent's
+  // answer on a list row. One batched call for the page, like the counts.
+  const { data: meanRows, error: meanError } = await supabase.rpc('survey_scale_means', {
+    p_org: viewer.orgId,
+  })
+  if (meanError) throw new Error(`survey_scale_means failed: ${meanError.message}`)
+  const scaleMeans = new Map(
+    (meanRows ?? []).map((m) => [m.survey_id, m.mean === null ? null : Number(m.mean)]),
+  )
+
   // The series behind each row (Q22, Q23). One read for the page rather than a
   // per-row embed: `schedules` is org-scoped through `can_view_survey`, so this
   // returns exactly the rows the viewer may see — a leser included, which is
@@ -329,6 +343,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
       ownerName: m?.name ?? null,
       ownerEmail: m?.email ?? null,
       sentLabel: sentDate(firstRound.get(s.id)),
+      mean: scaleMeans.get(s.id) ?? null,
     })
   })
 
@@ -681,6 +696,7 @@ export default async function SurveysPage({ searchParams }: { searchParams: Prom
                 colSent: t('colSent'),
                 colStatus: t('colStatus'),
                 colOwner: t('colOwner'),
+                colAverage: t('colAverage'),
                 colAction: t('colAction'),
                 noSent: t('colNoSent'),
                 noOwner: t('colNoOwner'),
