@@ -1,0 +1,91 @@
+-- PHASE B — invariant 1's grants. TRUNCATE and REFERENCES, revoked schema-wide.
+--
+-- ── WHAT WAS MEASURED, AND WHY THE SCOPE IS THE SCHEMA AND NOT TWO TABLES ──
+--
+-- A3 proved the hole on the two tables invariant 1 names. On a seeded local
+-- database, with 51 responses and 177 answers present:
+--
+--   set role authenticated; truncate answers;          -> SUCCEEDED, 177 -> 0
+--   set role anon;          truncate answers;          -> SUCCEEDED
+--   set role anon;          truncate responses cascade;-> SUCCEEDED, 51 -> 0
+--
+-- The one refusal in that set was NOT a permission check. `truncate responses`
+-- without CASCADE failed with «cannot truncate a table referenced in a foreign
+-- key constraint» — a foreign key, not a privilege. A guard that refuses for
+-- the wrong reason stops refusing the moment the schema changes.
+--
+-- B1 then asked whether the other 64 tables are the same. They are:
+--
+--   anon          TRUNCATE + REFERENCES on 61 of 66 tables
+--   authenticated TRUNCATE + REFERENCES on 65 of 66 tables
+--   PUBLIC grant rows in public/app: 0  (so none of it is inherited)
+--
+-- Identical on production, row for row. The two tables were not special; they
+-- were the two somebody looked at. Revoking only those two would be this
+-- file's own enumeration mistaken for a property (CLAUDE.md).
+--
+-- ── WHERE THE GRANT COMES FROM, WHICH DECIDES WHAT «FIXED» MEANS ──
+--
+-- Not from our migrations. Supabase ships
+-- `alter default privileges in schema public grant all on tables to anon,
+-- authenticated`, and `all` is `arwdDxtm` — the D is TRUNCATE and the x is
+-- REFERENCES. So every table created here has started with both since M:0001,
+-- and **revoking on the 66 that exist today would close the list and leave the
+-- property open**: table 67 would arrive holding them again.
+--
+-- Hence the second statement. Measured before writing it:
+--   · all 66 public tables are owned by `postgres`
+--   · migrations run as `postgres` (current_user = session_user = postgres)
+--   · `pg_has_role('postgres','supabase_admin','MEMBER')` is FALSE
+--
+-- There are two default-ACL rows for schema public, one granted by `postgres`
+-- and one by `supabase_admin`. We can only alter our own, and that is the one
+-- that matters: the default ACL applied to a new table is the CREATOR's, and
+-- every table this project creates is created by postgres. The supabase_admin
+-- row stays and is correctly out of our reach; it would only bite a table
+-- created BY supabase_admin, of which this schema has none. Stated rather than
+-- silently left, because «we revoked it» and «we revoked ours» differ.
+--
+-- ── WHAT THIS DOES NOT TOUCH, DELIBERATELY ──
+--
+-- SELECT, INSERT, UPDATE and DELETE are left exactly as they are. RLS already
+-- denies them on `responses` and `answers` — proven behaviourally, with rows
+-- present, by a real error and not an empty set:
+--   set role anon; insert into answers default values;
+--   -> ERROR: new row violates row-level security policy for table "answers"
+-- Changing more than one thing at a time makes a regression unattributable,
+-- and those four verbs are Phase B's successor's question, not this one's.
+--
+-- ── WHAT BREAKS: NOTHING, AND HERE IS THE QUERY THAT SAYS SO ──
+--
+-- Across all 125 functions in `public` and `app`:
+--   prosrc ~* '\mtruncate\M'              -> 0
+--   prosrc ~* '\m(create|alter)\s+table\M'-> 0
+-- Nothing issues TRUNCATE and nothing creates a table, so nothing needs either
+-- privilege. Of the 23 functions whose bodies name `responses` or `answers`,
+-- 21 are SECURITY DEFINER owned by postgres and so run with postgres's rights
+-- regardless of what anon and authenticated hold. The two SECURITY INVOKER
+-- ones — app.report_quotes and app.guard_quiz_policy — do SELECT and UPDATE
+-- only. The single `references` match in an invoker body is the English word
+-- inside a `--` comment in app.forbid_version_mutation, which is this project's
+-- own recorded trap: a file that documents its refusals contains the words it
+-- refuses.
+--
+-- rpc.submit_response — invariant 2's only write path — is prosecdef = true,
+-- owner postgres, search_path=public. It is unaffected.
+--
+-- ── AND THE REASON THIS IS WORTH A MIGRATION AT ALL ──
+--
+-- Nothing today reaches TRUNCATE from outside: PostgREST has no TRUNCATE verb
+-- and no function issues one, so the only path is a raw SQL session as
+-- anon/authenticated. That is exactly the argument CLAUDE.md warns keeps a
+-- wrong grant alive — «it refuses anyway» — and here the thing doing the
+-- refusing is the absence of a path rather than a control. A grant is a fact
+-- about the catalogue and must be read back from the catalogue, so it is
+-- stated there. `entra_connections`, `survey_blocks` and `method_rules`
+-- already do exactly this per table; this generalises it.
+
+revoke truncate, references on all tables in schema public from public, anon, authenticated;
+
+alter default privileges in schema public
+  revoke truncate, references on tables from anon, authenticated;
