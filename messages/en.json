@@ -1391,7 +1391,18 @@
     "chipPacks": "templates",
     "chipLegal": "statutory",
     "chipBank": "questions in the bank",
-    "chipOwn": "own templates"
+    "chipOwn": "own templates",
+    "packBack": "Back to templates",
+    "packLegal": "Statutory template · {ref}",
+    "packQuestionsHeading": "The questions in this template",
+    "packReadOnly": "Read-only · nothing is created until you press «Bruk mal»",
+    "packColQuestion": "Question",
+    "packColType": "Type",
+    "packColRequired": "Requirement",
+    "packColOptions": "Answer options",
+    "packRequired": "Required",
+    "packOptional": "Optional",
+    "packPeek": "View"
   },
   "auth": {
     "signInTitle": "Sign in",

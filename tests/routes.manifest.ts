@@ -1317,6 +1317,22 @@ export const ROUTES: RouteSpec[] = [
           await page.waitForURL((u) => u.searchParams.get('visning') === 'liste')
         },
       },
+      {
+        // T4 — `packdetail`, reached the way v8 reaches it: from a template
+        // card. The state is declared HERE rather than as a `/bibliotek/[id]`
+        // route of its own because the id is a seeded uuid nobody can name in
+        // advance, and clicking the card is also what proves the card LINKS —
+        // a route with no way in is a route nobody can measure.
+        name: 'pakke',
+        setup: async (page) => {
+          // v8's «Se», the card's own peek control. Located by href rather
+          // than by name: «Se» is two letters and would match inside other
+          // labels, and a name-based locator carries predicates nobody
+          // declared (D189).
+          await page.locator('a[href^="/bibliotek/"]').first().click()
+          await page.waitForURL(/\/bibliotek\/[0-9a-f-]{36}$/)
+        },
+      },
     ],
   },
   {

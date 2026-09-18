@@ -502,6 +502,7 @@ async function TemplatesTab({
         (useLabel.get(p.useCase ?? '') ?? p.category),
     meta: meta(p),
     use: t('usePack'),
+    peek: t('packPeek'),
     privateLabel: t('privateLabel'),
     sharedLabel: t('sharedLabel'),
     deleteLabel: t('deleteTemplate'),

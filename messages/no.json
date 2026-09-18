@@ -1391,7 +1391,18 @@
     "chipPacks": "maler",
     "chipLegal": "lovpålagte",
     "chipBank": "spørsmål i banken",
-    "chipOwn": "egne maler"
+    "chipOwn": "egne maler",
+    "packBack": "Tilbake til maler",
+    "packLegal": "Lovpålagt mal · {ref}",
+    "packQuestionsHeading": "Spørsmålene i malen",
+    "packReadOnly": "Lesevisning · ingenting opprettes før du trykker «Bruk mal»",
+    "packColQuestion": "Spørsmål",
+    "packColType": "Type",
+    "packColRequired": "Krav",
+    "packColOptions": "Svaralternativer",
+    "packRequired": "Påkrevd",
+    "packOptional": "Valgfritt",
+    "packPeek": "Se"
   },
   "auth": {
     "signInTitle": "Logg inn",

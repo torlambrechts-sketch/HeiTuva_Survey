@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { UsePackButton } from './UsePackButton'
 import { TemplateAdminControls } from './TemplateAdminControls'
 
@@ -39,6 +40,7 @@ export function TemplateCard({
     eyebrow: string
     meta: string
     use: string
+    peek: string
     privateLabel: string
     sharedLabel: string
     deleteLabel: string
@@ -93,13 +95,33 @@ export function TemplateCard({
         ))}
       </div>
 
-      <UsePackButton
-        packId={pack.id}
-        label={labels.use}
-        failedLabel={labels.failed}
-        disabledReason={disabledReason}
-        className="mt-[18px] w-full p-[11px]"
-      />
+      {/* T4 — the way INTO `packdetail`, and it is THE DRAWING'S OWN CONTROL.
+          v8:4924 puts a bordered «Se» beside «Bruk mal» in one flex row
+          (`display:flex; gap:8px; margin-top:18px`, the peek `flex:none` and
+          the use button `flex:1`) and calls `t.onPeek`.
+
+          THE FIRST VERSION OF THIS MADE THE TITLE A LINK, and that was a
+          substitution rather than a reading. `verify:responsive` failed it
+          twice over: the painted title is 28px so the link needed `touch-44`,
+          and the 44px hit area then overlapped the card's admin controls by up
+          to 93px² at 320px on every own-template card. The drawing had already
+          answered it — a control in the action row, where there is room. */}
+      <div className="mt-[18px] flex gap-2">
+        <Link
+          href={`/bibliotek/${pack.id}`}
+          title={labels.peek}
+          className="touch-44 flex flex-none items-center rounded-[10px] border border-line px-3.5 py-[11px] text-[13px] text-ink no-underline"
+        >
+          {labels.peek}
+        </Link>
+        <UsePackButton
+          packId={pack.id}
+          label={labels.use}
+          failedLabel={labels.failed}
+          disabledReason={disabledReason}
+          className="w-full flex-1 p-[11px]"
+        />
+      </div>
     </div>
   )
 }

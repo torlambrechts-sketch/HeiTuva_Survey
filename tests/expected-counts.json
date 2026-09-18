@@ -94,6 +94,7 @@
   "tests/unit/method-threshold.test.ts": 13,
   "tests/unit/onboarding.test.ts": 12,
   "tests/unit/org-options.test.ts": 10,
+  "tests/unit/pack-detail.test.ts": 7,
   "tests/unit/pack-questions.test.ts": 5,
   "tests/unit/page-header.test.ts": 9,
   "tests/unit/panel-refusals.test.ts": 7,
