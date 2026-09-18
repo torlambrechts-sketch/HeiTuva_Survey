@@ -43,7 +43,15 @@
 -- `app.k_for` returned `s.k_threshold` verbatim. A CHECK and a function that
 -- trusts it are one mechanism, not two: the CHECK can be dropped by a later
 -- migration meaning well, and every result read would silently follow. The
--- function now takes `greatest(k_threshold, 3)` for a person.
+-- function now takes `greatest(k_threshold, 2)` for a person.
+--
+-- THE 3 IN THIS SENTENCE WAS WRONG FOR THE LIFE OF THIS FILE. It was written
+-- while the floor was 3 and T1.10 corrected the SQL below to 2 without
+-- correcting the prose above it, so the migration that MOVES the floor to two
+-- described itself as moving it to three. Corrected rather than left, and the
+-- file is safe to edit because it is not in production's ledger — measured,
+-- not assumed: prod carries 20260918142503 (Phase B, renumbered on push) and
+-- neither this migration nor M:0131.
 --
 -- ── 3. IMMUTABILITY ONCE A RESPONSE EXISTS ────────────────────────────────
 --
