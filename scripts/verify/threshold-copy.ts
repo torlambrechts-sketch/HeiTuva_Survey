@@ -192,6 +192,25 @@ const ALLOWED: Record<string, string> = {
   'builder.cLavDesc': 'the 1–2 are SCALE VALUES that trigger a follow-up, not a gate',
   'results.insightSplit': 'the 1–2 are SCALE VALUES on the answer scale, not a gate',
   'splash.heroBody': 'the numbers are minutes and seconds to build and answer',
+  // V7-3b's image block seed, and the number is about a PICTURE.
+  //
+  // «Fra svar til tiltak i fire steg» is v7:6873 verbatim — the caption the
+  // drawing seeds an image block with — so «fire» counts the steps in a diagram
+  // the EDITOR supplies and replaces, and «svar» is the ordinary word rather
+  // than the gate's. The gate is right to look: `NEAR_GENERIC` is 14 characters
+  // and these are fifteen apart, which is the proximity rule doing its job on a
+  // string that happens to sit just inside it.
+  //
+  // SCOPE, per D110's addition: this covers seedImgCaption ONLY, and the first
+  // version of this sentence said «no other seed carries a numeral» — which I
+  // measured after writing it, and it is FALSE. `seedFactTitle` is «Tre ting å
+  // huske» and `seedVideoCaption` is «2 minutter om hvorfor vi spør»; ten seed
+  // strings, three with numbers. The gate does not flag those two because
+  // neither sits near a threshold word — «spør» is not «svar» — so they are
+  // checked like any other string and would be reported the day one of them
+  // gained one. A reason saying «the seeds are placeholder text» would have
+  // allowlisted the whole family on the strength of one member.
+  'builder.seedImgCaption': 'the «fire» counts steps in the editor’s own picture (v7:6873 verbatim)',
 }
 
 type Hit = { lang: string; key: string; text: string }

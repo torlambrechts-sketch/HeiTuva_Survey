@@ -174,6 +174,57 @@ describe('V7-3c — D233: the seed may not promise anonymity', () => {
     )
   })
 
+  it('10b. NO SEED ASSERTS A THRESHOLD, and `seedImgCaption` is v7 verbatim', () => {
+    /* V7-6, and it exists because of a demonstrated hole rather than a worry.
+       `verify:copy` failed on `builder.seedImgCaption` — «Fra svar til tiltak i
+       fire steg», a numeral fifteen characters from «svar» — and the fix was an
+       allowlist entry with a reason, which is the gate's own documented
+       mechanism. **Then the mutation test showed what that mechanism costs:**
+       replacing the value with «Vises fra fem svar» left the gate CLEAN,
+       because an allowlist keyed by NAME short-circuits before it reads the
+       string. The script's own header says so — «an allowlist keyed by name
+       ages exactly like a phrase list» — and five sibling entries share the
+       property.
+
+       So the guard for that key lives HERE instead, in the layer that is not
+       frozen, and it is stated two ways:
+
+       - the FAMILY property, over every seed in both languages: a block's
+         default copy may not claim a threshold, which is Q55's rule aimed at
+         the one place the gate can now be told to look away from;
+       - the VALUE, pinned, because the whole justification for the allowlist
+         entry is that the string is v7:6873 verbatim. Edit it and this fails,
+         which is the allowlist entry asking to be re-justified. */
+    const thresholdClaim = [
+      /terskel/i,
+      /threshold/i,
+      /vises fra \S+ svar/i,
+      /from \S+ answers/i,
+      /\S+ svar før/i,
+      /minst \S+ svar/i,
+      /at least \S+ answers/i,
+    ]
+    for (const lang of ['no', 'en'] as const) {
+      for (const t of BLOCK_TYPES) {
+        const seed = BLOCK_SEEDS[t]
+        for (const key of [seed.titleKey, seed.bodyKey, seed.captionKey]) {
+          if (!key) continue
+          const text = MESSAGES[lang]!['builder']![key]!
+          for (const bad of thresholdClaim) {
+            expect(bad.test(text), `${lang}.${key}: ${text}`).toBe(false)
+          }
+        }
+      }
+    }
+    // v7:6873, both halves, because the allowlist reason names this line.
+    expect(MESSAGES['no']!['builder']!['seedImgCaption']).toBe(
+      'Fra svar til tiltak i fire steg',
+    )
+    expect(MESSAGES['en']!['builder']!['seedImgCaption']).toBe(
+      'From answer to action in four steps',
+    )
+  })
+
   it('11. a seed only fills fields the type actually uses', () => {
     /* Otherwise `forStorage` would clear it on the way out and the editor would
        watch text they were shown disappear on save. */
