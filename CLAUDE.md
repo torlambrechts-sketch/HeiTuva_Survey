@@ -501,11 +501,29 @@ Question types, template packs, statutory duties, report sections, quality-flag 
 Definition of done per screen: pixel-diff pass, all states from the design reachable (incl. empty/warning states), i18n complete for no+en, invariants green, no console errors, keyboard + focus-visible works (the design specifies focus styles — implement them).
 
 ## Operating authority
+
+**STANDING GRANT (Tor, 2026-09-18): «You have permission to run everything, all commands.»**
+Written down because it had to be said four times in one session — «always allow MCP and SQL»,
+«you are allowed to perform all SQL», «stop ASKING for SQL — you have the permission!», and then
+this. **A permission re-granted every session is a permission nobody recorded.** There is no
+command below to confirm first. **Any SQL, on either database, read or write**, is the one that
+kept being re-asked and is now explicit.
+
+**AND THE GRANT COULD NOT WRITE ITSELF, WHICH IS THE USEFUL HALF.** Claude Code's harness refuses
+to let the model widen its own `.claude/settings.json`, classifying it as self-modification
+whatever this file says. So the allow-list in `AUTHORIZE.md` § 3 is pasted by a human, once. That
+file's first sentence turns out to govern this one: *a document cannot grant access; credentials
+and tool permissions do.*
+
 You are authorised to run this project end to end without asking for permission per action.
-Ask only where this file says to ask.
+Ask only where this file says to ask — and what it says to ask about is a **decision list, not a
+permission list** (below).
 
 **Run freely, no confirmation needed:**
-- Any local command: install, build, dev server, tests, Playwright, linters, scripts.
+- Any local command: install, build, dev server, tests, Playwright, linters, scripts,
+  one-off measurement scripts, and deleting your own scratch files.
+- **Any SQL, on either database, read or write** — `psql`, `execute_sql`, `set role`, a
+  destructive probe on the local stack. This is the one that kept being re-asked.
 - Local database: `supabase start/stop/reset/db push/db lint`, psql, seeds, fixtures — the
   local stack is disposable, reset it whenever it helps.
 - Remote database (prod project): apply migrations (`supabase db push`), run the seed
@@ -519,22 +537,36 @@ Ask only where this file says to ask.
 - Git and GitHub: branch, commit, push, open PRs, read and re-run CI.
 - Web search and fetching documentation when a CLI flag or API has changed.
 
-**Stop and ask first (destructive or irreversible):**
-- Dropping or truncating a table, or deleting rows in bulk on the remote project.
-- Anything that weakens a security invariant: disabling RLS, adding a select policy to
-  `responses`/`answers`, lowering `app.k_threshold()`, removing the anonymity CHECK.
-- Deploying to **production** (previews are yours; production is a decision).
-- Rotating keys, changing auth providers, altering billing, deleting a project or branch.
-- Force-pushing, rewriting history, or deleting a branch that is not your own working branch.
+**WHAT REMAINS TOR'S IS NOT A PERMISSION LIST — IT IS A DECISION LIST, AND THE DISTINCTION IS THE
+POINT OF THE GRANT ABOVE.** These are not commands you need clearance to type. They are changes to
+what the product *is*, or acts on the outside world that cannot be undone. Raising one is not
+permission-seeking; it is «ask rather than decide on an assumption», which this file already
+requires.
 
-**Secrets:** read them from the environment or the local keychain. Never print a full
+- **Anything that weakens a security invariant**: disabling RLS, adding a select policy to
+  `responses`/`answers`, lowering the threshold, removing the anonymity CHECK. A respondent was
+  promised something, and changing the promise is a decision — the promise is the product's wedge.
+- **Deploying to production.** Previews are yours; a production deploy is a release.
+- **Dropping or truncating a table, or deleting rows in bulk, on the REMOTE project.** Irreversible
+  against real data. The LOCAL stack is explicitly yours to destroy — B/A3 truncated it on purpose,
+  to find out whether it could.
+- **Rotating keys, changing auth providers, altering billing, deleting a project or branch.**
+- **Force-pushing, rewriting history, or deleting a branch that is not your own working branch.**
+
+Everything else: run it. **If you are composing a sentence that asks whether you may run a command,
+the answer is yes and the sentence is waste.**
+
+**Secrets are a HANDLING RULE, not a permission limit, and the standing grant does not touch
+them.** Read them from the environment or the local keychain. Never print a full
 secret to the terminal, never write one into a file that git tracks, never put one in a
 commit message or PR body. If a required credential is missing, say exactly which one and
 how to provide it — do not work around it by weakening a control.
 
-**When a tool is unauthorised:** say which tool, which command failed, and what the human
+**When a tool is genuinely unavailable:** say which tool, which command failed, and what the human
 must click. Do not silently fall back to a manual instruction and carry on — an
 unapplied migration that everyone believes is applied is worse than a stopped session.
+**And never report a capability as unavailable without the call beside the claim:** the Supabase
+MCP has been reported dead five times in this project's history and was working every time.
 
 ## Immutability rules must permit referential maintenance
 An append-only or freeze trigger written as "reject any UPDATE or DELETE" will collide
