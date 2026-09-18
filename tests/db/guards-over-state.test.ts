@@ -313,6 +313,20 @@ describe('the shape itself', () => {
       // other switch on the screen rewrites that column, and an unscoped guard
       // would re-check all of them on every save.
       'organizations.organizations_mode_in_use',
+      // T1 (M:0130), invariant 1 condition 2. The rule is «the threshold and
+      // the respondent kind may not CHANGE once a response exists», which is an
+      // EDGE and not a state: on INSERT there is no previous value to differ
+      // from, and no response can exist for a survey that is being created in
+      // the same statement. So UPDATE-only is the rule's own scope rather than
+      // a narrowing of it.
+      //
+      // And the SCOPE within UPDATE is `of k_threshold, respondent_kind` for
+      // Q137's reason, which this file already states twice above: an unscoped
+      // guard would re-check every unrelated write to `surveys` — the builder
+      // saving a title, send_round stamping policy_locked, the target trigger —
+      // and Q137 is the instance where exactly that made one objecting address
+      // abort the reminder sweep for every organisation.
+      'surveys.guard_threshold_immutable',
       // Closing a task IS an event rather than a state: a closed task is
       // immutable by a separate rule (M:0066, «lukket is terminal»), so there
       // is no second road to the state this guard is about.
