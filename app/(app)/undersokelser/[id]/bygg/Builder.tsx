@@ -800,7 +800,24 @@ export function Builder({
               disabled={disabled}
               placeholder={t('titlePlaceholder')}
               aria-label={t('title')}
-              className="mt-[6px] w-full border-none bg-transparent py-[2px] font-display text-[27px] font-bold text-ink outline-none disabled:opacity-60 md:py-0"
+              /* T6 — v8:548. The title input steps down 27px/700 -> 22px/500 and
+                 gains the dashed underline that shows it is editable. Each
+                 value from its own diff entry: `font-size` 27px is build's one
+                 departed size and `padding: 2px 0` its arrival. `md:py-0` is
+                 ours and stays — it is the touch-height accommodation the
+                 comment above records, and v8 has no mobile to state one.
+
+                 AND THE SMALLER TYPE COST THE TOUCH TARGET, which the gate
+                 caught: at 27px the padded input measured 44px, at 22px it
+                 measures 38 and `verify:responsive` flagged it at both widths.
+                 `min-h-[44px]` below `md` is a REAL height rather than
+                 `touch-44`'s pseudo-element, because an <input> is a REPLACED
+                 element on which `::after` renders nothing — CLAUDE.md's
+                 recorded trap. `touch-44-field` is the utility named for form
+                 fields and is wrong here too: it forces `border-color:
+                 transparent` and an inset ring, which would erase the dashed
+                 underline this change just added. */
+              className="mt-[6px] min-h-[44px] w-full border-0 border-b border-dashed border-line bg-transparent py-[2px] font-display text-[22px] font-medium text-ink outline-none disabled:opacity-60 md:min-h-0 md:py-0"
             />
             <input
               value={draft.audience}
