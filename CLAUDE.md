@@ -293,7 +293,47 @@ authoritative in a way a stale document does not.
 - Every UI string comes from next-intl (`no` is the source language). **Never hard-code user-facing text.** Norwegian copy must match the design bundle verbatim.
 
 ## Security invariants — violating any of these fails the PR
-1. **k-anonymity, k=5, database-enforced.** Clients never select from `responses` or `answers` (no RLS select policy exists for them — do not add one). All result reads go through the SECURITY DEFINER RPCs (`aggregate_results`, `get_quotes`, heatmap RPCs) which return `insufficient_data` for any cell with n < 5 and strip group labels below threshold.
+1. **k-anonymity, database-enforced, floor k=3.** Clients never select from `responses` or `answers`
+   (no RLS select policy exists for them — do not add one). All result reads go through the SECURITY
+   DEFINER RPCs (`aggregate_results`, `get_quotes`, heatmap RPCs), which return `insufficient_data` for
+   any cell below the survey's effective threshold and strip group labels below it.
+
+   The threshold is a per-survey policy, not a constant: **5 by default**, settable to 3, 4, 5, 8 or 10,
+   and **never below 3 where the respondent is a natural person**. The floor is enforced in the
+   database, not in the picker. No setting disables the threshold for natural persons.
+
+   **Four conditions, all structural. None of them is about a particular statute.**
+
+   1. **The floor is a CHECK constraint.** A value below 3 for a person survey is rejected by the
+      database whatever writes it.
+   2. **The threshold is immutable once a response exists.** Otherwise a suppressed cell can be read by
+      waiting and then lowering — that turns a setting into a retrieval mechanism. Enforced by
+      constraint, not by disabling a control.
+   3. **The strictest threshold governs any report drawing on more than one survey**, enforced in the
+      RPC. In the report layer instead, invariant 1's central claim stops being true where it matters.
+   4. **A below-threshold cell never exposes its actual n**, in any role, anywhere. The count is itself
+      a disclosure about the group.
+
+   **Organisations are outside k.** Where the respondent is a legal entity rather than a natural person,
+   k-anonymity is not the applicable protection and attribution is usually the point — supplier
+   assessments, B2B customer surveys, member organisations alike. Anonymity is locked off and shown as
+   locked rather than hidden. `respondent_kind` is immutable after the first response, and no path
+   reclassifies a person survey as an organisation one.
+
+   **Where a template carries a statutory policy, that policy is locked** — threshold and anonymity
+   both — with the statute named on the lock. This is the only place law enters the rule.
+
+   **Segmenter remains refused at any threshold.** Segments are rules selecting a population, never
+   labels on an answer, because k does not compose: two overlapping segments of five with an
+   intersection of two disclose the two by subtraction. This is arithmetic, not compliance, and it gets
+   worse at 3.
+
+   **WHO MAY SET IT.** The person who creates the survey sets the threshold on it; an administrator
+   sets the organisation default. That is all — no delegation switch, no enable step, no per-role gate
+   beyond that. Q17 § 8 proposes «Tillat at redaktører senker terskelen», whose purpose is to withhold
+   this from the survey's own creator; it is **not built**, because nothing is being withheld. `leser`
+   is unchanged: aggregates-only, and it does not create surveys. The floor still holds — 3, in the
+   database — because that is arithmetic about disclosure, not a permission.
 2. **Anonymity is structural.** Anonymous submissions: `invitation_id` NULL, no user id, no IP/user-agent anywhere, `submitted_hour` truncated to the hour. The DB CHECK constraint enforcing this stays. The only write path is `rpc.submit_response` (token-validated, single transaction: mark `responded_at`, insert unlinked response).
 3. RLS on every table, org-scoped via `app.is_org_member` / `app.has_role`. New table ⇒ RLS + policies in the same migration + a test.
    **AND THE COROLLARY THAT V4-0 MADE STANDING: NO PER-ORGANISATION VALUE MAY REACH A
