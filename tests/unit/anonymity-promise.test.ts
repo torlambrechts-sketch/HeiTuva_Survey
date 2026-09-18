@@ -136,3 +136,86 @@ describe('Q91 — k=2 is its own tier, not the low-threshold caveat', () => {
     ).toBe('promiseOrganisation')
   })
 })
+
+/**
+ * T1.5 — the keys the selector can return must RESOLVE, in both languages.
+ *
+ * Everything above this point tests which key the derivation picks. Nothing
+ * tested that the key names a string. The two are different failures: a wrong
+ * key shows the respondent the wrong promise, a missing key shows them
+ * «respondent.promiseChooseTwo», and only the first was guarded.
+ *
+ * `verify:i18n` cannot see any of them. `scripts/verify/i18n.ts:51` skips every
+ * message carrying an ICU placeholder, and six of the eight interpolate
+ * `{kWord}` — so the gate that exists for exactly this class of defect is blind
+ * to three quarters of this family by construction. That is why the assertion
+ * is here rather than left to it.
+ *
+ * The key set is obtained by DRIVING the selector across its whole input space,
+ * so a ninth variant added to the union type joins it on its own and fails the
+ * resolution checks if its string is missing. The first test then pins that set
+ * against a written list — deliberately, and it is the one place here a list is
+ * right: a variant that stops being reachable is invisible to a check that only
+ * asks whether what it reached resolves.
+ */
+describe('T1.5 — every promise the selector can return resolves, per locale', () => {
+  const reachable = async () => {
+    const { anonymityPromise } = await load()
+    const keys = new Set<string>()
+    for (const anonymity of ['anonymous', 'named', 'optional'] as const)
+      for (const respondentKind of ['person', 'organisation'] as const)
+        for (let k = 0; k <= 10; k++)
+          keys.add(anonymityPromise({ anonymity, kThreshold: k, respondentKind }).key)
+    return keys
+  }
+
+  it('the reachable set is the eight variants — derived, not listed', async () => {
+    const keys = await reachable()
+    expect([...keys].sort()).toEqual([
+      'promiseAnonymous',
+      'promiseAnonymousLow',
+      'promiseAnonymousTwo',
+      'promiseChoose',
+      'promiseChooseLow',
+      'promiseChooseTwo',
+      'promiseNamed',
+      'promiseOrganisation',
+    ])
+  })
+
+  // Per locale or it is not a comparison: `no` is the source language and `en`
+  // is the one a translator can leave behind, so asserting the union of the two
+  // would pass with every English string missing.
+  it.each(['no', 'en'])('%s carries a non-empty string for each of them', async (lang) => {
+    const keys = await reachable()
+    const messages = (await import(`@/messages/${lang}.json`)).default as Record<
+      string,
+      Record<string, string>
+    >
+    const missing = [...keys].filter((k) => !messages.respondent?.[k]?.trim())
+    expect(missing).toEqual([])
+  })
+
+  /**
+   * And the placeholder has to be fed. `Respondent.tsx:299` passes
+   * `p.values?.kWord ?? ''`, so a variant that interpolates `{kWord}` while the
+   * selector returns no `values` renders «minst  har svart» — a sentence with a
+   * hole in it, which no gate reads and which is not a missing key.
+   */
+  it.each(['no', 'en'])('%s: every string naming {kWord} is returned with one', async (lang) => {
+    const { anonymityPromise } = await load()
+    const messages = (await import(`@/messages/${lang}.json`)).default as Record<
+      string,
+      Record<string, string>
+    >
+    const holes: string[] = []
+    for (const anonymity of ['anonymous', 'named', 'optional'] as const)
+      for (const respondentKind of ['person', 'organisation'] as const)
+        for (let k = 2; k <= 10; k++) {
+          const p = anonymityPromise({ anonymity, kThreshold: k, respondentKind }, lang)
+          const interpolates = (messages.respondent?.[p.key] ?? '').includes('{kWord}')
+          if (interpolates && !p.values?.kWord) holes.push(`${p.key} at k=${k}`)
+        }
+    expect(holes).toEqual([])
+  })
+})

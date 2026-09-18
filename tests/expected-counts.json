@@ -59,7 +59,7 @@
   "tests/invariants/threshold-policy.test.ts": 18,
   "tests/invariants/token-lifecycle.test.ts": 14,
   "tests/unit/absent-deps.test.ts": 2,
-  "tests/unit/anonymity-promise.test.ts": 13,
+  "tests/unit/anonymity-promise.test.ts": 18,
   "tests/unit/anonymity-sheet.test.ts": 8,
   "tests/unit/attributed-csv.test.ts": 20,
   "tests/unit/audience-half.test.ts": 6,
