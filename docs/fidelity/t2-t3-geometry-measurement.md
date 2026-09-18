@@ -110,3 +110,100 @@ So the two halves split cleanly:
 - **Blocked on one decision:** installing the handoff (its directory name, its § 0.3 row), after
   which the seven-step checklist in CLAUDE.md applies — including the security-copy sweep over
   the new bundle's prose, which is per-bundle and has not been run for this one.
+
+---
+
+# WHAT T2 AND T3 RESOLVED, once v8 was installed and readable
+
+## THE SHARED HEADING MUST NOT MOVE, AND THE DIFF SAID IT SHOULD
+
+The three values the diff reports as GONE from v8's dashboard —
+`font-size:32px`, `max-width:460px`, `line-height:1.6` — are all one component:
+`components/PageHeader.tsx:112` and `:122`. F3 built it for a four-screen band.
+
+Applying the diff as read would have restyled the page heading on every screen
+that mounts it. **Measured instead, per screen, in v8 itself:**
+
+| screen in v8 | heading | verdict |
+|---|---|---|
+| `surveys` (T3, governed) | `600 · 32px · 1.1` | **identical to v7 and to ours** |
+| `library` (not governed) | `600 · 32px · 1.1` | identical |
+| `dashboard` (T2, governed) | `500 · 27px · 1.15` + `text-wrap:pretty` | the only one that changed |
+
+**v8 does not restyle the shared heading. It gives the dashboard a different one**,
+because the dashboard's heading stopped being a page label and became
+`{{ dashTitle }}` — the name of a user-created object. So `PageHeader` is
+UNCHANGED, and `max-width:460px` / `line-height:1.6` are absent from v8's
+dashboard because that screen has no lead paragraph any more; it has a meta bar.
+
+This is the shape F3 recorded from the other side: *a property of a shared
+surface is not a property of every screen it sits on.* Here the count said
+«three values gone» and the screens said «one screen differs from its
+neighbours».
+
+## T2 — APPLIED: the KPI row's geometry, and three things deliberately not copied
+
+`DashboardScreen.tsx`, against `v8:2603-2612`: track `auto-fit` at 185px in place
+of three declared breakpoints, gap 15 → 14, card 16px radius / `px-5 py-[18px]` →
+18px radius / `24px 26px`, value `35px/700/1.05` → `34px/600/1.1`, and `min-w-0`
+on the card because an auto-fit track is `auto` and `auto` is max-content.
+
+Not copied, with the reason beside each in the source: `min-height:37px` on the
+label (a constant sized for v8's two-line labels — ours are kickers), the
+`chipLabel`/`chipValue` chip (no such data in `stats`, and V5-1 removed an
+invented figure from this same card), and `c.tint` (a per-card colour the
+drawing takes from its fixture).
+
+## T2 — NOT GEOMETRY, therefore not built: v8 rebuilt the dashboard's architecture
+
+`dashAddArmed · dashCanDelete · dashEdit · dashNotRenaming · dashRenaming ·
+dashShareOpen · pn.isChooser · pn.isPanel · pn.isSlot · pn.scopeOpen ·
+pn.chooserEmpty` — eleven of v8's twenty-one new keys are a dashboard MANAGEMENT
+layer (rename, delete, share, a panel chooser) and a meta bar carrying
+`dashThresholdLine` and «Gjelder alle paneler». That is a feature tranche with
+its own data questions, not the geometry T2 was scoped to, and building it under
+a geometry label is how scope stops being legible.
+
+## T3 — NOT APPLIED, and the reason is a column that must not be built as drawn
+
+v8's survey table is FIVE columns where ours is six, and the sets differ:
+
+| | v8 | v7 / ours |
+|---|---|---|
+| 1 | Undersøkelse `minmax(220px,2.2fr)` | Undersøkelse |
+| 2 | Status `118px` | Svar |
+| 3 | Svar `minmax(120px,1fr)` | Sendt |
+| 4 | **Snitt** `78px` | Status |
+| 5 | Handling `166px` | Eier |
+| 6 | — | Handling |
+
+**v8 drops `Sendt` and `Eier` and adds `Snitt`.** Narrowing our flex tracks to
+v8's declared grid tracks is not possible without deciding that column set: `118px`
+is Status's width in a five-column table, and carrying it into a six-column one is
+the constant-out-of-context failure this project has already paid for once.
+
+### AND `Snitt` IS AN UNGATED AGGREGATE IN THE DRAWING
+
+```
+scoreOf(sv){                                                    v8:8245
+  let sum = 0, n = 0;
+  sv.questions.forEach(q => { if (q.type !== "scale") return;
+    sv.responses.forEach(r => { … sum += v; n++; }); });
+  return n ? (sum / n).toFixed(1).replace(".", ",") : "—";
+}
+```
+
+**No threshold anywhere.** It returns «—» only when a survey has no scale answers,
+never when the response count is below the survey's threshold — so as drawn, a
+survey with one response shows that respondent's mean on a list row.
+
+The bundle knows better elsewhere: `v8:10116` gates a round's average with
+`avg: below ? "—" : …`, and `v8:7544` carries `under: gr < pol.threshold`. The
+survey-row score is the one place it does not.
+
+Invariant 1 decides this and the tie-breaker is explicit — **this file wins on
+security, the bundle wins on visuals.** A mean over a survey's responses is a
+result read, so it belongs behind a SECURITY DEFINER RPC returning
+`insufficient_data` below `app.k_for(survey)`, and the cell renders the
+suppressed treatment rather than a number. **`Snitt` is buildable; it is not
+buildable as drawn.**

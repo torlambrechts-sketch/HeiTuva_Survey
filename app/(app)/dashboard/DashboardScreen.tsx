@@ -463,11 +463,37 @@ export async function DashboardScreen({
         }}
       />
 
-      <div className="mt-5 grid grid-cols-1 gap-[15px] md:grid-cols-2 xl:grid-cols-4">
+      {/* T2 — v8's KPI row geometry (v8:2603-2612). What moved, and what did not:
+          the track is `auto-fit` at 185px rather than three declared breakpoints,
+          the gap 15 -> 14, the card 16px/20px padding -> 18px radius with 24/26
+          padding, and the value 35px/700/1.05 -> 34px/600/1.1.
+
+          `min-width:0` is on the card because an auto-fit track is `auto`, which
+          resolves to max-content when nothing constrains it — F3's finding, and
+          the reason its absence shows up as a page-wide overflow rather than as
+          a wide card.
+
+          THREE THINGS IN v8's CARD ARE DELIBERATELY NOT COPIED, because they are
+          data and copy rather than geometry:
+          - the label at 13px with `min-height:37px`. That height exists to align
+            v8's two-line labels; ours are kickers («Svar», «Svarprosent»), so
+            the constant would carry its context's assumption in and add dead
+            space to every card. A constant is a property of the CONTROL, not of
+            the pattern.
+          - the `{{ c.chipLabel }}` / `{{ c.chipValue }}` chip that replaces the
+            note. `stats` carries {key, label, value, note} and no chip exists in
+            the schema; V5-1 already removed an invented figure from this exact
+            card.
+          - `{{ c.tint }}`, a per-card background the drawing supplies from its
+            fixture and nothing here can derive. */}
+      <div className="mt-4 grid gap-[14px] [grid-template-columns:repeat(auto-fit,minmax(185px,1fr))]">
         {stats.map((s) => (
-          <div key={s.key} className="rounded-2xl border border-line bg-sf px-5 py-[18px]">
+          <div
+            key={s.key}
+            className="min-w-0 rounded-[18px] border border-line bg-sf px-[26px] py-6"
+          >
             <div className="text-[11px] uppercase tracking-[.1em] text-mut">{s.label}</div>
-            <div className="mt-2 font-display text-[35px] font-bold leading-[1.05]">{s.value}</div>
+            <div className="mt-2 font-display text-[34px] font-semibold leading-[1.1]">{s.value}</div>
             <div className="mt-[2px] text-[13px] text-mut">{s.note}</div>
           </div>
         ))}
