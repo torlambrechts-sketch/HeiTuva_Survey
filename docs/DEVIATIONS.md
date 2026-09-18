@@ -8037,3 +8037,60 @@ locator's name — meeting a fixture that grew.
 the first thing to check is the control count on `undersokelser`.
 
 LOGGED, NOT FIXED — apparatus frozen. The runbook line is in `docs/OPERATIONS.md`.
+
+## D250 — the `supabase_admin` default-privilege row survives B3, and no migration of ours can reach it
+
+**Logged 2026-09-18, Phase C5.** B3's own migration text says this; it is lifted here so the next
+person finds it stated rather than rediscovering it from a grant that came back.
+
+B3 revoked TRUNCATE and REFERENCES from `anon` and `authenticated` on all 66 public tables, and
+closed the future with:
+
+```sql
+alter default privileges in schema public
+  revoke truncate, references on tables from anon, authenticated;
+```
+
+**That statement edits the default ACL of the role that runs it, and nothing else.** Read back after
+the apply, production and local agree, and there are TWO rows:
+
+```
+grantor         acl
+postgres        postgres=arwdDxtm/postgres | anon=arwdtm/postgres | authenticated=arwdtm/postgres | …
+supabase_admin  postgres=arwdDxtm/supabase_admin | anon=arwdDxtm/supabase_admin | authenticated=arwdDxtm/supabase_admin | …
+```
+
+The `postgres` row lost its `D` and `x`. **The `supabase_admin` row still grants both.**
+
+**Why it cannot be fixed by a migration, measured rather than assumed.** `ALTER DEFAULT PRIVILEGES`
+may only alter the defaults of a role you are a member of, and
+`pg_has_role('postgres','supabase_admin','MEMBER')` is **false** on both environments. Migrations run
+as `postgres` (`current_user = session_user = postgres`, confirmed on production through the MCP).
+So the statement is not merely omitted — it is unavailable.
+
+**Why it does not bite today, and exactly when it would.** The default ACL applied to a new table is
+the CREATOR's. All 66 public tables are owned by `postgres`, and every table this project creates is
+created by a migration running as `postgres`. The `supabase_admin` row therefore governs only tables
+created BY `supabase_admin`, of which this schema has none.
+
+**The condition that would make it bite**, stated so it is recognisable rather than left as a
+feeling: a table appearing in `public` owned by `supabase_admin` — a platform feature provisioned
+from the dashboard, an extension that installs into `public`, or a Supabase-managed migration. Such
+a table would arrive with `anon` and `authenticated` holding TRUNCATE and REFERENCES again, and
+B3's schema-wide revoke would not cover it because that revoke ran once over the tables that existed.
+
+**The check that finds it, and it is one query:**
+
+```sql
+select n.nspname||'.'||c.relname, pg_get_userbyid(c.relowner)
+from pg_class c join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relkind in ('r','p')
+  and (has_table_privilege('anon', c.oid, 'TRUNCATE')
+       or has_table_privilege('authenticated', c.oid, 'TRUNCATE'));
+```
+
+Zero rows on both environments as of 2026-09-18. **A non-zero result is this deviation arriving**,
+not a new defect, and the owner column tells you immediately which default ACL let it in.
+
+This is the same shape as the enumeration table's own subject: B3 closed the property for the
+creator we control and the list for everyone else, because the language offers nothing better.
