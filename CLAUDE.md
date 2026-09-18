@@ -293,19 +293,20 @@ authoritative in a way a stale document does not.
 - Every UI string comes from next-intl (`no` is the source language). **Never hard-code user-facing text.** Norwegian copy must match the design bundle verbatim.
 
 ## Security invariants — violating any of these fails the PR
-1. **k-anonymity, database-enforced, floor k=3.** Clients never select from `responses` or `answers`
+1. **k-anonymity, database-enforced, floor k=2.** Clients never select from `responses` or `answers`
    (no RLS select policy exists for them — do not add one). All result reads go through the SECURITY
    DEFINER RPCs (`aggregate_results`, `get_quotes`, heatmap RPCs), which return `insufficient_data` for
    any cell below the survey's effective threshold and strip group labels below it.
 
-   The threshold is a per-survey policy, not a constant: **5 by default**, settable to 3, 4, 5, 8 or 10,
-   and **never below 3 where the respondent is a natural person**. The floor is enforced in the
+   The threshold is a per-survey policy, not a constant: **5 by default**, settable to 2, 3, 4, 5, 8 or 10,
+   and **never below 2 where the respondent is a natural person**. The floor is enforced in the
    database, not in the picker. No setting disables the threshold for natural persons.
 
    **Four conditions, all structural. None of them is about a particular statute.**
 
-   1. **The floor is a CHECK constraint.** A value below 3 for a person survey is rejected by the
-      database whatever writes it.
+   1. **The floor is a CHECK constraint.** A value below 2 for a person survey is rejected by the
+      database whatever writes it. The floor is 2 because Q91 built and shipped the k=2 tier, with its
+      own copy in both locales; Q17's earlier «gulv 3» is superseded by it.
    2. **The threshold is immutable once a response exists.** Otherwise a suppressed cell can be read by
       waiting and then lowering — that turns a setting into a retrieval mechanism. Enforced by
       constraint, not by disabling a control.
@@ -326,13 +327,13 @@ authoritative in a way a stale document does not.
    **Segmenter remains refused at any threshold.** Segments are rules selecting a population, never
    labels on an answer, because k does not compose: two overlapping segments of five with an
    intersection of two disclose the two by subtraction. This is arithmetic, not compliance, and it gets
-   worse at 3.
+   worse at 2.
 
    **WHO MAY SET IT.** The person who creates the survey sets the threshold on it; an administrator
    sets the organisation default. That is all — no delegation switch, no enable step, no per-role gate
    beyond that. Q17 § 8 proposes «Tillat at redaktører senker terskelen», whose purpose is to withhold
    this from the survey's own creator; it is **not built**, because nothing is being withheld. `leser`
-   is unchanged: aggregates-only, and it does not create surveys. The floor still holds — 3, in the
+   is unchanged: aggregates-only, and it does not create surveys. The floor still holds — 2, in the
    database — because that is arithmetic about disclosure, not a permission.
 2. **Anonymity is structural.** Anonymous submissions: `invitation_id` NULL, no user id, no IP/user-agent anywhere, `submitted_hour` truncated to the hour. The DB CHECK constraint enforcing this stays. The only write path is `rpc.submit_response` (token-validated, single transaction: mark `responded_at`, insert unlinked response).
 3. RLS on every table, org-scoped via `app.is_org_member` / `app.has_role`. New table ⇒ RLS + policies in the same migration + a test.
