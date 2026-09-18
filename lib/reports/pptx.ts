@@ -128,7 +128,25 @@ function sectionSlides(pptx: PptxGenJS, section: ComposedSection, labels: PrintL
     return
   }
   if (section.key === 'method' && extra && typeof extra.k === 'number') {
-    prose(open(), extra.k === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(extra.k)), false)
+    const docK = extra.k
+    const slide = open()
+    prose(slide, docK === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(docK)), false)
+    // T1.6: the per-source line was missing here alone. `PrintLabels` has
+    // carried `sourceLowerK` since the PDF was built (print.ts:40) and the deck
+    // never rendered it, so a deck stated the document's threshold and stayed
+    // silent about a source weaker than it. A deck is the artefact that
+    // circulates furthest from the person who composed it, which makes it the
+    // worst of the four places to leave that out.
+    for (const src of (extra.sources ?? []).filter((x) => x.k > 0 && x.k < docK)) {
+      prose(
+        slide,
+        labels.sourceLowerK
+          .replace('{title}', src.title)
+          .replace('{k}', String(src.k))
+          .replace('{docK}', String(docK)),
+        true,
+      )
+    }
     return
   }
   if (section.key === 'per_virksomhet') {

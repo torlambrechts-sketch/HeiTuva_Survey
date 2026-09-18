@@ -14,6 +14,9 @@ type Labels = {
   responded: string
   completion: string
   summaryEmpty: string
+  methodK: string
+  methodAttributed: string
+  sourceLowerK: string
 }
 
 /**
@@ -79,6 +82,43 @@ function SectionBody({ section, labels }: { section: ComposedSection; labels: La
 
   if (section.pending) {
     return <p className="mt-2 text-[13px] text-mut">{labels.pending}</p>
+  }
+
+  /**
+   * T1.6 — the threshold the document rests on, in the method section, ALWAYS.
+   *
+   * `compose_report` has supplied `{k, sources}` for this section since
+   * M:0089, and three of the four renderers read it: the editor
+   * (`ReportDocument.tsx:274`), the PDF (`lib/reports/print.ts:120`) and the
+   * deck (`lib/reports/pptx.ts:130`). This one did not, so the share link —
+   * the only one of the four a reader OUTSIDE the organisation opens — showed
+   * the method section with its threshold missing.
+   *
+   * The card's footer was not a substitute. `reports.groupThreshold` says
+   * «Grupper under terskelen vises aldri nedbrutt» and carries no number, so
+   * the reader learned that a threshold exists and never which one — and the
+   * per-source line, which is the one that says a source is weaker than the
+   * document claiming it, was absent altogether.
+   */
+  if (section.key === 'method' && extra && typeof extra.k === 'number') {
+    const docK = extra.k
+    return (
+      <div className="mt-2 flex flex-col gap-[6px]">
+        <p className="text-[13.5px] leading-[1.65]">
+          {docK === 0 ? labels.methodAttributed : labels.methodK.replace('{k}', String(docK))}
+        </p>
+        {(extra.sources ?? [])
+          .filter((s) => s.k > 0 && s.k < docK)
+          .map((s) => (
+            <p key={s.survey_id} className="text-[12px] leading-[1.5] text-mut">
+              {labels.sourceLowerK
+                .replace('{title}', s.title)
+                .replace('{k}', String(s.k))
+                .replace('{docK}', String(docK))}
+            </p>
+          ))}
+      </div>
+    )
   }
 
   if (extra?.quotes) {

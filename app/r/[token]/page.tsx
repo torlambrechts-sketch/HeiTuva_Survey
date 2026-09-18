@@ -63,6 +63,11 @@ export default async function SharedReportPage({
         suppressedNote: t('suppressedNote', { count: doc.suppressed_groups?.length ?? 0 }),
         insufficient: t('insufficientCell'),
         threshold: t('groupThreshold'),
+        // Placeholders are handed through rather than resolved here: the values
+        // live on each section's `extra`, which only SectionBody has.
+        methodK: t('methodK', { k: 0 }).replace('0', '{k}'),
+        methodAttributed: t('methodAttributed'),
+        sourceLowerK: t('sourceLowerK', { title: '{title}', k: '{k}', docK: '{docK}' }),
         scopeNote:
           doc.share_scope === 'alle_ansatte'
             ? t('shareAlleDesc')
