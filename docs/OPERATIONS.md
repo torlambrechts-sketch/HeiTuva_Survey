@@ -1639,3 +1639,23 @@ allowlisted beside `submit_response` with reasons that cite numbered tests.
 G5 and G6 touched no `supabase/` path — verified per commit — and the schema was already in
 step through M:0126 from the previous sync. **The application code is what changes with G5
 and G6, and that ships with the Vercel deploy, not with a migration.**
+
+---
+
+## RUNBOOK — `verify:responsive` requires a database reset before it runs
+
+**Added 2026-09-18, Phase A5 (D249).**
+
+```bash
+supabase db reset && npx tsx scripts/seed-i18n.ts --local && npm run seed:demo && npm run seed:help
+npm run verify:responsive
+```
+
+**Why.** Eleven manifest labels declare `route: '/undersokelser'` and reach their screen by clicking
+a row in the survey list. `verify:roundtrip`, `verify:send`, `verify:load`, the full vitest suite and
+`verify:hermetic` all create surveys in the demo organisation. Run after them without a reset, the
+list is long enough that `.first()` on the row locator times out, and the gate exits 1 with
+«could not be measured» on up to 26 combinations — none of which is about a screen.
+
+**Reading rule:** a red from this gate is a question about the database first. Check the control
+count on `undersokelser` — a seeded baseline is ~35; 112 means the fixture grew.

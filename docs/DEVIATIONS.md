@@ -7970,3 +7970,70 @@ reason. **The rule was never wrong; its premise stopped being true**, which is a
 and the one a future reader needs, because «the bundle contains no X» is the kind of claim that
 expires silently every time a handoff arrives. A rule stated only by its premise has no boundary to
 fall back on when the premise goes.
+
+## D248 — `verify:reference` is green while rewriting 35 of 35 of its own baselines
+
+**Measured 2026-09-18, Phase A5. D242 records four non-reproducible baselines; it is all of them.**
+
+`npm run verify:reference` exits 0 and prints `captured 35, failed 0 across 1 bundle(s)`. Immediately
+afterwards, `git status artifacts/` lists **thirty-five modified PNGs** — every file the run produced:
+
+```
+admin-brukere admin-firma admin-grupper admin-integrasjoner admin-malgrupper admin-personvern
+admin-profil admin-valg bibliotek bibliotek-bank builder dashboard hjelp live live-revealed
+oppgaver oppgaver-oppgaver oppgaver-tilbakemeldinger oversikt profil rapport-editor
+rapport-editor-del rapport-editor-filter rapporter rapporter-mine rapporter-standard respondent
+respondent-kommentar respondent-kommentar-lagret respondent-takk respondent-takk-sendt
+resultater send undersokelser wizard
+```
+
+**Why it is green anyway, and this is the part worth keeping.** The gate's assertion is that the
+captured screens are **pairwise distinct from each other** — the check that earned itself at V6-0 by
+catching a removed `sc-if` key. It never compares a capture against the committed picture of the same
+screen. So the one thing the committed directory is *for* is the one thing nothing reads.
+
+D242 attributes non-reproducibility to the bundle's own `uid()` (`Math.random()`, v7:6405) on three
+screens plus one alternating layout. That explains four. **It does not explain thirty-five.** D243 does:
+every `artifacts/reference-*` baseline is the drawing rendered in FALLBACK FONTS, because the bundle's
+webfonts fail TLS in this container and `document.fonts.ready` resolves vacuously with no `@font-face`
+to wait for. A different font stack moves every glyph on every screen.
+
+**The two together mean the committed baselines are a picture of one machine's font availability**,
+and any run on a machine with different fonts rewrites all of them while reporting success.
+
+LOGGED, NOT FIXED — the apparatus is frozen (VERIFY.md). The churn was reverted with
+`git checkout -- artifacts/` rather than committed, because committing either state makes the
+baseline a picture of one run. **The reading habit that catches it needs no gate: a gate that goes
+green while rewriting its own evidence is a finding, not a relief.**
+
+## D249 — `verify:responsive` is order-dependent, and its red is not about a screen
+
+**Measured 2026-09-18, Phase A5.**
+
+Run individually after the write-heavy gates, `verify:responsive` exits 1 with
+**26 combinations never measured** — 13 states × 2 viewports, across `bygg*`, `send*` and
+`bibliotek-*`, every one a `locator.click: Timeout 30000ms` on
+`getByRole('link', { name: /^(Rediger spørsmål|Edit questions): / }).first()` or
+`getByRole('button', { name: 'Lagre til banken' }).first()`.
+
+**Not one of them is about a screen.** Measured on the same build:
+
+- `verify:browser` captured every one of those states cleanly — 14 `bygg`, 10 `send` — 243 of 243, 0
+  failed, and all 243 `*.log.json` artefacts carry empty `httpErrors`, `consoleErrors` and
+  `pageErrors` arrays.
+- `undersokelser` measured `controls=112` against a seeded baseline of ~35.
+- `bygg/kompakt` **succeeded** while its siblings on the same route timed out.
+- On a clean `supabase db reset` + all three seeds, the same command re-ran at
+  **244 declared, 244 measured, 0 skipped, 0 findings, 0 blockers, exit 0.**
+
+**The mechanism.** Eleven manifest labels declare `route: '/undersokelser'` and reach their real
+screen through `states[].setup`, which clicks a row in the survey list. `verify:roundtrip`,
+`verify:send` and `verify:load` each create surveys in the demo organisation; the full vitest suite
+and `verify:hermetic` create more. The list grows, the click target moves or is covered, and
+`.first()` on a name-filtered locator times out. That is D189's shape — a predicate living in a
+locator's name — meeting a fixture that grew.
+
+**So a red from this gate must be read as a question about the database, not about the layout**, and
+the first thing to check is the control count on `undersokelser`.
+
+LOGGED, NOT FIXED — apparatus frozen. The runbook line is in `docs/OPERATIONS.md`.
