@@ -75,3 +75,6 @@ artifacts/fidelity/*
 # after. Ignored so a transient file is never offered as a commit.
 *.tmp.mjs
 *.tmp.ts
+*.tmp.sh
+n101.log
+n101-*.txt
