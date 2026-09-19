@@ -4,6 +4,58 @@
 every gate there: not «is the code correct» but **«is the database this code is about to run
 against ready for it»**. It is the only check in the project that names a deploy TARGET.
 
+## THE ORDER, AND IT IS NOT NEGOTIABLE
+
+```
+  1. apply the migration to production
+  2. verify by CONTENT — the A1/F7 rollups, both sides serialised identically
+  3. verify:predeploy against production        <- green BEFORE
+  4. deploy
+  5. verify:predeploy against production        <- green AFTER
+```
+
+**Steps 3 and 5 are different claims and neither substitutes for the other.**
+Green before says «the schema is ready for the code that is about to ship».
+Green after says «the schema is ready for the code that actually shipped» — and
+the two differ whenever the deploy carries something the check did not see,
+which is every time a deploy is not the commit you measured.
+
+### Why the order is written down: F7's outage
+
+**`2202dd2` took `/undersokelser` down.** T3.1's `page.tsx` called
+`survey_scale_means`; production did not have it, because M:0131 was unapplied.
+The Vercel build was green — a `.rpc('name')` string is not type-checked against
+any database, and `types/database.ts` is generated from LOCAL. Every signed-in
+user got HTTP 500 with digest `3839573425`.
+
+### And G1 repeated it in the other direction, which is the more useful half
+
+`80624ea` was pushed while production was still at M:0136. `page.tsx` selects
+`dashboard_layouts.cols`, which did not exist yet. Simulated by dropping the
+column locally, `verify:predeploy` names it exactly:
+
+```
+  column    dashboard_layouts.cols    app/(app)/dashboard/page.tsx
+```
+
+**The check existed by then and was not run before the push.** Having the gate
+is not the same as putting it in the order.
+
+**What it did is the part worth keeping.** `/undersokelser` does
+`if (meanError) throw new Error(...)`, so its skew was a 500 — loud, reported
+within the hour. `/dashboard` destructures `{ data: savedLayouts }` with no
+error check and falls back to `savedLayouts ?? []`, so ITS skew was silent:
+every member's saved layout read as absent and the page showed the
+«choose a setup» state, as though nobody had ever arranged a dashboard.
+
+> **The same skew produced a loud failure in one screen and a wrong state in
+> the other, and the silent one is worse.** A 500 gets reported. A dashboard
+> that quietly forgets your layout gets shrugged at, and the cause is a
+> database column nobody would think to look for.
+
+That asymmetry is the argument for running step 3 rather than relying on
+someone noticing. A screen that degrades politely will not tell you.
+
 ## What it caught, after the fact
 
 `/undersokelser` returned HTTP 500 to every signed-in user while the Vercel build at `2202dd2` was
