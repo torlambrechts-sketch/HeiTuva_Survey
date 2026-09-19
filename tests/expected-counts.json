@@ -11,7 +11,7 @@
   "tests/db/comment-thread.test.ts": 11,
   "tests/db/comments.test.ts": 31,
   "tests/db/dashboard-layouts.test.ts": 22,
-  "tests/db/dashboards.test.ts": 15,
+  "tests/db/dashboards.test.ts": 19,
   "tests/db/deactivation.test.ts": 14,
   "tests/db/entra-credential.test.ts": 25,
   "tests/db/entra-sync.test.ts": 13,

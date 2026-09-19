@@ -75,6 +75,9 @@
  *
  * And at M:0135, which made both dashboard FKs COMPOSITE: 4 changed lines,
  * the two Relationships rows gaining org_id. Nothing else moved.
+ *
+ * And at F6/M:0136: 8 added, 0 removed — dashboard_shares.revoked_at plus the
+ * two anon-reachable functions, dashboard_for_share_token and shared_dashboard.
  */
 export type Json =
   | string
@@ -360,6 +363,7 @@ export type Database = {
           created_by: string | null
           dashboard_id: string
           id: string
+          revoked_at: string | null
           role: "administrator" | "redaktor" | "leser" | null
           scope: string
           token_hash: string | null
@@ -369,6 +373,7 @@ export type Database = {
           created_by?: string | null
           dashboard_id: string
           id?: string
+          revoked_at?: string | null
           role?: "administrator" | "redaktor" | "leser" | null
           scope: string
           token_hash?: string | null
@@ -378,6 +383,7 @@ export type Database = {
           created_by?: string | null
           dashboard_id?: string
           id?: string
+          revoked_at?: string | null
           role?: "administrator" | "redaktor" | "leser" | null
           scope?: string
           token_hash?: string | null
@@ -3378,6 +3384,7 @@ export type Database = {
         }
         Returns: Json
       }
+      dashboard_for_share_token: { Args: { p_token: string }; Returns: string }
       dashboard_summary: {
         Args: {
           p_group?: string
@@ -3562,6 +3569,10 @@ export type Database = {
       }
       set_result_optin: {
         Args: { p_token: string; p_want: boolean }
+        Returns: Json
+      }
+      shared_dashboard: {
+        Args: { p_dashboard: string; p_token: string }
         Returns: Json
       }
       sign_duty: { Args: { p_duty: string; p_role_key: string }; Returns: Json }

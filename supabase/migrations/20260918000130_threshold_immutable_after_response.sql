@@ -267,7 +267,7 @@ begin
       -- step, no per-role gate beyond that.» The admin-only check and the
       -- organisation flag that could waive it both existed to withhold this
       -- from the survey's own creator, so both are gone. What remains is
-      -- arithmetic, not permission: the floor of 3, the organisation's floor
+      -- arithmetic, not permission: the floor of 2, the organisation's floor
       -- above, and immutability once a response exists. The audit row stays.
       insert into public.audit_events (org_id, actor_user_id, action, target, meta)
       values (new.org_id, v_uid, 'threshold.change', new.id::text,

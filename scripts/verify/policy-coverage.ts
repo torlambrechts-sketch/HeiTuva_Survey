@@ -80,6 +80,37 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
 const ANON_BY_DESIGN: Record<string, string> = {
   report_for_share_token: 'resolves a share token to its report id; returns an id or nothing, never content',
   submit_response: 'the only respondent write path; token-validated',
+
+  // ── F6, the external dashboard share. Two functions, and they are
+  //    allowlisted for DIFFERENT reasons; neither is «it refuses anyway».
+  dashboard_for_share_token:
+    'F6: the token half of the report share\'s own shape. It RETURNS A UUID and ' +
+    'nothing else — there is no figure in its result to gate, which is precisely ' +
+    'why the shape is two functions rather than one. Anon by necessity: whoever ' +
+    'opens a share link has no session. It authorises itself from the token ' +
+    'inside, refuses a revoked or unknown one with the same empty answer so the ' +
+    'refusal cannot enumerate dashboards, and mirrors report_for_share_token ' +
+    'line for line. tests/db/dashboards.test.ts proves the wrong-token and ' +
+    'revoked-token cases resolve nothing',
+
+  shared_dashboard:
+    'F6: the serving half, and the ONLY anon-reachable function here that ' +
+    'returns figures. Every one of them comes from app.aggregate_rows — the ' +
+    'same authority-free body aggregate_results uses — so the k-gate is one ' +
+    'implementation with two callers rather than a copy, and a question below ' +
+    'its survey\'s threshold is not in that payload at all. It serves DRIVERS ' +
+    'ONLY: question means with no group label, no respondent text and no name. ' +
+    'heatmap (team labels are org structure), duties (duties.owner is ' +
+    'org_members.name), per_virksomhet (names third parties), themes ' +
+    '(respondent free text) and the participation counts are all excluded by ' +
+    'decision, and the allowlist is stated in the function rather than derived ' +
+    'from report_section_types.names_individuals — that flag means «a name next ' +
+    'to an ANSWER» for redact_for_role and would admit duties. The threshold it ' +
+    'reports is the STRICTEST over the panels\' sources (F6.2). Token ' +
+    're-validated inside, as compose_report re-validates rather than trusting ' +
+    'the resolve step. tests/db/dashboards.test.ts covers the valid, wrong, ' +
+    'empty and revoked token cases and asserts the strictest number',
+
   get_survey_for_token: 'renders /s/[token]; token-validated',
   get_peer_results: 'thank-you peer results; token-validated and k-gated',
   compose_report: 'a share link has no session; token or membership checked inside',
