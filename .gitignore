@@ -68,3 +68,10 @@ playwright-report/
 !artifacts/fidelity/
 artifacts/fidelity/*
 !artifacts/fidelity/00-report.md
+
+# Throwaway scripts run from the repo root. A browser check against production
+# has to live here to resolve `@playwright/test` from node_modules — /tmp cannot
+# — so it lands beside the source for the length of one run and is deleted
+# after. Ignored so a transient file is never offered as a commit.
+*.tmp.mjs
+*.tmp.ts
