@@ -258,6 +258,18 @@ type Change = {
   sig: string
   fromLine: number
   toLine: number
+  /**
+   * WHICH ALIGNMENT PAIRED THESE TWO, and it decides how much the entry is
+   * worth. `1` is the strong key — tag, attributes, own text AND every
+   * non-measured declaration — so the two elements are the same one beyond
+   * reasonable doubt and a differing property is a real restyle. `2` is the
+   * weak-key fallback over what pass 1 could not place; it recovers an element
+   * that changed a measured AND a non-measured property, and it is the pass
+   * that can still mispair two bare `<div style>` neighbours after an
+   * insertion. A pass-2 change on an element with no attribute and no own text
+   * is a claim to VERIFY, not a finding to act on.
+   */
+  pass: 1 | 2
 }
 
 const report: Record<string, {
@@ -287,8 +299,10 @@ const report: Record<string, {
  * the top cannot pair with an addition at the bottom. Anything still unpaired
  * after both passes is a genuine addition or removal.
  */
-function alignScreen(a: El[], b: El[]): [number, number][] {
-  const pairs = lcs(a, b, (e) => e.sig)
+function alignScreen(a: El[], b: El[]): [number, number, 1 | 2][] {
+  const pairs: [number, number, 1 | 2][] = lcs(a, b, (e) => e.sig).map(
+    ([i, j]) => [i, j, 1 as const],
+  )
   const usedA = new Set(pairs.map((p) => p[0]))
   const usedB = new Set(pairs.map((p) => p[1]))
 
@@ -299,7 +313,7 @@ function alignScreen(a: El[], b: El[]): [number, number][] {
     leftB.map((i) => b[i]!),
     (e) => e.weak,
   )
-  for (const [i, j] of second) pairs.push([leftA[i]!, leftB[j]!])
+  for (const [i, j] of second) pairs.push([leftA[i]!, leftB[j]!, 2])
   pairs.sort((x, y) => x[0] - y[0])
   return pairs
 }
@@ -312,7 +326,7 @@ for (const screen of screens) {
   const matchedB = new Set(pairs.map((p) => p[1]))
 
   const changed: Change[] = []
-  for (const [ia, ib] of pairs) {
+  for (const [ia, ib, pass] of pairs) {
     const ea = a[ia]!
     const eb = b[ib]!
     for (const prop of new Set([...ea.styles.keys(), ...eb.styles.keys()])) {
@@ -321,7 +335,7 @@ for (const screen of screens) {
       if (va !== vb) {
         changed.push({
           property: prop, from: va, to: vb,
-          tag: eb.tag, sig: eb.sig, fromLine: ea.line, toLine: eb.line,
+          tag: eb.tag, sig: eb.sig, fromLine: ea.line, toLine: eb.line, pass,
         })
       }
     }

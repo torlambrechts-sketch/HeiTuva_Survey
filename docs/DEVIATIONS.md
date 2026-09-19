@@ -8326,3 +8326,74 @@ the thing you think you are changing.
 carries neither an attribute nor own text can still be a residual mispair after an insertion:
 dashboard 31 of 50, surveys 41 of 44, reports 5 of 5. The numbers stay in the artefact — a finding
 that needs a person to look is still a finding — but nothing was restyled on one.
+
+## D258 — AN ABSENT KEY READS AS «NO CHANGES», AND FOUR PHASES RANKED WORK BY ONE
+
+**Logged 2026-09-19, phase N8.** This is the shape, not the incident. The incident is that
+`docs/fidelity/bundle-geometry-diff.json` carried **eleven** screens where the bundles define
+**seventeen**, and that T2, T3, T6 and G1 chose what to build from it.
+
+> **A derivation that emits one key per thing it FOUND cannot distinguish «this thing has no
+> findings» from «this thing was never looked at». Both render as absence, and absence in a
+> report reads as the good outcome.**
+
+That is the asymmetry that makes it worth a heading. Every other silent-gate shape in this file
+produces a WRONG value a reader could in principle disbelieve — a stale total, a true fact about
+the wrong object, a green over a baseline inside tolerance. **Here there is no value at all**, and
+a missing row provokes no suspicion because a report is not expected to enumerate what it has
+nothing to say about.
+
+**The six that were missing:** `admin`, `help`, `livestage`, `profile`, `respond`, `svdetail`.
+Between them they carry **1264 elements**, `svdetail` alone 528 — the largest screen in the
+bundle. Measured per element, all six are genuinely 0 changed, 0 added, 0 removed. **So nothing
+was missed, and that is the point:** «nothing was missed» is a MEASUREMENT here and was a
+COINCIDENCE before. Four phases ranked their work against a list that could not have told them
+otherwise.
+
+**Why a screen went missing is the ordinary case, not a bug.** The old extractor emitted a key
+when it saw a difference. A screen with none produced no key. `packdetail` shows the same
+mechanism from the other side: `isPackDetail` is a gate v8 introduces and v7 does not have, so it
+could only ever appear under `added` — there is no v7 side to differ from.
+
+**The fix is not «remember the six».** It is that the population must be DERIVED and then
+enumerated in full, including its zeroes. `scripts/fidelity/geometry-diff.ts` reads the screen
+list out of each bundle's own `isX: st.screen==="x"` lines and prints **one row per screen**,
+zeroes included, so a screen that is not looked at cannot be confused with a screen that is clean.
+Seventeen rows every run.
+
+**And the reading habit it earns, which is this file's own `controls=0` rule aimed at a report
+rather than at a page:** *a report with fewer rows than the thing it describes is a finding.* The
+question to ask of any artefact is not «what does it say» but **«how many rows should this have,
+and does it»** — and the answer has to come from the source, never from the artefact.
+
+
+## D259 — 59 of 112 «changed» declarations were position, not identity
+
+**Logged 2026-09-19, phase N8.** The per-element diff aligns in two passes (D256). N8 made the
+pass a FIELD on every change, and the distribution is the finding:
+
+```
+                p1-named  p1-bare  p2-named  p2-bare
+  TOTAL                1        7        29       75
+```
+
+**Only eight of 112 matched on the strong key.** The rest came from the weak-key fallback, and for
+a BARE `<div style="…">` the weak signature is literally `div|||` — tag, no attributes, no own
+text, nothing. Such a pair is not an identity claim at all; it is **two leftovers in the same
+ordinal position**, and calling the difference between them a «change» is the value-multiset
+failure one level down.
+
+Read against the markup, all 59 pass-2 bare declarations pair structurally different elements: a
+28px avatar against a flex container, a progress bar against a 36px pill, a card against a row.
+`surveys` produces 38 of them by itself, which is what a screen losing **133 of its 172 elements**
+does to a positional fallback.
+
+**So the tool now reports the pass and the consumer is expected to read it.** A pass-2 change on
+an element with no attribute and no own text is a claim to verify, not a finding to act on — and
+the distinction is stated in the `Change.pass` field's own comment rather than left to whoever
+opens the JSON next.
+
+**The one-line rule: a fallback that always produces an answer produces answers that mean
+nothing.** The alignment needs the fallback — without it fourteen real `build` restyles filed as
+twenty-eight structural events — so the fix is not to remove it but to make what it produces
+distinguishable from what the strong pass produces.

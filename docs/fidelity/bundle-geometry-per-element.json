@@ -17,21 +17,35 @@
       "margin-top",
       "padding"
     ],
-    "n6_verdict": {
-      "applied_by_n6": [
-        "dashboard FreezeButton v8:2418 — height 36 / padding 0 16 / border none / weight 700, and the kind changed: v7 outlined secondary -> v8 filled primary on var(--ink)",
-        "dashboard CustomizeToggle v8:2645 — height 34 / padding 0 13 / 12.5px",
-        "build Builder «Lagre utkast» + «Lagre som mal» v8:529,530 — height 38 / padding 0 15 / 13px, twice",
-        "build Builder savedNote v8:532 — padding 8px 14px"
-      ],
-      "flagged_but_NOT_unapplied_geometry": {
-        "surveys row initials avatar v8:2320": "we have no avatar on the survey row at all — an element never built, not a restyle missed",
-        "dashboard share-role picker v8:2586": "we render the share scope as a META CELL of text, not as a grid of pickable role buttons",
-        "dashboard insStats strip v8:2434-2439": "a dashboard-only strip. Our PageHeader chips are the «På tvers» CARD, which v8 still draws unchanged at 2263, 2885 and 4784 — restyling them onto this would have been the wrong element",
-        "dashboard dashThresholdLine chip v8:2646": "we render that sentence inside the joined `scope` line, not as a standalone 34px chip",
-        "library «Bruk mal» v8:4925": "ALREADY CORRECT. T4 built `mt-[18px] flex gap-2` exactly as v8:4923 draws it; the flagged delta is v7 margin moving onto a wrapper we already have"
+    "n8_full_pass": {
+      "method": "every changed entry on all 17 screens, read against the v7 and v8 markup AND against our components. Confidence comes from `pass`: a pass-1 pair matched on the STRONG key (tag, attributes, own text and every non-measured declaration) and is the same element beyond reasonable doubt; a pass-2 pair on a BARE div matched on `div|||` — literally no identity — so it pairs by position among leftovers and is not evidence of anything.",
+      "totals_of_112": {
+        "built_by_n6": 13,
+        "already_correct": 21,
+        "element_we_never_built": 19,
+        "mispair_not_a_change": 59
       },
-      "bare_div_changes": "changes whose element signature carries neither an attribute nor own text are reported but NOT acted on: a bare `<div style>` can still pair with a neighbour after an insertion. dashboard 31 of 50, surveys 41 of 44, reports 5 of 5 are of this kind."
+      "per_screen": {
+        "_shell": "0 changed. 5 added = N3's two relocations (the Arbeidsflate section and the <select>), BUILT.",
+        "admin": "0 changed, 0 added, 0 removed. Absent from the old artefact entirely.",
+        "build": "9 changed = 7 named (BUILT by N6: «Fra banken», «Lagre som mal», savedNote) + 2 breadcrumb mispairs.",
+        "dash": "0 changed. 1 removed = the in-page breadcrumb.",
+        "dashboard": "50 changed = 19 named + 31 bare. Named: 6 BUILT (FreezeButton 4, CustomizeToggle 2), 13 NEVER BUILT (insStats value+label 4, share-role picker 7, dashThresholdLine chip 2). Bare: 4 are pass-1 and ALREADY CORRECT — T2 applied v8:2603 (DashboardScreen.tsx:565 says «the gap 15 -> 14» in its own comment) and the card's padding already sits on the children; 27 are pass-2 bare mispairs.",
+        "help": "0 changed. Absent from the old artefact entirely.",
+        "library": "4 changed = 1 named ALREADY CORRECT («Bruk mal», T4 built v8:4923 exactly) + 3 breadcrumb mispairs.",
+        "livestage": "0 changed. Absent from the old artefact entirely.",
+        "packdetail": "0 changed, 36 added, 0 removed. `isPackDetail` is a NEW screen gate in v8; v7 has no such gate at all, so every element is an arrival rather than a change.",
+        "profile": "0 changed. Absent from the old artefact entirely.",
+        "reports": "5 changed, ALL FIVE breadcrumb mispairs. Zero real changes.",
+        "respond": "0 changed. Absent from the old artefact entirely.",
+        "results": "0 changed. 2 removed = the in-page breadcrumb.",
+        "send": "0 changed. 2 removed = the in-page breadcrumb.",
+        "surveys": "44 changed = 3 named + 41 bare. Named: r.initials avatar, NEVER BUILT (our compact row has no avatar). Bare: 3 are pass-1 and NEVER BUILT in that position — v8 puts the progress bar in the COMPACT row (v8:2328, track 8px->7px) and ours is inside `{isOpen ? …}`, the expanded row, from v6:2357; 38 are pass-2 bare mispairs, which is what a screen losing 133 of 172 elements does to a positional fallback.",
+        "svdetail": "0 changed, 0 added, 0 removed — on 528 elements, the largest screen in the bundle. Absent from the old artefact entirely.",
+        "tasks": "0 changed. 2 removed = the in-page breadcrumb."
+      },
+      "the_breadcrumb": "v8 REMOVES the in-page breadcrumb from every screen — `<div style=\"display:flex;align-items:center;gap:Npx;font-size:12.5px;color:var(--mut…)\">`. It accounts for 16 of the 82 bare changed declarations across 5 element pairs, and for the `removed` on dash, results, send and tasks. It is ALREADY CORRECT for us: F3 moved the breadcrumb into the shell (lib/shell/crumbs.ts), so the page holds no copy. Every one of the 16 is a mispair created by the removal, not a restyle.",
+      "verdict": "ZERO additional geometry to build. N6 read 11 named elements and that WAS the complete set of real changes; the remaining 101 declarations are 16 breadcrumb removals, 59 position-only pairings with no identity, 7 already-correct and 19 on elements we never built."
     }
   },
   "screens": {
@@ -116,7 +130,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px",
           "fromLine": 510,
-          "toLine": 523
+          "toLine": 523,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -125,7 +140,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px",
           "fromLine": 510,
-          "toLine": 523
+          "toLine": 523,
+          "pass": 2
         },
         {
           "property": "height",
@@ -134,7 +150,8 @@
           "tag": "button",
           "sig": "button|onClick|Fra banken|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 546,
-          "toLine": 529
+          "toLine": 529,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -143,7 +160,8 @@
           "tag": "button",
           "sig": "button|onClick|Fra banken|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 546,
-          "toLine": 529
+          "toLine": 529,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -152,7 +170,8 @@
           "tag": "button",
           "sig": "button|onClick|Fra banken|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 546,
-          "toLine": 529
+          "toLine": 529,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -161,7 +180,8 @@
           "tag": "button",
           "sig": "button|onClick|Lagre som mal|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 793,
-          "toLine": 530
+          "toLine": 530,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -170,7 +190,8 @@
           "tag": "button",
           "sig": "button|onClick|Lagre som mal|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 793,
-          "toLine": 530
+          "toLine": 530,
+          "pass": 2
         },
         {
           "property": "height",
@@ -179,7 +200,8 @@
           "tag": "button",
           "sig": "button|onClick|Lagre som mal|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 793,
-          "toLine": 530
+          "toLine": 530,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -188,7 +210,8 @@
           "tag": "span",
           "sig": "span||{{ savedNote }}|align-self:center;background:var(--ac2,#A8D5D2);white-space:nowrap",
           "fromLine": 795,
-          "toLine": 532
+          "toLine": 532,
+          "pass": 2
         }
       ],
       "added": [
@@ -426,7 +449,8 @@
           "tag": "div",
           "sig": "div|||align-items:flex-start;border-bottom:1px solid var(--line,#E8DFC9);display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2538,
-          "toLine": 2393
+          "toLine": 2393,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -435,7 +459,8 @@
           "tag": "div",
           "sig": "div|||align-items:flex-start;border-bottom:1px solid var(--line,#E8DFC9);display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2538,
-          "toLine": 2393
+          "toLine": 2393,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -444,7 +469,8 @@
           "tag": "div",
           "sig": "div|||align-items:flex-start;border-bottom:1px solid var(--line,#E8DFC9);display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2538,
-          "toLine": 2393
+          "toLine": 2393,
+          "pass": 2
         },
         {
           "property": "height",
@@ -453,7 +479,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex;flex:1 1 300px;min-width:0",
           "fromLine": 2539,
-          "toLine": 2394
+          "toLine": 2394,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -462,7 +489,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex;flex:1 1 300px;min-width:0",
           "fromLine": 2539,
-          "toLine": 2394
+          "toLine": 2394,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -471,7 +499,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex;flex:1 1 300px;min-width:0",
           "fromLine": 2539,
-          "toLine": 2394
+          "toLine": 2394,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -480,7 +509,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6)",
           "fromLine": 2551,
-          "toLine": 2392
+          "toLine": 2392,
+          "pass": 1
         },
         {
           "property": "padding",
@@ -489,7 +519,8 @@
           "tag": "button",
           "sig": "button|onClick,title|{{ freezeLabel }}|background:var(--ink,#191510);color:var(--sf,#FFFDF6);cursor:pointer;white-space:nowrap",
           "fromLine": 2555,
-          "toLine": 2418
+          "toLine": 2418,
+          "pass": 2
         },
         {
           "property": "border",
@@ -498,7 +529,8 @@
           "tag": "button",
           "sig": "button|onClick,title|{{ freezeLabel }}|background:var(--ink,#191510);color:var(--sf,#FFFDF6);cursor:pointer;white-space:nowrap",
           "fromLine": 2555,
-          "toLine": 2418
+          "toLine": 2418,
+          "pass": 2
         },
         {
           "property": "font-weight",
@@ -507,7 +539,8 @@
           "tag": "button",
           "sig": "button|onClick,title|{{ freezeLabel }}|background:var(--ink,#191510);color:var(--sf,#FFFDF6);cursor:pointer;white-space:nowrap",
           "fromLine": 2555,
-          "toLine": 2418
+          "toLine": 2418,
+          "pass": 2
         },
         {
           "property": "height",
@@ -516,7 +549,8 @@
           "tag": "button",
           "sig": "button|onClick,title|{{ freezeLabel }}|background:var(--ink,#191510);color:var(--sf,#FFFDF6);cursor:pointer;white-space:nowrap",
           "fromLine": 2555,
-          "toLine": 2418
+          "toLine": 2418,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -525,7 +559,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))",
           "fromLine": 2558,
-          "toLine": 2422
+          "toLine": 2422,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -534,7 +569,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))",
           "fromLine": 2558,
-          "toLine": 2422
+          "toLine": 2422,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -543,7 +579,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))",
           "fromLine": 2558,
-          "toLine": 2422
+          "toLine": 2422,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -552,7 +589,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex",
           "fromLine": 2560,
-          "toLine": 2424
+          "toLine": 2424,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -561,7 +599,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex",
           "fromLine": 2560,
-          "toLine": 2424
+          "toLine": 2424,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -570,7 +609,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex",
           "fromLine": 2560,
-          "toLine": 2424
+          "toLine": 2424,
+          "pass": 2
         },
         {
           "property": "border",
@@ -579,7 +619,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex",
           "fromLine": 2560,
-          "toLine": 2424
+          "toLine": 2424,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -588,7 +629,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex",
           "fromLine": 2560,
-          "toLine": 2424
+          "toLine": 2424,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -597,7 +639,8 @@
           "tag": "span",
           "sig": "span||{{ cs.value }}|font-family:var(--fd,'Playfair Display',serif)",
           "fromLine": 2561,
-          "toLine": 2437
+          "toLine": 2437,
+          "pass": 2
         },
         {
           "property": "font-weight",
@@ -606,7 +649,8 @@
           "tag": "span",
           "sig": "span||{{ cs.value }}|font-family:var(--fd,'Playfair Display',serif)",
           "fromLine": 2561,
-          "toLine": 2437
+          "toLine": 2437,
+          "pass": 2
         },
         {
           "property": "line-height",
@@ -615,7 +659,8 @@
           "tag": "span",
           "sig": "span||{{ cs.value }}|font-family:var(--fd,'Playfair Display',serif)",
           "fromLine": 2561,
-          "toLine": 2437
+          "toLine": 2437,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -624,7 +669,8 @@
           "tag": "span",
           "sig": "span||{{ cs.label }}|color:var(--mut,#5F5849);white-space:nowrap",
           "fromLine": 2562,
-          "toLine": 2438
+          "toLine": 2438,
+          "pass": 1
         },
         {
           "property": "gap",
@@ -633,7 +679,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6)",
           "fromLine": 2569,
-          "toLine": 2579
+          "toLine": 2579,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -642,7 +689,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6)",
           "fromLine": 2569,
-          "toLine": 2579
+          "toLine": 2579,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -651,7 +699,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6)",
           "fromLine": 2569,
-          "toLine": 2579
+          "toLine": 2579,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -660,7 +709,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6)",
           "fromLine": 2569,
-          "toLine": 2579
+          "toLine": 2579,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -669,7 +719,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))",
           "fromLine": 2573,
-          "toLine": 2584
+          "toLine": 2584,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -678,7 +729,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))",
           "fromLine": 2573,
-          "toLine": 2584
+          "toLine": 2584,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -687,7 +739,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "height",
@@ -696,7 +749,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -705,7 +759,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -714,7 +769,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "border",
@@ -723,7 +779,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -732,7 +789,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "font-weight",
@@ -741,7 +799,8 @@
           "tag": "button",
           "sig": "button|onClick||align-items:flex-start;background:{{ r.bg }};color:var(--ink,#191510);cursor:pointer;display:flex;font-family:inherit;text-align:left",
           "fromLine": 2575,
-          "toLine": 2586
+          "toLine": 2586,
+          "pass": 2
         },
         {
           "property": "height",
@@ -750,7 +809,8 @@
           "tag": "button",
           "sig": "button|onClick|{{ docFilterLine }}|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 2579,
-          "toLine": 2645
+          "toLine": 2645,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -759,7 +819,8 @@
           "tag": "button",
           "sig": "button|onClick|{{ docFilterLine }}|background:transparent;color:var(--ink,#191510);cursor:pointer;white-space:nowrap",
           "fromLine": 2579,
-          "toLine": 2645
+          "toLine": 2645,
+          "pass": 2
         },
         {
           "property": "height",
@@ -768,7 +829,8 @@
           "tag": "span",
           "sig": "span||{{ dashThresholdLine }}|align-items:center;background:var(--sf2,rgba(0,0,0,.05));display:inline-flex;white-space:nowrap",
           "fromLine": 2580,
-          "toLine": 2646
+          "toLine": 2646,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -777,7 +839,8 @@
           "tag": "span",
           "sig": "span||{{ dashThresholdLine }}|align-items:center;background:var(--sf2,rgba(0,0,0,.05));display:inline-flex;white-space:nowrap",
           "fromLine": 2580,
-          "toLine": 2646
+          "toLine": 2646,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -786,7 +849,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr))",
           "fromLine": 2719,
-          "toLine": 2603
+          "toLine": 2603,
+          "pass": 1
         },
         {
           "property": "margin-top",
@@ -795,7 +859,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr))",
           "fromLine": 2719,
-          "toLine": 2603
+          "toLine": 2603,
+          "pass": 1
         },
         {
           "property": "padding",
@@ -804,7 +869,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr))",
           "fromLine": 2719,
-          "toLine": 2603
+          "toLine": 2603,
+          "pass": 1
         },
         {
           "property": "gap",
@@ -813,7 +879,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2744,
-          "toLine": 2651
+          "toLine": 2651,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -822,7 +889,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2744,
-          "toLine": 2651
+          "toLine": 2651,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -831,7 +899,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;background:var(--ac2,#A8D5D2);display:flex;flex-wrap:wrap",
           "fromLine": 2746,
-          "toLine": 2672
+          "toLine": 2672,
+          "pass": 2
         },
         {
           "property": "border",
@@ -840,7 +909,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;background:var(--ac2,#A8D5D2);display:flex;flex-wrap:wrap",
           "fromLine": 2746,
-          "toLine": 2672
+          "toLine": 2672,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -849,7 +919,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;background:var(--ac2,#A8D5D2);display:flex;flex-wrap:wrap",
           "fromLine": 2746,
-          "toLine": 2672
+          "toLine": 2672,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -858,7 +929,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;background:var(--ac2,#A8D5D2);display:flex;flex-wrap:wrap",
           "fromLine": 2746,
-          "toLine": 2672
+          "toLine": 2672,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -867,7 +939,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;background:var(--ac2,#A8D5D2);display:flex;flex-wrap:wrap",
           "fromLine": 2746,
-          "toLine": 2672
+          "toLine": 2672,
+          "pass": 2
         }
       ],
       "added": [
@@ -1973,7 +2046,8 @@
           "tag": "div",
           "sig": "div|||display:flex",
           "fromLine": 4681,
-          "toLine": 4923
+          "toLine": 4923,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -1982,7 +2056,8 @@
           "tag": "div",
           "sig": "div|||display:flex",
           "fromLine": 4681,
-          "toLine": 4923
+          "toLine": 4923,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -1991,7 +2066,8 @@
           "tag": "div",
           "sig": "div|||display:flex",
           "fromLine": 4681,
-          "toLine": 4923
+          "toLine": 4923,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -2000,7 +2076,8 @@
           "tag": "button",
           "sig": "button|onClick|Bruk mal|background:var(--ac,#F5C64A);color:var(--ink,#191510);cursor:pointer;flex:1",
           "fromLine": 4839,
-          "toLine": 4925
+          "toLine": 4925,
+          "pass": 2
         }
       ],
       "added": [
@@ -2530,7 +2607,8 @@
           "tag": "div",
           "sig": "div|||background:var(--ac2,#A8D5D2)",
           "fromLine": 2862,
-          "toLine": 3232
+          "toLine": 3232,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -2539,7 +2617,8 @@
           "tag": "div",
           "sig": "div|||background:var(--ac2,#A8D5D2)",
           "fromLine": 2862,
-          "toLine": 3232
+          "toLine": 3232,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2548,7 +2627,8 @@
           "tag": "div",
           "sig": "div|||background:var(--ac2,#A8D5D2)",
           "fromLine": 2862,
-          "toLine": 3232
+          "toLine": 3232,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2557,7 +2637,8 @@
           "tag": "div",
           "sig": "div|||background:var(--ac2,#A8D5D2)",
           "fromLine": 2862,
-          "toLine": 3232
+          "toLine": 3232,
+          "pass": 2
         },
         {
           "property": "border",
@@ -2566,7 +2647,8 @@
           "tag": "div",
           "sig": "div|||background:var(--ac2,#A8D5D2)",
           "fromLine": 2862,
-          "toLine": 3232
+          "toLine": 3232,
+          "pass": 2
         }
       ],
       "added": [
@@ -2721,7 +2803,8 @@
           "tag": "div",
           "sig": "div|||",
           "fromLine": 2237,
-          "toLine": 2253
+          "toLine": 2253,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -2730,7 +2813,8 @@
           "tag": "div",
           "sig": "div|||",
           "fromLine": 2237,
-          "toLine": 2253
+          "toLine": 2253,
+          "pass": 2
         },
         {
           "property": "height",
@@ -2739,7 +2823,8 @@
           "tag": "div",
           "sig": "div|||",
           "fromLine": 2237,
-          "toLine": 2253
+          "toLine": 2253,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2748,7 +2833,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex",
           "fromLine": 2379,
-          "toLine": 2273
+          "toLine": 2273,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2757,7 +2843,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex",
           "fromLine": 2379,
-          "toLine": 2273
+          "toLine": 2273,
+          "pass": 2
         },
         {
           "property": "border",
@@ -2766,7 +2853,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex",
           "fromLine": 2379,
-          "toLine": 2273
+          "toLine": 2273,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2775,7 +2863,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex",
           "fromLine": 2379,
-          "toLine": 2273
+          "toLine": 2273,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -2784,7 +2873,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex",
           "fromLine": 2379,
-          "toLine": 2273
+          "toLine": 2273,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2793,7 +2883,8 @@
           "tag": "div",
           "sig": "div|||",
           "fromLine": 2380,
-          "toLine": 2281
+          "toLine": 2281,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -2802,7 +2893,8 @@
           "tag": "div",
           "sig": "div|||",
           "fromLine": 2380,
-          "toLine": 2281
+          "toLine": 2281,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2811,7 +2903,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6);min-width:0",
           "fromLine": 2387,
-          "toLine": 2282
+          "toLine": 2282,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -2820,7 +2913,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6);min-width:0",
           "fromLine": 2387,
-          "toLine": 2282
+          "toLine": 2282,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2829,7 +2923,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6);min-width:0",
           "fromLine": 2387,
-          "toLine": 2282
+          "toLine": 2282,
+          "pass": 2
         },
         {
           "property": "border",
@@ -2838,7 +2933,8 @@
           "tag": "div",
           "sig": "div|||background:var(--sf,#FFFDF6);min-width:0",
           "fromLine": 2387,
-          "toLine": 2282
+          "toLine": 2282,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2847,7 +2943,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2388,
-          "toLine": 2283
+          "toLine": 2283,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2856,7 +2953,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2388,
-          "toLine": 2283
+          "toLine": 2283,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2865,7 +2963,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between",
           "fromLine": 2388,
-          "toLine": 2283
+          "toLine": 2283,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2874,7 +2973,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;min-width:0",
           "fromLine": 2393,
-          "toLine": 2284
+          "toLine": 2284,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2883,7 +2983,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;min-width:0",
           "fromLine": 2393,
-          "toLine": 2284
+          "toLine": 2284,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2892,7 +2993,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap;min-width:0",
           "fromLine": 2393,
-          "toLine": 2284
+          "toLine": 2284,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2901,7 +3003,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap",
           "fromLine": 2400,
-          "toLine": 2287
+          "toLine": 2287,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -2910,7 +3013,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:flex;flex-wrap:wrap",
           "fromLine": 2400,
-          "toLine": 2287
+          "toLine": 2287,
+          "pass": 2
         },
         {
           "property": "height",
@@ -2919,7 +3023,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;background:var(--bg,#FCF6E9);display:flex",
           "fromLine": 2401,
-          "toLine": 2288
+          "toLine": 2288,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2928,7 +3033,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;background:var(--bg,#FCF6E9);display:flex",
           "fromLine": 2401,
-          "toLine": 2288
+          "toLine": 2288,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2937,7 +3043,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;background:var(--bg,#FCF6E9);display:flex",
           "fromLine": 2401,
-          "toLine": 2288
+          "toLine": 2288,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2946,7 +3053,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;background:var(--bg,#FCF6E9);display:flex",
           "fromLine": 2401,
-          "toLine": 2288
+          "toLine": 2288,
+          "pass": 2
         },
         {
           "property": "border",
@@ -2955,7 +3063,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;background:var(--bg,#FCF6E9);display:flex",
           "fromLine": 2401,
-          "toLine": 2288
+          "toLine": 2288,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -2964,7 +3073,8 @@
           "tag": "div",
           "sig": "div|||display:flex;flex-wrap:wrap",
           "fromLine": 2419,
-          "toLine": 2301
+          "toLine": 2301,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2973,7 +3083,8 @@
           "tag": "div",
           "sig": "div|||display:flex;flex-wrap:wrap",
           "fromLine": 2419,
-          "toLine": 2301
+          "toLine": 2301,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -2982,7 +3093,8 @@
           "tag": "div",
           "sig": "div|||display:flex;flex-wrap:wrap",
           "fromLine": 2419,
-          "toLine": 2301
+          "toLine": 2301,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -2991,7 +3103,8 @@
           "tag": "div",
           "sig": "div|||background:var(--bg,#FCF6E9);border-bottom:1px solid var(--line,#E8DFC9);border-top:1px solid var(--line,#E8DFC9);display:grid;grid-template-columns:minmax(220px,2.2fr) 118px minmax(120px,1fr) 78px 166px",
           "fromLine": 2421,
-          "toLine": 2308
+          "toLine": 2308,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -3000,7 +3113,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:grid;grid-template-columns:minmax(220px,2.2fr) 118px minmax(120px,1fr) 78px 166px",
           "fromLine": 2431,
-          "toLine": 2318
+          "toLine": 2318,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -3009,7 +3123,8 @@
           "tag": "div",
           "sig": "div|||align-items:center;display:grid;grid-template-columns:minmax(220px,2.2fr) 118px minmax(120px,1fr) 78px 166px",
           "fromLine": 2431,
-          "toLine": 2318
+          "toLine": 2318,
+          "pass": 2
         },
         {
           "property": "height",
@@ -3018,7 +3133,8 @@
           "tag": "span",
           "sig": "span||{{ r.initials }}|align-items:center;background:var(--sbg,#FBEBBE);display:flex;flex:none;justify-content:center;width:26px",
           "fromLine": 2452,
-          "toLine": 2320
+          "toLine": 2320,
+          "pass": 2
         },
         {
           "property": "border-radius",
@@ -3027,7 +3143,8 @@
           "tag": "span",
           "sig": "span||{{ r.initials }}|align-items:center;background:var(--sbg,#FBEBBE);display:flex;flex:none;justify-content:center;width:26px",
           "fromLine": 2452,
-          "toLine": 2320
+          "toLine": 2320,
+          "pass": 2
         },
         {
           "property": "font-size",
@@ -3036,7 +3153,8 @@
           "tag": "span",
           "sig": "span||{{ r.initials }}|align-items:center;background:var(--sbg,#FBEBBE);display:flex;flex:none;justify-content:center;width:26px",
           "fromLine": 2452,
-          "toLine": 2320
+          "toLine": 2320,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -3045,7 +3163,8 @@
           "tag": "span",
           "sig": "span|||align-items:center;display:flex;min-width:0",
           "fromLine": 2455,
-          "toLine": 2327
+          "toLine": 2327,
+          "pass": 2
         },
         {
           "property": "height",
@@ -3054,7 +3173,8 @@
           "tag": "span",
           "sig": "span|||background:{{ r.bar }};display:block;width:{{ r.pct }}%",
           "fromLine": 2484,
-          "toLine": 2328
+          "toLine": 2328,
+          "pass": 1
         },
         {
           "property": "padding",
@@ -3063,7 +3183,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))",
           "fromLine": 2494,
-          "toLine": 2350
+          "toLine": 2350,
+          "pass": 2
         },
         {
           "property": "gap",
@@ -3072,7 +3193,8 @@
           "tag": "div",
           "sig": "div|||display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))",
           "fromLine": 2494,
-          "toLine": 2350
+          "toLine": 2350,
+          "pass": 2
         },
         {
           "property": "margin-top",
@@ -3081,7 +3203,8 @@
           "tag": "div",
           "sig": "div|||display:flex;flex-wrap:wrap",
           "fromLine": 2498,
-          "toLine": 2361
+          "toLine": 2361,
+          "pass": 1
         },
         {
           "property": "padding",
@@ -3090,7 +3213,8 @@
           "tag": "div",
           "sig": "div|||display:flex;flex-wrap:wrap",
           "fromLine": 2498,
-          "toLine": 2361
+          "toLine": 2361,
+          "pass": 1
         },
         {
           "property": "gap",
@@ -3099,7 +3223,8 @@
           "tag": "div",
           "sig": "div|||text-align:center",
           "fromLine": 2512,
-          "toLine": 2377
+          "toLine": 2377,
+          "pass": 2
         },
         {
           "property": "padding",
@@ -3108,7 +3233,8 @@
           "tag": "div",
           "sig": "div|||text-align:center",
           "fromLine": 2512,
-          "toLine": 2377
+          "toLine": 2377,
+          "pass": 2
         }
       ],
       "added": [
