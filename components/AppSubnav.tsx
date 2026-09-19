@@ -1,9 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { resolveSubnav, type MsgRef, type SubnavPill } from '@/lib/shell/subnav'
+import {
+  resolveSubnav,
+  type MsgRef,
+  type SubnavDashboard,
+  type SubnavPill,
+} from '@/lib/shell/subnav'
 
 /**
  * The subnav — v5's shell addition (V5:227-234), REBUILT ON A REGISTRY in V7-1.
@@ -47,9 +52,10 @@ import { resolveSubnav, type MsgRef, type SubnavPill } from '@/lib/shell/subnav'
  */
 type Rendered = { pill: SubnavPill; on: boolean }
 
-export function AppSubnav() {
+export function AppSubnav({ dashboards = [] }: { dashboards?: SubnavDashboard[] }) {
   const pathname = usePathname()
   const params = useSearchParams()
+  const router = useRouter()
 
   /* Three namespaces, resolved here and chosen per pill by the registry's own
      `MsgRef`. A bare key resolved in the wrong namespace renders as a raw key
@@ -58,14 +64,19 @@ export function AppSubnav() {
   const tNav = useTranslations('nav')
   const tReports = useTranslations('reports')
   const tSurveys = useTranslations('surveys')
+  /* `raw` is a title the person typed, not a message. Sending it through
+     next-intl would miss and render it as a key — the defect Tor found nine of
+     behind seventeen green gates, arriving from the other direction. */
   const say = (m: MsgRef) =>
-    m.ns === 'reports'
+    m.ns === 'raw'
+      ? m.key
+      : m.ns === 'reports'
       ? tReports(m.key as 'tabLov')
       : m.ns === 'surveys'
         ? tSurveys(m.key as 'filterAll')
         : tNav(m.key as 'subnavInsight')
 
-  const rail = resolveSubnav(pathname, new URLSearchParams(params.toString()))
+  const rail = resolveSubnav(pathname, new URLSearchParams(params.toString()), dashboards)
   if (!rail) return null
 
   const items: Rendered[] = rail.pills.map((pill) => ({
@@ -95,6 +106,52 @@ export function AppSubnav() {
         </span>
         {items.map(({ pill, on }) => {
           const exit = pill.kind === 'exit'
+
+          /* N3 · v8:238-241 — THE «FLERE OPPSETT» ITEM IS A NATIVE `<select>`,
+             not a pill. Every declaration below is that line's:
+
+               box-sizing:border-box · flex:none · height:32px · padding:0 10px
+               border:1px solid var(--line) · border-radius:9px
+               background:transparent · color:var(--ink)
+               font-size:13px · font-family:inherit · font-weight:600
+               outline:none · cursor:pointer
+
+             A `<select>` is a REPLACED element, so `touch-44` — whose hit area
+             is an `::after` — renders nothing on it. `touch-44-field` exists in
+             globals.css for exactly this, with the reason in its own comment,
+             and taking the wrong one of the two is the mistake C4 made on
+             `FeedbackList`'s select. 32px painted needs the field variant.
+
+             `value=""` on every render, as v8's is: the placeholder is not a
+             selection, and re-selecting a board you are already on must still
+             navigate. */
+          if (pill.kind === 'more') {
+            return (
+              <select
+                key={pill.id}
+                aria-label={say(pill.label)}
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) router.push(e.target.value)
+                }}
+                className="touch-44-field h-[32px] flex-none cursor-pointer rounded-[9px] border border-line bg-transparent px-[10px] text-[13px] font-semibold text-ink outline-none"
+                style={{ fontFamily: 'inherit', boxSizing: 'border-box' }}
+              >
+                {/* v8's own placeholder is «Flere oppsett …», one character
+                    different from the control's accessible name — and the
+                    ellipsis is punctuation a language has an opinion about
+                    («Flere oppsett …» spaced, «More layouts…» not), so it is
+                    its own key rather than a concatenation. */}
+                <option value="">{tNav('subnavMoreChoose')}</option>
+                {(pill.options ?? []).map((o) => (
+                  <option key={o.href} value={o.href}>
+                    {say(o.label)}
+                  </option>
+                ))}
+              </select>
+            )
+          }
+
           return (
             <Link
               key={pill.id}

@@ -14,6 +14,9 @@ export function UserMenu({
   labels,
   langSlot,
   wideSlot,
+  workspaceSlot,
+  workspaceLabel,
+  workspaceHint,
 }: {
   name: string
   initials: string
@@ -26,6 +29,13 @@ export function UserMenu({
      so each keeps its own component and its own tests. */
   langSlot: React.ReactNode
   wideSlot: React.ReactNode
+  /** N3 — the Arbeidsflate chip, which v8 moved out of the header row and into
+   *  this menu. Null when the registry has not been seeded: the section is
+   *  ABSENT rather than drawn empty, because a labelled «Arbeidsflate» heading
+   *  over nothing is a claim that there is a choice to make. */
+  workspaceSlot?: React.ReactNode
+  workspaceLabel?: string
+  workspaceHint?: string
 }) {
   const t = useTranslations('common')
   const tRole = useTranslations('role')
@@ -90,6 +100,45 @@ export function UserMenu({
             <div className="text-[14px] font-semibold">{name}</div>
             <div className="mt-0.5 text-[12.5px] text-mut">{tRole(role)}</div>
           </div>
+
+          {/* N3 · v8:189-204 — THE ARBEIDSFLATE SECTION, and it is a MOVE rather
+              than an addition. v7 drew the chip in the header row between «?»
+              and the avatar (v7:182); v8 draws the identical chip here
+              (v8:192), under an 11px uppercase label and over a hint line, and
+              the header row is left with two 34px circles.
+
+              Measured rather than inferred: `docs/fidelity/bundle-geometry-diff.json`
+              reports ten `_shell` properties CHANGED between v7 and v8 and
+              `v7_only_values` EMPTY in every one of them — every delta is a
+              count going up. A multiset of literal values cannot see a move,
+              so ten «changes» were one relocation plus what it gained. The
+              chip's own declarations (`height:34px`, `padding:0 11px 0 10px`,
+              `border-radius:999px`, `12.5px/600`) are unchanged and
+              `WorkspaceChip` is untouched.
+
+              The four values here are v8:189-204's own:
+                section  padding:8px 12px 12px · border-top:1px solid var(--line)
+                label    font-size:11px · uppercase · letter-spacing:.09em · var(--mut)
+                row      display:flex · align-items:center · gap:8px · margin-top:7px
+                hint     font-size:11.5px · var(--mut) · margin-top:7px · line-height:1.45 */}
+          {workspaceSlot ? (
+            <div className="border-t border-line px-3 pb-3 pt-2">
+              <div className="text-[11px] uppercase tracking-[.09em] text-mut">
+                {workspaceLabel}
+              </div>
+              <div className="mt-[7px] flex items-center gap-2">{workspaceSlot}</div>
+              {/* The hint is the registry's own `workspaces.hint`, which has
+                  existed since W0 and was rendered nowhere in the shell. v8
+                  gives it a home. Absent rather than blank when the row has
+                  none — this is a sentence about the workspace, not a
+                  placeholder. */}
+              {workspaceHint ? (
+                <div className="mt-[7px] text-[11.5px] leading-[1.45] text-mut">
+                  {workspaceHint}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* V4:196 — `justify-between`, `gap:10px`, `padding:8px 12px 10px`.
               Two controls that used to sit in the header, now one row here.

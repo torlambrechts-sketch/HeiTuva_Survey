@@ -98,9 +98,17 @@ describe('Q172 — the tab set is one registry, read by both renderers', () => {
        This read `libraryTabHref(resolveLibraryTab(` until V7-1. The composition
        existed because «current» was an HREF and had to be spelled the same way
        twice; a rail that names its current pill by ID needs no round trip, so
-       the resolver stands alone. The property is unchanged and the shape that
-       could get it wrong is gone. */
-    expect(code(subnav)).toMatch(/currentId: resolveLibraryTab\(/)
+       the resolver stands alone.
+
+       N2 REPOINTED IT A SECOND TIME AND THE PROPERTY IS STILL THE SAME ONE.
+       The `library` entry is gone — v8 draws these three pills on the SURVEYS
+       rail (v8:9395) and /bibliotek is a screen inside that set — so one rail
+       now serves two screens and its `currentId` is a branch. The resolver's
+       answer is still what names the pill; it is prefixed `lib:` because the
+       rail's other pills are status filters and the two id spaces must not
+       collide. Repointed rather than relaxed: dropping to a looser match would
+       buy a green test and lose the guard. */
+    expect(code(subnav)).toMatch(/lib:\$\{resolveLibraryTab\(params\.get\('fane'\)\)\}/)
   })
 
   it('the page keeps NO second copy of the rail — the condition the move rests on', () => {

@@ -48,9 +48,10 @@ export default async function DashboardPage({
     gruppe?: string
     u?: string | string[]
     tilpass?: string
+    flate?: string
   }>
 }) {
-  const { periode, gruppe, u, tilpass } = await searchParams
+  const { periode, gruppe, u, tilpass, flate } = await searchParams
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('dashboard')
@@ -118,9 +119,37 @@ export default async function DashboardPage({
 
   // ── The layout (Q25/Q51) ──────────────────────────────────────────────────
   const offered = (panelTypes ?? []).map((t) => t.key)
-  const working = (savedLayouts ?? []).find(
+  const own = (savedLayouts ?? []).find(
     (l) => l.user_id === viewer.userId && l.title === WORKING_TITLE,
   )
+
+  /* N2 — `?flate=<dashboards.id>` SELECTS WHICH BOARD IS ON SCREEN, and this is
+     the reader for the link the Innsikt rail emits.
+     `lib/shell/subnav.ts` lists the organisation's dashboards as pills; without
+     this block that parameter would reach the page and change nothing, which is
+     D208's second face — the worse one — arriving in a link rather than in a
+     column. A pill that appears to select a board and silently shows another is
+     exactly the control this file's own rules refuse.
+
+     IT IS A READ AND ONLY A READ. The selection resolves against
+     `savedLayouts`, which RLS has already narrowed to what this member may see
+     — their own rows and the organisation's presets — so an id naming a board
+     whose layout is not readable, or no board at all, falls through to `own`
+     rather than erroring. That is the same "resolve against the registry
+     instead of trusting the value" treatment `readWorkspace` gives its cookie.
+
+     AND THE CUSTOMIZE PANEL IS FORCED SHUT ON A BOARD THAT IS NOT YOURS.
+     Every write in `actions.ts` — `saveLayout`, `setColumns`, `resetLayout` —
+     targets `(org, me, WORKING_TITLE)`. Left open while another board renders,
+     «Lagre» would say it saved this board and write a different one: a control
+     whose copy asserts a write it does not perform (D221). Switching boards for
+     real is a product decision about whether a person may keep several named
+     dashboards — raised in `MetaBar.tsx` when the entity landed, still not
+     settled, and not settled here either. */
+  const chosen = flate ? (savedLayouts ?? []).find((l) => l.dashboard_id === flate) : undefined
+  const working = chosen ?? own
+  const viewingOther = !!chosen && chosen.id !== own?.id
+
   // A member with no working row has not chosen yet: the design answers that
   // with the shipped presets, not an empty board (NEW:1042).
   const panels: PanelEntry[] = working ? readPanels(working.panels, offered) : []
@@ -490,7 +519,7 @@ export default async function DashboardPage({
       picker={picker}
       presetChips={presetChips}
       chooserPresets={chooserPresets}
-      customizeOpen={tilpass !== undefined}
+      customizeOpen={tilpass !== undefined && !viewingOther}
       canEdit={viewer.role === 'administrator' || viewer.role === 'redaktor'}
       layoutFilters={dashFilters}
       bundles={bundles}

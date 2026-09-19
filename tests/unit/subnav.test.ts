@@ -167,9 +167,17 @@ describe('V7-1 — the subnav registry', () => {
   })
 
   it('7. the screens with no rail get null, and /live and /test get a rail with NOTHING current', () => {
-    for (const p of ['/oversikt', '/profil', '/hjelp', '/administrasjon', '/administrasjon/brukere']) {
+    for (const p of ['/profil', '/hjelp', '/administrasjon', '/administrasjon/brukere']) {
       expect(rails(p), `${p} should have no rail`).toBeNull()
     }
+    /* N2 — /oversikt CHANGED SIDES and is asserted rather than dropped. It was
+       in the list above until v8, whose insight rail covers `dash`,
+       `dashboard` and `reports` alike (v8:9334); `dash` is v8's «I dag», which
+       is this screen. Deleting the line would have left the move unguarded —
+       the honest form is the opposite claim, with the pill that lights. */
+    const today = rails('/oversikt')
+    expect(today, '/oversikt carries the Innsikt rail since v8').not.toBeNull()
+    expect(today!.currentId).toBe('dash')
     /* `admin` is the measured refusal, not an oversight: the bundle's six-item
        list is missing three tabs the app has (D164), and a shell rail may
        absorb an in-page one only when its list is COMPLETE. */
@@ -255,5 +263,147 @@ describe('V7-1 — the subnav registry', () => {
     expect(c).toMatch(/FILTERS\.map/)
     expect(c).toMatch(/LIBRARY_TABS\.map/)
     expect(c).toMatch(/SURVEY_TABS\.map/)
+  })
+
+  /* ── N2 — THE INSIGHT RAIL'S DASHBOARD PILLS ────────────────────────────
+   *
+   * Every test above drives `resolveSubnav` with the default empty dashboard
+   * list, which is the right default — the rail must be sound with no boards —
+   * and it means the pills themselves were unreached. These four reach them.
+   */
+  const boards = (n: number, currentIdx = -1) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `${i}0000000-0000-4000-8000-000000000000`,
+      title: `Tavle ${i}`,
+      ...(i === currentIdx ? { current: true as const } : {}),
+    }))
+  const insight = (q: string, list: ReturnType<typeof boards>) =>
+    resolveSubnav('/dashboard', new URLSearchParams(q), list)!
+
+  it('11. the rail lists the boards, capped at v8\'s four, with the title as RAW text', () => {
+    const r = insight('', boards(6))
+    const pills = r.pills.filter((p) => p.id.startsWith('dash:'))
+    // v8:9347 caps at four; the fifth and sixth reach the rail via «Flere
+    // oppsett», which is what that pill is for.
+    expect(pills).toHaveLength(4)
+    expect(r.pills.some((p) => p.id === 'more')).toBe(true)
+    // A board's name is whatever the person typed. Sent through next-intl it
+    // would MISS and render as a key — the defect Tor found nine of behind
+    // seventeen green gates, arriving from the other direction.
+    expect(pills[0]!.label).toEqual({ ns: 'raw', key: 'Tavle 0' })
+    expect(pills[0]!.href).toBe('/dashboard?flate=00000000-0000-4000-8000-000000000000')
+    // With no boards at all the rail is still sound — two pills, no dangling
+    // current.
+    const empty = insight('', boards(0))
+    expect(railFaults(empty)).toEqual([])
+  })
+
+  it('12. `?flate=` lights the board it names, and an unknown one never lights a different board', () => {
+    const list = boards(3, 0)
+    const named = list[2]!.id
+    expect(insight(`flate=${named}`, list).currentId).toBe(`dash:${named}`)
+    /* An id naming no board falls back to the one the SERVER says is current,
+       never to «the first pill». The page resolves the same value the same way
+       — an unreadable or unknown `flate` renders the viewer's own working row
+       — so the rail and the screen cannot disagree about what is open. */
+    expect(insight('flate=00000000-0000-4000-8000-0000000000ff', list).currentId).toBe(
+      `dash:${list[0]!.id}`,
+    )
+  })
+
+  it('13. nothing lights when the server flags no current board — a guess would be a claim', () => {
+    // A member who has never customised has no working row, so no board is
+    // open. Null is true; `dashboards[0]` was the guess this replaced.
+    expect(insight('', boards(3)).currentId).toBeNull()
+    expect(railFaults(insight('', boards(3)))).toEqual([])
+    /* N3 — `?tilpass` DOES NOT WIN ANY MORE, and this assertion changed sides
+       rather than being deleted. «Flere oppsett» is a `<select>` in v8, always
+       `value=""`, so nothing in it can read as selected; the customize panel is
+       a STATE of the board on screen, and the board stays lit under it. */
+    expect(insight('tilpass=', boards(3, 1)).currentId).toBe(`dash:${boards(3, 1)[1]!.id}`)
+  })
+
+  it('15. «Flere oppsett» is a more-pill carrying the OVERFLOW, and is absent when there is none', () => {
+    /* v8:9347 caps the rail at four inline; the rest reach it through this
+       control. Ours omits the pill when the overflow is empty, because v8's
+       other three option classes all CREATE a dashboard and are refused —
+       without them a ≤4-board dropdown would have nothing in it. */
+    const four = insight('', boards(4))
+    expect(four.pills.some((p) => p.kind === 'more'), 'no overflow, no pill').toBe(false)
+
+    const six = insight('', boards(6))
+    const more = six.pills.find((p) => p.kind === 'more')!
+    expect(more, 'six boards, four inline, two over').toBeTruthy()
+    expect(more.options).toHaveLength(2)
+    expect(more.options![0]!.href).toBe(`/dashboard?flate=${boards(6)[4]!.id}`)
+    // Every option is a board that is NOT already a pill — the two sets
+    // partition the list, so no board is both inline and in the dropdown.
+    const inlineHrefs = six.pills.filter((p) => p.id.startsWith('dash:')).map((p) => p.href)
+    for (const o of more.options!) expect(inlineHrefs).not.toContain(o.href)
+    expect(railFaults(six)).toEqual([])
+  })
+
+  it('16. railFaults refuses an empty dropdown and a more-pill that lights — proven, not trusted', () => {
+    const base = { label: { ns: 'nav' as const, key: 'x' } }
+    // An empty dropdown is decoration wearing a control's clothes.
+    expect(
+      railFaults({
+        ...base,
+        pills: [{ id: 'more', label: base.label, href: '/x', kind: 'more', options: [] }],
+        currentId: null,
+      })[0],
+    ).toMatch(/has no options/)
+    // And it can never be current: v8's select is `value=""` on every render.
+    expect(
+      railFaults({
+        ...base,
+        pills: [
+          { id: 'more', label: base.label, href: '/x', kind: 'more', options: [{ href: '/y', label: base.label }] },
+        ],
+        currentId: 'more',
+      })[0],
+    ).toMatch(/is a more-pill/)
+    // Options on a pill that is not a dropdown would render nowhere at all.
+    expect(
+      railFaults({
+        ...base,
+        pills: [
+          { id: 'a', label: base.label, href: '/x', kind: 'filter', options: [{ href: '/y', label: base.label }] },
+        ],
+        currentId: null,
+      })[0],
+    ).toMatch(/not a more-pill/)
+  })
+
+  it('17. the subnav RENDERS the dropdown with v8\'s own geometry, and with the field hit area', () => {
+    /* A third `kind` that no renderer branches on is a registry entry nobody
+       draws. And the utility matters: a `<select>` is a REPLACED element, so
+       `touch-44`'s `::after` hit area renders nothing on it — `touch-44-field`
+       is the one globals.css keeps for this case, and taking the wrong one is
+       the mistake C4 made on `FeedbackList`'s select. */
+    const c = code(component)
+    expect(c).toMatch(/pill\.kind === 'more'/)
+    expect(c).toMatch(/touch-44-field/)
+    for (const decl of ['h-\\[32px\\]', 'rounded-\\[9px\\]', 'px-\\[10px\\]', 'text-\\[13px\\]', 'font-semibold']) {
+      expect(c, decl).toMatch(new RegExp(decl))
+    }
+  })
+
+  it('14. `flate` is READ by the dashboard page — a pill emitting a dead parameter is D208', () => {
+    /* THE HALF A REGISTRY TEST CANNOT SEE. Every assertion above is about the
+       rail; none of them notices that the href it builds changes nothing when
+       followed. A control whose parameter nothing reads is D208's second face,
+       and it is the worse one — the link works, the page renders, and only the
+       selection silently does not happen. So this asserts the READER, on the
+       far side of the link. */
+    const page = code(readFileSync('app/(app)/dashboard/page.tsx', 'utf8'))
+    expect(page, 'the page must destructure `flate`').toMatch(/flate\s*\}\s*=\s*await searchParams/)
+    expect(page, 'and resolve it against the layouts it may read').toMatch(
+      /dashboard_id === flate/,
+    )
+    /* And the customize panel must be shut on a board that is not yours: every
+       write in `actions.ts` targets `(org, me, WORKING_TITLE)`, so an open
+       «Lagre» there would claim a write it does not perform (D221). */
+    expect(page).toMatch(/customizeOpen=\{tilpass !== undefined && !viewingOther\}/)
   })
 })

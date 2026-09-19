@@ -17,15 +17,26 @@
  * selected is not the one that is. `libraryTabHref` and `resolveLibraryTab` are
  * the two halves of one fact, kept in one place.
  */
-export const LIBRARY_TABS = ['bruksomrader', 'maler', 'bank'] as const
+/* N2 — THE ORDER IS v8's, AND IT MOVED. v8:9395 draws these three on the
+   SURVEYS rail, «Maler · Spørsmålsbank · Bruksområder», because v8 has no
+   Bibliotek nav item and the library is a sub-view of the surveys set. The
+   previous order led with «Bruksområder» (Q24, NEW:4460) and was right for the
+   bundle it was read from; § 0.3 hands a surface to the handoff whose phases
+   touch it, and v8's surveys rail is where these pills live now.
+
+   Only the ORDER changes. The set is the same, so `resolveLibraryTab`,
+   `TAB_NAV_KEY`, `TAB_HEADING_KEY` and every derivation over this list are
+   unaffected — and `DEFAULT_LIBRARY_TAB` was already «Maler», which is now
+   also the first entry rather than the second. */
+export const LIBRARY_TABS = ['maler', 'bank', 'bruksomrader'] as const
 export type LibraryTab = (typeof LIBRARY_TABS)[number]
 
 /**
- * The tab a bare `/bibliotek` shows. It is «Maler» rather than the first entry
- * of the list: the rail leads with «Bruksområder» (Q24, NEW:4460) and the
- * screen has always opened on the templates. Named rather than implied,
- * because `libraryTabHref` omits the parameter for exactly this value and a
- * mismatch there is a link that looks selected and is not.
+ * The tab a bare `/bibliotek` shows. It is «Maler», which since N2 is also the
+ * first entry of the list — it was the second while the rail led with
+ * «Bruksområder». Named rather than implied either way, because
+ * `libraryTabHref` omits the parameter for exactly this value and a mismatch
+ * there is a link that looks selected and is not.
  */
 export const DEFAULT_LIBRARY_TAB: LibraryTab = 'maler'
 

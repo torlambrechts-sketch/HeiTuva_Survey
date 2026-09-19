@@ -75,7 +75,11 @@ import { FILTERS, FILTER_KEY } from '@/app/(app)/undersokelser/keys'
 
 /** The namespaces the rails draw from. Adding a fourth is a compile error at
  *  every call site, which is the point. */
-export type Namespace = 'nav' | 'reports' | 'surveys'
+/** `raw` is not a namespace — it is the absence of one. A dashboard's title is
+ *  whatever the person called it, so it must NOT go through next-intl: a
+ *  lookup would miss and render the title as a raw key. The renderer prints
+ *  `key` verbatim for this one. */
+export type Namespace = 'nav' | 'reports' | 'surveys' | 'raw'
 
 /** A message, with the namespace it lives in. */
 export type MsgRef = { ns: Namespace; key: string }
@@ -89,8 +93,19 @@ const nav = (key: string): MsgRef => ({ ns: 'nav', key })
  * a renderer that decides emphasis by `current === id` gives every exit the
  * inactive treatment. That is «a jump rendered as a filter is a pill that never
  * lights», and it is why this is a field rather than a comment.
+ *
+ * N3 — `more` IS A THIRD KIND BECAUSE v8 DRAWS IT AS A DIFFERENT CONTROL, not
+ * because it behaves differently. v8:238-241 renders the «Flere oppsett» item
+ * as a native `<select>` — `height:32px · padding:0 10px · border:1px solid
+ * var(--line) · border-radius:9px · 13px/600` — where every other item is a
+ * button. A `kind` that only changed emphasis could not express that, and a
+ * renderer branching on `id === 'more'` would be the hand-written special case
+ * this registry exists to remove.
+ *
+ * Like an exit it can never be current: v8's select is `value=""` on every
+ * render, so nothing inside it ever reads as selected. `railFaults` asserts it.
  */
-export type PillKind = 'filter' | 'exit'
+export type PillKind = 'filter' | 'exit' | 'more'
 
 export type SubnavPill = {
   /** Stable within a rail. `currentId` names one of these rather than comparing
@@ -101,6 +116,10 @@ export type SubnavPill = {
   label: MsgRef
   href: string
   kind: PillKind
+  /** `more` only: where the dropdown can go. A `more` pill with no options is
+   *  a control that does nothing, so `railFaults` refuses it and the insight
+   *  rail omits the pill entirely rather than drawing an empty select. */
+  options?: { href: string; label: MsgRef }[]
   /**
    * V7-2 — HOW AN EXIT IS DRAWN, decided with the pill in front of us, which is
    * what Q231 deferred to this phase.
@@ -131,7 +150,30 @@ export type SubnavRail = {
   currentId: string | null
 }
 
-type Ctx = { pathname: string; params: URLSearchParams }
+/** N2 — the insight rail lists the viewer's own dashboards (v8's `mine`,
+ *  v8:9340), which is a database read. The registry stays PURE: the list
+ *  arrives as context from the server, so `resolveSubnav` is still a function
+ *  of its arguments and `tests/unit/subnav.test.ts` can drive every rail
+ *  without a database. */
+export type SubnavDashboard = {
+  id: string
+  title: string
+  /** Is this the board `/dashboard` renders when no `flate` is given?
+   *
+   *  A PROPERTY OF THE VIEWER CARRIED ON THE ROW, deliberately. The rail used
+   *  to light `dashboards[0]` on a bare `/dashboard` — a guess, and one the
+   *  page can contradict: it renders the layout row `(me, WORKING_TITLE)`,
+   *  whose `dashboard_id` need not be the organisation's oldest board. A rail
+   *  and a page disagreeing about what is selected is the defect F3's rule is
+   *  about, so the answer is read where it is known (`readDashboards`) and
+   *  carried, rather than inferred here from an ordering.
+   *
+   *  Optional because it can be absent for a real reason: a member who has
+   *  never customised has no working row, so no board is current and no pill
+   *  lights. That is true, and truer than lighting the first one. */
+  current?: boolean
+}
+type Ctx = { pathname: string; params: URLSearchParams; dashboards: SubnavDashboard[] }
 
 type Entry = {
   /** For tests and for the error a mismatched entry produces. */
@@ -150,56 +192,120 @@ type Entry = {
 export const SUBNAV: Entry[] = [
   {
     key: 'insight',
-    match: (p) => p === '/dashboard' || p === '/rapporter',
-    build: ({ pathname, params }) => {
+    /* N1/N2 — v8 gives this rail to `dash`, `dashboard` AND `reports`
+       (v8:9334). `dash` is v8's «I dag» screen, which is our /oversikt, so the
+       rail now covers three routes where it covered two. */
+    match: (p) => p === '/dashboard' || p === '/rapporter' || p === '/oversikt',
+    build: ({ pathname, params, dashboards }) => {
+      /* ── v8:9334-9357, verbatim in shape ──────────────────────────────────
+       *
+       *   «I dag» · up to FOUR of the viewer's dashboards · «Flere oppsett» · «Arkiv»
+       *
+       * AND v8's SECOND RAIL FOR THESE SCREENS IS DEAD CODE, WHICH IS WHY IT IS
+       * NOT BUILT. The ternary at v8:9334 tests
+       * `["dash","dashboard","reports"].indexOf(st.screen) > -1` FIRST, so the
+       * later branch `(st.screen === "dashboard" || st.screen === "reports")`
+       * at v8:9376 — «Dashbord · Rapporter · Lovpålagt · Maler · Bygger» — can
+       * never be reached. Both were listed as rows to build; only this one
+       * renders in the drawing. Reported rather than built, per «finner du at
+       * noe ikke står i v8 — bygg ikke».
+       *
+       * `.slice(0, 4)` is v8's own cap (v8:9347). A fifth dashboard reaches the
+       * rail through «Flere oppsett», which is what that pill is for.
+       *
+       * ── N3 · «FLERE OPPSETT» IS A `<select>`, AND TWO OF ITS FOUR OPTION
+       *    CLASSES ARE REFUSED IN WRITING ────────────────────────────────────
+       *
+       * v8:238-241 renders this one item as a native dropdown rather than a
+       * button, and `subnavMore` (v8:9308-9324) fills it with FOUR classes:
+       *
+       *   1. the viewer's boards beyond the inline four   `mine:<key>`
+       *   2. the standard presets not already inline      `std:<key>  · mal`
+       *   3. the viewer's own saved presets               `own:<key> · eget`
+       *   4. «＋ Nytt dashbord …»                          `new`
+       *
+       * ONLY CLASS 1 IS BUILT. Classes 2, 3 and 4 all call `newDashFrom` or
+       * open the picker — they CREATE a dashboard (v8:9327-9331). A rail pill
+       * that writes has no action behind it here and a `<Link>` cannot invoke
+       * one; building the option and landing it somewhere that does not create
+       * would be a control whose label asserts a write it does not perform
+       * (D221's third face). Whether a shell rail may create a dashboard is a
+       * product decision, raised rather than settled — the same question
+       * `MetaBar.tsx` already has open about several named boards.
+       *
+       * And the pill is OMITTED when class 1 is empty rather than drawn with
+       * nothing in it. v8 never meets that case because classes 2-4 always
+       * supply an entry; with only class 1 built, ≤4 boards means an empty
+       * dropdown, which is decoration. `railFaults` refuses one either way. */
+      const inline = dashboards.slice(0, 4)
+      const overflow = dashboards.slice(4)
       const pills: SubnavPill[] = [
-        { id: 'dash', label: nav('subnavDashboard'), href: '/dashboard', kind: 'filter' },
-        {
-          id: 'mine',
-          label: nav('subnavReports'),
-          href: '/rapporter?fane=mine',
-          kind: 'filter',
-        },
-        /* F3 — the Rapporter screen's OWN tab labels, moved with the control
-           rather than rewritten beside it, which is why these two name the
-           `reports` namespace and their neighbours name `nav`. */
-        { id: 'lov', label: { ns: 'reports', key: 'tabLov' }, href: '/rapporter?fane=lov', kind: 'filter' },
-        {
-          id: 'standard',
-          label: { ns: 'reports', key: 'tabStandard' },
-          href: '/rapporter?fane=standard',
-          kind: 'filter',
-        },
-        /* THE FIFTH PILL IS REFUSED, NOT MISSING — v7:8912-8918 draws «Bygger»
-           here and it opens the editor on a FRESH draft. In this app the editor
-           is `?rapport=<id>` of a report that exists, so the pill would be a
-           deep link that does not resolve — V6-5's standing rule and Q178's
-           tranche-wide constraint, `DECISIONS.md:869-872`. The affordance is
-           already «＋ Ny rapport» in the «På tvers» card, so drawing it would
-           also be two controls for one action.
-
-           Written here rather than left as a silent four-of-five: a rail short
-           of the drawing reads as one somebody did not finish. */
+        { id: 'dash', label: nav('subnavToday'), href: '/oversikt', kind: 'filter' },
+        ...inline.map((d) => ({
+          id: `dash:${d.id}`,
+          // A dashboard's own name is DATA, not a message — it is whatever the
+          // person called it, so it cannot come from next-intl.
+          label: { ns: 'raw' as const, key: d.title },
+          href: `/dashboard?flate=${d.id}`,
+          kind: 'filter' as const,
+        })),
+        ...(overflow.length
+          ? [
+              {
+                id: 'more',
+                label: nav('subnavMoreLayouts'),
+                /* The href is where the select lands with no selection made —
+                   i.e. nowhere new. It is the current screen, so a viewer
+                   without JavaScript is not stranded on a control that cannot
+                   act. v8's own placeholder option is `value:""` and its
+                   handler returns early on it. */
+                href: '/dashboard',
+                kind: 'more' as const,
+                options: overflow.map((d) => ({
+                  href: `/dashboard?flate=${d.id}`,
+                  label: { ns: 'raw' as const, key: d.title },
+                })),
+              },
+            ]
+          : []),
+        /* «Arkiv» → v8 sets `screen:"reports", repTab:"lov"` (v8:9357), so the
+           href carries the tab rather than landing on a default the page
+           resolves differently. */
+        { id: 'arkiv', label: nav('subnavArchive'), href: '/rapporter?fane=lov', kind: 'filter' },
       ]
-      /* `/rapporter` with no `fane` IS `fane=lov` — the page's own resolver
-         says so, and a pill that resolves it differently is a default tab that
-         reads as nothing selected. */
-      if (pathname === '/rapporter') {
-        const fane = params.get('fane')
-        return {
-          label: nav('subnavInsight'),
-          pills,
-          currentId: fane === 'standard' || fane === 'mine' ? fane : 'lov',
-        }
-      }
-      return { label: nav('subnavInsight'), pills, currentId: 'dash' }
+
+      const current = (() => {
+        if (pathname === '/oversikt') return 'dash'
+        if (pathname === '/rapporter') return 'arkiv'
+        /* N3 — `?tilpass` NO LONGER LIGHTS «Flere oppsett», and that is v8's
+           reading rather than a regression. The pill is a `<select>` there,
+           `value=""` on every render, so nothing in it can read as selected;
+           what opened the customize panel in v8 is the dropdown's «＋ Nytt
+           dashbord …» option, which is one of the three classes refused above.
+           The customize panel is a STATE of the board on screen, so the board
+           stays lit under it — and the panel's own toggle
+           (`dashboard/CustomizeToggle.tsx`) is how it opens, which is why
+           dropping this branch orphans nothing. */
+        const flate = params.get('flate')
+        if (flate && dashboards.some((d) => d.id === flate)) return `dash:${flate}`
+        /* /dashboard with no `flate` renders the viewer's own board, which the
+           server flags. Null rather than a guess when nothing is flagged — see
+           `SubnavDashboard.current`. */
+        const mine = dashboards.find((d) => d.current)
+        return mine ? `dash:${mine.id}` : null
+      })()
+
+      return { label: nav('subnavInsight'), pills, currentId: current }
     },
   },
 
   {
     key: 'surveys',
-    match: (p) => p === '/undersokelser',
-    build: ({ params }) => {
+    /* N2 — v8:9395 gives this rail to `surveys`, `library` AND `packdetail`:
+       «Alle» · Maler · Spørsmålsbank · Bruksområder, then a «Bygger» exit.
+       That is the way into the library now that v8 has no Bibliotek nav item. */
+    match: (p) => p === '/undersokelser' || p.startsWith('/bibliotek'),
+    build: ({ pathname, params }) => {
       /* The search and the sort ride along, because losing a search by clicking
          a status filter is a regression the drawing has no opinion about. */
       const carry = (f: string) => {
@@ -214,21 +320,46 @@ export const SUBNAV: Entry[] = [
       }
       const raw = params.get('filter')
       const current = FILTERS.find((f) => f === raw) ?? 'alle'
+      /* N2 — v8:9395's three LIBRARY pills, appended to the status filters.
+         v8 draws «Alle» then Maler · Spørsmålsbank · Bruksområder, all on one
+         rail, because the library is a sub-view of the surveys set rather than
+         a top-level destination. Our /bibliotek carries the same three as its
+         own tabs, so each pill is a deep link into the tab it names. */
+      const libraryPills: SubnavPill[] = LIBRARY_TABS.map((tab) => ({
+        id: `lib:${tab}`,
+        label: nav(TAB_NAV_KEY[tab]),
+        href: libraryTabHref(tab),
+        kind: 'filter' as const,
+      }))
+
       return {
         label: nav('subnavSurveys'),
         /* Built FROM the registry, so a fifth status arrives with its label
            wired or not at all. */
-        pills: FILTERS.map((f) => ({
-          id: f,
-          label: { ns: 'surveys' as const, key: FILTER_KEY[f] },
-          href: carry(f),
-          kind: 'filter' as const,
-        })),
+        pills: [
+          ...FILTERS.map(
+            (f): SubnavPill => ({
+              id: f,
+              label: { ns: 'surveys', key: FILTER_KEY[f] },
+              href: carry(f),
+              kind: 'filter',
+            }),
+          ),
+          ...libraryPills,
+        ],
         /* v7:8934 appends a «Bygger» EXIT here. It is V7-2's, and it needs a
            destination this screen does not have: the bundle opens the builder
            on `st.activeId`, a survey the prototype happens to be holding, and
            a list has none. */
-        currentId: current,
+        /* WHICH PILL LIGHTS DEPENDS ON WHICH SCREEN THIS IS, because one rail
+           now serves two. On /undersokelser it is the status filter; on
+           /bibliotek it is the tab, resolved by the page's OWN resolver so the
+           pill that looks selected is the one that is. A rail serving two
+           screens with one `currentId` expression is what made the separate
+           `library` entry removable without losing anything. */
+        currentId: pathname.startsWith('/bibliotek')
+          ? `lib:${resolveLibraryTab(params.get('fane'))}`
+          : current,
       }
     },
   },
@@ -262,24 +393,20 @@ export const SUBNAV: Entry[] = [
     },
   },
 
-  {
-    key: 'library',
-    match: (p) => p === '/bibliotek',
-    build: ({ params }) => ({
-      /* Q172 — the bundle draws this rail IN-PAGE (v5:4082) and its subnav has
-         no library branch at all. Tor moved it here, and the page keeps no
-         second copy, which is the condition a shell rail must meet. */
-      label: nav('subnavLibrary'),
-      pills: LIBRARY_TABS.map((tab) => ({
-        id: tab,
-        label: nav(TAB_NAV_KEY[tab]),
-        href: libraryTabHref(tab),
-        kind: 'filter' as const,
-      })),
-      // The page's own resolver, so the default tab cannot be spelled two ways.
-      currentId: resolveLibraryTab(params.get('fane')),
-    }),
-  },
+  /* N2 — THE `library` ENTRY IS GONE, AND THAT IS A MERGE RATHER THAN A
+     REMOVAL. It gave /bibliotek its own rail labelled «Bibliotek» (Q172 — the
+     v5 bundle drew it in-page at v5:4082 and Tor moved it to the shell). v8
+     has no Bibliotek destination at all: its surveys rail carries the three
+     library pills itself (v8:9395), so /bibliotek is a screen INSIDE the
+     surveys set and shares that set's rail.
+
+     Everything the old entry held survives in the `surveys` entry above — the
+     same three pills off the same registry, the same `resolveLibraryTab` for
+     which one lights. What it stops doing is claiming Bibliotek is a
+     destination of its own, which is the structural half of N1's three-item
+     nav. `tests/unit/subnav.test.ts` case 2 is what named this: two entries
+     both matched /bibliotek, and a pathname matching two entries is the
+     ambiguity that check exists for. */
 
   {
     /* Last, because its match is a PREFIX and the entries above are exact. */
@@ -340,9 +467,13 @@ export const SUBNAV: Entry[] = [
 ]
 
 /** The rail for a screen, or null where the drawing gives none. */
-export function resolveSubnav(pathname: string, params: URLSearchParams): SubnavRail | null {
+export function resolveSubnav(
+  pathname: string,
+  params: URLSearchParams,
+  dashboards: SubnavDashboard[] = [],
+): SubnavRail | null {
   const entry = SUBNAV.find((e) => e.match(pathname))
-  return entry ? entry.build({ pathname, params }) : null
+  return entry ? entry.build({ pathname, params, dashboards }) : null
 }
 
 /**
@@ -363,6 +494,13 @@ export function railFaults(rail: SubnavRail): string[] {
     // the set's current member. A renderer that lit one would be claiming the
     // user is on a screen they are leaving.
     else if (cur.kind === 'exit') faults.push(`currentId "${rail.currentId}" is an exit`)
+    else if (cur.kind === 'more') faults.push(`currentId "${rail.currentId}" is a more-pill`)
+  }
+  for (const p of rail.pills) {
+    // An empty dropdown is decoration wearing a control's clothes — D208's
+    // first face, in the shell. The rail omits the pill instead.
+    if (p.kind === 'more' && !p.options?.length) faults.push(`more pill "${p.id}" has no options`)
+    if (p.kind !== 'more' && p.options) faults.push(`pill "${p.id}" carries options but is not a more-pill`)
   }
   return faults
 }

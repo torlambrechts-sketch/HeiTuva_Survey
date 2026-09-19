@@ -14,6 +14,7 @@ import { MobileNav } from '@/components/MobileNav'
 import { WideToggle } from '@/components/WideToggle'
 import { WorkspaceChip } from '@/components/WorkspaceChip'
 import { readWorkspace } from '@/lib/workspace/current'
+import { readDashboards } from '@/lib/shell/dashboards'
 import { initialsOf, type Viewer } from '@/lib/auth/session'
 import type { Locale } from '@/lib/i18n/locales'
 
@@ -31,22 +32,47 @@ import type { Locale } from '@/lib/i18n/locales'
  * into MobileNav's slide-over (docs/RESPONSIVE.md § App shell). Together they
  * were 505px wider than a 390px viewport, which is D12. Desktop is untouched.
  */
+/**
+ * N1 — v8's THREE items, `v8:8310` verbatim:
+ *
+ *     const screens = [["insight","Innsikt"],["surveys","Undersøkelser"],["tasks","Oppgaver"]];
+ *
+ * The app carried FIVE (`dash, surveys, tasks, insight, library`, v2:4790).
+ * v8 collapses them: `insight` covers dash/dashboard/reports and `surveys`
+ * covers library/packdetail, both by v8's own `on` predicate at v8:8411. So
+ * Oversikt, Dashboard, Rapporter and Bibliotek stop being top-level and are
+ * reached through the SUBNAV, which v8 gives to every screen but `results`
+ * (v8:9289). Tor chose this explicitly (alternativ A) after the measurement.
+ *
+ * ONE DEVIATION, AND IT IS COPY RATHER THAN STRUCTURE. v8's third label is
+ * «Oppgaver»; ours stays «Handlinger». Q123 refused «Oppgaver» — it is untrue
+ * of half that screen's content — and § 0.3 puts copy under DECISIONS.md
+ * rather than under the bundle. Order, keys, geometry and active-state logic
+ * are v8's unchanged.
+ *
+ * `insight` points at /dashboard, where the design's own `go('insight')` lands
+ * when nothing was opened before (`insightLast || "dashboard"`, :3222).
+ */
 const NAV = [
-  { href: '/oversikt', key: 'dash' },
-  { href: '/undersokelser', key: 'surveys' },
-  // V2-4: the fifth item, and it is THIRD rather than last — V2:4790 draws
-  // `dash, surveys, tasks, insight, library`. Added here with the screen it
-  // points to, per the plan: a nav item reaching a route that does not exist
-  // is the same defect as a link to a page nobody drew (Q56, D73).
-  { href: '/oppgaver', key: 'tasks' },
   { href: '/dashboard', key: 'insight' },
-  { href: '/bibliotek', key: 'library' },
+  { href: '/undersokelser', key: 'surveys' },
+  { href: '/oppgaver', key: 'tasks' },
 ] as const
 
 export async function AppHeader({ viewer }: { viewer: Viewer }) {
   const t = await getTranslations('nav')
 
   const ws = await readWorkspace(viewer.orgId)
+
+  /* N2 — the Innsikt rail's dashboard pills need the organisation's boards, and
+     the header is the only server component that renders on every screen the
+     rail can appear on. Fetched unconditionally rather than per-route: the
+     header cannot read the pathname (it is a server component, which is the
+     same constraint that put the subnav's radius in CSS), so «only fetch on
+     Innsikt screens» is not expressible here. One indexed select on
+     `dashboards_org_idx`, and `AppSubnav` returns null on every other screen
+     without ever reading the array. */
+  const dashboards = await readDashboards(viewer.orgId, viewer.userId)
 
   return (
     // The frame, the wrap and the 14/26 padding are the v1 bundle's
@@ -134,17 +160,17 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           ?
         </Link>
 
-        {/* V4:181-190. Absent rather than faked when the registry has not been
-            seeded — CLAUDE.md's never-fabricate rule: a chip showing an
-            invented workspace is indistinguishable from a real one. */}
-        {ws ? (
-          <WorkspaceChip
-            current={ws.current}
-            options={ws.selectable}
-            label={t('workspace')}
-            title={t('workspaceTitle')}
-          />
-        ) : null}
+        {/* N3 — THE ARBEIDSFLATE CHIP IS NOT IN THIS ROW ANY MORE, and it is
+            the fourth control v4/v8 displaced rather than a feature dropped.
+            v7:182 drew it here between «?» and the avatar; v8:192 draws the
+            identical chip inside the user menu, under its own label and over
+            the registry's hint. It is passed to `UserMenu` as
+            `workspaceSlot` below — same component, same props, same tint and
+            dot, one level in.
+
+            The row v8 leaves behind is two 34px circles, which is also why
+            this header no longer needs the wrap arithmetic that the chip's
+            width forced. */}
 
         <MobileNav
           items={NAV.map((n) => ({ href: n.href, key: n.key, label: t(n.key) }))}
@@ -167,10 +193,26 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
           }}
           langSlot={<LangPicker current={viewer.locale as Locale} />}
           wideSlot={<WideToggle wideLabel={t('wide')} narrowLabel={t('narrow')} />}
+          /* Absent rather than faked when the registry has not been seeded —
+             CLAUDE.md's never-fabricate rule: a chip showing an invented
+             workspace is indistinguishable from a real one, and a labelled
+             section over nothing claims a choice that is not there. */
+          workspaceSlot={
+            ws ? (
+              <WorkspaceChip
+                current={ws.current}
+                options={ws.selectable}
+                label={t('workspace')}
+                title={t('workspaceTitle')}
+              />
+            ) : null
+          }
+          workspaceLabel={t('workspace')}
+          workspaceHint={ws?.current.hint}
         />
       </div>
     </header>
-      <AppSubnav />
+      <AppSubnav dashboards={dashboards} />
     </div>
   )
 }
