@@ -240,3 +240,33 @@
   display: none;
 }
 
+
+/* ── G1 — the dashboard panel grid ─────────────────────────────────────────
+ *
+ * v8 renders the flate as `repeat(N,minmax(0,1fr))` with an 18px gap
+ * (v8:8946, v8:2683) and gives each panel `span N`, or `1 / span N` when the
+ * panel starts a new row (v8:7110). Both values arrive as CSS custom
+ * properties from the component, because the column count is a stored setting
+ * and the span is per panel — neither can be a Tailwind class.
+ *
+ * `minmax(0,1fr)` rather than `1fr` is the bundle's own spelling and it is
+ * load-bearing: an `auto`/`1fr` track resolves to MAX-CONTENT when a child
+ * cannot shrink, which is exactly the grid overflow F3 traced on
+ * /undersokelser. The `min-w-0` on each panel is the other half of that pair —
+ * one lets the track shrink, the other lets the content.
+ *
+ * BELOW 1024px THE GRID IS ONE COLUMN AND SPAN DOES NOT APPLY. There is no
+ * drawing under 1280px, so docs/RESPONSIVE.md governs: six tracks at 390px
+ * would be 65px each. A span is a statement about a desktop flate. */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .dash-grid {
+    grid-template-columns: var(--dash-cols, repeat(6, minmax(0, 1fr)));
+  }
+  .dash-panel {
+    grid-column: var(--dash-span, span 3);
+  }
+}

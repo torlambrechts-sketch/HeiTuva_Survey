@@ -94,8 +94,32 @@ export async function openPinnedReport(title: string) {
  * ORDER of the payload, which a CHECK cannot express.
  */
 
+/* G1 — the panel's layout and scope values (M:0137).
+ *
+ * WIDENING THIS WAS NOT OPTIONAL AND IT NEARLY WAS NOT DONE. `z.object()`
+ * STRIPS unknown keys, so with the old two-key shape every span chip, height
+ * chip, row-break toggle and scope select would have posted, returned ok, and
+ * saved nothing — the control moving, the page reloading, and the value gone.
+ * That is D221's third face: a control whose behaviour asserts a write it does
+ * not perform. The Zod boundary is where a new panel key has to be admitted,
+ * and it is one file away from the migration that permits it.
+ *
+ * `.optional()` throughout, because absent IS «inherit» — there is no sentinel
+ * (M:0137). `span` is bounded 1..6 here and clamped to the live column count at
+ * render, matching the CHECK rather than restating it narrower. */
 const PanelsInput = z
-  .array(z.object({ key: z.string().trim().min(1).max(64), wide: z.boolean() }))
+  .array(
+    z.object({
+      key: z.string().trim().min(1).max(64),
+      wide: z.boolean(),
+      span: z.number().int().min(1).max(6).optional(),
+      h: z.enum(['lav', 'normal', 'hoy']).optional(),
+      br: z.literal(true).optional(),
+      src: z.string().uuid().optional(),
+      per: z.enum(['q', 'h', 'y']).optional(),
+      grp: z.string().uuid().optional(),
+    }),
+  )
   .max(20)
 
 const FiltersInput = z.object({
@@ -134,6 +158,34 @@ export async function saveLayout(input: {
     { onConflict: 'org_id,user_id,title' },
   )
 
+  if (error) return { ok: false }
+  revalidatePath('/dashboard')
+  return { ok: true }
+}
+
+/**
+ * G1 — the grid's column count (v8:8947 draws exactly two chips).
+ *
+ * Its own action rather than a field on `saveLayout`: `cols` is a property of
+ * the FLATE and the panels are a property of the layout, and folding them into
+ * one call would mean every chip click posts the whole panel array back — a
+ * larger write, and one that can lose a concurrent panel edit from another tab.
+ *
+ * The span values are deliberately NOT rewritten when the count changes.
+ * v8 rescales them (`Math.round((cur.size[k] * n) / old)`, v8:8951); we clamp
+ * at render instead, so 6 -> 4 -> 6 is lossless where v8's rounding is not.
+ * A panel stored at 6 shows as 4 under four columns and returns to 6 after.
+ */
+export async function setColumns(cols: number): Promise<{ ok: boolean }> {
+  if (cols !== 4 && cols !== 6) return { ok: false }
+  const viewer = await requireViewer()
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('dashboard_layouts')
+    .update({ cols, updated_at: new Date().toISOString() })
+    .eq('org_id', viewer.orgId)
+    .eq('user_id', viewer.userId)
+    .eq('title', WORKING_TITLE)
   if (error) return { ok: false }
   revalidatePath('/dashboard')
   return { ok: true }

@@ -370,7 +370,13 @@ describe('F5-3 — resultat keeps its ONE screen, and says so four ways', () => 
        refuses one floor up. */
     expect(strip(RESULTS)).toMatch(/\/dashboard\?u=\$\{survey\.id\}/)
     expect(strip(RESULTS)).toContain('resMatrixLink')
-    expect(strip('app/(app)/dashboard/page.tsx')).toMatch(/readHeatmap\(viewer\.orgId, selected/)
+    /* G1 changed the ARGUMENT this is called with — the dashboard page now
+       reads per panel SCOPE (`sc.survey_ids`) rather than from one page-level
+       `selected`. The property this line is here to protect is «/dashboard is
+       the screen that draws the matrix», so it asserts the CALL, not the
+       spelling of its arguments. A guard pinned to an argument list fails on
+       every refactor that keeps the property true, which is what it just did. */
+    expect(strip('app/(app)/dashboard/page.tsx')).toMatch(/readHeatmap\(viewer\.orgId,/)
   })
 
   it('every resultat refusal has a sentence in both languages', () => {

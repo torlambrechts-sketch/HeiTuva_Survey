@@ -78,6 +78,13 @@
  *
  * And at F6/M:0136: 8 added, 0 removed — dashboard_shares.revoked_at plus the
  * two anon-reachable functions, dashboard_for_share_token and shared_dashboard.
+
+ * Regenerated 2026-09-19 (G1) against the local stack at migration HEAD. The
+ * diff was THREE lines — `cols` in Row, Insert and Update for
+ * `dashboard_layouts` (M:0137) — and nothing else moved. Recorded because the
+ * V6-3 entry above exists to make the diff worth reading: this time it held
+ * exactly the phase's own change, which is the outcome to expect and not the
+ * one to assume.
  */
 export type Json =
   | string
@@ -242,6 +249,7 @@ export type Database = {
       }
       dashboard_layouts: {
         Row: {
+          cols: number
           created_at: string
           dashboard_id: string | null
           filters: Json
@@ -253,6 +261,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cols?: number
           created_at?: string
           dashboard_id?: string | null
           filters?: Json
@@ -264,6 +273,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cols?: number
           created_at?: string
           dashboard_id?: string | null
           filters?: Json

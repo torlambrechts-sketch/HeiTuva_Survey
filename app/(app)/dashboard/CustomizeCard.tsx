@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  type Cols,
   addPanel,
   archetypeOf,
   filtersForPreset,
@@ -10,7 +11,7 @@ import {
   type LayoutFilters,
   type PanelEntry,
 } from '@/lib/dashboard/layout'
-import { savePreset, saveLayout, deletePreset, resetLayout } from './actions'
+import { savePreset, saveLayout, deletePreset, resetLayout, setColumns } from './actions'
 
 /**
  * «Tilpass dashboardet» — HeiTuva.dc.html:944-1040.
@@ -54,10 +55,12 @@ export function CustomizeCard({
   presets,
   canEdit,
   thresholdLine,
+  cols,
   labels,
 }: {
   open: boolean
   panels: PanelEntry[]
+  cols: Cols
   filters: LayoutFilters
   surveys: { id: string; title: string }[]
   groups: { id: string; name: string }[]
@@ -70,6 +73,7 @@ export function CustomizeCard({
   labels: Record<string, string | undefined>
 }) {
   const router = useRouter()
+  const [colsPending, startCols] = useTransition()
   const [tab, setTab] = useState<'data' | 'panels' | 'layout'>('data')
   const [draft, setDraft] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
@@ -179,6 +183,30 @@ export function CustomizeCard({
             </div>
           </div>
           <div className="flex flex-col gap-[14px]">
+            {/* G1 — v8:8947 draws exactly two column counts. A chip row rather
+                than a select because the bundle draws chips, and because two
+                options in a select is the control substitution CLAUDE.md
+                forbids. */}
+            <div>
+              <span className={`block ${legend}`}>{labels.columns}</span>
+              <span className="touch-cluster mt-2 flex flex-wrap items-center gap-[6px]">
+                {([4, 6] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={colsPending}
+                    onClick={() => startCols(async () => { await setColumns(n); router.refresh() })}
+                    className={`touch-44 h-[30px] cursor-pointer rounded-full border px-[12px] text-[12px] ${
+                      cols === n
+                        ? 'border-ink bg-sf font-semibold shadow-[0_1px_3px_rgba(25,21,16,.14)]'
+                        : 'border-line bg-transparent text-mut'
+                    }`}
+                  >
+                    {(labels.columnsN ?? '{n}').replace('{n}', String(n))}
+                  </button>
+                ))}
+              </span>
+            </div>
             <label className="block">
               <span className={`block ${legend}`}>{labels.period}</span>
               <select

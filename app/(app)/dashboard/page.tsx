@@ -3,12 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
 import { readDashboard, readHeatmap, readThemes, readTrends } from '@/lib/results/read'
 import type { Theme, TrendPoint } from '@/lib/results/types'
+import type { PanelScope } from '@/lib/dashboard/layout'
+import type { ScopeBundle } from './DashboardScreen'
 import { isGated } from '@/lib/results/types'
 import { DashboardScreen } from './DashboardScreen'
 import {
   WORKING_TITLE,
   archetypeOf,
   readPanels,
+  distinctScopes,
+  scopeKey,
+  readCols,
   type PanelEntry,
 } from '@/lib/dashboard/layout'
 import { readAttributed } from '@/lib/results/read'
@@ -96,7 +101,7 @@ export default async function DashboardPage({
     // for and what `tests/db/dashboard-layouts.test.ts` proves.
     supabase
       .from('dashboard_layouts')
-      .select('id, user_id, title, panels, filters, dashboard_id')
+      .select('id, user_id, title, panels, filters, dashboard_id, cols')
       .eq('org_id', viewer.orgId)
       .order('title'),
     // Org row wins over the global default; both are readable, so the "some
@@ -119,6 +124,7 @@ export default async function DashboardPage({
   // A member with no working row has not chosen yet: the design answers that
   // with the shipped presets, not an empty board (NEW:1042).
   const panels: PanelEntry[] = working ? readPanels(working.panels, offered) : []
+  const cols = readCols(working?.cols)
 
   /* F5 — the three meta-bar cells that needed the entity (M:0132/M:0134).
      Each is a real read or it is absent: nothing here falls back to a name or
@@ -274,12 +280,40 @@ export default async function DashboardPage({
       .map((t) => t.key),
   )
 
-  // The period is a set of rounds: the most recent one per survey, the most
-  // recent two, or all of them.
+  /* ── G1: ONE FETCH PER DISTINCT SCOPE, NOT ONE PER PANEL ──────────────────
+   *
+   * A panel may override the dashboard's survey, period and group (M:0137), so
+   * the figures are no longer one dataset — they are one dataset PER SCOPE.
+   *
+   * `distinctScopes` collapses panels that share a scope, and on a dashboard
+   * where nothing is overridden it returns exactly one, so this does the same
+   * work it did before G1. The cost is proportional to the number of DIFFERENT
+   * questions asked, not to the number of panels.
+   *
+   * THE GATE IS UNTOUCHED AND THAT IS THE POINT. Narrowing happens by passing
+   * a smaller `surveys`/`group` to the SAME SECURITY DEFINER RPCs — every one
+   * of which calls `app.k_for` on its own data. A per-panel filter therefore
+   * makes the gate MATTER MORE, not less, and there is nothing here that could
+   * weaken it: this file has no threshold in it and cannot acquire one.
+   */
+  const dashFilters = { period, group_id: group, survey_ids: selected }
+  const scopes = distinctScopes(panels, dashFilters)
+  /* THE DASHBOARD'S OWN SCOPE IS ALWAYS FETCHED, even when every panel
+     overrides it and even when there are no panels at all. The filter line,
+     the meta bar and the empty state all describe the dashboard rather than
+     any panel, so `base` below must exist — deriving it with `!` from a list
+     that legitimately might not contain it would be a fabricated value of
+     exactly the kind this project refuses. */
+  if (!scopes.some((sc) => scopeKey(sc) === scopeKey(dashFilters))) scopes.unshift({ ...dashFilters })
+
+  // Rounds for the UNION of every scope, in one query, then sliced per scope in
+  // memory. Per-scope round queries would be the obvious shape and would issue
+  // one round-trip per distinct scope for data that overlaps almost entirely.
+  const unionSurveys = [...new Set(scopes.flatMap((sc) => sc.survey_ids))]
   const { data: rounds } = await supabase
     .from('survey_rounds')
     .select('id, survey_id, round_no, opens_at')
-    .in('survey_id', selected.length ? selected : ['00000000-0000-0000-0000-000000000000'])
+    .in('survey_id', unionSurveys.length ? unionSurveys : ['00000000-0000-0000-0000-000000000000'])
     .order('round_no', { ascending: false })
 
   const perSurvey = new Map<string, { id: string; round_no: number }[]>()
@@ -288,62 +322,88 @@ export default async function DashboardPage({
     bucket.push({ id: r.id, round_no: r.round_no })
     perSurvey.set(r.survey_id, bucket)
   }
-  const take = period === 'q' ? 1 : period === 'h' ? 2 : Number.POSITIVE_INFINITY
-  const roundIds =
-    period === 'y'
-      ? null
-      : [...perSurvey.values()].flatMap((list) => list.slice(0, take).map((r) => r.id))
+  /** The period as a set of rounds: the latest per survey, the latest two, or
+   *  all of them. Unchanged from before G1 — only its input is now a scope. */
+  const roundsFor = (sc: PanelScope): string[] | null => {
+    if (sc.period === 'y') return null
+    const take = sc.period === 'q' ? 1 : 2
+    return sc.survey_ids.flatMap((id) => (perSurvey.get(id) ?? []).slice(0, take).map((r) => r.id))
+  }
 
-  const [summary, heatmap] = await Promise.all([
-    readDashboard(viewer.orgId, selected, group, roundIds),
-    readHeatmap(viewer.orgId, selected, group, roundIds),
-  ])
+  const bundles = new Map<string, ScopeBundle>()
+  await Promise.all(
+    scopes.map(async (sc) => {
+      const roundIds = roundsFor(sc)
+      const [summary, heatmap] = await Promise.all([
+        readDashboard(viewer.orgId, sc.survey_ids, sc.group_id, roundIds),
+        readHeatmap(viewer.orgId, sc.survey_ids, sc.group_id, roundIds),
+      ])
 
-  // Trends and themes are per-survey RPCs, so the cross-survey panels are the
-  // union of per-survey reads. That is deliberate rather than a shortcut: each
-  // survey's gate is applied to its OWN data, and merging afterwards can only
-  // combine cells that already survived. A theme gated in every survey never
-  // appears in the merged list, which a single cross-survey query with one
-  // contributor count could not guarantee.
-  const perSurveyReads = await Promise.all(
-    selected.map(async (id) => ({
-      id,
-      title: available.find((s) => s.id === id)?.title ?? '',
-      trends: await readTrends(id, group),
-      themes: await readThemes(id, roundIds, group),
-    })),
+      // Trends and themes are per-survey RPCs, so the cross-survey panels are
+      // the union of per-survey reads. That is deliberate rather than a
+      // shortcut: each survey's gate is applied to its OWN data, and merging
+      // afterwards can only combine cells that already survived. A theme gated
+      // in every survey never appears in the merged list, which a single
+      // cross-survey query with one contributor count could not guarantee.
+      const perSurveyReads = await Promise.all(
+        sc.survey_ids.map(async (id) => ({
+          id,
+          title: available.find((x) => x.id === id)?.title ?? '',
+          trends: await readTrends(id, sc.group_id),
+          themes: await readThemes(id, roundIds, sc.group_id),
+        })),
+      )
+
+      const trendBars: { key: string; label: string; avg: number | null }[] = []
+      for (const sv of perSurveyReads) {
+        const points: TrendPoint[] = sv.trends?.points ?? []
+        const inScope = roundIds ? points.filter((pt) => roundIds.includes(pt.round_id)) : points
+        for (const pt of [...inScope].sort((a, b) => a.round_no - b.round_no)) {
+          trendBars.push({
+            key: pt.round_id,
+            label: `${sv.title} · ${pt.round_no}`,
+            avg: isGated(pt) ? null : pt.avg,
+          })
+        }
+      }
+
+      const merged = new Map<string, Theme>()
+      for (const sv of perSurveyReads) {
+        for (const theme of sv.themes?.themes ?? []) {
+          const seen = merged.get(theme.key)
+          merged.set(
+            theme.key,
+            seen
+              ? {
+                  ...seen,
+                  mentions: seen.mentions + theme.mentions,
+                  contributors: seen.contributors + theme.contributors,
+                }
+              : theme,
+          )
+        }
+      }
+
+      bundles.set(scopeKey(sc), {
+        summary,
+        heatmap,
+        trendBars,
+        themes: [...merged.values()].sort((a, b) => b.mentions - a.mentions),
+        // The scope's OWN threshold, derived exactly as the screen derived the
+        // page-level one before G1: the summary's k, or the heatmap's when the
+        // summary itself was refused.
+        trendK: summary?.k ?? heatmap?.k ?? null,
+      })
+    }),
   )
 
-  const trendBars: { key: string; label: string; avg: number | null }[] = []
-  for (const s of perSurveyReads) {
-    const points: TrendPoint[] = s.trends?.points ?? []
-    const inScope = roundIds ? points.filter((p) => roundIds.includes(p.round_id)) : points
-    for (const p of [...inScope].sort((a, b) => a.round_no - b.round_no)) {
-      trendBars.push({
-        key: p.round_id,
-        label: `${s.title} · ${p.round_no}`,
-        avg: isGated(p) ? null : p.avg,
-      })
-    }
-  }
-
-  const merged = new Map<string, Theme>()
-  for (const s of perSurveyReads) {
-    for (const theme of s.themes?.themes ?? []) {
-      const seen = merged.get(theme.key)
-      merged.set(
-        theme.key,
-        seen
-          ? {
-              ...seen,
-              mentions: seen.mentions + theme.mentions,
-              contributors: seen.contributors + theme.contributors,
-            }
-          : theme,
-      )
-    }
-  }
-  const themes = [...merged.values()].sort((a, b) => b.mentions - a.mentions)
+  /* The dashboard's OWN bundle — what the filter line and the meta bar
+     describe, and what a panel with no override renders. */
+  const base = bundles.get(scopeKey(dashFilters))!
+  /* Only the two the PAGE itself still needs: the filter line's response count
+     and the heatmap's k. The trend bars and themes are read per panel from
+     `bundles`, so there is no page-level copy to drift from them. */
+  const { summary, heatmap } = base
 
   // ── The two non-aggregate panels (NEW:1138-1163) ──────────────────────────
   // Read only when the LAYOUT contains them: a panel nobody has added is a
@@ -418,8 +478,6 @@ export default async function DashboardPage({
       groups={groups ?? []}
       summary={summary}
       heatmap={heatmap}
-      trendBars={trendBars}
-      themes={themes}
       filterLine={t('filterLine', {
         surveys: selected.length,
         responses: summary?.n ?? 0,
@@ -434,7 +492,9 @@ export default async function DashboardPage({
       chooserPresets={chooserPresets}
       customizeOpen={tilpass !== undefined}
       canEdit={viewer.role === 'administrator' || viewer.role === 'redaktor'}
-      layoutFilters={{ period, group_id: group, survey_ids: selected }}
+      layoutFilters={dashFilters}
+      bundles={bundles}
+      cols={cols}
       meta={{
         ownerName: dashOwnerName,
         shares: dashShares,

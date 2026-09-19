@@ -24,12 +24,115 @@
 
 /** A panel key is a `report_section_types` row with `on_dashboard` — never a
  *  string this file decides. The registry is the vocabulary (Q51). */
-export type PanelEntry = { key: string; wide: boolean }
+export type PanelHeight = 'lav' | 'normal' | 'hoy'
+export type Period = 'q' | 'h' | 'y'
+
+/**
+ * A panel: its identity, its LAYOUT (span, height, row break) and its own
+ * SCOPE OVERRIDES (src, per, grp) — G1.
+ *
+ * v8 keys six maps by panel key at the dashboard level (`d.size`, `d.h`,
+ * `d.br`, `d.src`, `d.per`, `d.grp`). These live on the entry instead, and
+ * M:0137 states the reason in full: v8's `patchDash` never prunes those maps
+ * when a panel is removed, so six orphans accumulate per removal and come back
+ * carrying a scope somebody set months ago. On the entry an orphan cannot be
+ * expressed.
+ *
+ * Every override is OPTIONAL and `undefined` means «inherit the dashboard's».
+ * There is no «alle» sentinel: absent already means all, and two spellings of
+ * one state is how a value goes stale on one of them.
+ */
+export type PanelEntry = {
+  key: string
+  wide: boolean
+  /** 1..6, the stored INTENT. Clamped to the live column count at render. */
+  span?: number
+  h?: PanelHeight
+  /** Start a new row — v8's `br`, which renders as `1 / span N`. */
+  br?: boolean
+  /** ONE survey id. Overrides the dashboard's whole survey selection. */
+  src?: string
+  per?: Period
+  grp?: string
+}
 
 export type LayoutFilters = {
-  period: 'q' | 'h' | 'y'
+  period: Period
   group_id: string | null
   survey_ids: string[]
+}
+
+/** The grid's column count. v8 offers exactly two (v8:8947). */
+export type Cols = 4 | 6
+export const COLS_DEFAULT: Cols = 6
+export const readCols = (stored: unknown): Cols => (stored === 4 ? 4 : COLS_DEFAULT)
+
+/** v8:7108's three heights, each from its own entry in that object literal. */
+export const PANEL_MIN_H: Record<PanelHeight, string> = {
+  lav: '150px',
+  normal: '230px',
+  hoy: '340px',
+}
+
+/**
+ * The span a panel actually gets, which is NOT necessarily the one stored.
+ *
+ * v8's `panelSpan` (v8:7237-7244) clamps with `Math.min(cols, stored)`, and
+ * the clamp is why the stored value is the unclamped INTENT: a panel set to 6
+ * and viewed at 4 columns narrows to 4, and switching back to 6 restores it.
+ * Clamping on WRITE would make 6 -> 4 -> 6 lossy.
+ *
+ * With no stored span the panel falls back to `wide`, which is the model F1
+ * built and every existing row carries: wide = the full width, otherwise half,
+ * rounded up so 6 columns give 3 and 4 give 2.
+ */
+export function spanOf(entry: PanelEntry, cols: Cols): number {
+  if (typeof entry.span === 'number' && Number.isFinite(entry.span)) {
+    return Math.max(1, Math.min(cols, Math.round(entry.span)))
+  }
+  return entry.wide ? cols : Math.max(1, Math.round(cols / 2))
+}
+
+/**
+ * A panel's effective scope: its own overrides over the dashboard's filters.
+ *
+ * THE WHOLE POINT OF THIS FUNCTION IS THAT THERE IS ONLY ONE OF IT. A per-panel
+ * filter narrows the population a panel is computed over, so the k gate matters
+ * MORE here, not less — and the way that is guaranteed is that this returns the
+ * same `{ surveys, group, period }` shape every reader already takes, and every
+ * reader still goes through the SECURITY DEFINER RPCs that call `app.k_for`.
+ * Nothing about narrowing happens outside the database's gate.
+ */
+export type PanelScope = { survey_ids: string[]; group_id: string | null; period: Period }
+
+export function scopeFor(entry: PanelEntry, filters: LayoutFilters): PanelScope {
+  return {
+    // `src` names ONE survey and replaces the selection rather than
+    // intersecting it — that is what v8's single-select draws.
+    survey_ids: entry.src ? [entry.src] : filters.survey_ids,
+    group_id: entry.grp ?? filters.group_id,
+    period: entry.per ?? filters.period,
+  }
+}
+
+/** A stable identity for a scope, so panels sharing one are fetched ONCE.
+ *  Most dashboards override nothing, and then this collapses to a single key
+ *  and the page does exactly the work it did before G1. */
+export const scopeKey = (s: PanelScope) =>
+  JSON.stringify([[...s.survey_ids].sort(), s.group_id, s.period])
+
+/** The distinct scopes a layout needs, in first-appearance order. */
+export function distinctScopes(panels: PanelEntry[], filters: LayoutFilters): PanelScope[] {
+  const out: PanelScope[] = []
+  const seen = new Set<string>()
+  for (const p of panels) {
+    const scope = scopeFor(p, filters)
+    const k = scopeKey(scope)
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(scope)
+  }
+  return out
 }
 
 /** The title of the member's own working row. A constant rather than a magic
@@ -110,9 +213,39 @@ export function readPanels(stored: unknown, offered: readonly string[]): PanelEn
     const key = (raw as { key?: unknown }).key
     if (typeof key !== 'string' || !allowed.has(key) || seen.has(key)) continue
     seen.add(key)
-    out.push({ key, wide: (raw as { wide?: unknown }).wide === true })
+    const r = raw as Record<string, unknown>
+    const entry: PanelEntry = { key, wide: r.wide === true }
+    // Each optional value is admitted only in the shape the CHECK permits, so
+    // a row that somehow holds something else reads as «inherit» rather than
+    // as a value the writer cannot write back.
+    if (typeof r.span === 'number' && r.span >= 1 && r.span <= 6) entry.span = Math.round(r.span)
+    if (r.h === 'lav' || r.h === 'normal' || r.h === 'hoy') entry.h = r.h
+    if (r.br === true) entry.br = true
+    if (typeof r.src === 'string' && r.src.length > 0) entry.src = r.src
+    if (r.per === 'q' || r.per === 'h' || r.per === 'y') entry.per = r.per
+    if (typeof r.grp === 'string' && r.grp.length > 0) entry.grp = r.grp
+    out.push(entry)
   }
   return out
+}
+
+/** Set one panel's layout or scope value. `undefined` CLEARS the override, and
+ *  clearing is what «inherit» is — there is no sentinel to write. */
+export function patchPanel(
+  panels: PanelEntry[],
+  key: string,
+  patch: Partial<Omit<PanelEntry, 'key'>>,
+): PanelEntry[] {
+  if (!panels.some((p) => p.key === key)) return panels
+  return panels.map((p) => {
+    if (p.key !== key) return p
+    const next: PanelEntry = { ...p }
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === undefined) delete (next as Record<string, unknown>)[k]
+      else (next as Record<string, unknown>)[k] = v
+    }
+    return next
+  })
 }
 
 /** The complement of readPanels for the filter payload. Unknown keys are

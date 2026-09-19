@@ -1799,7 +1799,13 @@ export const ROUTES: RouteSpec[] = [
         name: 'tilpass-oppsett',
         setup: async (page) => {
           await page.getByRole('button', { name: 'Tilpass' }).click()
-          await page.getByRole('button', { name: 'Oppsett' }).click()
+          // EXACT. Playwright matches `name` as a case-insensitive SUBSTRING by
+          // default, so G1's per-panel «Panelets oppsett» button matched this
+          // tab and the click became a strict-mode violation over five
+          // elements. The tab is the one named exactly «Oppsett»; the loose
+          // match was carrying a predicate — «the only control whose name
+          // contains oppsett» — that nothing declared and G1 falsified.
+          await page.getByRole('button', { name: 'Oppsett', exact: true }).click()
           await page.getByPlaceholder('Navn på oppsettet').waitFor()
         },
       },

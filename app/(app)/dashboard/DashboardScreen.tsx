@@ -15,7 +15,27 @@ import { selectionLine } from '@/lib/dashboard/selection-line'
 import { MetaBar } from './MetaBar'
 import { PageHeader, PARTICIPATION } from '@/components/PageHeader'
 import type { Measured } from '@/lib/surveys/participation'
-import type { LayoutFilters, PanelEntry } from '@/lib/dashboard/layout'
+import type { LayoutFilters, PanelEntry, Cols } from '@/lib/dashboard/layout'
+import { PANEL_MIN_H, scopeFor, scopeKey, spanOf } from '@/lib/dashboard/layout'
+
+/**
+ * The figures for ONE panel scope — G1.
+ *
+ * A panel may narrow the dashboard's survey, period or group (M:0137), so the
+ * page fetches one of these per DISTINCT scope and the panel looks its own up.
+ * Every field in here came out of a SECURITY DEFINER RPC that called
+ * `app.k_for` on the narrowed population, so `k` is that scope's threshold and
+ * a suppressed cell is suppressed against the scope the reader is looking at.
+ */
+export type ScopeBundle = {
+  summary: DashboardSummary | null
+  heatmap: Heatmap | null
+  trendBars: { key: string; label: string; avg: number | null }[]
+  themes: Theme[]
+  /** The gate's own number for this scope: the summary's, or the heatmap's
+   *  when the summary is refused outright. Never the page's. */
+  trendK: number | null
+}
 import type { DutyRow, RegisterStat } from '@/lib/dashboard/panels'
 
 const CARD = 'rounded-2xl border border-line bg-sf p-[22px]'
@@ -26,8 +46,8 @@ export async function DashboardScreen({
   groups,
   summary,
   heatmap,
-  trendBars,
-  themes,
+  bundles,
+  cols,
   filterLine,
   pinned,
   panels,
@@ -50,8 +70,16 @@ export async function DashboardScreen({
   groups: { id: string; name: string }[]
   summary: DashboardSummary | null
   heatmap: Heatmap | null
-  trendBars: { key: string; label: string; avg: number | null }[]
-  themes: Theme[]
+  /* `trendBars` and `themes` are NOT props any more. Before G1 the page
+     computed one set and every panel rendered it; now each panel reads its own
+     scope's bundle, so a page-level copy would be a second source that the
+     trend and theme panels could silently fall back to. Removing it is what
+     makes «a panel shows its own scope» structural rather than careful. */
+  /** G1 — one entry per DISTINCT panel scope, keyed by `scopeKey`. A panel
+   *  with no overrides finds the dashboard's own bundle here under the same
+   *  key, so there is one code path rather than a default and a special case. */
+  bundles: Map<string, ScopeBundle>
+  cols: Cols
   filterLine: string
   /** The member's own pins, from `dashboard_pins`. */
   pinned: string[]
@@ -248,20 +276,24 @@ export async function DashboardScreen({
    * file, and their header action is the move/width/remove control set with
    * the pin beside it where a panel may become a report section.
    */
-  const renderPanel = (key: string, controls: React.ReactNode): React.ReactNode => {
+  /* G1 — a panel renders from ITS OWN scope's figures, not the page's. The
+     bundle is a PARAMETER rather than a closure read, so a panel cannot show
+     the dashboard's numbers while claiming its own scope: the narrowed values
+     are the only ones reachable in here. */
+  const renderPanel = (key: string, controls: React.ReactNode, b: ScopeBundle): React.ReactNode => {
     switch (key) {
       case 'trend':
         return (
 <Panel title={t('panel_trend')} note={t('note_trend')} action={controls}>
-        {trendBars.length ? (
+        {b.trendBars.length ? (
           <div className="mt-[14px] flex flex-col gap-[9px]">
-            {trendBars.map((b) => (
+            {b.trendBars.map((bar) => (
               <BarRow
-                key={b.key}
-                label={b.label}
-                value={b.avg === null ? tr('gatedCell', { k: trendK ?? 0 }) : no(b.avg)}
-                pct={b.avg === null ? 0 : pctOf5(b.avg)}
-                color={b.avg === null ? 'var(--sf2)' : 'var(--ac)'}
+                key={bar.key}
+                label={bar.label}
+                value={bar.avg === null ? tr('gatedCell', { k: b.trendK ?? 0 }) : no(bar.avg)}
+                pct={bar.avg === null ? 0 : pctOf5(bar.avg)}
+                color={bar.avg === null ? 'var(--sf2)' : 'var(--ac)'}
               />
             ))}
           </div>
@@ -277,7 +309,7 @@ export async function DashboardScreen({
           note={heatK === null ? t('heatNoteGeneric') : t('heatNote', { k: heatK, kWord: numberWord(heatK, locale) })}
           action={controls}
         >
-          <HeatGrid heatmap={heatmap} gated={tr('gatedCell', { k: heatK ?? 0 })} gatedTitle={tr('gatedTitle', { k: heatK ?? 0 })} empty={t('noData')} />
+          <HeatGrid heatmap={b.heatmap} gated={tr('gatedCell', { k: b.heatmap?.k ?? 0 })} gatedTitle={tr('gatedTitle', { k: b.heatmap?.k ?? 0 })} empty={t('noData')} />
         </Panel>
         )
       case 'drivers':
@@ -300,9 +332,9 @@ export async function DashboardScreen({
       case 'themes':
         return (
 <Panel title={t('panel_themes')} note={t('note_themes')} action={controls}>
-        {themes.length ? (
+        {b.themes.length ? (
           <div className="mt-[14px] flex flex-wrap gap-2">
-            {themes.map((theme) => (
+            {b.themes.map((theme) => (
               <span key={theme.key} className="rounded-full bg-sbg px-[14px] py-2 text-[13px]">
                 {/* The dashboard's own wording, not Resultater's: the
                     design writes "tid · nevnt 19 ganger" on both screens
@@ -479,6 +511,7 @@ export async function DashboardScreen({
       </div>
 
       <CustomizeCard
+        cols={cols}
         open={customizeOpen}
         panels={panels}
         filters={layoutFilters}
@@ -489,6 +522,8 @@ export async function DashboardScreen({
         canEdit={canEdit}
         thresholdLine={thresholdText}
         labels={{
+          columns: t('columns'),
+          columnsN: t('columnsN', { n: '{n}' }),
           title: t('customizeTitle'),
           tabData: t('tabData'),
           tabPanels: t('tabPanels'),
@@ -586,7 +621,30 @@ export async function DashboardScreen({
           registry row (M:0047), so `renderPanel` is exhaustive over what a
           layout can contain: the database refuses any other key on write, and
           `readPanels` drops one the registry has since retired. */}
-      <div className="mt-[18px] grid grid-cols-1 gap-[18px] xl:grid-cols-2">
+      {/* Q51/Q25: the panels on screen are the member's LAYOUT, rendered in
+          its order with its widths — not a fixed sequence. Each key is a
+          registry row (M:0047), so `renderPanel` is exhaustive over what a
+          layout can contain: the database refuses any other key on write, and
+          `readPanels` drops one the registry has since retired.
+
+          G1 — THE GEOMETRY IS v8's, each value from its own line:
+            grid     `repeat(N,minmax(0,1fr))`     v8:8946
+            gap      18px                          v8:2683
+            span     `span N`, clamped Math.min(cols, n)   v8:7110 / 7237
+            break    `1 / span N` when set         v8:7110's `brK` branch
+            minH     lav 150px · normal 230px · hoy 340px  v8:7111
+          `minmax(0,1fr)` rather than `1fr` is the bundle's own spelling and it
+          is load-bearing: a bare `1fr` track resolves to max-content when a
+          child cannot shrink, which is the grid overflow F3 spent a section on.
+
+          Below `lg` the whole thing is ONE column regardless of span. There is
+          no drawing under 1280px, and `docs/RESPONSIVE.md` governs: a six-wide
+          panel at 390px would be six tracks of 65px. Span is a desktop
+          statement, so it applies from `lg` up and collapses below. */}
+      <div
+        className="dash-grid mt-[18px] gap-[18px]"
+        style={{ ['--dash-cols' as string]: `repeat(${cols},minmax(0,1fr))` }}
+      >
         {panels.map((entry) => {
           const controls = (
             <span className="touch-cluster flex flex-wrap items-center justify-end gap-[6px]">
@@ -594,6 +652,9 @@ export async function DashboardScreen({
                 panelKey={entry.key}
                 panels={panels}
                 filters={layoutFilters}
+                cols={cols}
+                surveys={surveys}
+                groups={groups}
                 labels={{
                   up: t('moveUp'),
                   down: t('moveDown'),
@@ -601,14 +662,46 @@ export async function DashboardScreen({
                   narrow: t('makeNarrow'),
                   remove: t('removePanel'),
                 }}
+                cfg={{
+                  open: t('panelCfg'),
+                  close: t('panelCfgClose'),
+                  size: t('panelSize'),
+                  height: t('panelHeight'),
+                  lav: t('panelHeightLav'),
+                  normal: t('panelHeightNormal'),
+                  hoy: t('panelHeightHoy'),
+                  brk: t('panelBreak'),
+                  brkOn: t('panelBreakOn'),
+                  scope: t('panelScope'),
+                  srcAll: t('panelSrcAll'),
+                  grpAll: t('panelGrpAll'),
+                  perInherit: t('panelPeriodInherit'),
+                  // The board's own period labels, reused rather than a second
+                  // set: two vocabularies for one filter is how they diverge.
+                  periods: { q: t('periodLast'), h: t('periodTwo'), y: t('periodAll') },
+                }}
               />
               {pinnable.has(entry.key) ? pin(entry.key) : null}
             </span>
           )
-          const inner = renderPanel(entry.key, controls)
+          /* The panel's OWN bundle. `scopeFor` and `scopeKey` are the same two
+             functions the page used to decide what to fetch, so the key a
+             panel looks up here cannot drift from the key the page stored —
+             one derivation, two callers, which is why neither is inlined. */
+          const bundle = bundles.get(scopeKey(scopeFor(entry, layoutFilters)))
+          if (!bundle) return null
+          const inner = renderPanel(entry.key, controls, bundle)
           if (!inner) return null
+          const n = spanOf(entry, cols)
           return (
-            <div key={entry.key} className={entry.wide ? 'xl:col-span-2' : undefined}>
+            <div
+              key={entry.key}
+              className="dash-panel min-w-0"
+              style={{
+                ['--dash-span' as string]: entry.br ? `1 / span ${n}` : `span ${n}`,
+                minHeight: PANEL_MIN_H[entry.h ?? 'normal'],
+              }}
+            >
               {inner}
             </div>
           )
