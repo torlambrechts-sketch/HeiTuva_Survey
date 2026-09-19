@@ -1047,7 +1047,11 @@ export function Builder({
                 that did nothing would be a lie about what it does. */}
             <Link
               href="/undersokelser"
-              className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-[13px] text-sm font-semibold text-ink no-underline"
+              /* N6 · v8:529 — `height:38px · padding:0 15px · 13px`. v7 drew
+                 `13px 22px` at 14px; v8 fixes the height and narrows the
+                 padding, so the two builder header actions match the
+                 38px rail rather than sizing themselves off their text. */
+              className="touch-44 flex h-[38px] cursor-pointer items-center rounded-[10px] border border-line bg-transparent px-[15px] text-[13px] font-semibold text-ink no-underline"
             >
               {t('saveDraft')}
             </Link>
@@ -1062,12 +1066,16 @@ export function Builder({
                   else setFailed(true)
                 })
               }}
-              className="touch-44 cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-[13px] text-sm font-semibold text-ink disabled:opacity-60"
+              /* N6 · v8:530 — the same 38px/0 15px/13px as its neighbour. */
+              className="touch-44 flex h-[38px] cursor-pointer items-center rounded-[10px] border border-line bg-transparent px-[15px] text-[13px] font-semibold text-ink disabled:opacity-60"
             >
               {templateSaved ? t('templateSaved') : t('saveTemplate')}
             </button>
             {saved && !failed ? (
-              <span className="rounded-full bg-ac2 px-[15px] py-[9px] text-[12.5px] font-semibold">
+              <span
+                /* N6 · v8:532 — `padding:8px 14px`, down from v7's `9px 15px`. */
+                className="rounded-full bg-ac2 px-[14px] py-2 text-[12.5px] font-semibold"
+              >
                 {t('saved')}
               </span>
             ) : null}

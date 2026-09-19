@@ -8256,3 +8256,73 @@ possible outcome for a check being validated. **The guard turned a false negativ
 
 **The habit it confirms:** a server that is already up is not evidence that it is serving your
 code, and a version number in `ps` is worth reading before trusting a port.
+
+## D256 — the geometry extractor measured a value SET, and both of its replacements lied before the third worked
+
+**Logged 2026-09-19, phase N6.** D251 recorded that ten `_shell` «changes» were two relocations.
+This is the tool that can say so mechanically, and the two wrong versions it went through are the
+finding — each failed in a different direction and neither failure was predicted.
+
+**The old artefact** (`docs/fidelity/bundle-geometry-diff.json`) keys on
+`(screen, property) -> sorted multiset of literal values`. A multiset has no positions, so a moved
+element is invisible and what it gains on arrival is attributed to properties it never touched.
+
+**Version 1 — signature too weak.** `tag | attribute names | own text`. Every unattributed
+`<div style="…">` hashes to `div||`. v8 removes the breadcrumb from the `results` screen
+(v7:5718); the LCS then paired each later bare div with its neighbour and the tool reported **ten
+changed declarations on `results`, and ten identical phantoms on `send`**, where the truth is one
+removal and no restyle at all. *An identity weak enough to collide is not an identity* — which is
+the old artefact's own failure one level down: a key too coarse to tell two things apart, and a
+diff that then attributes one thing's values to another.
+
+**Version 2 — signature too strong.** Adding every NON-measured style declaration to the signature
+fixed the collisions and created the opposite lie: an element that changed a measured property
+**and** a non-measured one no longer matches itself. `build` reported **0 changed with 14 added and
+14 removed** — fourteen elements restyled in two respects each, filed as twenty-eight structural
+events.
+
+**Version 3 — two passes, and neither alone is correct.** Strong key first; then the leftovers are
+re-matched IN ORDER on the weak key. Order is what stops pass 2 reintroducing pass 1's collisions:
+a removal at the top of a screen cannot pair with an addition at the bottom.
+
+**THE VALIDATION IS THAT IT REPRODUCES D251 WITHOUT BEING TOLD TO.** `_shell` per element: 0
+changed, 0 removed, and exactly **five** added — the section wrapper `8px 12px 12px`, the 11px
+`.09em` label, the `gap:8px;margin-top:7px` row, the `11.5px/1.45` hint, and the `<select>`. Two
+relocations, derived a second way, by a method that shares no code with the reading that found them.
+
+**AND THE SCREEN LIST WAS AN ENUMERATION TOO.** The old artefact carries ELEVEN screens. The
+bundles define fifteen (v7) and sixteen (v8), from their own `isX: st.screen==="x"` lines —
+`isPackDetail` is new in v8. Six screens were absent from the old file entirely: `admin`, `help`,
+`livestage`, `profile`, `respond`, `svdetail`. **An absent key reads as «no changes».** All six are
+genuinely 0 per element, so nothing was missed — but the old tool could not have said so, and
+«nothing was missed» is not something a reader should have to take on trust.
+
+
+## D257 — three of the four flagged screens had no unapplied geometry, they had unbuilt ELEMENTS
+
+**Logged 2026-09-19, phase N6.** The question N6 exists to answer is «which screens have geometry
+we did not apply». The per-element diff points at four; measured against the code, **the answer is
+one and a half**, and the difference is a distinction worth keeping.
+
+| flagged | what it actually is |
+|---|---|
+| dashboard `FreezeButton` v8:2418 · `CustomizeToggle` v8:2645 | **genuinely unapplied.** Ours carried v7's sizes. Applied. |
+| build «Lagre utkast» / «Lagre som mal» / savedNote v8:529-532 | **genuinely unapplied.** Ours were `13px 22px` at 14px where v8 fixes `height:38px; padding:0 15px; 13px`. Applied. |
+| surveys row avatar v8:2320 · dashboard share-role picker v8:2586 · dashboard `insStats` strip v8:2434 · `dashThresholdLine` chip v8:2646 | **elements we never built.** A row avatar that does not exist cannot have the wrong radius. These are absent features, and «apply the geometry» is not the fix. |
+| library «Bruk mal» v8:4925 | **already correct.** T4 built `mt-[18px] flex gap-2` exactly as v8:4923 draws it; the flagged delta is v7's margin moving onto a wrapper we already have. |
+
+**THE NEAR-MISS IS THE REASON THIS IS AN ENTRY.** `insStats` reads like our `PageHeader` chips —
+the component's own comment cites `insStats (v6:8238)` — and v8 draws it with no pill at all, a
+22px Playfair value and an 12.5px label. Restyling `PageHeader` to match would have destroyed a
+correct component. **v8 still draws the «På tvers» CARD, unchanged, at 2263, 2885 and 4784**; the
+strip at 2434 is a dashboard element beside it. One grep for «På tvers» settled it.
+
+That is «the thing measured was not the thing claimed» aimed at a COMPONENT: the diff named an
+element, the name matched a comment in our code, and the two were different things. **A shared
+identifier is not a shared element**, and the cheap test is to ask whether the drawing still draws
+the thing you think you are changing.
+
+**And the bare-div changes are reported but NOT acted on.** A change whose element signature
+carries neither an attribute nor own text can still be a residual mispair after an insertion:
+dashboard 31 of 50, surveys 41 of 44, reports 5 of 5. The numbers stay in the artefact — a finding
+that needs a person to look is still a finding — but nothing was restyled on one.

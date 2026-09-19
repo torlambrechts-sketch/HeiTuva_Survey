@@ -26,7 +26,11 @@ export function CustomizeToggle({ label, open }: { label: string; open: boolean 
         const q = next.toString()
         router.push(q ? `/dashboard?${q}` : '/dashboard', { scroll: false })
       }}
-      className="touch-44 flex cursor-pointer items-center gap-2 rounded-[10px] border border-line px-3 py-[10px] text-[13px] font-semibold text-ink"
+      /* N6 · v8:2645 — `height:34px · padding:0 13px · 12.5px/600`. v7 drew the
+         same control two pixels taller and one wider; v8 tightens the whole
+         filter row. Height with `padding:0` rather than `py-`, as the bundle
+         writes it — see FreezeButton for why the two are not interchangeable. */
+      className="touch-44 flex h-[34px] cursor-pointer items-center gap-2 rounded-[10px] border border-line px-[13px] text-[12.5px] font-semibold text-ink"
       style={{ background: open ? 'var(--sbg)' : 'transparent' }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">

@@ -16,7 +16,23 @@
       "line-height",
       "margin-top",
       "padding"
-    ]
+    ],
+    "n6_verdict": {
+      "applied_by_n6": [
+        "dashboard FreezeButton v8:2418 — height 36 / padding 0 16 / border none / weight 700, and the kind changed: v7 outlined secondary -> v8 filled primary on var(--ink)",
+        "dashboard CustomizeToggle v8:2645 — height 34 / padding 0 13 / 12.5px",
+        "build Builder «Lagre utkast» + «Lagre som mal» v8:529,530 — height 38 / padding 0 15 / 13px, twice",
+        "build Builder savedNote v8:532 — padding 8px 14px"
+      ],
+      "flagged_but_NOT_unapplied_geometry": {
+        "surveys row initials avatar v8:2320": "we have no avatar on the survey row at all — an element never built, not a restyle missed",
+        "dashboard share-role picker v8:2586": "we render the share scope as a META CELL of text, not as a grid of pickable role buttons",
+        "dashboard insStats strip v8:2434-2439": "a dashboard-only strip. Our PageHeader chips are the «På tvers» CARD, which v8 still draws unchanged at 2263, 2885 and 4784 — restyling them onto this would have been the wrong element",
+        "dashboard dashThresholdLine chip v8:2646": "we render that sentence inside the joined `scope` line, not as a standalone 34px chip",
+        "library «Bruk mal» v8:4925": "ALREADY CORRECT. T4 built `mt-[18px] flex gap-2` exactly as v8:4923 draws it; the flagged delta is v7 margin moving onto a wrapper we already have"
+      },
+      "bare_div_changes": "changes whose element signature carries neither an attribute nor own text are reported but NOT acted on: a bare `<div style>` can still pair with a neighbour after an insertion. dashboard 31 of 50, surveys 41 of 44, reports 5 of 5 are of this kind."
+    }
   },
   "screens": {
     "_shell": {
