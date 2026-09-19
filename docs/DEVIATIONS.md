@@ -8094,3 +8094,165 @@ not a new defect, and the owner column tells you immediately which default ACL l
 
 This is the same shape as the enumeration table's own subject: B3 closed the property for the
 creator we control and the list for everyone else, because the language offers nothing better.
+
+## D251 — ten «changed» shell declarations were two MOVES, and a multiset cannot see a move
+
+**Logged 2026-09-19, phase N3.**
+
+`docs/fidelity/bundle-geometry-diff.json` reports ten `_shell` properties as CHANGED between v7
+and v8 — `border`, `border-radius`, `font-size`, `font-weight`, `gap`, `height`,
+`letter-spacing`, `line-height`, `margin-top`, `padding`. The instruction read them as ten
+declarations to apply, each value from its own entry.
+
+**They are not ten changes. They are two relocations, and the diff says so in a field nobody
+reads.** `v7_only_values` is `[]` in every one of the ten. Nothing left; every delta is a count
+going UP. The extractor compares a sorted MULTISET of literal values per (screen, property), and
+a multiset has no positions — **so an element moved from one place to another is invisible, and
+what it GAINS on arrival shows up as a change to properties it never touched.**
+
+Attributed in full, which is what makes it a finding rather than a guess:
+
+| element | declarations | deltas it accounts for |
+|---|---|---|
+| **A** the Arbeidsflate chip moves out of the header row (v7:182) and into the user menu (v8:192), gaining a section wrapper, an 11px uppercase label and the registry's own `hint` line | `padding:8px 12px 12px` · `border-top` · `font-size:11px` · `letter-spacing:.09em` · `gap:8px` · `margin-top:7px` ×2 · `font-size:11.5px` · `line-height:1.45` | font-size 11px +1, 11.5px +1 · letter-spacing +1 · gap 8px +1 · margin-top 7px +2 · line-height 1.45 +1 (new value) · padding `8px 12px 12px` +1 (new value) |
+| **B** «Flere oppsett» becomes a native `<select>` (v8:238-241) | `height:32px` · `padding:0 10px` · `border:1px solid var(--line)` · `border-radius:9px` · `font-size:13px` · `font-weight:600` | border +1 · border-radius 9px +1 · font-size 13px +1 · font-weight 600 +1 · height 32px +1 · padding `0 10px` +1 |
+
+Ten properties, two elements, every delta placed. **The chip's own declarations are unchanged
+and `WorkspaceChip.tsx` was not touched** — a relocation of a component, read as ten restylings
+of things around it.
+
+**Why this is worth an entry when CLAUDE.md already says «diffing keys tells you what a handoff
+added; only reading the markup tells you what it changed away».** That rule is about REVERSALS —
+a property that was one value and became another, invisible to a key-set comparison. This is the
+third kind after that and after `qcSaved`: **a property whose value set did not change at all,
+attributed to the wrong element.** The count is correct, the conclusion drawn from it is not,
+and the only thing that tells them apart is opening the two files at the lines the diff hands
+you. The diff's own `sample_handoff_lines` field named 189 and 204 — both inside change A — and
+was empty for the eight entries whose values all already existed.
+
+**The cheap habit:** before reading a «changed» entry as a change, read `v7_only_values`. Empty
+means nothing left, which means nothing changed away, which means the entry is an ARRIVAL wearing
+a change's clothes.
+
+
+## D252 — two of v8's four «Flere oppsett» option classes are refused: a rail pill that WRITES
+
+**Logged 2026-09-19, phase N3. Raised, not settled — see CLAUDE.md «when the drawing and a
+decision disagree, ask».**
+
+v8's `subnavMore` (v8:9308-9324) fills the Innsikt rail's dropdown with four classes:
+
+```
+  1  the viewer's boards beyond the inline four     mine:<key>
+  2  the standard presets not already inline        std:<key>   · mal
+  3  the viewer's own saved presets                 own:<key>   · eget
+  4  «＋ Nytt dashbord …»                            new
+```
+
+**Only class 1 ships.** Classes 2, 3 and 4 all call `newDashFrom` or open the picker
+(v8:9327-9331) — they **CREATE a dashboard**. A `<Link>` or an `<option>` cannot invoke a server
+action, and there is no create action behind the shell rail at all, so building them would put a
+labelled control on screen that does not do what its label says. That is D221's third face, and
+it is the class this project refuses in writing rather than shipping quietly.
+
+**Whether a shell rail may create a dashboard is a product decision, not a fidelity one.** It is
+the same open question `MetaBar.tsx` records from the other side: v8's meta strip is five
+properties of a *current* dashboard chosen from several, and this product has one working layout
+per person. Building the create path would answer that question by implication.
+
+**The pill is OMITTED when class 1 is empty**, rather than drawn with nothing in it. v8 never
+meets that case because classes 2-4 always supply an entry; with only class 1 built, four boards
+or fewer means a dropdown containing only its own placeholder. `railFaults` refuses an empty
+`more` pill in both directions, and the test proving it fires is `subnav.test.ts` 16.
+
+
+## D253 — `?tilpass` no longer lights «Flere oppsett», and that is v8's reading
+
+**Logged 2026-09-19, phase N3.** Recorded because it is a behaviour that changed with no
+instruction naming it, and because the assertion covering it changed SIDES rather than being
+deleted (`subnav.test.ts` 13).
+
+The Innsikt rail lit «Flere oppsett» whenever `?tilpass` was present. In v8 that pill is a
+`<select>` rendered with `value=""` on every render, so **nothing inside it can read as
+selected**, and what opened the customize panel there is the dropdown's «＋ Nytt dashbord …»
+option — one of the three classes D252 refuses.
+
+The customize panel is a STATE of the board on screen, so the board stays lit under it, which is
+the truer answer anyway: the rail names where you are, and you are on that board. Dropping the
+branch orphans nothing — `dashboard/CustomizeToggle.tsx` is how the panel opens, and
+`verify:reachable` is now the check that would say so if it were not.
+
+## D254 — `verify:reachable` reported two orphans on its second run and BOTH were its own narrowing
+
+**Logged 2026-09-19, phase N4.** The check is new; these are the first two findings it produced,
+and neither was about the product. They are recorded because the *fixes* are the check's real
+specification, and because a false orphan is the failure mode this kind of gate has.
+
+```
+ORPHANED         2
+  orphan  /undersokelser/[id]/live  [app/(app)]
+  orphan  /undersokelser/[id]/test  [app/(app)]
+```
+
+**Both routes are linked. Measured before concluding:**
+
+| route | linked from | why the crawl could not see it |
+|---|---|---|
+| `/undersokelser/[id]/test` | `RowMenu.tsx:176`, `bygg/PreviewPane.tsx:110` | `RowMenu` renders its items under `{open ? … }`. **A link inside a closed menu is not in the DOM**, so an anchor harvest finds nothing. |
+| `/undersokelser/[id]/live` | `SurveyContextBar.tsx:110` | the link renders under `liveMode`. The crawl expanded **one** survey per route shape, and that survey was not a live one. |
+
+**Two different causes, two different fixes, and both are properties rather than patches.**
+
+1. **Open what is closed, first.** Before harvesting, the crawl clicks every
+   `[aria-expanded="false"]` and every `details:not([open]) > summary`. Those are found by what
+   a disclosure SAYS ABOUT ITSELF, not by a list of components that hide links — a registry of
+   such components would be an enumeration and the next one would not be in it. The URL is
+   compared before and after, so a control that is both a link and a disclosure abandons the
+   harvest rather than silently returning a different page's links.
+2. **Sample three instances per route shape, not one.** Collapsing expansion to one page per
+   shape is what made the crawl fast (287 renders -> 31); it is also what hid a link that only a
+   live-mode survey draws.
+
+**AND THE SECOND FIX IS A SAMPLE, STATED AS ONE.** Three instances does not prove every
+state-dependent link is found. A control rendering for one row in twenty can still be missed, and
+this check will call it an orphan when it is not. That limit is written into `PER_SHAPE`'s own
+comment, beside the number, because it was discovered from a false finding and the next reader
+should meet it as a documented property rather than rediscover it the same way.
+
+**A download is not a page**, either — `/undersokelser/[id]/resultater/csv` is an export, and
+Playwright refuses to navigate to it in those words. It is classified from what the browser said
+rather than from a list of paths ending in `/csv`, and it is counted as an edge leading OUT of
+the page graph rather than as a screen that could not be reached.
+
+## D255 — a `next-server v16` was running in this container while the project pins `^15.5.0`
+
+**Logged 2026-09-19, phase N4.** Recorded because it is the exact instance CLAUDE.md's stale-server
+paragraph describes, caught by the guard built for it, and because the number in the message is
+the only thing that identified it.
+
+```
+$ ps aux | grep next
+root  5802  next-server (v16.2.11)          <- foreign: package.json pins ^15.5.0
+root 12125  npm exec next start -p 3100     <- the harness's own, Next 15.5.25
+```
+
+**Nothing was measured against the wrong one**, and that is a fact rather than an assumption:
+`ensureServer` printed `server: reusing http://127.0.0.1:3100` on every reachability run, and the
+v16 process was not on that port. But it was running for over an hour and `ps` is the only place
+it appeared.
+
+**What DID fire is the guard, on a different case, and correctly.** After the Arkiv pill was
+removed for the red proof, `verify:reachable` refused to run:
+
+```
+Error: A server is already running at http://127.0.0.1:3100, but source files are
+newer than the build it is serving. Stop it and re-run so the harness rebuilds.
+```
+
+That is `scripts/verify/server.ts`'s `serverBuildId()` — the fix for «the thing measured was not
+the thing claimed», instance 2 — doing precisely its job: a red proof run against the OLD build
+would have reported ORPHANED 0 and been read as «the check cannot go red», which is the worst
+possible outcome for a check being validated. **The guard turned a false negative into a stop.**
+
+**The habit it confirms:** a server that is already up is not evidence that it is serving your
+code, and a version number in `ps` is worth reading before trusting a port.

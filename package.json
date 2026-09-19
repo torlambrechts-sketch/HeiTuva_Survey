@@ -39,7 +39,8 @@
     "verify:thresholds": "tsx scripts/verify/threshold-readers.ts",
     "seed:help": "tsx scripts/seed-help.ts --local",
     "verify:fidelity": "tsx scripts/verify/fidelity.ts",
-    "verify:predeploy": "tsx scripts/verify/predeploy.ts"
+    "verify:predeploy": "tsx scripts/verify/predeploy.ts",
+    "verify:reachable": "tsx scripts/verify/reachable.ts --local"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.73.0",
