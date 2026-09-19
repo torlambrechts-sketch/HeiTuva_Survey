@@ -89,6 +89,25 @@ login page and a respondent's token link are not reached from inside the product
 reported as an orphan with the cause invisible. `HTTP 500 /x (offers nothing)` is a different
 line from `orphan /x`, and the difference is the whole diagnosis.
 
+## WHAT THIS CHECK DOES NOT COVER
+
+**Read this beside the number, not after a false finding.** A green `ORPHANED 0` means «no route in
+either population was missed by a crawl with these limits», and the limits are these:
+
+| limit | consequence | why it is there |
+|---|---|---|
+| **3 instances per route shape** (`--per-shape`) | a link that renders for one row in twenty can be missed, and the check will call that route an orphan when it is not | expanding every instance is 287 renders for the same 31 answers; three is a sample, and a sample is not a proof |
+| **only `[aria-expanded="false"]` and `details:not([open]) > summary` are opened** | a link behind any other kind of hidden control — a hover-only menu, a modal opened by a plain button, a tab panel mounted on click, a control gated on scroll — is invisible | those two are what a disclosure *says about itself*; anything else needs a name, and a list of component names is the enumeration this project keeps being bitten by |
+| **a control that navigates from JavaScript state** — `router.push` with a computed path, a redirect after a form post | not in the DOM at all, so not an edge | only `<a href>` and `<option value>` are harvested; an `<option>` was added because N3 introduced one, which is itself the evidence that the next kind will need adding too |
+| **depth 5** (`--depth`) | a route six clicks deep from `/oversikt` is unreachable *to the crawl* | the app is shallow; raise it if that stops being true |
+| **administrator only** | a route reachable only by some other role is not distinguished from one reachable by nobody | administrator sees the most, so an orphan here is an orphan for everybody — the narrower question deserves its own run, not a conflation with this one |
+| **a signed-out route is out of scope by construction** | the splash, login, legal pages and token surfaces are never checked | they are not reached from inside the product and must not be |
+
+**So a green result is evidence, not proof, and an orphan it reports is a claim to verify before
+acting on.** `artifacts/reachable/graph.json`'s `via` map is what tells the two apart: it answers
+*what linked here*, which an orphan list cannot. Both of this check's first two findings were false
+and `via` is how that was established in minutes rather than by rebuilding a screen.
+
 ## Two things it had to learn about itself, and one it still cannot do
 
 Its second run reported `/undersokelser/[id]/live` and `/undersokelser/[id]/test` as orphans.
@@ -106,8 +125,39 @@ be missed, and this check will call it an orphan when it is not. The limit is wr
 number in the script. `artifacts/reachable/graph.json`'s `via` map is what tells a reader which
 kind of finding they have: it answers *what linked here*, which an orphan list cannot.
 
-## Proving it red
+## Proving it red — and the correction it forced
 
-Removing one subnav pill must make it fail, naming the screens that pill was the only way into.
-The proof is in the N4 commit message and in `artifacts/reachable/graph.json`, whose `via` map
-answers the question an orphan list cannot: *what used to link here*.
+**THE PREMISE WAS WRONG AND THE CHECK IS WHAT ESTABLISHED THAT.** N4 was written on my claim that
+four screens depend on one subnav pill each, `/dashboard` most of all. Measured, none of the four
+does:
+
+| screen | links outside the subnav registry |
+|---|---|
+| `/rapporter` | `oversikt/ComplianceCard.tsx:42` |
+| `/bibliotek` | `oversikt/OverviewScreen.tsx:244`, `rapporter/DutyCard.tsx:176` |
+| `/oversikt` | the logo, `Breadcrumb`, `TuvaHelper`, `ResultsScreen` |
+| `/dashboard` | **`AppHeader.tsx:57` — the top-level «Innsikt» nav item itself** — and `AppFooter.tsx:44` |
+
+Removing «Arkiv» left `/rapporter` reachable. Removing the board pills left `/dashboard`
+reachable. Both runs printed `ORPHANED 0`, **correctly**. The claim was mine and the grep behind it
+matched `href="…"` in JSX, which finds neither a `NAV` constant nor a footer link array.
+
+**So the red proof is the whole rail, and it names three screens:**
+
+```
+$ NEXT_PUBLIC_NO_SUBNAV=1 npm run verify:reachable
+app/(app)        32 route shapes swept off the filesystem
+  reachable      29
+ORPHANED         3
+  orphan  /undersokelser/[id]/historikk    [app/(app)]
+  orphan  /undersokelser/[id]/kommentarer  [app/(app)]
+  orphan  /undersokelser/[id]/tiltak       [app/(app)]
+```
+
+**Those three are the survey sub-tabs, and they are the only screens in the product whose sole way
+in is the subnav.** Not the four N1 was expected to put at risk — the four have other doors — but
+three that nobody had named. That is the check doing the job it was built for: the answer was not
+the one anybody predicted, and it took a measurement to get it.
+
+`artifacts/reachable/graph.json`'s `via` map is what made each of the three false starts cost
+minutes instead of a rebuild: it answers *what linked here*, which an orphan list cannot.
