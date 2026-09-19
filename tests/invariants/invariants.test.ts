@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { OPTION_DEFAULTS } from '../../lib/org/options'
-import { admin, anon, uniq } from '../helpers'
+import { admin, anon, uniq, dropOrgsById } from '../helpers'
 import { buildFixture, type Fixture } from './fixture'
 
 /**
@@ -8,6 +8,9 @@ import { buildFixture, type Fixture } from './fixture'
  * the real policies. If any of these fail the schema is wrong — do not "fix"
  * a test here by loosening the assertion.
  */
+/** Organisations created INSIDE a describe rather than by `buildFixture`. */
+const extraOrgs: string[] = []
+
 let f: Fixture
 
 beforeAll(async () => {
@@ -281,6 +284,7 @@ describe('(b5) SSO break-glass — the organisation can always get back in (D82,
   beforeAll(async () => {
     const { data } = await admin().from('organizations').insert({ name: uniq('Org SSO') }).select('id').single()
     org = data as { id: string }
+    extraOrgs.push(org.id)
     first = await member({ org_id: org.id, email: `${uniq('bg1')}@example.test`, role: 'administrator', status: 'active' })
     second = await member({ org_id: org.id, email: `${uniq('bg2')}@example.test`, role: 'administrator', status: 'active' })
   })
@@ -712,3 +716,14 @@ describe('integrity triggers survive their own cascade', () => {
     await a.from('organizations').delete().eq('id', org!.id)
   })
 })
+
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(f?.orgA?.id, f?.orgB?.id, ...extraOrgs)
+}, 120_000)

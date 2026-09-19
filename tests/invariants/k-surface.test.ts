@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { admin, anon, asUser, uniq } from '../helpers'
+import { admin, anon, asUser, uniq, dropOrgsById } from '../helpers'
 import { hashToken } from './fixture'
 
 /**
@@ -235,6 +235,11 @@ afterAll(async () => {
     .eq('industry', BENCH_INDUSTRY)
     .in('metric_key', BENCH_METRICS as unknown as string[])
   if (benchBefore.length) await admin().from('benchmarks').insert(benchBefore)
+  /* N10.2 — and the two ORGANISATIONS, which this teardown never removed.
+     It was the only invariant fixture with an afterAll, and it has one
+     because V7-5 added it after the benchmarks leak had a symptom (D245).
+     The instance was closed and the class was not: both orgs stayed. */
+  await dropOrgsById(ctx?.org?.id, ctx?.other?.id)
 }, 120_000)
 
 /** Unwraps a jsonb-returning RPC, failing loudly rather than yielding `{}`. */

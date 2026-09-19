@@ -1,7 +1,7 @@
-import { beforeAll, describe, expect, test } from 'vitest'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { admin, anon, asUser, uniq } from '../helpers'
+import { admin, anon, asUser, uniq, dropOrgsById } from '../helpers'
 
 /**
  * The k-gate is per cell. A report is a COMPOSITION of cells, and composition
@@ -33,6 +33,10 @@ import { admin, anon, asUser, uniq } from '../helpers'
 const hashToken = (raw: string) => createHash('sha256').update(raw).digest('hex')
 
 type Fx = Awaited<ReturnType<typeof buildCompositionFixture>>
+/** Organisations created INSIDE a test rather than by the fixture. A teardown
+ *  that only knows about `beforeAll`'s rows leaves these behind. */
+const extraOrgs: string[] = []
+
 let fx: Fx
 
 beforeAll(async () => {
@@ -780,6 +784,7 @@ describe('overview_activity: counts rows, discloses nothing about answers', () =
   test('an organisation that has sent nothing has no response rate, not 0 %', async () => {
     const a = admin()
     const empty = await insert(a, 'organizations', { name: uniq('Helt ny') })
+    extraOrgs.push(empty.id)
     const user = await asUser(uniq('ny-admin') + '@example.test')
     await insert(a, 'org_members', {
       org_id: empty.id, user_id: user.userId, email: uniq('ny-admin') + '@example.test',
@@ -793,3 +798,13 @@ describe('overview_activity: counts rows, discloses nothing about answers', () =
   })
 })
 
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(fx?.org?.id, fx?.other?.id, ...extraOrgs)
+}, 120_000)

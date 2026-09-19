@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { admin, anon, asUser, uniq } from '../helpers'
+import { admin, anon, asUser, uniq, dropOrgsById } from '../helpers'
 import { hashToken } from './fixture'
 
 /**
@@ -735,3 +735,14 @@ describe('(T3.2) the survey list mean is k-gated, unlike the drawing', () => {
     expect(error, 'an anonymous caller is refused').not.toBeNull()
   })
 })
+
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(ctx?.org?.id)
+}, 120_000)

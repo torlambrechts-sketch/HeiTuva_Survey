@@ -1,7 +1,7 @@
-import { beforeAll, describe, expect, test } from 'vitest'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
-import { admin, anon, asUser, uniq } from '../helpers'
+import { admin, anon, asUser, uniq, dropOrgsById } from '../helpers'
 
 /** A 64-char hex hash, the shape `token_hash` stores. */
 const hashHex = (raw: string) => createHash('sha256').update(raw).digest('hex')
@@ -293,3 +293,14 @@ describe('duty_versions — the statutory archive', () => {
     expect(error).not.toBeNull()
   })
 })
+
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(fx?.org?.id, fx?.other?.id)
+}, 120_000)

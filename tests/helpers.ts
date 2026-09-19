@@ -40,3 +40,28 @@ export async function asUser(email: string, password = 'test-password-123!'): Pr
 }
 
 export const uniq = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+/**
+ * N10.2 — THE TEARDOWN EVERY INVARIANT FIXTURE WAS MISSING.
+ *
+ * Eight of the ten files under `tests/invariants/` created organisations and
+ * dropped none of them (D262). One full suite run left 18 behind; the table
+ * stood at 218 rows where a bare reset plus `seed:demo` gives 200.
+ *
+ * **It READS its own error and throws.** A teardown whose rejection nobody
+ * reads is a leak that reports success, which is how twelve `Redaktør-utkast`
+ * drafts accumulated in the demo organisation unseen — and `dropOrg`'s own
+ * comment records the same lesson from the other side: «the error was swallowed
+ * here, and that is how the seed spent weeks claiming to be idempotent».
+ *
+ * Deleting the organisation cascades to everything org-scoped under it. What it
+ * does NOT remove is the `auth.users` row and its `profiles` row, which are
+ * global — that is D241's writer, and it is why `tests/db/factories.ts` only
+ * ever sets `display_name` on CREATION.
+ */
+export async function dropOrgsById(...ids: (string | null | undefined)[]): Promise<void> {
+  const wanted = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  if (wanted.length === 0) return
+  const { error } = await admin().from('organizations').delete().in('id', wanted)
+  if (error) throw new Error(`dropOrgsById(${wanted.join(', ')}): ${error.message}`)
+}

@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { admin, anon, asUser, uniq } from '../helpers'
+import { admin, anon, asUser, uniq, dropOrgsById } from '../helpers'
 
 /**
  * Phase 5 — the duty engine's signature, which is the product's legal claim.
@@ -419,3 +419,14 @@ describe('the archive is append-only', () => {
     expect(after!.label).not.toBe('Omskrevet')
   })
 })
+
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(ctx?.org?.id, ctx?.other?.id)
+}, 120_000)

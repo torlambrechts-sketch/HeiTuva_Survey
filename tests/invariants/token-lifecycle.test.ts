@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { dropOrgsById } from '../helpers'
 import { createHash, randomBytes } from 'node:crypto'
 import { anonClient, serviceClient } from '../db/clients'
 import { createOrg, createRound, createSurvey } from '../db/factories'
@@ -288,3 +289,14 @@ describe('D42 — what is actually stored', () => {
     expect((await open(round.tokens[0]!)).error).toBeUndefined()
   })
 })
+
+/**
+ * N10.2 — the organisations this file makes are removed here.
+ *
+ * It READS its own error and throws: a teardown whose rejection nobody reads is
+ * a leak that reports success (D262). Deleting the organisation cascades to
+ * everything org-scoped beneath it.
+ */
+afterAll(async () => {
+  await dropOrgsById(orgId)
+}, 120_000)

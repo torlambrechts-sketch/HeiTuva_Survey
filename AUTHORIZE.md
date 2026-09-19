@@ -131,9 +131,9 @@ access; credentials and tool permissions do* — and a repository is a document 
 layers. When approvals keep appearing, read WHICH layer the prompt belongs to before editing the
 file again. The file is the only one of the three that editing the file can fix.
 
-### 3b. OPEN ITEM — the lowercase `supabase` in `.mcp.json`
+### 3b. CLOSED — the lowercase `supabase` is out of `.mcp.json` (N10.4, 2026-09-19)
 
-**Not removed. Recorded so it is not rediscovered as a defect.** There are two Supabase MCP
+**Removed, and the removal was confirmed by a call rather than by reasoning.** There are two Supabase MCP
 registrations in this session:
 
 | registration | source | state |
@@ -153,6 +153,17 @@ They are **two registrations**, the lowercase one contributes zero tools, and re
 cannot take production access away — because nothing has ever gone through it. It is still Tor's
 call, but the risk that argued for leaving it alone is gone, and the recurring «requires
 authentication» notice is its only observable effect.
+
+**DONE (N10.4).** `.mcp.json` is now `{"mcpServers": {}}` — the file is kept as the place a future
+server goes, the entry is gone. **Confirmed after the deletion with a real call**, because a
+capability reported without one is the thing this project has been wrong about seven times:
+
+```
+mcp__Supabase__execute_sql  ->  db=postgres  orgs=1  no_msgs=3013  at=2026-09-19 19:37:19+00
+```
+
+Production, through the capitalised connector, after the lowercase registration was removed. If the
+«requires authentication» notice appears again, it is now provably not coming from this repository.
 
 ### 3c. A FOURTH LAYER, MEASURED — THE AUTO MODE CLASSIFIER DENIES INSIDE THE ALLOW-LIST
 
