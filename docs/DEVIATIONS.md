@@ -8456,3 +8456,58 @@ The count is logged so the next phase starts from a number rather than from an a
 dependents in FK order and raises each step's error. Measured rather than read: the four residual
 «S3 …» rows in the demo organisation are stamped **09:05–10:40**, and two full suite runs today at
 **14:21** and **14:53** added none.
+
+## D261 — the i18n seed reached production: 2115 -> 3013 per language, and it left 36 orphans behind
+
+**Logged 2026-09-19, phase N9.3.**
+
+**VERIFIED BEFORE WRITING, because the question was whether a seed can destroy a customer's own
+wording.** It cannot, and there are two independent reasons:
+
+1. `ui_messages.org_key` is `coalesce(org_id, '00000000-…-0')` (M:0026), and the unique index is
+   `(namespace, key, lang, org_key)`. The seed's row type carries **no `org_id`**, so every upsert
+   targets the zero-UUID index entry. An organisation's override has `org_key = <their uuid>` — a
+   different entry, which `ON CONFLICT` never reaches.
+2. From the other side, `i18n_org_cud` requires `org_id is not null` on both `using` and
+   `with check`. **A global row is not writable from the application at all**, which is why this
+   had to go through the elevated route rather than as an administrator over REST.
+
+**WHAT WAS WRITTEN.** Production went **2115 → 3013 global rows per language**, and it was done as
+a DIFF rather than a blind reseed: prod's per-key `md5` was fingerprinted first, giving 1802 rows
+to write — **1796 new keys and 6 changed values.**
+
+The six were worth looking at individually, because they are the only rows that overwrote
+something. All six are the per-organisation vocabulary landing: `builder.previewTitle`,
+`send.recipients` and `admin.defaultRespondentLang`, where prod held the hard-coded
+«respondenten»/«respondents» and the JSON holds `{personDef}` / `{persons}`, filled from the
+workspace registry. Forward changes, not a loss of deliberate wording.
+
+**THE PHASE-C DIVERGENCE STANDS, AND IT ALREADY DID.** `tasks.taskFilterFrist` read «Over frist» /
+"Past the deadline" on production BEFORE the seed and reads the same after — the JSON carries the
+identical value, so the write is idempotent on it. Read back after the run, with four others:
+
+```
+no  tasks.taskFilterFrist     Over frist            en  Past the deadline
+no  surveyAudience.delTitle   Levering              en  Delivery
+no  nav.subnavMoreChoose      Flere oppsett …       en  More layouts…
+no  crumb.root                Oversikt              en  Overview
+no  tuva.noRating             Det er ingen tommel…  en  There is no thumbs up…
+```
+
+**AND IT LEFT 36 ORPHAN KEYS PER LANGUAGE, WHICH IS A PROPERTY OF THE SEED AND NOT AN ACCIDENT.**
+Prod now holds 3013 where `messages/no.json` holds 2977. The seed is an UPSERT and never a delete,
+so a key renamed or removed from the JSON stays in the table for ever:
+
+```
+builder +2 · dashboard +9 · library +4 · reports +2
+respondent +5 · send +10 · surveyNav +3 · tasks +1
+```
+
+**They are inert**: the overlay only surfaces a key the code asks for, so a row nobody reads is
+dead weight rather than a defect. **They are NOT deleted here** — bulk row deletion on the remote
+project is on the decision list, and 72 rows is bulk. Logged so the number is known rather than
+discovered later as a discrepancy between «2977 in the file» and «3013 in the database».
+
+**The general shape, which is D208's second face pointed at a seed:** an upsert-only seeder makes
+the database a SUPERSET of its source, and the two drift in one direction silently. Nothing
+compares them, so the drift is only ever visible to someone who counts both.
