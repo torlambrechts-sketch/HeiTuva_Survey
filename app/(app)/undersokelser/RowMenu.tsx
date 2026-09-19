@@ -130,9 +130,33 @@ export function RowMenu({
       {open ? (
         <div
           role="menu"
-          // Below md the row is narrower than the menu's 220px, so it anchors to
-          // the row's left edge instead of overflowing the viewport.
-          className="absolute left-4 top-[64px] z-[5] flex min-w-[220px] flex-col gap-[2px] rounded-[14px] border border-line bg-sf p-2 md:left-auto md:right-[22px]"
+          /* N9 — RIGHT-ANCHORED AT EVERY WIDTH, AND THE OLD COMMENT STATED THE
+             INTENT THIS NOW HAS.
+
+             It read «below md the row is narrower than the menu's 220px, so it
+             anchors to the row's left edge instead of overflowing the
+             viewport» — and `left-4` is 16px from THIS SPAN, the trigger's
+             wrapper, not from the row. Measured at 390px: the wrapper sits at
+             x=271, so the menu ran 287 -> 507 and overflowed the viewport by
+             **117px**. The reason was sound and the offset parent was not the
+             one the sentence assumed.
+
+             `verify:responsive` found it as two hit-area overlaps on
+             `undersokelser/row-menu` — «Slett» against the icons of the rows
+             BELOW, 204px² and 748px². The mechanism is the menu's left edge
+             landing between the two icons (271-301 and 317-347): the left one's
+             centre at x=286 falls one pixel outside the menu, so it is not
+             occluded, stays in the count, and pairs with the menu item over it.
+             A dropdown covering what is beneath it is normal and the gate's
+             occlusion rule forgives it; a dropdown whose EDGE bisects a control
+             is not.
+
+             Right-anchored, the menu spans 81 -> 301 at 390px: inside the
+             viewport, and the icons below are either fully covered (centre
+             occluded, correctly skipped) or fully clear. One rule for both
+             breakpoints instead of two, which is also why `md:left-auto` is
+             gone — there is no left to undo. */
+          className="absolute right-0 top-[64px] z-[5] flex min-w-[220px] flex-col gap-[2px] rounded-[14px] border border-line bg-sf p-2 md:right-[22px]"
           style={{ boxShadow: '0 14px 34px rgba(25,21,16,.14)' }}
         >
           <Link

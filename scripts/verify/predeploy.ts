@@ -131,6 +131,71 @@ function walkSelect(table: string, sel: string, where: string) {
   }
 }
 
+
+/**
+ * N9 — A COLUMN USED ONLY IN A FILTER WAS INVISIBLE, AND THAT IS THE SHAPE THIS
+ * CHECK EXISTS TO CATCH.
+ *
+ * The sweep read `.select('…')` and nothing else. So
+ * `.from('survey_invitations').select('id').not('sent_at', 'is', null)` declared
+ * a requirement on `id` and none on `sent_at` — and a deploy whose schema lacks
+ * `sent_at` passes the gate and then returns 400 from PostgREST at runtime.
+ * **It is the F7 outage's exact shape**: the code names a database object, the
+ * build cannot type-check the string, and the check that exists to compare them
+ * was looking at one method out of a dozen.
+ *
+ * ── WHICH METHODS, DERIVED RATHER THAN REMEMBERED ─────────────────────────
+ *
+ * Measured over `app/`, `lib/` and `components/` — `grep -rhoP '\.\K(…)\('`
+ * then sorted by count — the query methods in actual use are `eq` (333),
+ * `filter` (207), `order` (85), `in` (35), `is` (34), `or` (11), `not` (7),
+ * `neq` (5), `contains` (3), `match`, `lt`, `gt`, `ilike` (1 each). Every one
+ * of them names a column in its first argument.
+ *
+ * ── WHY A QUOTED STRING IS REQUIRED, AND IT IS NOT A STYLE CHOICE ─────────
+ *
+ * `filter` at 207 is overwhelmingly `Array.prototype.filter`, and `in`, `not`,
+ * `or`, `contains` and `match` all collide with ordinary JavaScript too. A
+ * false requirement here is worse than a missing one — it turns a blocking
+ * pre-deploy gate red against a schema that is correct. Demanding that the
+ * first argument be a QUOTED IDENTIFIER excludes every array callback by
+ * construction: `.filter((x) => …)` has no string first argument and cannot
+ * match. That is the property, not a list of files to skip.
+ *
+ * ── WHAT IS DELIBERATELY NOT CLAIMED ──────────────────────────────────────
+ *
+ * A dotted name (`.eq('groups.name', …)`) belongs to an EMBEDDED resource, not
+ * to `table`, so recording `table.groups.name` would be a false requirement.
+ * Those are skipped. `.match({ … })` takes an object rather than a string and
+ * is skipped for the same reason — one call site, and a wrong guess costs more
+ * than the coverage is worth. Both absences are stated here so the next reader
+ * meets them as decisions rather than as oversights.
+ */
+const FILTERS = [
+  'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'is', 'in',
+  'contains', 'containedBy', 'overlaps', 'order', 'filter', 'not',
+  'rangeGt', 'rangeGte', 'rangeLt', 'rangeLte',
+].join('|')
+const FILTER_RE = new RegExp(`\\.(${FILTERS})\\(\\s*'([A-Za-z_][A-Za-z0-9_.]*)'`, 'g')
+/** `.or('a.eq.1,b.is.null')` — PostgREST's own expression grammar, so the
+ *  column is whatever precedes the first dot in each comma-separated term. */
+const OR_RE = /\.or\(\s*'([^']*)'/g
+
+function walkFilters(table: string, window: string, where: string) {
+  for (const m of window.matchAll(FILTER_RE)) {
+    const col = m[2]!
+    if (col.includes('.')) continue // an embedded resource's column, not this table's
+    required.push({ kind: 'column', name: `${table}.${col}`, where })
+  }
+  for (const m of window.matchAll(OR_RE)) {
+    for (const term of m[1]!.split(',')) {
+      const col = term.trim().split('.')[0]
+      if (!col || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(col)) continue
+      required.push({ kind: 'column', name: `${table}.${col}`, where })
+    }
+  }
+}
+
 for (const root of ROOTS) {
   for (const file of sourceFiles(root)) {
     const text = stripComments(readFileSync(file, 'utf8'))
@@ -149,6 +214,7 @@ for (const root of ROOTS) {
       const window = text.slice(m.index! + m[0].length, end)
       const sel = /\.select\(\s*'([^']*)'/.exec(window)
       if (sel) walkSelect(table, sel[1]!, file)
+      walkFilters(table, window, file)
     })
   }
 }

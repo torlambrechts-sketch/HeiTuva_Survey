@@ -8397,3 +8397,62 @@ opens the JSON next.
 nothing.** The alignment needs the fallback — without it fourteen real `build` restyles filed as
 twenty-eight structural events — so the fix is not to remove it but to make what it produces
 distinguishable from what the strong pass produces.
+
+## D260 — THE SWALLOWED RETURN, BOTH FACES: 40 in the product, 28 in the fixtures
+
+**Logged 2026-09-19, phase N9. Swept, not fixed — the count is the finding.**
+
+CLAUDE.md states that a catch-all is a decision to make one class of failure invisible. **A
+discarded return value is the same decision made by OMISSION**, and it is cheaper to make: no
+`try`, no `catch`, no handler to justify. It is one character of difference.
+
+```ts
+const { data, error } = await supabase.from('x').select('y')   // the decision is visible
+const { data }        = await supabase.from('x').select('y')   // the decision is invisible
+await supabase.from('x').delete().eq('id', id)                 // there is no decision at all
+```
+
+**THE TWO FACES, AND THEY FAIL DIFFERENTLY.**
+
+- **In the PRODUCT, a dropped `error` renders as ABSENCE.** `data` is null, the screen draws its
+  empty state, and a reader cannot tell «there is nothing» from «the query was refused». That is
+  the never-fabricate rule inverted: not a fake value, a fake nothing.
+- **In a FIXTURE, a dropped `error` renders as a LEAK**, and the leak surfaces somewhere else
+  entirely. G2 fixed exactly one instance of this and wrote the diagnosis into it: twenty
+  «S3 guard probe» surveys accumulated because `.delete()`'s refusal by a composite FK went to a
+  caller that threw it away, and the symptom was `verify:responsive` blocking on a screen that
+  file never touches.
+
+**MEASURED** — `python3 /tmp/claude-0/swallow.py`, which walks each awaited statement containing
+`.from(` or `.rpc(`, skips `.throwOnError()`, and reports destructurings without `error` plus
+results discarded entirely:
+
+```
+  app/ lib/ components/     40 sites
+  tests/                   376 sites, of which 28 are `afterAll` deletes
+                               whose rejection is never read
+```
+
+**THE THREE WORST, BY CONSEQUENCE RATHER THAN BY COUNT:**
+
+1. **`app/(auth)/kom-i-gang/actions.ts:77`** — `await admin.from('organizations').delete().eq('id', org.id)`,
+   result discarded entirely. **It is a ROLLBACK**: onboarding failed partway and this undoes the
+   organisation it had just created. If the delete is refused — an FK with no cascade, a policy —
+   the organisation survives, half-built, and nothing anywhere says so. A cleanup that cannot
+   clean up, silently, in production rather than in a fixture.
+2. **`app/(app)/bibliotek/actions.ts:69`** — `await supabase.from('surveys').delete().eq('id', survey.id)`,
+   the same shape on the same kind of path: a survey created from a template, then abandoned.
+3. **`tests/invariants/k-surface.test.ts`** — the `afterAll` delete whose error is unread, on the
+   fixture **D245 already names**: it writes into `benchmarks`, a GLOBAL table with no org scope,
+   and V7-5 found a manifest state photographing a screen only that leak could produce — with the
+   leaked row passing `isSourced`, walking straight through the guard Q134 built against invented
+   comparison figures.
+
+**Not fixed here, deliberately.** Forty product sites are forty decisions about what each failure
+means, and a sweep that silences them uniformly would be the catch-all again at a larger scale.
+The count is logged so the next phase starts from a number rather than from an anecdote.
+
+**What IS verified fixed:** `tests/db/guards-over-state.test.ts`'s teardown, which now deletes
+dependents in FK order and raises each step's error. Measured rather than read: the four residual
+«S3 …» rows in the demo organisation are stamped **09:05–10:40**, and two full suite runs today at
+**14:21** and **14:53** added none.
