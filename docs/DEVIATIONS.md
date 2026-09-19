@@ -8667,3 +8667,55 @@ run of this gate is not by itself evidence about the 88px² pair. Until the caus
 is found, a run that reports it should be repeated before anything is changed —
 which is the opposite of the habit this file usually asks for, and is why it is
 written down rather than absorbed.
+
+## D265 — `verify:visual` IS RED ON `veiviser-formal`, AND THE PAGE HAS THREE HEIGHTS
+
+**Reported rather than repaired, and NOT re-baselined. N9 cannot claim seven
+green gates and this entry is why.**
+
+```
+2 failed   [desktop] and [mobile] › the new-survey wizard › step one lists the seeded purposes
+10 passed
+Expected an image 390px by 1130px, received 390px by 1088px. 2825 pixels (0.01).
+```
+
+**The two images are pixel-identical except one 41px band.** Aligned row by row:
+rows 0–844 match exactly, the last 244 rows match exactly, and the baseline
+carries 41px at y 845–885 that the current render does not. Cropped and looked
+at, that band is **the footer** — the «Hjelp og personvern» heading and the
+«Hjelp og støtte» link — not the wizard the test is named for.
+
+**Three heights for one page, all measured:**
+
+```
+1130   the committed baseline, tests/visual/…-snapshots/, last written 2026-09-14 (b534337, V6-4)
+1088   the gate's own run, its server built against the LOCAL Supabase project
+1108   my server, same .next source, built against .env.local (PRODUCTION), and
+       STABLE: four consecutive loads gave 1108 / 1108 / 1108 / 1108, footer 888px, 12 links
+```
+
+The footer's link COUNT is the same in all three (12, and the failure's own
+accessibility tree lists every one), so nothing is missing from the DOM. What
+differs is **where the text wraps**, which is a font-metric question — and D243
+already records that this container cannot fetch the bundle's webfonts over TLS,
+so what a screenshot here shows is the page in fallback fonts.
+
+**It is not N9's.** The four commits touch `RowMenu.tsx`, `predeploy.ts`,
+`access.test.ts` and this file; none can reach the wizard or the footer. The
+baseline predates **N1–N3**, which rebuilt the shell — the footer in both images
+already carries N1's three-item vocabulary («Innsikt», «Handlinger»), so the
+drift arrived with that rebuild and the gate has not run since.
+
+**Why not just regenerate it.** Because a baseline written from a run whose
+height depends on which database the build points at, in a container that cannot
+load the fonts, is **a picture of one run** — which is exactly what D242/D243
+refused for `verify:reference`, and the churn was reverted there rather than
+committed. Re-baselining would turn a visible failure into a silent one.
+
+**What would settle it** is a render with the real fonts, or a baseline captured
+in CI where the fonts load, and then one comparison. That is a phase's work, not
+a fix pass's.
+
+**And the reporting rule this file already states applies here:** «green» said
+of a gate that did not run is the same false claim as «green» said of a
+cancelled one. N9's gates are **six green and one red**, named.
