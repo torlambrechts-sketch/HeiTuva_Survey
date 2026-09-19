@@ -125,8 +125,28 @@ export async function AppHeader({ viewer }: { viewer: Viewer }) {
         <AppNav items={NAV.map((n) => ({ href: n.href, key: n.key, label: t(n.key) }))} />
       </div>
 
-      {/* V4:175 — `gap:6px`, `flex:none`. */}
-      <div className="relative flex flex-none items-center gap-1.5">
+      {/* V4:175 — `gap:6px`, `flex:none`.
+
+          N5 · `touch-cluster` — AND IT IS N3'S BILL, PAID WITH THE UTILITY
+          BUILT FOR EXACTLY THIS. `verify:responsive` reported **50 blockers,
+          every one of them the same pair**: «Hjelp og støtte» / «Åpne meny»
+          overlapping by 88px², on 25 states at both 390px and 320px.
+
+          The cause is N3 and nothing else: v7 drew `?` · Arbeidsflate-chip ·
+          avatar (v7:182), and v8 moves the chip into the user menu (v8:192).
+          The chip was what held the two round buttons apart. Removing it left
+          the drawn `gap:6px` between a 34px `?` and the 38px menu button,
+          whose 44px hit areas overflow (44-34)/2 = 5px and (44-38)/2 = 3px —
+          8px of demand against 6px of gap, so 2px of collision over the 44px
+          height. 2 x 44 = 88px², which is the number the gate printed.
+
+          `touch-cluster` is `gap:14px !important` scoped to `max-width:767px`,
+          so the BUNDLE'S 6px survives at every width v8 governs and only touch
+          widths get clearance. That is globals.css's own rule, in its own
+          comment: «spacing is layout and may change; the control is a token
+          and may not», and «a finding count in the hundreds is one systemic
+          fix, not hundreds of edits». Fifty findings, one class. */}
+      <div className="touch-cluster relative flex flex-none items-center gap-1.5">
         {/* W1 — «Ny undersøkelse» IS NOT IN THIS HEADER ANY MORE, and it is the
             third control v4 displaced rather than a feature dropped.
 
