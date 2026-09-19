@@ -212,6 +212,54 @@ async function submitRespondent(page: Page, surveyComment?: string) {
   await page.getByText(/^(Takk!|Thank you!)$/).waitFor({ timeout: 15_000 })
 }
 
+/**
+ * N5 — THE REPORT TABS ARE NO LONGER REACHED FROM A RAIL, AND THESE STATES
+ * ASKED A RAIL FOR THEM.
+ *
+ * Five states on `/rapporter` clicked
+ * `getByRole('navigation', { name: 'Innsikt' }).getByRole('link', …)` for
+ * «Maler» and «Rapporter». N1/N2 rebuilt that rail to v8:9334's — «I dag», the
+ * viewer's boards, «Flere oppsett», «Arkiv» — so neither pill exists and
+ * `verify:responsive` hung on the locator. **It is what found this.**
+ *
+ * ── THE TABS THEMSELVES ARE FINE, WHICH IS THE PART TO CHECK BEFORE FIXING ──
+ *
+ * Measured before touching anything: all three are reachable by click, from
+ * `oversikt/ComplianceCard.tsx:42` (lov), the subnav's «Arkiv» (lov),
+ * `rapporter/ReportEditor.tsx:65` (mine), `undersokelser/SurveyDetail.tsx:79`
+ * and `SurveyTable.tsx:194` (standard), and four `lib/tuva/answers.ts` stems.
+ * `verify:reachable` reports 0 orphans. **So there is no product regression —
+ * only five states naming a control that moved.**
+ *
+ * And it matches the drawing: v8 defines `repTabs` (v8:8682) and renders it
+ * NOWHERE in its markup. The one rail that would have carried those tabs is
+ * v8:9376, which Q248 records as unreachable dead code. v8 reaches `standard`
+ * and `mine` from tips (v8:7429-7430) and from `onReport` (v8:7895) — from
+ * ACTIONS, never from a rail.
+ *
+ * ── WHY THIS NAVIGATES INSTEAD OF CLICKING ─────────────────────────────────
+ *
+ * The rule here is «drive the UI, never reach past the app to fake a state the
+ * app cannot actually produce», and this does not break it: the app produces
+ * `/rapporter?fane=mine` and several shipped controls lead there. What the old
+ * setup was ALSO doing, incidentally, was proving the tab is reachable — and
+ * that claim now has a check of its own. `verify:reachable` walks the link
+ * graph from the front page; a manifest state's job is to photograph a state,
+ * not to re-prove navigation on the way to it.
+ *
+ * Keeping the click would mean starting these five states on a DIFFERENT
+ * screen — Oversikt or the survey row — which couples a report-editor state to
+ * the survey list's markup. That is a locator with a predicate nobody declared,
+ * which is D189 exactly.
+ */
+async function openReportTab(page: Page, fane: 'standard' | 'mine' | 'lov') {
+  const url = new URL(page.url())
+  url.searchParams.set('fane', fane)
+  url.searchParams.delete('rapport')
+  await page.goto(url.toString(), { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('load')
+}
+
 export const ROUTES: RouteSpec[] = [
   {
     /*
@@ -1884,17 +1932,13 @@ export const ROUTES: RouteSpec[] = [
            is what found it. */
         name: 'standardmaler',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Maler' }).click()
-          await page.waitForURL((u) => u.searchParams.get('fane') === 'standard')
-          await page.waitForLoadState('load')
+          await openReportTab(page, 'standard')
         },
       },
       {
         name: 'mine-rapporter',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
-          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
-          await page.waitForLoadState('load')
+          await openReportTab(page, 'mine')
         },
       },
     ],
@@ -1911,8 +1955,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'innhold',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
-          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await openReportTab(page, 'mine')
           /* `.first()` because v6 draws this ONE action three times — the «På
              tvers» card (v6:2809), the mine-list header (v6:3008) and the empty
              state (v6:3054), all calling `onNewReport`. Two of the three ship,
@@ -1926,8 +1969,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'filter',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
-          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await openReportTab(page, 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
           await page.getByRole('button', { name: 'Filter', exact: true }).click()
@@ -1937,8 +1979,7 @@ export const ROUTES: RouteSpec[] = [
       {
         name: 'del',
         setup: async (page) => {
-          await page.getByRole('navigation', { name: 'Innsikt' }).getByRole('link', { name: 'Rapporter' }).click()
-          await page.waitForURL((u) => u.searchParams.get('fane') === 'mine')
+          await openReportTab(page, 'mine')
           await page.getByRole('link', { name: 'Åpne' }).first().click()
           await page.waitForURL((u) => !!u.searchParams.get('rapport'))
           // `exact` because "Deltakelse og svarprosent" is also a button on
