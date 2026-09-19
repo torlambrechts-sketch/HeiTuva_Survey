@@ -8511,3 +8511,53 @@ discovered later as a discrepancy between «2977 in the file» and «3013 in the
 **The general shape, which is D208's second face pointed at a seed:** an upsert-only seeder makes
 the database a SUPERSET of its source, and the two drift in one direction silently. Nothing
 compares them, so the drift is only ever visible to someone who counts both.
+
+## D262 — EIGHT OF NINE INVARIANT FIXTURES HAVE NO TEARDOWN AT ALL, AND THE NINTH IS THE ONE THAT HAD A SYMPTOM
+
+**N9.2 asked whether other fixtures carry the leak's form. Measured, the answer
+is a clean split along a directory boundary**, which is not what «other
+fixtures» suggested — it suggested a scatter.
+
+```
+tests/db/factories.ts            creates=2  teardown=4
+tests/db/org-options.test.ts     creates=2  teardown=4
+tests/db/token-retention.test.ts creates=2  teardown=4
+tests/invariants/k-surface.test.ts        creates=2  teardown=2
+tests/invariants/invariants.test.ts       creates=1  teardown=0
+tests/invariants/threshold-policy.test.ts creates=1  teardown=0
+tests/invariants/attributed-results.test.ts creates=2 teardown=0
+tests/invariants/duty-signing.test.ts       creates=2 teardown=0
+tests/invariants/fixture.ts                 creates=2 teardown=0
+tests/invariants/policy-coverage.test.ts    creates=2 teardown=0
+tests/invariants/report-rls.test.ts         creates=2 teardown=0
+tests/invariants/report-composition.test.ts creates=3 teardown=0
+```
+
+Every file under `tests/db/` drops what it made. **Eight of the nine under
+`tests/invariants/` have no `afterAll` and no `dropOrg` in them at all** — so
+there is no swallowed rejection to fix, which is the form N9.2 named. There is
+nothing to swallow. `build()` inserts an organisation, and the row is simply
+still there when the process exits.
+
+Measured on this stack: **one full suite run leaves 18 organisations behind**
+(`select count(*) … where created_at > '16:55'` against the 16:56 run), and the
+table stands at 218 rows where a bare reset plus `seed:demo` gives 200.
+
+**THE NINTH FILE IS THE FINDING, NOT THE EIGHT.** `k-surface.test.ts` is the
+only invariant fixture with teardown, and it has it because **V7-5 put it there
+after the leak had a symptom** — its two upserted `benchmarks` rows were what
+made `resultater/bransje-valgt` photographable, so a manifest state had been a
+picture of a test's residue (D245). The repair closed the file that hurt and
+left the other eight standing. That is this project's own recorded shape, one
+level up from where it is usually caught: **the instance was fixed and the class
+was not**, and the sweep that would have said so is the one run here, two phases
+later.
+
+**Why it is logged rather than fixed.** The residue is org-scoped, so it cannot
+reach another organisation's screens the way a `benchmarks` row could: RLS is
+what makes the leak inert, and RLS is the thing these files exist to test. The
+local stack is explicitly disposable. **The exposure is the global tables** — an
+invariant fixture that writes a registry row rather than an org-scoped one has
+D245's reach again, and nothing structural stops one being written. That is the
+thing to close, and closing it is a `dropOrg` in eight files plus the question
+asked of each: *what did this fixture write that is not under its own org?*
