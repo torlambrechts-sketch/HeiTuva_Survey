@@ -24,8 +24,20 @@ const BUNDLE = 'design-reference-v6/heituva-survey-app-design/project/HeiTuva.dc
  * what we believe and one that checks what the drawing says — and this
  * project has written down twice what a transcribed number costs.
  */
-function bundleSubTabs(): Record<string, string[]> {
-  const src = readFileSync(BUNDLE, 'utf8').split('\n').slice(7138, 7145).join('\n')
+/**
+ * G2 — WHICH BUNDLE GOVERNS WHICH TAB, per docs/v2/00-diff.md § 0.3.
+ *
+ * `kommentarer`, `tiltak` and `sporsmal` were built at F5 from v6, and a
+ * fidelity question about an untouched screen is answered against the bundle it
+ * was built from. `resultat` and `malgruppe` are touched by G2, a v8 phase, so
+ * v8 governs those two — and the difference is not cosmetic: v8's resultat has
+ * FOUR sub-tabs where v6 had six.
+ */
+const BUNDLE_V8 = 'design-reference-v8/heituva-survey-app-design/project/HeiTuva.dc.html'
+const V8_TABS = new Set(['resultat', 'malgruppe'])
+
+function subsFrom(file: string, from: number, to: number): Record<string, string[]> {
+  const src = readFileSync(file, 'utf8').split('\n').slice(from, to).join('\n')
   const out: Record<string, string[]> = {}
   for (const m of src.matchAll(/(\w+):\s*\[(\["[a-z]+","[^"]*"\](?:,\["[a-z]+","[^"]*"\])*)\]/g)) {
     out[m[1]!] = [...m[2]!.matchAll(/\["([a-z]+)","[^"]*"\]/g)].map((x) => x[1]!)
@@ -33,15 +45,37 @@ function bundleSubTabs(): Record<string, string[]> {
   return out
 }
 
+function bundleSubTabs(): Record<string, string[]> {
+  const v6 = subsFrom(BUNDLE, 7138, 7145)
+  const v8 = subsFrom(BUNDLE_V8, 7733, 7742)
+  const merged: Record<string, string[]> = {}
+  for (const [k, v] of Object.entries(v6)) merged[k] = V8_TABS.has(k) ? (v8[k] ?? v) : v
+  return merged
+}
+
+
 describe('F5 — the sub-tab registry is the second navigation level', () => {
   const bundle = bundleSubTabs()
 
-  it('the bundle really does hold 27 sub-tabs in seven rails', () => {
+  it('the governing bundles hold 25 sub-tabs in seven rails', () => {
     /* The guard on every count below. If this changes, a handoff moved and
        every verdict in docs/f5/00-plan.md needs re-deriving rather than
-       re-reading. */
+       re-reading — which is exactly what happened here.
+
+       IT SAID 27 AND IT IS 25, and the derivation is the point rather than the
+       number: `resultat` is read from v8 now (§ 0.3 — a v8 phase touches it),
+       and v8 draws FOUR where v6 drew six.
+
+         27  v6's seven rails
+        − 2  v8 dropped `runder` and `fordeling` from resultat (v8:7736)
+        = 25
+
+       `fordeling` going is the one worth noting: F5 refused it on the reasoning
+       that a distribution belongs inside its own question's card, and the next
+       handoff did the same thing. */
     expect(Object.keys(bundle)).toHaveLength(7)
-    expect(Object.values(bundle).flat()).toHaveLength(27)
+    expect(Object.values(bundle).flat()).toHaveLength(25)
+    expect(bundle['resultat'], 'v8 governs this one').toHaveLength(4)
   })
 
   it('every sub-tab we OFFER is one the drawing draws, under the same tab', () => {
@@ -169,16 +203,17 @@ describe('F5-1 — the filters, and what they are filters OF', () => {
   const TASKS = 'app/(app)/undersokelser/[id]/tiltak/page.tsx'
   const AUDIENCE = 'app/(app)/undersokelser/[id]/malgruppe/page.tsx'
 
-  it('exactly three tabs have a rail, and the other five must not', () => {
+  it('exactly five tabs have a rail, and the other three must not', () => {
     /* Stated in both directions, which is F3's lesson written into the phase
        that came after it: «these have one» is half a property, and the half
        that catches a mistake is «and the rest must not».
 
-       It says THREE because F5-2 added `sporsmal`. Recorded rather than
-       silently widened: this assertion failed when the read view shipped, which
-       is the test doing its job — a rail appearing on a fourth tab without a
-       phase behind it is exactly what it is for. */
-    const RAILED = ['kommentarer', 'sporsmal', 'tiltak']
+       It said THREE at F5-2, and G2 makes it FIVE: `resultat` gained four
+       sub-tabs and `malgruppe` two. Recorded rather than silently widened —
+       this assertion failed when G2 shipped, which is the test doing its job.
+       A rail appearing on a sixth tab without a phase behind it is what it is
+       for, and that property is unchanged. */
+    const RAILED = ['kommentarer', 'malgruppe', 'resultat', 'sporsmal', 'tiltak']
     const withRail = SURVEY_TABS.filter((t) => subTabsFor(t).length > 0)
     expect([...withRail].sort()).toEqual(RAILED)
     for (const t of SURVEY_TABS) {
@@ -187,14 +222,14 @@ describe('F5-1 — the filters, and what they are filters OF', () => {
     }
   })
 
-  it('malgruppe has no rail BECAUSE two of its three are refused', () => {
-    /* A rail of one pill is not a rail. The reason it is one pill is the two
-       refusals, so the two facts are asserted together — otherwise a later
-       phase that un-refuses «Segmenter» leaves this tab railless for no
-       recorded reason. */
-    expect(subTabsFor('malgruppe')).toHaveLength(0)
+  it('malgruppe has TWO pills, and Segmenter is still refused for its own reason', () => {
+    /* G2.6 built «Levering», so two pills are a rail. The pair is still
+       asserted together: «Segmenter» is refused on the MODEL (Q92 — k does not
+       compose over overlapping segments), not on missing data, so un-building
+       Levering must not quietly take Segmenter with it. */
+    expect(subTabsFor('malgruppe')).toEqual(['grupper', 'levering'])
     expect(REFUSED_KEYS).toContain('malgruppe/segmenter')
-    expect(REFUSED_KEYS).toContain('malgruppe/levering')
+    expect(REFUSED_KEYS, 'Levering is built now').not.toContain('malgruppe/levering')
     expect(bundleSubTabs()['malgruppe']).toEqual(['grupper', 'segmenter', 'levering'])
   })
 
@@ -246,11 +281,14 @@ describe('F5-1 — the filters, and what they are filters OF', () => {
   })
 
   it('every page that has a rail mounts it, and malgruppe mounts the refusals', () => {
+    const RESULTS_PAGE = 'app/(app)/undersokelser/[id]/resultater/page.tsx'
     expect(src(COMMENTS)).toContain('<SubTabRail')
     expect(src(TASKS)).toContain('<SubTabRail')
+    // G2.6 — malgruppe now mounts BOTH: a rail for its two built pills and the
+    // refusal note for Segmenter, which is still refused.
     expect(src(AUDIENCE)).toContain('<SubTabRefusals')
-    // And the tab with no rail does not mount one.
-    expect(src(AUDIENCE)).not.toContain('<SubTabRail')
+    expect(src(AUDIENCE)).toContain('<SubTabRail')
+    expect(src(RESULTS_PAGE)).toContain('<SubTabRail')
   })
 })
 
@@ -332,7 +370,7 @@ describe('F5-2 — the question read view, and the column it must not have', () 
   })
 })
 
-describe('F5-3 — resultat keeps its ONE screen, and says so four ways', () => {
+describe('F5-3/G2 — resultat has four views, and each is judged on its own', () => {
   const RESULTS = 'app/(app)/undersokelser/[id]/resultater/page.tsx'
   const SCREEN = 'app/(app)/undersokelser/[id]/resultater/ResultsScreen.tsx'
   const strip = (f: string) =>
@@ -340,36 +378,45 @@ describe('F5-3 — resultat keeps its ONE screen, and says so four ways', () => 
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '')
 
-  it('resultat has NO rail — all six are answered without one', () => {
-    expect(subTabsFor('resultat')).toHaveLength(0)
-    /* And the four that needed saying are said. «Per spørsmål» and «Runder» are
-       not refusals: they ARE this screen. */
-    for (const k of ['matrise', 'sammenlign', 'fordeling', 'frisvar']) {
-      expect(REFUSED_KEYS, `resultat/${k}`).toContain(`resultat/${k}`)
+  it('G2 — resultat has v8\'s FOUR, and none of them is refused any more', () => {
+    /* v8:7736 draws four where v6 drew six: `runder` and `fordeling` are GONE
+       from the drawing. F5 refused `fordeling` on the reasoning that a
+       distribution belongs inside its own question's card, and v8 has since
+       done the same — so it is not a refusal now, there is simply nothing to
+       refuse. Asserted in both directions. */
+    // Our order puts `sporsmal` first so it stays the landing view; v8's default
+    // is `matrise`. The SET matches the drawing, the first entry does not, and
+    // that divergence is recorded in the registry rather than hidden here.
+    expect(subTabsFor('resultat')).toEqual(['sporsmal', 'matrise', 'sammenlign', 'frisvar'])
+    expect([...subTabsFor('resultat')].sort()).toEqual([...bundleSubTabs()['resultat']!].sort())
+    for (const k of ['matrise', 'sammenlign', 'fordeling', 'frisvar', 'sporsmal', 'runder']) {
+      expect(REFUSED_KEYS, `resultat/${k} should not be refused`).not.toContain(`resultat/${k}`)
     }
-    expect(REFUSED_KEYS).not.toContain('resultat/sporsmal')
-    expect(REFUSED_KEYS).not.toContain('resultat/runder')
+    expect(bundleSubTabs()['resultat'], 'the drawing still has its own order').toEqual([
+      'matrise', 'sporsmal', 'sammenlign', 'frisvar',
+    ])
   })
 
-  it('Fordeling and Frisvar are refused BECAUSE the card already holds them', () => {
-    /* The load-bearing measurement: `ResultsScreen` opens one <section> per
-       question and that card carries both the bars and the quotes. If either
-       ever moves out of the per-question card, this refusal stops being true
-       and the test that guards it fails. */
+  it('«Per spørsmål» still holds the bars AND the quotes together', () => {
+    /* Unchanged by G2 and still load-bearing: the frisvar TAB is a second
+       rendering of the same `get_quotes` payload, not a move. If the quotes
+       ever leave the per-question card, «Per spørsmål» stops being the joined
+       view v8 draws and this fails. */
     const body = strip(SCREEN)
     const card = body.slice(body.indexOf('<section key={q.id}'))
     expect(card.slice(0, 3000)).toContain('QuoteList')
     expect(card.slice(0, 3000)).toContain('questionBars')
   })
 
-  it('the matrix note points at the screen that already draws it', () => {
-    /* `/dashboard` passes its survey array straight to `get_heatmap`, so
-       `?u=<id>` IS the survey-scoped group x question matrix. Driven: it
-       reports «1 undersøkelse» and two cells where the unscoped view has
-       twenty-eight. A second entry point to one picture is what the rail rule
-       refuses one floor up. */
-    expect(strip(RESULTS)).toMatch(/\/dashboard\?u=\$\{survey\.id\}/)
-    expect(strip(RESULTS)).toContain('resMatrixLink')
+  it('/dashboard is still the group x QUESTION matrix, which Matrise is not', () => {
+    // The resultat page no longer links to /dashboard for the matrix — it has
+    // its own. What must stay true is that the two are DIFFERENT AXES.
+    expect(strip(RESULTS), 'the tab is here now, not a link away').toContain('<SubTabRail')
+    /* G2.3 — the two matrices are different axes and both exist. `/dashboard`
+       passes its survey array to `get_heatmap`: group x QUESTION. The Matrise
+       TAB is group x THEME, N gated `get_themes` calls. The old note pointed
+       at /dashboard because the tab did not exist; now both do, and what must
+       stay true is that the dashboard one is still the question axis. */
     /* G1 changed the ARGUMENT this is called with — the dashboard page now
        reads per panel SCOPE (`sc.survey_ids`) rather than from one page-level
        `selected`. The property this line is here to protect is «/dashboard is

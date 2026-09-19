@@ -12,6 +12,9 @@ import {
   teamTone,
 } from '@/lib/results/present'
 import { attributedColumns, isNegative } from '@/lib/questions/roles'
+import { changeBetween } from '@/lib/results/compare'
+import { CompareRounds } from './CompareRounds'
+import { ThemeMatrix } from './ThemeMatrix'
 import { isGated } from '@/lib/results/types'
 import type {
   Aggregate,
@@ -58,6 +61,8 @@ export async function ResultsScreen({
   trends,
   themes,
   benchmarks,
+  sub,
+  groupThemes,
   industries,
   industry,
   activeTheme,
@@ -81,6 +86,9 @@ export async function ResultsScreen({
   trends: Trends | null
   themes: Themes | null
   benchmarks: Benchmarks | null
+  /** G2 — which of v8's four resultat views is on screen (v8:7736). */
+  sub: string
+  groupThemes: { groupId: string; name: string; themes: Themes | null }[]
   industries: string[]
   industry: string
   activeTheme: string | null
@@ -412,7 +420,82 @@ export async function ResultsScreen({
           call sites below took the union at its word and called `.toFixed` on
           it. Both are fixed to render the em dash; this switch is the design,
           not the fix. */}
-      {!attributed ? (
+      {/* G2 — v8's four resultat views (v8:7736). «Per spørsmål» is the list
+          that was always here; the other three are renderings of data this
+          screen already holds, so none of them opens a new data path. An
+          attributed (organisation) survey keeps its register and has no rail
+          content to switch — each row IS the finding there. */}
+      {!attributed && sub === 'sammenlign' ? (
+        <CompareRounds
+          points={trends?.points ?? []}
+          labels={{
+            title: t('cmpTitle'),
+            lead: t('cmpLead'),
+            rounds: t('cmpRounds', { n: trends?.points?.length ?? 0 }),
+            change: t('cmpChange'),
+            none: t('cmpNone'),
+            withheld: t('cmpChangeWithheld'),
+            round: (n: number) => t('cmpRound', { n }),
+            answers: (n: number) => t('answers', { n }),
+          }}
+        />
+      ) : null}
+
+      {!attributed && sub === 'matrise' ? (
+        <ThemeMatrix
+          themeLabels={(themes?.themes ?? []).map((x) => ({ key: x.key, label: x.label }))}
+          rows={groupThemes}
+          labels={{
+            title: t('mtxTitle'),
+            lead: t('mtxLead'),
+            group: t('mtxGroup'),
+            noThemes: t('mtxNoThemes'),
+            rowAllWithheld: t('mtxRowAllWithheld'),
+          }}
+        />
+      ) : null}
+
+      {!attributed && sub === 'frisvar' ? (
+        <section className={`${CARD} mt-4 min-w-0`}>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="min-w-0 font-display text-[21px] font-medium">{t('frisvarTitle')}</h2>
+            {/* `min-w-0`, NOT `shrink-0`. Measured at 320px this span was 283px
+                wide and could not shrink, so it set the page to 326 — F3's rule:
+                in an overflow, look for the narrowest child that CANNOT shrink,
+                not the widest one reported. */}
+            <span className="min-w-0 text-[12.5px] text-mut">{t('frisvarLead')}</span>
+          </div>
+          {/* THE SAME `QuoteList` THE QUESTION CARD USES. Free text goes
+              through `get_quotes`, which is k-gated, and never through a raw
+              select — `responses` and `answers` have no select policy at all.
+              Reusing the component rather than writing a second renderer is
+              what keeps one treatment of a withheld quote set. */}
+          {questions.filter((q) => q.type === 'text').length === 0 ? (
+            <p className="mt-3 text-[13px] leading-relaxed text-mut">{t('frisvarNone')}</p>
+          ) : (
+            questions
+              .filter((q) => q.type === 'text')
+              .map((q) => (
+                /* `min-w-0` — F3's grid lesson: a flex/grid child defaults to
+                   min-content and a long unbroken quote sets the track. The
+                   frisvar tab overflowed 326 > 320 the first time it was
+                   measured, and the widest reported element was the victim
+                   rather than the cause. */
+                <div key={q.id} className="mt-5 min-w-0 first:mt-3">
+                  <h3 className="min-w-0 break-words text-[14px] font-semibold">{q.text}</h3>
+                  <QuoteList
+                    set={quotes[q.id] ?? null}
+                    anonymous={anonymity === 'anonymous'}
+                    anonLabel={t('anonymous')}
+                    empty={gatedText}
+                  />
+                </div>
+              ))
+          )}
+        </section>
+      ) : null}
+
+      {!attributed && sub === 'sporsmal' ? (
         <>
         {questions.map((q) => {
           const result = byQuestion.get(q.id)
@@ -546,7 +629,18 @@ export async function ResultsScreen({
                       : pctOf5(row.bench)
                 const show = (v: number) =>
                   row.scale === 'rate' ? `${Math.round(v * 100)} %` : row.scale === 'enps' ? String(Math.round(v)) : no(v)
-                const diff = mine === null ? null : mine - row.bench
+                /* G2.2 — through `changeBetween` rather than a hand guard.
+                   The guard here was CORRECT, and that is the point: it was
+                   correct because somebody remembered `mine === null`, and the
+                   next two-cell figure is the one nobody remembers. The
+                   benchmark is a published figure and never gated, so only one
+                   endpoint can withhold — which is exactly the pair that makes
+                   a manual check look unnecessary right up until it is. */
+                const change = changeBetween(
+                  { avg: row.bench },
+                  mine === null ? { avg: null, insufficient_data: true } : { avg: mine },
+                )
+                const diff = change.kind === 'value' ? change.delta : null
                 return (
                   <div key={row.metric_key}>
                     <div className="flex items-baseline justify-between gap-3">
@@ -863,7 +957,7 @@ function QuoteList({
       {set.quotes.map((q, i) => (
         <div
           key={i}
-          className="rounded-[10px] bg-sf2 px-[15px] py-[13px] text-[13.5px] leading-[1.45]"
+          className="min-w-0 break-words rounded-[10px] bg-sf2 px-[15px] py-[13px] text-[13.5px] leading-[1.45]"
         >
           “{q.text}”
           {anonymous ? <span className="text-xs" style={{ color: '#6F6759' }}> — {anonLabel}</span> : null}

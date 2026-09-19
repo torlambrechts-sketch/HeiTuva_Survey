@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { SubTabRefusals } from '@/components/SubTabRefusals'
+import { SubTabRail } from '@/components/SubTabRail'
+import { resolveSubTab } from '@/lib/surveys/subtabs'
+import { DeliveryPanel } from './DeliveryPanel'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireViewer } from '@/lib/auth/session'
@@ -35,10 +38,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  */
 export default async function SurveyAudiencePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ vis?: string }>
 }) {
   const { id } = await params
+  const sub = resolveSubTab('malgruppe', (await searchParams).vis)!
   if (!UUID.test(id)) notFound()
 
   await requireViewer()
@@ -47,7 +53,7 @@ export default async function SurveyAudiencePage({
 
   const { data: survey, error } = await supabase
     .from('surveys')
-    .select('id, title, status, audience_label, run_mode, anonymity')
+    .select('id, title, status, audience_label, run_mode, anonymity, org_id')
     .eq('id', id)
     .maybeSingle()
   if (error) throw new Error(`survey read failed: ${error.message}`)
@@ -74,6 +80,43 @@ export default async function SurveyAudiencePage({
   for (const inv of invitations ?? []) {
     byGroup.set(inv.group_id, (byGroup.get(inv.group_id) ?? 0) + 1)
   }
+
+  /* ── G2.6 — «Levering», and it reads COUNTS ONLY ─────────────────────────
+     Three aggregate counts, asked for only when that tab is on screen, and no
+     identity column among them. The Grupper view above still reads `group_id`
+     and nothing else; V6-4b's guard is restated over that view rather than
+     over the whole file, because the refusal it encoded — «the drop-off half
+     does not ship» — was about data that did not exist and three of those six
+     figures now do. Restated, not widened: the same choice V5-3 made when a
+     refused string began shipping on purpose. */
+  const delivery =
+    sub === 'levering' && roundIds.length
+      ? await (async () => {
+          const [sentRes, doneRes, supRes] = await Promise.all([
+            supabase
+              .from('survey_invitations')
+              .select('id', { count: 'exact', head: true })
+              .in('round_id', roundIds)
+              .eq('is_test', false)
+              .not('sent_at', 'is', null),
+            supabase
+              .from('survey_invitations')
+              .select('id', { count: 'exact', head: true })
+              .in('round_id', roundIds)
+              .eq('is_test', false)
+              .not('responded_at', 'is', null),
+            supabase
+              .from('suppressions')
+              .select('id', { count: 'exact', head: true })
+              .eq('org_id', survey.org_id),
+          ])
+          return {
+            sent: sentRes.count ?? 0,
+            done: doneRes.count ?? 0,
+            suppressed: supRes.count ?? 0,
+          }
+        })()
+      : null
 
   const groupIds = [...byGroup.keys()].filter((g): g is string => g !== null)
   const { data: groups } = groupIds.length
@@ -124,18 +167,47 @@ export default async function SurveyAudiencePage({
             a decision and not as a tab somebody did not finish. */}
         <p className="mt-5 border-t border-line pt-4 text-[12.5px] text-mut">
           {t('dropoffRefused')}{' '}
-          <Link href={`/undersokelser/${survey.id}/send`} className="underline">
+          {/* G2 fix pass — `touch-44` because this is a LINK inside a
+              paragraph, measured 100x16 at 320px the first time this page ever
+              had manifest coverage. It predates G2; the phase that runs the
+              sweep owns what it finds. `inline-flex` so the 44px hit area has a
+              box to hang on — an inline <a>'s ::after has nothing to size
+              against. */}
+          <Link
+            href={`/undersokelser/${survey.id}/send`}
+            className="touch-44 inline-flex items-center underline"
+          >
             {t('toReminders')}
           </Link>
         </p>
       </section>
 
-      {/* F5 — THIS TAB HAS NO SUB-RAIL, AND THAT IS THE MEASUREMENT.
-          v6 gives it three: «Grupper», «Segmenter» and «Levering». The first IS
-          this page; the other two are refused for two different reasons, and a
-          rail of one pill is not a rail. The notes are derived from the
-          registry, so a refusal reversed loses its sentence by leaving it. */}
+      {sub === 'levering' && delivery ? (
+        <DeliveryPanel
+          sent={delivery.sent}
+          done={delivery.done}
+          suppressed={delivery.suppressed}
+          invited={invitations?.length ?? 0}
+          labels={{
+            title: t('delTitle'),
+            lead: t('delLead'),
+            sent: t('delSent'),
+            sentSub: t('delSentSub'),
+            done: t('delDone'),
+            doneSub: (pct: number) => t('delDoneSub', { pct }),
+            suppressed: t('delSuppressed'),
+            suppressedSub: t('delSuppressedSub'),
+            whyNoStarted: t('delWhyNoStarted'),
+          }}
+        />
+      ) : null}
+
+      {/* G2.6 — THE RAIL EXISTS NOW, because «Levering» is built and two pills
+          are a rail. «Segmenter» stays refused and keeps its sentence: it is
+          the only refusal in this product about the MODEL rather than about
+          missing data (Q92 — k does not compose over overlapping segments). */}
       <SubTabRefusals tab="malgruppe" />
+      <SubTabRail surveyId={survey.id} tab="malgruppe" current={sub} />
     </main>
   )
 }

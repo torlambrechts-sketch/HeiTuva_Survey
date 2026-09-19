@@ -120,6 +120,12 @@ documents a refusal contains the string it refuses):
    that is what the A1/F7 catalogue diff covers.
 3. **Type and nullability drift.** It asks whether an object EXISTS, not whether its shape still
    matches. A column that changed type is invisible here and visible to F7.
+4. **A column used ONLY in a filter, never in a `.select()`.** Found at G2: the delivery counts
+   read `.select('id', { count: 'exact', head: true }).not('sent_at', 'is', null)`, so `sent_at`
+   and `responded_at` are genuine requirements that this sweep does not see — it walks `.select()`
+   lists, and a `.eq()`/`.not()`/`.in()` argument is a column name in a different position.
+   Logged rather than fixed mid-phase. It is the enumeration shape again: the sweep enumerates the
+   PLACES a column name appears that somebody thought of, and the filter position was not one.
 
 ## Proven red before being trusted
 

@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { SubTabRefusals } from '@/components/SubTabRefusals'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveSubTab } from '@/lib/surveys/subtabs'
+import { SubTabRail } from '@/components/SubTabRail'
 import { requireViewer } from '@/lib/auth/session'
 import { isSourced } from '@/lib/benchmarks/sourced'
 import {
@@ -45,17 +45,19 @@ export default async function ResultsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ bransje?: string; tema?: string }>
+  searchParams: Promise<{ bransje?: string; tema?: string; vis?: string }>
 }) {
   const { id } = await params
-  const { bransje, tema } = await searchParams
+  const { bransje, tema, vis } = await searchParams
+  // G2 — the resultat rail (v8:7736). `resolveSubTab` falls back to the first
+  // entry, so an invented `?vis=` lands on the default rather than on nothing.
+  const sub = resolveSubTab('resultat', vis)!
 
   if (!UUID.test(id)) notFound()
 
   const viewer = await requireViewer()
   const supabase = await createClient()
   const t = await getTranslations('results')
-  const tS = await getTranslations('surveys')
 
   const { data: survey, error } = await supabase
     .from('surveys')
@@ -130,6 +132,27 @@ export default async function ResultsPage({
   )
   const quotes = new Map<string, Quotes | null>(quoteEntries)
 
+  /* G2.3 — the matrix is N gated `get_themes` calls, one per group, and it is
+     only asked for when that tab is on screen: a cross-tab nobody is looking at
+     is |groups| RPC calls nobody asked for. */
+  const groupRows =
+    sub === 'matrise'
+      ? ((
+          await supabase
+            .from('groups')
+            .select('id, name')
+            .eq('org_id', viewer.orgId)
+            .order('name')
+        ).data ?? [])
+      : []
+  const groupThemes = await Promise.all(
+    groupRows.map(async (g) => ({
+      groupId: g.id,
+      name: g.name,
+      themes: await readThemes(id, null, g.id),
+    })),
+  )
+
   const latestRound = rounds?.[0] ?? null
   const hasRounds = (rounds?.length ?? 0) > 0
 
@@ -192,6 +215,8 @@ export default async function ResultsPage({
         }))}
         summary={summary}
         aggregate={aggregate}
+        sub={sub}
+        groupThemes={groupThemes}
         trends={trends}
         themes={themes}
         benchmarks={benchmarks}
@@ -223,21 +248,12 @@ export default async function ResultsPage({
         </div>
       ) : null}
 
-      {/* F5-3 — THE SUB-RAIL v6 DRAWS HERE IS NOT BUILT, AND ALL FOUR REASONS
-          ARE DIFFERENT. Matrise duplicates `/dashboard?u=<id>`, Sammenligning is
-          deferred, and Fordeling and Frisvar are not beside «Per spørsmål» but
-          INSIDE it — one card per question holds the question, its bars and its
-          quotes. Splitting those apart would take a question away from its own
-          answers on a screen the audit records as having zero findings.
-          Derived from the registry, so a reversal loses its sentence. */}
-      <SubTabRefusals tab="resultat">
-        <Link
-          href={`/dashboard?u=${survey.id}`}
-          className="touch-44 mt-3 inline-flex items-center rounded-[10px] border border-line px-3.5 py-2 text-[12.5px] font-semibold text-ink no-underline"
-        >
-          {tS('resMatrixLink')}
-        </Link>
-      </SubTabRefusals>
+      {/* G2 — THE RAIL, and the refusal note is gone with the refusals.
+          Four of resultat's sub-tabs are built now; v8 dropped `fordeling` and
+          `runder` entirely, so there is nothing left on this tab to refuse and
+          a `SubTabRefusals` block would describe a state that no longer exists.
+          `REFUSED` is derived, so removing the keys removed the sentence. */}
+      <SubTabRail surveyId={survey.id} tab="resultat" current={sub} />
     </>
   )
 }

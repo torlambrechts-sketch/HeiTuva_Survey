@@ -1667,6 +1667,20 @@ export const ROUTES: RouteSpec[] = [
     ],
   },
   {
+    /* G2.6 — the survey's Målgruppe tab, which had NO manifest coverage at all
+       before this phase. «Levering» ships three of v8's six delivery figures;
+       the other three are stated as absent on the screen rather than omitted,
+       so this state is also what proves that sentence renders. */
+    route: '/undersokelser',
+    label: 'survey-malgruppe',
+    as: 'administrator',
+    phase: 'phase-3',
+    states: [
+      { name: 'default', setup: (page: Page) => openSurveyTab(page, 'malgruppe') },
+      { name: 'levering', setup: (page: Page) => openSurveyTab(page, 'malgruppe', 'Levering') },
+    ],
+  },
+  {
     route: '/undersokelser',
     label: 'survey-tiltak',
     as: 'administrator',
@@ -1712,6 +1726,38 @@ export const ROUTES: RouteSpec[] = [
           await pickSurvey(page, 'Arbeidsmiljø — månedlig')
           await page.getByRole('link', { name: /^tid · / }).click()
           await page.waitForURL((u) => u.searchParams.get('tema') === 'tid')
+          await page.waitForLoadState('load')
+        },
+      },
+      /* G2 — v8's three OTHER resultat views. Added with the phase that built
+         them: a route nobody walks is a route nobody can measure, and F5 paid
+         for that lesson when a sub-route's first manifest coverage immediately
+         turned up a finding that predated it. `sporsmal` needs no state — it is
+         the default and `default` above already lands on it. */
+      {
+        name: 'vis-matrise',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+          await page.getByRole('link', { name: 'Matrise', exact: true }).click()
+          await page.waitForURL((u) => u.searchParams.get('vis') === 'matrise')
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'vis-sammenlign',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+          await page.getByRole('link', { name: 'Sammenligning', exact: true }).click()
+          await page.waitForURL((u) => u.searchParams.get('vis') === 'sammenlign')
+          await page.waitForLoadState('load')
+        },
+      },
+      {
+        name: 'vis-frisvar',
+        setup: async (page) => {
+          await pickSurvey(page, 'Arbeidsmiljø — månedlig')
+          await page.getByRole('link', { name: 'Frisvar', exact: true }).click()
+          await page.waitForURL((u) => u.searchParams.get('vis') === 'frisvar')
           await page.waitForLoadState('load')
         },
       },

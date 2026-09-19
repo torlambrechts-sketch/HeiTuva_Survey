@@ -100,3 +100,50 @@ is an Administrasjon one.
 
 That reasoning is F5's and it survives re-measurement against v8 unchanged: `delivery2` occurs twice
 in v6 and twice in v8, and the rows are the same rows.
+
+
+---
+
+# G2 BUILD — the outcome per subtab
+
+| # | subtab | outcome |
+|---|---|---|
+| G2.1 | `resultat/frisvar` | **built as drawn**, reusing `QuoteList` — one renderer, not two |
+| G2.2 | `resultat/sammenlign` | **built with a correction**: the Endring column renders only when BOTH endpoints clear the threshold |
+| G2.3 | `resultat/matrise` | **built as drawn** — Gruppe × tema, N gated `get_themes` calls |
+| G2.6 | `malgruppe/levering` | **built with a correction**: three of v8's six rows; the other three named as absent on the screen |
+| G2.4 | `utsending/bolger` | not built — data absent, per instruction |
+| G2.5 | `utsending/leveranse` | not built — domain facts, not survey facts, per instruction |
+
+## G2.0 — `n` on a gated trend point does NOT contradict T1.4
+
+Read back from `pg_proc`, not from the TypeScript type — which is where my own measurement note had
+gone wrong. `get_trends` keeps two different counts:
+
+- **`scale_n`** — the population behind the AVERAGE. This is the gate's subject, and the function's
+  own comment says of it: *«it is emitted nowhere, and if it is ever emitted again it must not be
+  called `n`».*
+- **`took_part`** — how many people responded, with **no join to `answers`**. This is what ships
+  as `n`.
+
+So the emitted `n` is participation, which Q28's people-versus-derived line lets through.
+**Something did change since T1.4:** Q49 (V1-6) moved `n` from null to the count deliberately, and
+`tests/invariants/k-surface.test.ts:362` says so verbatim — *«Was asserted null here»*. The gated
+payload is enforced as a CLOSED KEY SET, so nothing derived can join it.
+
+And the trend reader is not a second path: `readTrends` is a one-line `call('get_trends', …)`.
+
+**Conclusion: the source is sound.** The Endring column is its own defect, not a symptom of one,
+and what it would reconstruct is the `avg` — never the count.
+
+## The sweep — every derived figure over two possibly-gated cells
+
+| figure | endpoints | verdict |
+|---|---|---|
+| `results_summary.delta` (round over round) | both gateable | **correct, and structurally so** — `v_prev_avg` is read from the PUBLISHED `v_prev` payload (`v_prev ? 'avg'`), and a gated `PrevRound` has no `avg` key |
+| `ResultsScreen` benchmark `diff` | `mine` gateable, `bench` published | **was correct by vigilance** (`mine === null ? null : …`) — now routed through `changeBetween` |
+| `RoundsPanel` bar height | single cell | gated (`gated ? 4 : …`) |
+| oversikt / duty / live percentages | non-gated denominators (invited, steps, counts) | not the class |
+
+**One pre-existing delta, and it was already right.** v8's Endring column would have been the first
+ungated one in the product.

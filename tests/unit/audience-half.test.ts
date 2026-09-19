@@ -20,9 +20,27 @@ const page = readFileSync('app/(app)/undersokelser/[id]/malgruppe/page.tsx', 'ut
  *  refuse it, which is the refusal-in-a-comment shape. */
 const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
-describe('V6-4b — the audience half ships, the drop-off half does not', () => {
-  it('the page NEVER reads a response state', () => {
-    for (const forbidden of ['responded_at', 'respondedAt', 'bounced_at', 'reminded_at']) {
+/**
+ * RESTATED AT G2.6, NOT WIDENED, AND THE DISTINCTION IS THE POINT.
+ *
+ * This guard said «the page NEVER reads a response state», encoding V6-4b's
+ * refusal of the drop-off half. That refusal was about data that did not
+ * exist — and three of v8's six delivery figures now do (Sendt, Fullført,
+ * Reservert), so Tor reversed it and G2.6 builds them.
+ *
+ * Dropping `responded_at` from the forbidden list would have bought a green
+ * test and lost the guard. So the property is restated instead: the GRUPPER
+ * view still reads `group_id` and nothing else, and NO view on this page reads
+ * a per-person identity column or a figure that does not exist. That is the
+ * same choice V5-3 made when a refused string began shipping on purpose —
+ * restate the rule around the new truth rather than delete it.
+ */
+describe('V6-4b/G2.6 — the audience half is counts only, and so is delivery', () => {
+  it('the page never reads a figure that has no writer or no meaning', () => {
+    // `bounced_at` has NO WRITER (D133) and `reminded_at` is a single timestamp
+    // that cannot describe a wave. Reading either would put an invented number
+    // on screen, which is the rule this guard has always been about.
+    for (const forbidden of ['bounced_at', 'reminded_at']) {
       expect(code, `the page reads ${forbidden}`).not.toContain(forbidden)
     }
     // Nor the identity columns a per-person list would need.
@@ -33,7 +51,16 @@ describe('V6-4b — the audience half ships, the drop-off half does not', () => 
     }
   })
 
-  it('it selects group_id and nothing else from the invitations', () => {
+  it('DELIVERY IS COUNTS ONLY — head:true, never a row of people', () => {
+    // Every delivery read is `select('id', { count: 'exact', head: true })`, so
+    // no invitation row ever reaches the page. A figure is a count; a list is
+    // a disclosure.
+    const deliveryReads = code.split('\n').filter((l) => l.includes('responded_at') || l.includes('sent_at'))
+    expect(deliveryReads.length, 'the delivery counts moved or vanished').toBeGreaterThan(0)
+    expect(code).toContain("count: 'exact', head: true")
+  })
+
+  it('the GRUPPER view still selects group_id and nothing else', () => {
     // Selecting more «just in case» is how the refused half arrives later as a
     // one-line change.
     expect(code).toMatch(/from\('survey_invitations'\)\s*\.select\('group_id'\)/)

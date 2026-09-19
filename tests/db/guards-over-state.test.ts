@@ -77,7 +77,25 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  if (madeSurveys.length) await svc.from('surveys').delete().in('id', madeSurveys)
+  if (!madeSurveys.length) return
+  /* G2 FIX PASS — THIS CLEANUP HAD BEEN FAILING SILENTLY AND NOBODY READ THE
+     ERROR. Twenty «S3 guard probe» surveys had accumulated in the local
+     database, and the symptom surfaced two phases away: `verify:responsive`
+     blocked on /undersokelser's row menu, on a screen this file never touches.
+     The delete is refused by `live_sessions_survey_tenancy` — a composite FK
+     with no cascade — and `.delete()` returns its error to a caller that threw
+     it away. A swallowed return value is the same decision as a catch-all, made
+     by omission.
+
+     So: the dependents go first, in FK order, and every step's error is READ.
+     A cleanup that cannot clean up must say so, or the next gate says it
+     instead, somewhere unrelated. */
+  const { error: liveErr } = await svc.from('live_sessions').delete().in('survey_id', madeSurveys)
+  if (liveErr) throw new Error(`cleanup: live_sessions — ${liveErr.message}`)
+  const { error: roundErr } = await svc.from('survey_rounds').delete().in('survey_id', madeSurveys)
+  if (roundErr) throw new Error(`cleanup: survey_rounds — ${roundErr.message}`)
+  const { error } = await svc.from('surveys').delete().in('id', madeSurveys)
+  if (error) throw new Error(`cleanup: surveys — ${error.message}`)
 })
 
 async function makeSurvey(fields: Record<string, unknown> = {}): Promise<string> {

@@ -53,6 +53,35 @@ export const SUBTABS: Partial<Record<SurveyTab, readonly string[]>> = {
    *  «Med hjemmel» is `law_ref is not null`, which is the bundle's `!!t.law`. */
   tiltak: ['apne', 'alle', 'hjemmel'],
   /**
+   * G2 — v8:7736, and v8 DROPPED TWO of v6's six. `runder` and `fordeling` are
+   * gone from the drawing, and `fordeling` is gone for the reason F5 refused
+   * it: a distribution belongs inside its own question's card. A refusal the
+   * next bundle adopts is evidence the refusal was right, so both keys leave
+   * `REFUSED` rather than sitting there describing a tab nothing draws.
+   */
+  /**
+   * ORDER DIVERGES FROM v8 BY ONE PLACE, DELIBERATELY, AND IT IS RAISED.
+   *
+   * v8's default is `matrise` (v8:7783 — `... || "matrise"`). Ours is
+   * `sporsmal`, because `resolveSubTab` falls back to the FIRST entry and that
+   * decides what `/resultater` lands on with no `?vis=`. Making the matrix the
+   * landing view would change where every existing link, bookmark and manifest
+   * state arrives — on the one results screen the fidelity audit records as
+   * having ZERO findings.
+   *
+   * That is a product decision about the default view, not a fidelity question
+   * about a drawing, so it is the conservative option plus a note rather than a
+   * silent adoption. The pills are v8's four in v8's order otherwise; only
+   * which one is first differs, and reversing it is a one-line edit.
+   */
+  resultat: ['sporsmal', 'matrise', 'sammenlign', 'frisvar'],
+  /**
+   * G2.6 — `grupper` is this page and `levering` is now built. `segmenter`
+   * stays refused, and it is the only refusal in this file about the MODEL
+   * rather than about missing data (Q92: k does not compose).
+   */
+  malgruppe: ['grupper', 'levering'],
+  /**
    * `malgruppe` HAS NO RAIL, AND THAT IS THE MEASUREMENT RATHER THAN AN
    * OMISSION. Its three sub-tabs are «Grupper», «Segmenter» and «Levering»:
    * the first IS this page, and the other two are refused below for two
@@ -83,7 +112,7 @@ export const REFUSED: Record<string, string> = {
    *   «Reservert» = the string "1"          — this one we do have (suppressions)
    * Sendt and Fullført are real. Two real rows do not make a funnel.
    */
-  'malgruppe/levering': 'refuseLevering',
+  /* BUILT at G2 — see docs/fidelity/g2-subtab-measurement.md (levering). */
 
   /**
    * v6:7135-7137, and **the audit misread what this is.**
@@ -140,7 +169,7 @@ export const REFUSED: Record<string, string> = {
    * «a shell rail may absorb an in-page one only when its list is COMPLETE»
    * exists to prevent, one floor down. The screen LINKS there instead.
    */
-  'resultat/matrise': 'refuseMatrise',
+  /* BUILT at G2 — see docs/fidelity/g2-subtab-measurement.md (matrise). */
 
   /**
    * **Sammenligning is the one genuinely missing view**, and it is deferred
@@ -149,7 +178,7 @@ export const REFUSED: Record<string, string> = {
    * (v6:1595-1649), which is a new rendering rather than a re-cut. It is the
    * only one of resultat's six that would ADD something.
    */
-  'resultat/sammenlign': 'deferSammenlign',
+  /* BUILT at G2 — see docs/fidelity/g2-subtab-measurement.md (sammenlign). */
 
   /**
    * **Fordeling and Frisvar are not beside «Per spørsmål» — they are INSIDE
@@ -163,8 +192,9 @@ export const REFUSED: Record<string, string> = {
    * the note says which — because a sub-tab that is simply absent reads as one
    * somebody did not finish.
    */
-  'resultat/fordeling': 'refuseFordeling',
-  'resultat/frisvar': 'refuseFrisvar',
+  /* v8 NO LONGER DRAWS `fordeling` (v8:7736 has four, v6 had six). Not a
+     refusal any more — there is nothing to refuse. */
+  /* BUILT at G2 — see docs/fidelity/g2-subtab-measurement.md (frisvar). */
 
   /**
    * v6:1851-1872 — four waves, day 0 -> +3 -> +7 -> +12, each to those who have
