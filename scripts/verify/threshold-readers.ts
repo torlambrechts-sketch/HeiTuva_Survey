@@ -294,36 +294,73 @@ console.log(`  surveys_k_threshold_floor : >= ${Number.isFinite(dbFloor) ? dbFlo
 console.log(`  THRESHOLD_FLOOR           : ${Number.isFinite(tsFloor) ? tsFloor : '(not found)'}`)
 console.log(`  ${floorsAgree ? 'agree' : 'DISAGREE — the copy and the constraint promise different floors'}`)
 
-/* ── § 2c — THE GATE ITSELF ────────────────────────────────────────────────
+/* ── § 2c — THE GATE'S FLOOR AGREES WITH THE CHECK ─────────────────────────
  *
- * `app.k_for` is the function every aggregate path routes through, and it
- * carried `greatest(s.k_threshold, 3)` — Q17's floor — for a full phase after
- * Q91 moved that floor to 2. The CHECK said 2, the copy warned about 2, and the
- * gate applied 3: a threshold a customer could set, that was audited and
- * warned about, and that the database ignored.
+ * CORRECTED AT F8.1, AND THE CORRECTION IS A REVERSAL. What follows is what
+ * this section used to assert, kept because a rule replaced silently is a rule
+ * nobody can re-derive:
  *
- * So the floor must not live in `app.k_for` AT ALL. The CHECK guarantees
- * `k_threshold >= 2` for every person survey, which makes a clamp inside the
- * gate a second copy of a bound that has now gone stale once. The organisation
- * branch keeps its 0 — that is the existence value, not a floor.
+ *   «So the floor must not live in `app.k_for` AT ALL. The CHECK guarantees
+ *    `k_threshold >= 2` for every person survey, which makes a clamp inside the
+ *    gate a second copy of a bound that has now gone stale once.»
+ *
+ * That was written 2026-09-14 (V6-4, b534337). T1.2 decided the opposite on
+ * 2026-09-18 (M:0130, 12d3101), in the migration's own words:
+ *
+ *   «The floor is applied HERE as well as in the CHECK, deliberately. Two
+ *    mechanisms, not one: if the constraint is ever dropped by a migration
+ *    meaning well, every result read still refuses below 2 for a person.»
+ *
+ * T1.2 is the later decision and it governs. The gate MUST clamp.
+ *
+ * ── WHAT THE OLD RULE WAS ACTUALLY PROTECTING, WHICH SURVIVES ──────────────
+ *
+ * The danger was never that a clamp EXISTS. It was that a second copy of a
+ * bound can DISAGREE with the first — `app.k_for` carried Q17's 3 for a full
+ * phase after Q91 moved the floor to 2, so the CHECK said 2, the copy warned
+ * about 2, and the gate applied 3. Absence was one way to guarantee agreement;
+ * it was not the only one, and it is no longer available.
+ *
+ * So this section now measures AGREEMENT rather than absence: the clamp must be
+ * there, and its constant must equal the CHECK's own bound read out of
+ * `pg_constraint` in § 2b. That catches the exact 2-vs-3 divergence the old
+ * rule existed for, and it catches it whichever of the two moves. Inverting the
+ * boolean alone would have bought a green gate and lost the guard — the same
+ * choice as «fix the column, not the predicate» one level up.
+ *
+ * AND THE CLAMP MAKES THE ORGANISATION BRANCH LOAD-BEARING. `greatest(k, 2)`
+ * applied to an organisation survey would impose a floor on a respondent kind
+ * invariant 1 puts OUTSIDE k entirely. The branch returning 0 is what keeps
+ * that from happening, so it is asserted here: it was decoration before the
+ * clamp and it is a guard after it.
  */
 const kForBody = psql(
   `select p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'app' and p.proname = 'k_for'`,
 )[0]?.[0] ?? ''
-const gateClamps = FLOOR_MIRROR.test(kForBody)
+const clampMatch = FLOOR_MIRROR.exec(kForBody)
+const gateClampValue = clampMatch ? Number(clampMatch[2]) : NaN
+const gateClamps = clampMatch !== null
+// T1.2's second mechanism only holds for a NATURAL PERSON. An organisation is
+// outside k, and the 0 branch is what stops the clamp reaching it.
+const orgBranchIntact = /respondent_kind\s*=\s*'organisation'\s*then\s*0/i.test(kForBody)
+const gateFloorAgrees = gateClamps && Number.isFinite(dbFloor) && gateClampValue === dbFloor
 
-console.log('\n== § 2c  THE GATE CARRIES NO FLOOR OF ITS OWN\n')
-console.log(`  app.k_for ${gateClamps ? 'CLAMPS — it carries a floor the CHECK already guarantees' : 'reads the column; the CHECK is the only floor'}`)
-if (gateClamps) console.log(`      ${kForBody.replace(/\s+/g, ' ').trim().slice(0, 160)}`)
+console.log("\n== § 2c  THE GATE CLAMPS, AND ITS FLOOR AGREES WITH THE CHECK\n")
+console.log(`  app.k_for clamp           : ${gateClamps ? `greatest(..., ${gateClampValue})` : 'ABSENT — T1.2 requires two mechanisms, not one'}`)
+console.log(`  surveys_k_threshold_floor : >= ${Number.isFinite(dbFloor) ? dbFloor : '(not found)'}`)
+console.log(`  ${gateFloorAgrees ? 'agree' : 'DISAGREE — a second copy of the boundary has gone stale, which is the 2-vs-3 defect'}`)
+console.log(`  organisation branch       : ${orgBranchIntact ? 'returns 0 — the clamp cannot reach a legal entity' : 'MISSING — greatest() would impose a floor on a kind outside k'}`)
 
-if (tierHits.length > 0 || !floorsAgree || gateClamps) {
+if (tierHits.length > 0 || !floorsAgree || !gateFloorAgrees || !orgBranchIntact) {
   console.log(
-    `\nVERDICT: ${tierHits.length} surface(s) derive a tier by literal; the floor constant ` +
+    `\nVERDICT: ${tierHits.length} surface(s) derive a tier by literal; the copy constant ` +
       `${floorsAgree ? 'agrees with' : 'DISAGREES WITH'} the catalogue; the gate ` +
-      `${gateClamps ? 'CARRIES ITS OWN FLOOR' : 'carries no floor'}.\n` +
-      '  A second copy of the boundary is the defect Q91 produced threshold-tier.ts to end.\n',
+      `${!gateClamps ? 'DOES NOT CLAMP' : gateFloorAgrees ? 'clamps at the CHECK\'s own floor' : `clamps at ${gateClampValue} while the CHECK says ${dbFloor}`}` +
+      `${orgBranchIntact ? '' : '; THE ORGANISATION BRANCH IS GONE'}.\n` +
+      '  Two mechanisms are T1.2\'s decision (M:0130). Two mechanisms that DISAGREE\n' +
+      '  is the defect Q91 produced threshold-tier.ts to end.\n',
   )
   process.exit(1)
 }
-console.log('\nVERDICT: one boundary, asked by every surface, and it agrees with the database.\n')
+console.log('\nVERDICT: one boundary value, mirrored deliberately in two mechanisms that agree.\n')

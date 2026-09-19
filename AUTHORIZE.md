@@ -81,6 +81,72 @@ cannot disagree. If you want them open too, delete them; nothing in the code dep
 there. What they buy is that the operations which are painful to undo need one deliberate keystroke
 from you, and they cost nothing the rest of the time.
 
+### 3a. THE FILE IS ONE OF THREE LAYERS, AND IT CANNOT SET THE OTHER TWO
+
+**Added 2026-09-19 (F8.3), after Tor: «I have updated the permission, why do I still have to
+approve everything??»** The paste in § 3 was correct and committed, and he was still clicking. The
+reason is that `.claude/settings.json` governs less than its name suggests, and the other two
+layers are set somewhere a repository cannot reach. Measured rather than reasoned — the calls are
+beside each claim.
+
+| layer | what it governs | where it is set | can § 3's file set it? |
+|---|---|---|---|
+| **Tool rules** — `Bash`, `Read`, `mcp__Supabase`, the `deny` list | whether a matching tool call runs without asking | `.claude/settings.json`, committed | **YES — this is § 3** |
+| **Session permission mode** | the mode the whole session runs in | the **mode dropdown** at claude.ai/code, per session | **no** |
+| **MCP connector approvals** | each claude.ai connector tool call | the connector layer | **no** |
+
+**AND THE TOOL RULES ARE READ ONLY IN A SINGLE-REPOSITORY SESSION.** The documentation is explicit,
+and it is the sharpest thing in this section because nothing announces it at runtime:
+
+> Shared project settings (`.claude/settings.json`): read in a session with one repository, because
+> the file is part of the clone and the session starts inside it. **A session with several
+> repositories starts above the clones, so from each repository's `.claude/settings.json` it loads
+> only the plugins and marketplaces the file declares, not permission rules, hooks, `env`, or other
+> keys.**
+
+So the same committed file grants everything in a one-repo session and **nothing** in a two-repo
+one, silently, with no message either way. Check it with one command before concluding the file is
+broken:
+
+```
+find /home/user -maxdepth 2 -name .git -type d      # one result => rules are read
+```
+
+Measured 2026-09-19: one result, `/home/user/HeiTuva_Survey/.git`, and the session's working
+directory is that clone. The rules were in force the whole time — confirmed from the other side by
+a session that ran `psql`, `dockerd`, `npm`, `curl`, `git push` and fifteen MCP calls including
+`apply_migration` **against production**, with zero prompts returned to the model.
+
+**The two layers § 3 cannot reach, in the documentation's own words:**
+
+- *«You pick a cloud session's permission mode from the mode dropdown, both when you create the
+  task and while the session runs.»* — so `defaultMode` in the file is a default the dropdown
+  overrides. And `acceptEdits` covers **file edits**, not commands.
+- *«A session counts as inactive while it waits for you to approve an MCP connector tool call or to
+  sign in to an MCP server.»* — connector calls are approved through the connector layer.
+  `"mcp__Supabase"` in the allow-list cannot pre-approve them.
+
+**The rule, which is this file's first sentence pointed at itself:** *a document cannot grant
+access; credentials and tool permissions do* — and a repository is a document to two of these three
+layers. When approvals keep appearing, read WHICH layer the prompt belongs to before editing the
+file again. The file is the only one of the three that editing the file can fix.
+
+### 3b. OPEN ITEM — the lowercase `supabase` in `.mcp.json`
+
+**Not removed. Recorded so it is not rediscovered as a defect.** There are two Supabase MCP
+registrations in this session:
+
+| registration | source | state |
+|---|---|---|
+| `supabase` (lowercase) | this repository's `.mcp.json`, HTTP to `mcp.supabase.com` | **unauthenticated** — flagged in `~/.claude/mcp-needs-auth-cache.json`, contributes zero tools |
+| `Supabase` (capitalised) | the claude.ai connector | **works** — every `mcp__Supabase__*` call in this project goes through it |
+
+The lowercase entry is the likely source of the recurring session notice that `supabase` «requires
+authentication», which CLAUDE.md's opening section records as wrong five times over. **It is left
+in place deliberately:** it cannot be established from inside the container whether these are two
+registrations or one with a display-name difference, and if they are one, deleting `.mcp.json`
+removes production access mid-phase. Removing it is Tor's call and costs a session to get wrong.
+
 ## 4. Verify the grant end to end
 Ask Claude Code to do a full loop and report:
 
