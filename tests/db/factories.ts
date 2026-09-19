@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { rememberCreatedUser } from '../helpers/created-users'
 import type { Database } from '@/types/database'
 import { anonClient, serviceClient, type Client } from './clients'
 
@@ -146,6 +147,11 @@ async function findOrCreateUser(svc: Client, email: string): Promise<string> {
     email_confirm: true,
   })
   if (error) throw new Error(`createUser(${email}): ${error.message}`)
+  /* N10.7 — remembered only on the CREATE branch. The early return above hands
+     back the demo personas without creating them, and a persona must outlive
+     the suite: the seed owns those rows, not a test. Nothing found is
+     recorded, so nothing found is deleted. */
+  rememberCreatedUser(data.user!.id)
   return data.user!.id
 }
 

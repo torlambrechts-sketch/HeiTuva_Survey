@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { rememberCreatedUser } from './helpers/created-users'
 
 /** Local `supabase start` defaults. These are the published demo keys — they
  *  are not secrets and only ever reach a throwaway container. */
@@ -32,6 +33,9 @@ export async function asUser(email: string, password = 'test-password-123!'): Pr
   })
   if (created.error) throw new Error(`createUser(${email}): ${created.error.message}`)
   const userId = created.data.user!.id
+  // N10.7 — this path ALWAYS creates, so every user it returns is one this test
+  // file made and must remove. `tests/helpers/cleanup.ts` drains the registry.
+  rememberCreatedUser(userId)
 
   const client = createClient(LOCAL_URL, ANON_KEY, { auth: { persistSession: false } })
   const signedIn = await client.auth.signInWithPassword({ email, password })

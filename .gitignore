@@ -80,5 +80,4 @@ artifacts/fidelity/*
 # N10.6's list-length sweep, whatever comes next). Written as the SHAPE rather
 # than as the two experiments that happen to exist, because the previous version
 # of these lines was an enumeration and needed an edit per experiment.
-n[0-9][0-9][0-9].log
-n[0-9][0-9][0-9]-*
+/n[0-9][0-9][0-9]*

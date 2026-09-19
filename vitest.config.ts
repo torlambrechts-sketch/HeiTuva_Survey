@@ -25,6 +25,11 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 60_000,
     include: ['tests/**/*.test.ts'],
+    // N10.7 — per-file teardown for the auth users a fixture creates.
+    // Dropping an organisation cascades org_members and cannot reach
+    // `auth.users`, which is global: two suite runs left 64 orphans.
+    // A setup file covers every test file, including ones not yet written.
+    setupFiles: ['./tests/helpers/cleanup.ts'],
     exclude: ['tests/visual/**', 'node_modules/**'],
     // 'default' keeps the normal output; the census reporter runs beside it and
     // fails the run if any file collected fewer tests than tests/expected-counts.json
