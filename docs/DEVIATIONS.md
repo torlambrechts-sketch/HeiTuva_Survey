@@ -8561,3 +8561,109 @@ invariant fixture that writes a registry row rather than an org-scoped one has
 D245's reach again, and nothing structural stops one being written. That is the
 thing to close, and closing it is a `dropOrg` in eight files plus the question
 asked of each: *what did this fixture write that is not under its own org?*
+
+## D263 — BELOW THE FOLD, `verify:responsive`'s OCCLUSION GUARD SCORES «CANNOT MEASURE» AS «NOT OCCLUDED»
+
+**Found by N9.1's second half: four 320px blockers on `undersokelser/row-menu`,
+on a screen the phase had already fixed at 390px.**
+
+`touchAreas()` drops a control that something else is painted over, because a
+tap there reaches the overlay and not the control (`scripts/verify/responsive.ts`,
+the «Occluded controls do not compete for taps» comment). The test is
+`document.elementFromPoint` at the control's centre, and it is guarded:
+
+```ts
+if (cx >= 0 && cy >= 0 && cx <= innerWidth && cy <= innerHeight) {
+  const top = document.elementFromPoint(cx, cy)
+  if (top && top !== el && !el.contains(top)) continue
+}
+```
+
+**The guard is necessary — `elementFromPoint` returns `null` outside the
+viewport — and its `else` branch is «keep the control».** So a control whose
+centre is below the fold is measured as though nothing were on top of it. The
+viewport is 844px tall and the pages are thousands of pixels long, so this is
+most of every page.
+
+Measured, replaying the gate's own predicate on the gate's own server:
+
+```
+SKIP  Rediger spørsmål: Redaktør-utkast  centre=(84,650)  inView=true   top=BUTTON.touch-44 …
+SKIP  Flere valg: Redaktør-utkast        centre=(216,821) inView=true   top=BUTTON.touch-44 …
+KEEP  Rediger spørsmål: Redaktør-utkast  centre=(84,878)  inView=false  top=null
+KEEP  Flere valg: Redaktør-utkast        centre=(216,878) inView=false  top=null
+```
+
+`innerHeight` is 844. The four KEEP rows are 34px past it, under an open menu
+408px tall, and they were reported as competing for taps with the menu's own
+«Slett». **The two groups differ by nothing except which side of the fold their
+centre landed on.**
+
+**It is this project's own recorded shape with the unmeasurable case as the
+thing unseen** — «a gate that never reads the status code scores a 500 as a
+pass», and F2's composite of two broken-image icons. A gate that cannot decide
+should not answer; here the fall-through answers «fine».
+
+**LOGGED, NOT BUILT.** The apparatus is frozen, and the repair is not a
+one-liner: skipping every below-the-fold control would discard most of each
+page, so the honest fix is to scroll each such control into view, run
+`elementFromPoint`, and restore the scroll. That is a change to how the gate
+measures and belongs in a phase that owns it.
+
+**What made it visible is the other half, and it is fixed:** twelve leaked
+`Redaktør-utkast` drafts had lengthened the survey list until a row's centre
+crossed 844px. See the `afterAll` added to `tests/db/access.test.ts`. The gate's
+blind spot was there all along; the leak is what walked a row into it.
+
+## D264 — THE SAME GATE, SAME BUILD, THREE RUNS: 4 BLOCKERS, THEN 50, THEN 0
+
+**A gate whose answer changes without its input changing cannot decide anything,
+and this one did it inside one hour.**
+
+```
+run 1   4 blockers   all undersokelser/row-menu @320px      (D263)
+run 2  50 blockers   all «Hjelp og støtte» / «Åpne meny», 88px², 25 states x 2 widths
+run 3   0 of those 50 — every state run 2 flagged came back ok
+```
+
+All three ran against **one `.next`** (run 1 rebuilt it; 2 and 3 reused it,
+which the gate's own log states) and one local database. Between run 1 and run 2
+the only changes were eleven deleted survey rows and one test file — neither
+reachable from the app header.
+
+**88px² is N5's arithmetic exactly**: a 34px `?` and a 38px menu button, hit
+areas 44px each, overflowing (44−34)/2 = 5 and (44−38)/2 = 3 against a 6px gap —
+2px of collision over 44px. It is the number the header produces when
+`.touch-cluster` is NOT in effect.
+
+Measured on the gate's own server, during run 3, on a state run 2 had flagged:
+
+```
+gap (computed)  14px          .touch-cluster{gap:14px!important} in @media (max-width:767px)
+help            x=39  w=34    hit [34,78]
+menu            x=87  w=38    hit [84,128]
+dx              −6            no intersection is possible at this geometry
+served CSS      /_next/static/css/ce8cc14af5c458a7.css contains the rule
+```
+
+**So the run-2 reading was of a header that does not exist at that width**, and
+the rule it would have had to be missing is present in the bytes that server was
+serving.
+
+**One pattern is real and worth recording: every one of the 25 was a state with
+a SETUP step** — `rad-apen`, `artikkel`, `kontakt`, `saved`, `notify-toggled`,
+`accent-picked`, `invite-duplicate`, `medlemmer-sok`, `dsr-form-open`,
+`privacy-toggled`, `sok`, `egen-tekst`, `row-menu`, `kompakt`. **No default state
+was affected in any run.**
+
+**THE CAUSE IS NOT MEASURED, AND THIS SENTENCE SAYS SO ON PURPOSE.** D241's rule
+is that a cause goes into a document with the call that established it or with
+the word «hypothesis» in the sentence. The hypothesis is that the measurement
+sometimes happens before layout has settled after the setup's interaction; it
+has no call behind it and the next reader must not inherit it as a finding.
+
+**What IS established:** the product's geometry is correct at both widths, and a
+run of this gate is not by itself evidence about the 88px² pair. Until the cause
+is found, a run that reports it should be repeated before anything is changed —
+which is the opposite of the habit this file usually asks for, and is why it is
+written down rather than absorbed.

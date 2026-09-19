@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   adminClient,
   anonClient,
@@ -19,6 +19,21 @@ import { ORG_OTHER, ORG_PRIMARY, GROUP_PRIMARY } from './personas'
  */
 let admin: Client, redaktor: Client, leser: Client, outsider: Client
 let orgId: string, otherOrgId: string, surveyId: string
+/** Set by «redaktor may create a survey»; removed by the `afterAll` below. */
+let createdSurveyId: string | null = null
+
+/**
+ * The teardown READS its own error and throws it.
+ *
+ * A teardown whose rejection nobody reads is a leak that reports success —
+ * which is how the twelve drafts accumulated unseen. If this delete ever stops
+ * working, the suite must go red here rather than quietly resume leaking.
+ */
+afterAll(async () => {
+  if (!createdSurveyId) return
+  const { error } = await serviceClient().from('surveys').delete().eq('id', createdSurveyId)
+  if (error) throw new Error(`teardown: could not remove the created survey: ${error.message}`)
+})
 
 beforeAll(async () => {
   ;[admin, redaktor, leser, outsider] = await Promise.all([
@@ -101,10 +116,30 @@ describe('role boundaries', () => {
   })
 
   it('redaktor may create a survey', async () => {
-    const { error } = await redaktor
+    /* The row is KEPT so the assertion is about the policy and not about a
+       transaction — and then removed in `afterAll`, because this insert lands
+       in the DEMO organisation, which is the one every manifest state
+       photographs.
+    
+       It leaked for twelve runs. `select count(*) … where title =
+       'Redaktør-utkast'` returned 12 against a seed that makes one, one per
+       suite run, and the twelfth pushed a survey row's centre below the 844px
+       fold on `undersokelser/row-menu` — where `verify:responsive`'s occlusion
+       guard cannot run `elementFromPoint` and scores the unmeasurable case as
+       «not occluded». Four blockers at 320px, on a screen nobody had touched.
+       D245's shape (a gate photographing a test's residue) with a longer fuse.
+    
+       The file already carried the symptom's workaround: the `.limit(1)` in
+       `beforeAll` exists because «a title is not unique … the round-trip
+       harness both create surveys in this org». That made this suite survive
+       the residue instead of stopping it. */
+    const { data, error } = await redaktor
       .from('surveys')
       .insert({ org_id: orgId, title: 'Redaktør-utkast' })
+      .select('id')
+      .single()
     expect(error).toBeNull()
+    createdSurveyId = data!.id
   })
 
   it('leser may not create a survey', async () => {
