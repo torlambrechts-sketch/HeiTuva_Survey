@@ -73,9 +73,10 @@ artifacts/fidelity/*
 # has to live here to resolve `@playwright/test` from node_modules — /tmp cannot
 # — so it lands beside the source for the length of one run and is deleted
 # after. Ignored so a transient file is never offered as a commit.
-*.tmp.mjs
-*.tmp.ts
-*.tmp.sh
+# Scratch files a measurement pass leaves beside the source for one run.
+# Written as `*.tmp.*` rather than as the three extensions that had come up —
+# R's pass added .tmp.py and .tmp.json, which is the enumeration paying out again.
+*.tmp.*
 # Measurement-run artefacts from a numbered experiment (N10.1's ten gate runs,
 # N10.6's list-length sweep, whatever comes next). Written as the SHAPE rather
 # than as the two experiments that happen to exist, because the previous version
