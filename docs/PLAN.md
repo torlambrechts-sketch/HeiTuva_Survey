@@ -108,7 +108,9 @@ because D changes six of the screens E would otherwise measure twice.
 - Geometry diff between the two bundles: every literal inline style value in the markup region, keyed
   by screen gate and source line.
 - Implementation column: computed styles for every rendered control on all 40 routes, joined to
-  `elements.json` (3423 elements, 570 controls, 301 repeaters).
+  `docs/fidelity/elements.json` (3423 elements, 570 controls, 301 repeaters). **It is committed now.**
+  Until 2026-09-20 this line named a file that was not in the tree — scratch from the session that
+  produced the inventory, cited as though it had been committed.
 
 **E2 — implementation, in tranches ranked by per-screen `changed` count.** One verification pass and
 one fix pass per tranche; fix-pass findings go to the next tranche.

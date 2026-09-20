@@ -2,10 +2,13 @@
 
 Extracted from the markup region (lines 26–6181, md5 `6efa903fcc59904c7e715ef1af04cbf9`) of `HeiTuva.dc.html`. That region is byte-identical in the handoff zip and the loose upload; see the addendum.
 
+**HOW THAT HASH IS SERIALISED, because R0 got it wrong in both directions.** The region is hashed WITHOUT a trailing newline. `sed -n '26,6181p' | md5sum` appends one and yields `aa5557057e7f669554ac2b8819c1d43e`; `sed -n '26,6181p' | head -c -1 | md5sum` yields the `6efa903f…` above. Same bytes, two serialisations. R0 read the mismatch as «this inventory describes a different bundle» and was wrong — the markup region IS v8's.
+
 | | value |
 |---|---|
-| md5 | `c0e3fbdc7c7f2d3ff379e93ea3caa2a6` |
-| lines | 11049 |
+| md5 | `b4e430eccd9cfac0105b8089b6ef206f` (v8) |
+| lines | 11050 |
+| earlier serialisation | `c0e3fbdc7c7f2d3ff379e93ea3caa2a6`, 11049 lines — the loose upload; differs from v8 in three hunks, all in the LOGIC region (7943, 9399, 10389), so the markup this file describes is unaffected |
 | markup region | 26–6181 |
 | logic region | 6182–11049 |
 | screens | 16 |
