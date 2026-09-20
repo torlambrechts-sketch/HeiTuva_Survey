@@ -33,6 +33,14 @@ import {
   type BlockType,
 } from '@/lib/surveys/blocks'
 import { MAX_MEDIA_BYTES, isMediaType } from '@/lib/surveys/media'
+import {
+  BUILD_GROUPS,
+  BUILD_TAB_KEY,
+  buildTabGroup,
+  currentBuildGroup,
+  lintTabLabel,
+  type BuildTab,
+} from '@/lib/surveys/build-tabs'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
@@ -57,19 +65,13 @@ import {
   uploadBlockMedia,
 } from './actions'
 
-/* V2:6472 — four, in this order: Generelt · Legg til · Innstillinger · Vis.
-   The app carried three and stacked RunModePanel, QuizPanel, PolicyPanel and
-   EngagementPanel under `settings`, so «Innstillinger» meant four panels where
-   the bundle means two. `general` is where a survey's MODE is decided; the rest
-   of the pane is about the questions. */
-const TABS = ['general', 'add', 'settings', 'preview'] as const
-type Tab = (typeof TABS)[number]
-const TAB_KEY: Record<Tab, string> = {
-  general: 'tabGeneral',
-  add: 'tabAdd',
-  settings: 'tabSettings',
-  preview: 'tabPreview',
-}
+/* T5 — v8's SIX tabs in contextual groups, `lib/surveys/build-tabs.ts`.
+   This was a flat four sourced from `V2:6472`, five handoffs back, and the
+   note it replaced complained that `settings` meant four panels where the
+   bundle means two — which was true, and the fix was a tab rather than a
+   re-stack: `content` and `lint` now have their own. */
+type Tab = BuildTab
+const TAB_KEY = BUILD_TAB_KEY
 
 let seq = 0
 const newId = () => `${NEW_ID_PREFIX}${++seq}`
@@ -357,6 +359,12 @@ export function Builder({
 
   /* Recomputed on every edit, which is what makes it advice rather than a
      verdict: the author sees the note appear and disappear as they write. */
+  /* T5 — the lint pill's label. v8 counts the UNDISMISSED rows, and says
+     «Ingen merknader» when there are no rows AT ALL rather than when the
+     count is zero — two different states, and the drawing separates them.
+     We have no dismiss control, so every row is undismissed and the two
+     numbers are equal; they are kept apart so a dismiss control does not
+     have to rediscover the distinction. */
   const methodNotesForDraft = useMemo(
     () =>
       methodNotes(
@@ -395,6 +403,9 @@ export function Builder({
    * must not raise it.
    */
   const breachOn = (q: DraftQuestion) => anonymous && specOf(q.type).breaksAnonymity
+
+  const lintRows = methodNotesForDraft.length
+  const lintOpen = lintRows
 
   const readyChecks = [
     { messageKey: 'ready_title', done: draft.title.trim().length > 0 },
@@ -442,12 +453,41 @@ export function Builder({
           «three buttons using the existing tab chip styling». It is four now.
           That sentence is a COUNT of the tabs that existed when it was written —
           D129's failure, third instance, same document. */}
+      {/* T5 LEVEL ONE — v8:9366-9371's four group pills. Without this row the
+          contextual grouping below makes `general`, `settings`, `lint` and
+          `preview` UNREACHABLE from `add`, which would be a worse product than
+          the flat four it replaces. v8 draws this in the shell rail; ours is a
+          survey route whose rail F5-2 and V7-2 both reasoned about, so it is
+          in the pane and the placement is Tor's to settle. */}
+      <div className="mb-2 flex flex-wrap gap-[3px]" role="tablist" aria-label={t('groupBuild')}>
+        {BUILD_GROUPS.map((g) => {
+          const on = currentBuildGroup(tab) === g.id
+          return (
+            <button
+              key={g.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setTab(g.target)}
+              className="touch-44 flex-1 cursor-pointer rounded-[10px] border border-line px-3 py-[9px] text-[12.5px] text-ink"
+              style={{
+                background: on ? 'var(--sf)' : 'transparent',
+                fontWeight: on ? 700 : 500,
+                opacity: on ? 1 : 0.7,
+              }}
+            >
+              {t(g.key)}
+            </button>
+          )
+        })}
+      </div>
+
       <div
         className="flex flex-wrap gap-x-[3px] gap-y-1.5 rounded-[13px] p-1 md:flex-nowrap md:gap-y-0"
         style={{ background: 'var(--sf2)' }}
         role="tablist"
       >
-        {TABS.map((k) => (
+        {buildTabGroup(tab).map((k) => (
           <button
             key={k}
             type="button"
@@ -460,7 +500,7 @@ export function Builder({
               boxShadow: tab === k ? '0 1px 3px rgba(25,21,16,.14)' : 'none',
             }}
           >
-            {t(TAB_KEY[k])}
+            {k === 'lint' ? lintTabLabel(lintRows, lintOpen, t) : t(TAB_KEY[k])}
           </button>
         ))}
       </div>
@@ -550,10 +590,16 @@ export function Builder({
               </div>
             )
           })}
-          {/* V7-3 — the content palette sits beside the question palette rather
-              than in v7's fifth builder tab, because that tab arrives with the
-              two-level rail restructure (V7-4's list) and inventing it here
-              would be a sub-tab nobody drew in that position. */}
+        </div>
+      ) : null}
+
+      {/* T5 — «Innhold» is its own tab now. V7-3 put this palette beside the
+          question palette and said why: v7's fifth builder tab «arrives with
+          the two-level rail restructure … and inventing it here would be a
+          sub-tab nobody drew in that position». T5 IS that restructure, so the
+          deferral is cashed rather than repeated. */}
+      {tab === 'content' ? (
+        <div className="rounded-2xl border border-line bg-sf p-5">
           <BlockPalette count={draft.blocks.length} disabled={disabled} onAdd={addBlock} />
         </div>
       ) : null}
@@ -650,7 +696,10 @@ export function Builder({
           stops a send, and nothing here does (Q178). Folding advice into it
           would make a methodological opinion look like a precondition, which is
           exactly what «lint advises, lint does not block» refuses. */}
-      {tab === 'settings' ? (
+      {/* T5 — «Merknader» is its own tab now (v8:10683). It was stacked under
+          `settings` beside PolicyPanel, which is the «four panels where the
+          bundle means two» the old tab comment named — the fix was a tab. */}
+      {tab === 'lint' ? (
         <MethodPanel
           notes={methodNotesForDraft}
           questionTexts={draft.questions.map((q) => q.text)}
@@ -762,7 +811,7 @@ export function Builder({
           Both wrap now. The property is «every rail that renders this tab set»,
           not «the rail I found». */}
       <div className="mb-3 flex flex-wrap gap-2 xl:hidden">
-        {TABS.map((k) => (
+        {buildTabGroup(tab).map((k) => (
           <button
             key={k}
             type="button"
@@ -772,7 +821,7 @@ export function Builder({
             }}
             className="touch-44 flex-1 cursor-pointer rounded-[10px] border border-line bg-sf px-3 py-[10px] text-[12.5px] font-semibold text-ink"
           >
-            {t(TAB_KEY[k])}
+            {k === 'lint' ? lintTabLabel(lintRows, lintOpen, t) : t(TAB_KEY[k])}
           </button>
         ))}
       </div>
