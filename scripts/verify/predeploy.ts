@@ -226,6 +226,45 @@ for (const root of ROOTS) {
  * that would have to be copied back by hand through the MCP, and hand-copying
  * a payload is the failure `scripts/edge-bundle.ts` exists to prevent. This way
  * the answer is a handful of rows, or none. */
+/* ── 2a-bis. --emit-sql-compact — THE SAME DIFF, A THIRD OF THE BYTES.
+ *
+ * `--emit-sql` spells every requirement as a `('kind','name')` tuple, which is
+ * ~16 KB. Carried through the Supabase MCP that is 16 KB of hand-relayed
+ * payload per deploy, and hand-relaying a payload is exactly what
+ * `scripts/edge-bundle.ts` exists to stop.
+ *
+ * This emits one delimited string that the SERVER splits, so the requirement
+ * list is still generated from the sweep and never retyped. The answer is
+ * identical: one row per object the code needs and the target lacks. */
+if (args.includes('--emit-sql-compact')) {
+  const rows = [...new Set(required.map((r) => `${r.kind}:${r.name}`))].sort()
+  // A name containing the delimiter would silently split into two requirements
+  // and BOTH would look absent. Identifiers cannot contain these, and the
+  // assertion is here so a future kind that can fails loudly instead.
+  const bad = rows.filter((r) => r.includes(',') || r.includes("'"))
+  if (bad.length > 0) {
+    console.error(`predeploy: requirement unsafe for the compact form: ${bad[0]}`)
+    process.exit(2)
+  }
+  console.log(`-- verify:predeploy — ${rows.length} requirements swept from app/, lib/, components/.
+-- No rows = ready to deploy.
+with required as (
+  select split_part(v,':',1) as kind, substr(v, strpos(v,':')+1) as name
+    from unnest(string_to_array('${rows.join(',')}', ',')) as v
+),
+have(kind, name) as (
+  select 'function', p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'
+  union all
+  select 'relation', t.table_name::text from information_schema.tables t where t.table_schema = 'public'
+  union all
+  select 'column', c.table_name || '.' || c.column_name from information_schema.columns c where c.table_schema = 'public'
+)
+select r.kind, r.name from required r
+where not exists (select 1 from have h where h.kind = r.kind and h.name = r.name)
+order by r.kind, r.name;`)
+  process.exit(0)
+}
+
 if (args.includes('--emit-sql')) {
   const lit = (v: string) => `'${v.replace(/'/g, "''")}'`
   const tuples = [...new Set(required.map((r) => `${r.kind}\u0000${r.name}`))]
