@@ -11,8 +11,8 @@ other half: FUNCTION and CONTENT, not geometry.
 | claim | measured |
 |---|---|
 | the upload is v8 | **yes** — md5 `b4e430eccd9cfac0105b8089b6ef206f`, 11050 lines, byte-identical to `design-reference-v8/heituva-survey-app-design/project/HeiTuva.dc.html` |
-| `elements.json` (3423 elements) exists | **NO.** `git log --all --diff-filter=A -- '*elements.json'` returns nothing — it was a scratch artefact of the session that produced the inventory and was never committed. `docs/PLAN.md:111` cites it as though it were in the tree. |
-| `docs/fidelity/handoff-inventory.md` covers v8 | **NO.** Its own header declares md5 `c0e3fbdc7c7f2d3ff379e93ea3caa2a6` and **11049** lines, which matches none of the nine bundles. It claims its markup region (26–6181) is stable at `6efa903fcc59904c7e715ef1af04cbf9`; v8's same range hashes **`aa5557057e7f669554ac2b8819c1d43e`**. It is an inventory of a bundle that is not here. |
+| `elements.json` (3423 elements) exists | **it existed and was not committed.** The `git log --diff-filter=A` was true and the wrong question. Tor supplied it: `docs/fidelity/elements.json`, 3423 elements, `build` = 407, all six drag lines present. |
+| `docs/fidelity/handoff-inventory.md` covers v8 | **YES. R0 SAID NO AND WAS WRONG — see R0.0-K.** |
 | `bundle-geometry-per-element.json` is an inventory | **no** — it is the v7→v8 *diff*, 112 changed elements over 17 gates. Which is the instruction's own point. |
 
 So this pass derives its inventory from the bundle. **Commands, so the next reader re-derives rather than trusts:**
@@ -22,6 +22,33 @@ md5sum design-reference-v8/heituva-survey-app-design/project/HeiTuva.dc.html
 sed -n '26,6181p' <v8> | md5sum
 grep -n 'sc-if value="{{ is[A-Za-z]*' <v8>        # the screen gates
 ```
+
+## R0.0-K — the correction, because R0 rested on a serialisation artefact
+
+**R0 concluded that `handoff-inventory.md` describes a different bundle. It does not. It describes
+v8's markup, and the whole mismatch was a trailing newline.**
+
+```
+markup region, lines 26..6181 of v8
+  sed -n '26,6181p' | md5sum                aa5557057e7f669554ac2b8819c1d43e   <- sed APPENDS a newline
+  sed -n '26,6181p' | head -c -1 | md5sum   6efa903fcc59904c7e715ef1af04cbf9   <- what the inventory states
+```
+
+Same bytes, two serialisations. The loose file (`c0e3fbdc`, 11049 lines) and v8 (`b4e430ec`, 11050)
+differ in **three hunks, all in the LOGIC region** (7943, 9399, 10389). The markup region is
+byte-identical, which is exactly why an inventory OF THE MARKUP is valid for both.
+
+**Why this is written down rather than quietly fixed.** This project's 0c check landed on this
+correctly once already. R0 met the same trap FROM THE OTHER SIDE — not «two hashes agree, so the
+files agree», but «two hashes differ, so the files differ» — and reached a confident wrong
+conclusion about a committed document, then acted on it by re-deriving an inventory that already
+existed. **A hash is a fact about a BYTE STREAM, and `sed`, `head`, `cat` and an editor do not all
+produce the same stream from the same lines.** State how a digest was serialised beside the digest;
+`handoff-inventory.md` now does.
+
+**`screens.json` did not arrive.** Named as attached, absent from the uploads directory and from
+both `files_*.zip` (each holds the same four `.md`). Only `elements.json` came through.
+
 
 ## R0.1 — screen regions and element census
 
