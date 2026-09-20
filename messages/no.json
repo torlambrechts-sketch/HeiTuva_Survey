@@ -460,7 +460,7 @@
     "quizTeamDesc": "Krever navngitte svar",
     "quizTimeBonus": "Tidsbonus",
     "quizTimeBonusDesc": "Raskere riktig svar gir flere poeng",
-    "quizTitle": "Quizmodus",
+    "quizTitle": "Quiz-innstillinger",
     "quizWillName": "Quiz gir poeng til en person. Velger du Quiz, settes undersøkelsen til «Med navn».",
     "randomOff": "Fast rekkefølge",
     "randomOn": "Tilfeldig rekkefølge: på",
@@ -545,7 +545,11 @@
     "groupBuild": "Bygg",
     "groupMethod": "Metodikk",
     "groupSettings": "Innstillinger",
-    "groupPreview": "Forhåndsvis"
+    "groupPreview": "Forhåndsvis",
+    "saveClose": "Lagre og lukk",
+    "seeMethod": "Se metodikk",
+    "metaHide": "Skjul ▴",
+    "metaEdit": "Rediger ▾"
   },
   "send": {
     "title": "Slik når den fram",
@@ -2883,7 +2887,8 @@
     "question": "Spørsmål",
     "suggestion": "Forslag",
     "title": "Metodikk",
-    "warning": "Advarsel"
+    "warning": "Advarsel",
+    "emptyBody": "Spørsmålene følger reglene for skala, lengde og rekkefølge."
   },
   "surveyPrivacy": {
     "title": "Personvern",

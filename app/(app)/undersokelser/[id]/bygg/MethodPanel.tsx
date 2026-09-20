@@ -37,6 +37,11 @@ export function MethodPanel({
     title: string
     lead: string
     empty: string
+    /** T7 · v8:1203 — the empty state is TWO lines in the drawing: a heading
+     *  «Ingen merknader» and a body saying WHY it is empty. Ours carried only
+     *  the first, so the state said «nothing to report» without saying what
+     *  had been checked. */
+    emptyBody: string
     warning: string
     suggestion: string
     question: string
@@ -52,7 +57,10 @@ export function MethodPanel({
       <p className="mt-1 text-[13px] text-mut">{labels.lead}</p>
 
       {ordered.length === 0 ? (
-        <p className="mt-4 text-[13px] text-mut">{labels.empty}</p>
+        <div className="mt-4 rounded-[13px] border border-dashed border-line p-[18px] text-center">
+          <p className="text-[13.5px] font-semibold text-ink">{labels.empty}</p>
+          <p className="mt-1 text-[12.5px] text-mut">{labels.emptyBody}</p>
+        </div>
       ) : (
         <ul className="mt-4 flex list-none flex-col gap-3 p-0">
           {ordered.map((n) => (

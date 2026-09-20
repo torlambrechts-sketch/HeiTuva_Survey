@@ -707,6 +707,7 @@ export function Builder({
             title: tm('title'),
             lead: tm('lead'),
             empty: tm('empty'),
+            emptyBody: tm('emptyBody'),
             warning: tm('warning'),
             suggestion: tm('suggestion'),
             question: tm('question'),
@@ -1099,10 +1100,17 @@ export function Builder({
               /* N6 · v8:529 — `height:38px · padding:0 15px · 13px`. v7 drew
                  `13px 22px` at 14px; v8 fixes the height and narrows the
                  padding, so the two builder header actions match the
-                 38px rail rather than sizing themselves off their text. */
+                 38px rail rather than sizing themselves off their text.
+
+                 T7 · v8:534 — the LABEL is «Lagre og lukk», not «Lagre
+                 utkast». The control was already v8's: the debounce owns
+                 persistence and this link leaves the builder, so «og lukk» is
+                 what it actually does. R0's copy axis reported the string
+                 absent and could not tell «no control» from «this control,
+                 named something else» — it is the second. */
               className="touch-44 flex h-[38px] cursor-pointer items-center rounded-[10px] border border-line bg-transparent px-[15px] text-[13px] font-semibold text-ink no-underline"
             >
-              {t('saveDraft')}
+              {t('saveClose')}
             </Link>
             <button
               type="button"

@@ -460,7 +460,7 @@
     "quizTeamDesc": "Requires named answers",
     "quizTimeBonus": "Time bonus",
     "quizTimeBonusDesc": "A faster correct answer scores more",
-    "quizTitle": "Quiz mode",
+    "quizTitle": "Quiz settings",
     "quizWillName": "A quiz awards points to a person. Choosing Quiz sets the survey to «By name».",
     "randomOff": "Fixed order",
     "randomOn": "Random order: on",
@@ -545,7 +545,11 @@
     "groupBuild": "Build",
     "groupMethod": "Method",
     "groupSettings": "Settings",
-    "groupPreview": "Preview"
+    "groupPreview": "Preview",
+    "saveClose": "Save and close",
+    "seeMethod": "See method",
+    "metaHide": "Hide ▴",
+    "metaEdit": "Edit ▾"
   },
   "send": {
     "title": "How it reaches them",
@@ -2883,7 +2887,8 @@
     "question": "Question",
     "suggestion": "Suggestion",
     "title": "Methodology",
-    "warning": "Warning"
+    "warning": "Warning",
+    "emptyBody": "The questions follow the rules for scale, length and order."
   },
   "surveyPrivacy": {
     "title": "Privacy",
