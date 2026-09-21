@@ -39,27 +39,42 @@ const decomment = (src: string) =>
 
 const builder = decomment(readFileSync(BUILDER, 'utf8'))
 const panel = decomment(readFileSync(PANEL, 'utf8'))
+const buildTabs = decomment(readFileSync('lib/surveys/build-tabs.ts', 'utf8'))
 const no = JSON.parse(readFileSync(NO, 'utf8')) as Record<string, Record<string, string>>
 const en = JSON.parse(readFileSync(EN, 'utf8')) as Record<string, Record<string, string>>
 
-describe('the right pane has the bundle’s four tabs', () => {
+describe('T5 — the right pane has v8’s SIX tabs in contextual groups', () => {
   it('lists them in the bundle’s order', () => {
-    expect(builder).toContain("const TABS = ['general', 'add', 'settings', 'preview'] as const")
+    /* T5 — this pinned V2:6472's flat four until v8 was read. The six live in
+       `lib/surveys/build-tabs.ts` now, as GROUPS of at most two (v8:10678), so
+       the builder imports a registry instead of declaring a list. */
+    expect(buildTabs).toContain(
+      "export const BUILD_TABS = ['add', 'content', 'general', 'settings', 'lint', 'preview'] as const",
+    )
+    expect(builder).toContain('const TAB_KEY = BUILD_TAB_KEY')
   })
 
   it('names each one, in both languages', () => {
-    for (const k of ['tabGeneral', 'tabAdd', 'tabSettings', 'tabPreview']) {
-      expect(builder).toContain(k)
+    for (const k of ['tabGeneral', 'tabAdd', 'tabContent', 'tabSettings', 'tabLint', 'tabPreview']) {
+      expect(buildTabs).toContain(k)
       expect(no.builder![k], `no.builder.${k}`).toBeTruthy()
       expect(en.builder![k], `en.builder.${k}`).toBeTruthy()
     }
-    expect(no.builder!.tabGeneral).toBe('Generelt')
+    // v8:10680-10683's labels, verbatim — not the old «Generelt · Legg til».
+    expect(no.builder!.tabAdd).toBe('Spørsmål')
+    expect(no.builder!.tabContent).toBe('Innhold')
+    expect(no.builder!.tabGeneral).toBe('Kjøremodus')
+    expect(no.builder!.tabSettings).toBe('Personvern og frekvens')
+    expect(no.builder!.tabPreview).toBe('Slik ser den ut')
   })
 
   it('puts mode on `general` and policy/engagement on `settings`', () => {
     expect(builder).toContain("{tab === 'general' ? (\n        <RunModePanel")
     expect(builder).toContain("{tab === 'general' && runMode === 'quiz' ? (")
     expect(builder).toContain("{tab === 'settings' ? (\n        <PolicyPanel")
+    // T5 — and the two that got their OWN tab rather than being stacked.
+    expect(builder).toContain("{tab === 'lint' ? (\n        <MethodPanel")
+    expect(builder).toContain("{tab === 'content' ? (")
   })
 
   it('wraps below md, because four flex-1 tabs cannot shrink to 320px', () => {
@@ -74,9 +89,9 @@ describe('the right pane has the bundle’s four tabs', () => {
     // one on screen at 320px. Run 110 was diagnosed as the first and fixed
     // there; run 112 returned byte-identical because that rail was not visible.
     // Counting them is what this asserts, so a third rail fails here.
-    const rails = builder.match(/\{TABS\.map\(\(k\) => \(/g) ?? []
+    const rails = builder.match(/\{buildTabGroup\(tab\)\.map\(\(k\) => \(/g) ?? []
     expect(rails.length).toBe(2)
-    for (const m of builder.matchAll(/className="([^"]*)"\s*\n?\s*(?:style|role)?[^>]*>\s*\{TABS\.map/g)) {
+    for (const m of builder.matchAll(/className="([^"]*)"\s*\n?\s*(?:style|role)?[^>]*>\s*\{buildTabGroup/g)) {
       expect(m[1], `a TABS rail that cannot wrap: ${m[1]}`).toContain('flex-wrap')
     }
     expect(builder).toContain('flex flex-wrap gap-x-[3px] gap-y-1.5')
@@ -120,7 +135,14 @@ describe('the add panel, as v2 redraws it', () => {
   it('keeps the per-type description shipped and translated, as `title`', () => {
     // v2 moved it off the face of the button; it is not dropped, and dropping
     // it would lose a string every type carries in two languages.
-    expect(builder).toContain('title={t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}')
+    //
+    // T8 — it is NESTED now rather than the whole title: v8:989 makes the
+    // palette dual-mode and its title reads «{desc} · klikk eller dra inn i
+    // flyten». The property is «the description reaches `title`», so this
+    // asserts that and not the expression's spelling — pinning the spelling is
+    // what made this fail on a change that kept the description.
+    expect(builder).toMatch(/title=\{t\('paletteDragHintQ',[\s\S]{0,120}ADD_DESC_KEY\[type\]/)
+    expect(no.builder!.paletteDragHintQ).toContain('{desc}')
     for (const k of ['addDescScale', 'addDescChoice', 'addDescMatrix', 'addDescField']) {
       expect(no.builder![k], `no.builder.${k}`).toBeTruthy()
       expect(en.builder![k], `en.builder.${k}`).toBeTruthy()

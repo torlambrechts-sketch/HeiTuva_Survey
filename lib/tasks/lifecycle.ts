@@ -44,5 +44,23 @@ export const nextStep = (s: TaskStatus): TaskStatus | null =>
  * mattering when the duty was discharged, and colouring it red afterwards is a
  * report that misdescribes what happened.
  */
-export const isLate = (dueAt: string | null, status: TaskStatus): boolean =>
-  status !== 'lukket' && dueAt !== null && new Date(dueAt) < new Date(new Date().toDateString())
+/* T8 fix pass — `now` IS A PARAMETER NOW, and the defect it closes is the
+   shape this project keeps recording: a function that TAKES a clock and then
+   reads a different one.
+
+   `bucketOf(facts, now)` threads a caller's `now` into its «this week»
+   arithmetic and then called `isLate` — which read `new Date()` — for the
+   «over frist» branch one line earlier. The two disagreed whenever the two
+   clocks did, so a test pinning NOW to 2026-09-12 was really asserting
+   «2026-09-19 is in the future», which stopped being true on 2026-09-21 and
+   turned a fixed-clock test into a date bomb. It had nothing to do with the
+   phase that was running when it went off.
+
+   Defaulting keeps every existing caller correct; the point is that a caller
+   WITH a clock can now hand it over instead of being silently ignored. */
+export const isLate = (
+  dueAt: string | null,
+  status: TaskStatus,
+  now: Date = new Date(),
+): boolean =>
+  status !== 'lukket' && dueAt !== null && new Date(dueAt) < new Date(now.toDateString())

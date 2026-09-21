@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import type { FlowDragProps } from './drag-props'
 import {
   ADD_PANEL_TINTS,
   QUESTION_TYPES,
@@ -48,6 +49,7 @@ export function QuestionCard({
   disabled,
   onChange,
   onMove,
+  drag,
   onDuplicate,
   onRemove,
   onSaveToBank,
@@ -64,6 +66,8 @@ export function QuestionCard({
   disabled: boolean
   onChange: (patch: Partial<DraftQuestion>) => void
   onMove: (delta: number) => void
+  /** T8 — v8:607. Optional: a row without them simply is not draggable. */
+  drag?: FlowDragProps
   onDuplicate: () => void
   onRemove: () => void
   onSaveToBank: () => void
@@ -108,7 +112,18 @@ export function QuestionCard({
     patchConfig({ [key]: list(key).filter((_, j) => j !== i) })
 
   return (
-    <div className="rounded-2xl border border-line bg-sf px-[18px] py-4 shadow-card">
+    /* T8 · v8:607 — the whole card is the drag source AND a drop target.
+       `dropTop` is a TOP BORDER rather than a gap, so marking a target
+       never moves the row you are aiming at (v8:6919). */
+    <div
+      draggable={drag?.draggable}
+      onDragStart={drag?.onDragStart}
+      onDragOver={drag?.onDragOver}
+      onDrop={drag?.onDrop}
+      onDragEnd={drag?.onDragEnd}
+      className="rounded-2xl border border-line bg-sf px-[18px] py-4 shadow-card"
+      style={{ opacity: drag?.dragOpacity ?? 1, borderTop: drag?.dropTop }}
+    >
       {/* Header row: number, text, type, reorder, duplicate, bank, delete. */}
       <div className="flex flex-wrap items-center gap-[14px] md:gap-[10px]">
         <span

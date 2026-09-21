@@ -100,7 +100,7 @@ export function bucketOf(r: WorklistFacts, now: Date = new Date()): WorklistBuck
   if (r.kind === 'comment') return r.handled ? 'avsluttet' : 'uten-frist'
   if (r.status === 'lukket') return 'avsluttet'
   if (r.dueAt === null) return 'uten-frist'
-  if (isLate(r.dueAt, r.status ?? 'foreslatt')) return 'over-frist'
+  if (isLate(r.dueAt, r.status ?? 'foreslatt', now)) return 'over-frist'
   const start = new Date(now.toDateString()).getTime()
   return new Date(r.dueAt).getTime() <= start + 7 * DAY ? 'denne-uken' : 'senere'
 }

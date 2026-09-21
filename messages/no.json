@@ -550,7 +550,12 @@
     "saveClose": "Lagre og lukk",
     "seeMethod": "Se metodikk",
     "metaHide": "Skjul ▴",
-    "metaEdit": "Rediger ▾"
+    "metaEdit": "Rediger ▾",
+    "insertedAt": "{label} satt inn på plass {n}",
+    "dropEndIdle": "Dra hit for å legge nederst",
+    "dropEndActive": "Slipp «{label}» her — legges nederst",
+    "paletteDragHintQ": "{desc} · klikk eller dra inn i flyten",
+    "paletteDragHintB": "Klikk for å legge nederst, eller dra inn i flyten"
   },
   "send": {
     "title": "Slik når den fram",

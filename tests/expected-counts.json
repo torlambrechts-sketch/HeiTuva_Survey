@@ -81,6 +81,7 @@
   "tests/unit/entra-graph.test.ts": 13,
   "tests/unit/feedback-mode.test.ts": 10,
   "tests/unit/fidelity-pairs.test.ts": 4,
+  "tests/unit/flow-drag.test.ts": 9,
   "tests/unit/flow-row.test.ts": 11,
   "tests/unit/i18n-cache-key.test.ts": 3,
   "tests/unit/i18n-overlay.test.ts": 5,

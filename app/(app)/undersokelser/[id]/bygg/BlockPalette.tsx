@@ -37,11 +37,14 @@ export function BlockPalette({
   count,
   disabled,
   onAdd,
+  onDragType,
 }: {
   /** How many blocks the flow already has, for the empty state. */
   count: number
   disabled: boolean
   onAdd: (type: BlockType) => void
+  /** T8 · v8:821 — dual mode. Absent leaves the palette click-only. */
+  onDragType?: (type: BlockType, label: string) => void
 }) {
   const t = useTranslations('builder')
 
@@ -56,7 +59,20 @@ export function BlockPalette({
             type="button"
             disabled={disabled}
             onClick={() => onAdd(type)}
-            title={t('blkAddHint')}
+            /* T8 · v8:821 — the same button appends on a click and inserts at
+               a position on a drag; v8's title says both, verbatim. */
+            draggable={!disabled && onDragType !== undefined}
+            onDragStart={(e) => {
+              try {
+                e.dataTransfer.effectAllowed = 'copy'
+                e.dataTransfer.setData('text/plain', `block:${type}`)
+              } catch {
+                /* see Builder.dragFor — the state is what the UI reads */
+              }
+              onDragType?.(type, t(BLOCKS[type].labelKey as 'blkInfo'))
+            }}
+            onDragEnd={() => onDragType?.(type, '')}
+            title={t('paletteDragHintB')}
             className="touch-44 flex cursor-pointer items-start gap-[11px] rounded-xl border border-line bg-bg px-[13px] py-[11px] text-left text-ink disabled:opacity-50"
           >
             <span

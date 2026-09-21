@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import type { FlowDragProps } from './drag-props'
 import { BLOCKS, type BlockDraft } from '@/lib/surveys/blocks'
 import { DOT_TINT, moveTargets, type FlowDot } from '@/lib/surveys/flow-row'
 import { TYPE_OPTION_KEY, type DraftQuestion } from './types'
@@ -56,8 +57,11 @@ export function CompactFlowRow({
   onMove,
   onMoveTo,
   onRemove,
+  drag,
 }: {
   item: CompactRowItem
+  /** T8 — v8:783. The compact row is draggable too. */
+  drag?: FlowDragProps
   dot: FlowDot
   dotTitle: string
   /** 0-based position in the flow — what `moveInFlow` takes. */
@@ -78,9 +82,21 @@ export function CompactFlowRow({
   const kind = isBlock ? t(spec!.labelKey as 'blkInfo') : t(TYPE_OPTION_KEY[item.question.type])
 
   return (
+    /* T8 · v8:783 — and this row GAINS ITS HANDLE BACK. D235 removed it
+       because «a one-line row with a handle and no drag is just a lie about a
+       pixel»; the drag exists now, so the handle is true. */
     <div
+      draggable={drag?.draggable}
+      onDragStart={drag?.onDragStart}
+      onDragOver={drag?.onDragOver}
+      onDrop={drag?.onDrop}
+      onDragEnd={drag?.onDragEnd}
       className="flex min-w-0 flex-wrap items-center gap-[11px] rounded-xl border border-line px-[14px] py-[10px]"
-      style={{ background: isBlock ? 'var(--sbg)' : 'var(--sf)' }}
+      style={{
+        background: isBlock ? 'var(--sbg)' : 'var(--sf)',
+        opacity: drag?.dragOpacity ?? 1,
+        borderTop: drag?.dropTop,
+      }}
     >
       {isBlock ? (
         <span

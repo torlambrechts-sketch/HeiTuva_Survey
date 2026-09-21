@@ -114,13 +114,19 @@ describe('the compact row ships no claim it cannot keep', () => {
     }
   })
 
-  it('10. and the row itself draws no grab handle', () => {
-    /* Measured over the CODE: the component's doc comment explains at length
-       why the handle is absent, and names it. */
+  it('10. the row IS draggable now — D235 overturned — and keeps the reachable half', () => {
+    /* T8 — this asserted the opposite until Tor overturned D235. The refusal
+       was «a one-line row with a handle and no drag is just a lie about a
+       pixel»; the drag exists, so the handle is true and the assertion flips.
+
+       WHAT DOES NOT FLIP is the second half. The arrows and «Flytt til» are
+       the keyboard equivalent D235 said was missing, so they are what makes
+       the overturn safe rather than a regression — a drag that REPLACED them
+       would re-earn the refusal. That is why they are still asserted here. */
     const body = code(readFileSync('app/(app)/undersokelser/[id]/bygg/CompactFlowRow.tsx', 'utf8'))
-    expect(body, 'the braille-dots handle is v7 s drag affordance').not.toContain('⠿')
-    expect(body).not.toMatch(/draggable|onDragStart|cursor-grab/)
-    // What it DOES carry is the reachable half: two arrows and an absolute move.
+    expect(body).toMatch(/draggable=\{drag\?\.draggable\}/)
+    expect(body).toMatch(/onDragStart/)
+    // The reachable half, unchanged.
     expect(body).toMatch(/moveTargets/)
     expect(body).toMatch(/moveUp/)
     expect(body).toMatch(/moveDown/)

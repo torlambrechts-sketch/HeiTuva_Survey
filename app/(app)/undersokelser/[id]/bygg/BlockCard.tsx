@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import type { FlowDragProps } from './drag-props'
 import { BLOCKS, type BlockDraft } from '@/lib/surveys/blocks'
 import { editorMediaHref } from '@/lib/surveys/media'
 
@@ -37,8 +38,11 @@ export function BlockCard({
   saved,
   mediaError,
   onUpload,
+  drag,
 }: {
   block: BlockDraft
+  /** T8 — v8:744, the block card's own draggable row. */
+  drag?: FlowDragProps
   /** 1-based, for «Plass {n} av {total}». */
   slot: number
   total: number
@@ -67,9 +71,19 @@ export function BlockCard({
     'touch-44 flex h-8 w-[30px] cursor-pointer items-center justify-center rounded-[9px] border border-line bg-transparent text-[13px] text-ink disabled:opacity-50'
 
   return (
+    /* T8 · v8:744 — same four handlers as the question card. */
     <div
+      draggable={drag?.draggable}
+      onDragStart={drag?.onDragStart}
+      onDragOver={drag?.onDragOver}
+      onDrop={drag?.onDrop}
+      onDragEnd={drag?.onDragEnd}
       className="rounded-2xl border border-line p-[16px_18px]"
-      style={{ background: spec.tint === 'sbg' ? 'var(--sbg)' : 'var(--sf)' }}
+      style={{
+        background: spec.tint === 'sbg' ? 'var(--sbg)' : 'var(--sf)',
+        opacity: drag?.dragOpacity ?? 1,
+        borderTop: drag?.dropTop,
+      }}
     >
       <div className="flex flex-wrap items-center gap-[10px]">
         {/* v7:723 — the handle. Present because the row is drawn with one; it

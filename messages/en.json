@@ -550,7 +550,12 @@
     "saveClose": "Save and close",
     "seeMethod": "See method",
     "metaHide": "Hide ▴",
-    "metaEdit": "Edit ▾"
+    "metaEdit": "Edit ▾",
+    "insertedAt": "{label} inserted at position {n}",
+    "dropEndIdle": "Drag here to add at the bottom",
+    "dropEndActive": "Drop «{label}» here — added at the bottom",
+    "paletteDragHintQ": "{desc} · click or drag into the flow",
+    "paletteDragHintB": "Click to add at the bottom, or drag into the flow"
   },
   "send": {
     "title": "How it reaches them",

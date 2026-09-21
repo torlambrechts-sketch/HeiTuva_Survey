@@ -7416,6 +7416,49 @@ MOVES it rather than discovering it.
 
 ## D235 — V7-3: THE BLOCK ROW'S ARROWS SHIP AND ITS DRAG DOES NOT (2026-09-17)
 
+> **OVERTURNED BY TOR, 2026-09-21 (T8). The drag is built. This entry is kept
+> rather than deleted, because the reasoning below is what the build had to
+> satisfy — and it did.**
+>
+> **What was built** (`lib/surveys/flow-drag.ts`, and v8's own lines):
+>
+> - all three flow rows draggable with v8's four handlers — the question card
+>   (v8:607), the block card (744) and the compact row (783), which gets its
+>   ⠿ handle back;
+> - the feedback v8 draws and nothing more: `dragOpacity` `.45` on the row in
+>   flight (6918), `dropTop` `3px solid --ink` on the row under the pointer
+>   (6919), **no ghost and no placeholder** — the marker is a top border, so
+>   nothing reflows under the pointer you are aiming with;
+> - the END drop zone (807), `min-height:54px`, `2px dashed --ink` over `--sbg`
+>   when hovered and dashed `--line` otherwise, with both label states verbatim
+>   (10718);
+> - both palettes DUAL-MODE (821, 989) — click appends, drag inserts at a
+>   position — with v8's `title` strings verbatim and `effectAllowed` `"copy"`
+>   against a row's `"move"`;
+> - the confirmation «{label} satt inn på plass {n}» (6899).
+>
+> **THE TWO GROUNDS THE REFUSAL RESTED ON ARE ANSWERED, NOT WAIVED.**
+>
+> *No keyboard equivalent.* The arrows and «Flytt til» are untouched, and that
+> is the point: the drag is ADDITIVE. Both paths end in the same `moveInFlow`,
+> so a drop and an arrow cannot disagree about what a move means. A drag that
+> REPLACED them would re-earn this refusal, which is why
+> `tests/unit/flow-drag.test.ts` test 9 fails if they leave — proven red by
+> removing `moveUp` from `QuestionCard` and watching it go.
+>
+> *No `docs/RESPONSIVE.md` pattern.* Touch is answered by leaving the reachable
+> half in place rather than by inventing a gesture: every row keeps its arrows
+> and its absolute move at every width, so nothing is drag-only. The handle's
+> hit area is measured at 320px and 390px directly rather than inferred from
+> the gate.
+>
+> **And D221's third face is now satisfied rather than avoided.** The refusal's
+> sharpest argument was that a handle which cannot be grabbed is a control whose
+> appearance claims an ability the code lacks. The handle is back BECAUSE the
+> ability is there — the appearance and the code agree again, which is the only
+> honest way to restore it.
+
+
 v7 makes every flow row `draggable` with `onDragStart` / `onDragOver` / `onDrop` / `onDragEnd`
 (`v7:721`, `v7:760`), adds a palette drag (`paletteDrag`, `v7:6801`), an insert-at-index
 (`insertFlowAt`, `v7:6808`), a move-to-target (`moveFlowTo`, `v7:6818`) and an end drop zone

@@ -42,6 +42,17 @@ import {
   type BuildTab,
 } from '@/lib/surveys/build-tabs'
 import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  IDLE,
+  dragOpacity,
+  dropIndex,
+  dropTop,
+  endZoneStyle,
+  type DragOver,
+  type FlowDragState,
+
+} from '@/lib/surveys/flow-drag'
+import type { FlowDragProps } from './drag-props'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
@@ -258,17 +269,17 @@ export function Builder({
     setDraft((d) => ({ ...d, questions: lists.questions, blocks: lists.blocks }))
   }
 
+  /** T8 — the block seed, shared by the palette's click and its drag. */
+  const seedBlockFor = (type: BlockType, id: string) =>
+    seededBlock(type, id, (key) => t(key as 'seedInfoTitle'))
+
   const addBlock = (type: BlockType) => {
     /* V7-3c — SEEDED, which is v7's own behaviour (`blockSeed`, v7:6869) and a
        real feature rather than placeholder text: the palette promises «egen
        tittel og innledning», so an editor gets a draft to edit. One seed is
        refused — see D233 and `BLOCK_SEEDS` — because the `info` block's second
        sentence promises anonymity the block cannot keep. */
-    const block = seededBlock(
-      type,
-      `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
-      (key) => t(key as 'seedInfoTitle'),
-    )
+    const block = seedBlockFor(type, `${NEW_ID_PREFIX}b${Date.now()}${Math.random().toString(36).slice(2, 6)}`)
     // v7's own behaviour: «Blokken legges nederst i flyten» (v7:6882, and the
     // pane says so), so it lands at the end and the arrows move it.
     setDraft((d) => ({ ...d, blocks: [...d.blocks, { ...block, position: d.questions.length + d.blocks.length }] }))
@@ -279,6 +290,85 @@ export function Builder({
       ...d,
       blocks: d.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)),
     }))
+
+  /* ── T8 — THE DRAG, D235 OVERTURNED BY TOR ────────────────────────────
+     The arrows and «Flytt til» above are untouched: they are the keyboard
+     equivalent D235 said was missing, so the drag is ADDITIVE. Both paths end
+     in `moveInFlow`, so a drop and an arrow cannot disagree about what a move
+     means — and the deferred `app.guard_flow_position` still checks the same
+     stored result either way.
+
+     `dragOver` is deliberately NOT derived from the drop target's index: v8
+     keys it on the row's ID (`st.dragOver === q.id`), because an index shifts
+     under the very drag that is reading it. */
+  const [dragState, setDragState] = useState<FlowDragState>(IDLE)
+  /* v8:6899 — `savedNote`, the confirmation an insert leaves: «{label} satt
+     inn på plass {n}». It is a SENTENCE, not a toast queue: v8 overwrites it,
+     so a second insert replaces the first rather than stacking. */
+  const [insertNote, setInsertNote] = useState('')
+  /* FlowItem carries no id of its own — it wraps the item — so the ids the
+     drag keys on come from the items themselves, which is also what the
+     DOM rows use as their React key. One source, so a drop target cannot
+     name a row the list does not have. */
+  const flowIds = flow.map((f) => f.item.id)
+
+  /** v8:6925-6930 — a palette drop CREATES, a row drop MOVES, and the palette
+   *  is asked about first. One function, because both drop targets share it. */
+  const dropOnto = (targetId: DragOver) => {
+    const nd = dragState.newDrag
+    if (nd) {
+      const at = dropIndex(flowIds, targetId)
+      /* A palette drag CREATES at the drop position. The click path appends
+         («Klikk for å legge nederst», v8:821) and this one positions — same
+         seeds, one extra splice, so the two cannot produce different items. */
+      const fresh = `${NEW_ID_PREFIX}d${Date.now()}${Math.random().toString(36).slice(2, 6)}`
+      const seeded =
+        nd.kind === 'block'
+          ? { kind: 'block' as const, item: seedBlockFor(nd.type as BlockType, fresh) }
+          : { kind: 'question' as const, item: seedQuestionFor(nd.type as QuestionType, fresh) }
+      const next = flow.slice()
+      next.splice(Math.max(0, Math.min(next.length, at)), 0, seeded as (typeof flow)[number])
+      writeFlow(next)
+      setInsertNote(t('insertedAt', { label: nd.label, n: at + 1 }))
+      setDragState(IDLE)
+      return
+    }
+    const from = flowIds.indexOf(dragState.dragId)
+    const to = targetId === '__end' ? flowIds.length - 1 : flowIds.indexOf(targetId)
+    if (from >= 0 && to >= 0 && from !== to) moveFlowTo(from, to)
+    setDragState(IDLE)
+  }
+
+  /** The prop bag a row gets. `undefined` while the survey is read-only, which
+   *  is how a row stops being draggable without a second code path. */
+  const dragFor = (id: string): FlowDragProps | undefined =>
+    disabled
+      ? undefined
+      : {
+          draggable: true,
+          onDragStart: (e) => {
+            try {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', id)
+            } catch {
+              /* jsdom and some browsers throw on a synthetic dataTransfer; the
+                 state below is what the UI actually reads, so a throw here must
+                 not stop the drag. v8 wraps the same two lines (6921). */
+            }
+            setDragState({ dragId: id, dragOver: '', newDrag: null })
+          },
+          onDragOver: (e) => {
+            e.preventDefault()
+            setDragState((d) => (d.dragOver === id ? d : { ...d, dragOver: id }))
+          },
+          onDrop: (e) => {
+            e.preventDefault()
+            dropOnto(id)
+          },
+          onDragEnd: () => setDragState(IDLE),
+          dragOpacity: dragOpacity(dragState, id),
+          dropTop: dropTop(dragState, id),
+        }
 
   const moveFlowItem = (from: number, delta: number) => writeFlow(moveInFlow(flow, from, from + delta))
   /* V7-5 — «Flytt til plass». `moveInFlow` has always taken an ABSOLUTE target,
@@ -332,28 +422,27 @@ export function Builder({
     else setMediaError((m) => ({ ...m, [id]: t('blkMediaFailed') }))
   }
 
+  /* T8 — ONE SEED, TWO ENTRY POINTS. The palette's click appends and its drag
+     inserts at a position; if each built its own object the two would drift,
+     which is the shape `PageHeader` has no `pct` prop for. */
+  const seedQuestionFor = (type: QuestionType, id: string): DraftQuestion => ({
+    id,
+    type,
+    text: NEW_QUESTION_TEXT[type],
+    help: '',
+    required: false,
+    commentMode: 'arv',
+    followUpOnLow: false,
+    // V2-10: a NEW question has no answer key. Null rather than 0 —
+    // `actions.ts` says why at length: a default of 0 marks the first
+    // option correct on every question anyone ever writes.
+    answerIndex: null,
+    points: 100,
+    config: { ...specOf(type).defaultConfig },
+  })
+
   const addQuestion = (type: QuestionType) =>
-    setDraft((d) => ({
-      ...d,
-      questions: [
-        ...d.questions,
-        {
-          id: newId(),
-          type,
-          text: NEW_QUESTION_TEXT[type],
-          help: '',
-          required: false,
-          commentMode: 'arv',
-          followUpOnLow: false,
-          // V2-10: a NEW question has no answer key. Null rather than 0 —
-          // `actions.ts` says why at length: a default of 0 marks the first
-          // option correct on every question anyone ever writes.
-          answerIndex: null,
-          points: 100,
-          config: { ...specOf(type).defaultConfig },
-        },
-      ],
-    }))
+    setDraft((d) => ({ ...d, questions: [...d.questions, seedQuestionFor(type, newId())] }))
 
   /* `moveQuestion` IS GONE, and that is V7-3's doing rather than a tidy-up.
      It moved a question within `questions`, which was the whole order while one
@@ -567,7 +656,32 @@ export function Builder({
                       type="button"
                       disabled={disabled}
                       onClick={() => addQuestion(type)}
-                      title={t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type])}
+                      /* T8 · v8:989 — DUAL MODE. The same button appends on a
+                         click and inserts at a position on a drag, and v8's
+                         `title` says both. `effectAllowed = "copy"` because a
+                         palette item CREATES; a row's drag is "move". */
+                      draggable={!disabled}
+                      onDragStart={(e) => {
+                        try {
+                          e.dataTransfer.effectAllowed = 'copy'
+                          e.dataTransfer.setData('text/plain', `question:${type}`)
+                        } catch {
+                          /* see dragFor — the state below is what the UI reads */
+                        }
+                        setDragState({
+                          dragId: '',
+                          dragOver: '',
+                          newDrag: {
+                            kind: 'question',
+                            type,
+                            label: t(ADD_LABEL_KEY[type] ?? TYPE_OPTION_KEY[type]),
+                          },
+                        })
+                      }}
+                      onDragEnd={() => setDragState(IDLE)}
+                      title={t('paletteDragHintQ', {
+                        desc: t(ADD_DESC_KEY[type] ?? TYPE_OPTION_KEY[type]),
+                      })}
                       className="touch-44 flex min-w-0 cursor-pointer items-center gap-[9px] rounded-[10px] border border-line bg-bg px-[11px] py-[10px] text-left text-ink disabled:opacity-50"
                     >
                       <span
@@ -593,7 +707,16 @@ export function Builder({
           deferral is cashed rather than repeated. */}
       {tab === 'content' ? (
         <div className="rounded-2xl border border-line bg-sf p-5">
-          <BlockPalette count={draft.blocks.length} disabled={disabled} onAdd={addBlock} />
+          <BlockPalette
+            count={draft.blocks.length}
+            disabled={disabled}
+            onAdd={addBlock}
+            /* T8 — an empty label is the dragEnd signal, so the palette needs
+               no second callback to say «the drag is over». */
+            onDragType={(type, label) =>
+              setDragState(label ? { dragId: '', dragOver: '', newDrag: { kind: 'block', type, label } } : IDLE)
+            }
+          />
         </div>
       ) : null}
 
@@ -1002,6 +1125,7 @@ export function Builder({
                         : tm('noneForQuestion')
                 return (
                   <CompactFlowRow
+                    drag={dragFor(entry.item.id)}
                     key={entry.item.id}
                     item={
                       entry.kind === 'block'
@@ -1025,6 +1149,7 @@ export function Builder({
                 const b = entry.item
                 return (
                   <BlockCard
+                    drag={dragFor(b.id)}
                     key={b.id}
                     block={b}
                     slot={slot + 1}
@@ -1046,6 +1171,7 @@ export function Builder({
               const i = draft.questions.indexOf(q)
               return (
               <QuestionCard
+                drag={dragFor(q.id)}
                 key={q.id}
                 quizMode={runMode === 'quiz'}
                 question={q}
@@ -1076,6 +1202,43 @@ export function Builder({
               )
             })
           )}
+
+          {/* T8 · v8:807 — THE END DROP ZONE. `min-height:54px`, dashed, and it
+              is the only drop target that is not a row: everything else inserts
+              BEFORE something, this appends. Its label has two states and v8
+              names the element being dragged in the active one (v8:10718). */}
+          {!disabled ? (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragState((d) => (d.dragOver === '__end' ? d : { ...d, dragOver: '__end' }))
+              }}
+              onDragLeave={() =>
+                setDragState((d) => (d.dragOver === '__end' ? { ...d, dragOver: '' } : d))
+              }
+              onDrop={(e) => {
+                e.preventDefault()
+                dropOnto('__end')
+              }}
+              className="mt-2 flex min-h-[54px] items-center justify-center gap-[9px] rounded-[13px] px-4 py-3 text-[12.5px] text-mut"
+              style={endZoneStyle(dragState)}
+            >
+              <span className="text-[13px] tracking-[1px]">⠿</span>
+              {dragState.newDrag
+                ? t('dropEndActive', { label: dragState.newDrag.label })
+                : t('dropEndIdle')}
+            </div>
+          ) : null}
+
+          {/* v8:531 — the insert confirmation, a pill that names where it went. */}
+          {insertNote ? (
+            <p
+              role="status"
+              className="mt-2 self-center rounded-full bg-ac2 px-[14px] py-2 text-[12.5px] font-semibold"
+            >
+              {insertNote}
+            </p>
+          ) : null}
 
           <div className="mt-1 flex flex-wrap items-center gap-[10px]">
             <Link
