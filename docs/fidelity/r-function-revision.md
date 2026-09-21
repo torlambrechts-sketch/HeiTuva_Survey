@@ -114,18 +114,23 @@ decorative glyph, one (`Lukk valgte`) is a REFUSAL with a test asserting it
 - `349` Svar kunden
 - `361` Fire alternativer med farge og ikon, nedtelling og resultattavle på storskjerm. Deltakerne bruker mobilen, uten app.
 
-**build** — 10 absent
+**build** — 10 absent *(status after T5–T8, 2026-09-21: 4 built, 3 refused, 3 open)*
 
-- `534` Lagre og lukk
-- `541` Se metodikk
-- `581` Skjul ▴
-- `597` Rediger ▾
-- `883` Live-innstillinger
-- `901` Quiz-innstillinger
-- `918` Bestått-grense
-- `922` Antall forsøk
-- `1095` forventet svar
-- `1203` Spørsmålene følger reglene for skala, lengde og rekkefølge.
+- `534` Lagre og lukk — **BUILT** (T7, `builder.saveClose`)
+- `541` Se metodikk — **REFUSED, raised to Tor.** v8's condition is
+  `!lint.canPublish`, which counts rows of severity «Blokkert»; `M:0120:51` is
+  `check (severity in ('advarsel','forslag'))`, so the banner can never appear.
+  See D266 for the three repairs and which of them is not mine.
+- `581` Skjul ▴ — **BUILT** (T7, v8:10910-10912)
+- `597` Rediger ▾ — **BUILT** (T7, the closed summary)
+- `883` Live-innstillinger — **BUILT, with none of v8's ten toggles.** No
+  per-survey live storage exists, so all ten would be controls that save
+  nothing. `lib/surveys/live-features.ts` + D267.
+- `901` Quiz-innstillinger — BUILT already (`QuizPanel`, V2-10)
+- `918` Bestått-grense — refused, Q84 (Tor's narrowing)
+- `922` Antall forsøk — refused, Q84 (Tor's narrowing)
+- `1095` forventet svar — refused, D232 (the estimator was deleted, not hidden)
+- `1203` Spørsmålene følger reglene for skala, lengde og rekkefølge — open
 
 **svdetail** — 32 absent
 
@@ -334,11 +339,14 @@ zero everywhere, which is why the convention is named here.
 
 `onDragLeave` is a seventh handler kind the first census missed.
 
-**Ours: AVVIST, D235** — `CompactFlowRow.tsx:31` and `BlockCard.tsx:19` both carry the reasoning: no
-keyboard equivalent, no `docs/RESPONSIVE.md` pattern, and a handle that cannot be grabbed is D221's
-third face (a control whose appearance claims an ability the code lacks). Arrows plus a «Flytt til»
-select ship instead. The end drop zone and the dual-mode palette are consequences of that refusal,
-not separate gaps.
+**Ours: was AVVIST under D235 — OVERTURNED BY TOR, BUILT IN T8 (2026-09-21).** The refusal's two
+grounds were no keyboard equivalent and no `docs/RESPONSIVE.md` pattern for the handle. Both are
+ANSWERED rather than waived: the arrows and the «Flytt til» select stay — they ARE the keyboard
+equivalent — and the handle measures 16×14 painted with a **44×44** hit area at 320px and 390px
+(D269). All six drag lines ship, including the end drop zone and the dual-mode palette, which were
+consequences of the refusal rather than separate gaps. `lib/surveys/flow-drag.ts` holds the model,
+`moveTo` splices rather than swaps (v8:6905), and the splice is confirmed in a real Chromium, not
+only in a unit test — see D268 for what that confirmation cost and what it corrected.
 
 ### Tabs — the largest structural gap in the builder
 
@@ -390,9 +398,9 @@ Not by element count. Each marked: **new data** / **new RPC** / **pure UI**.
 | 2 | **send** — target groups from one population, one-off list, save-as-target-group, sender/appearance + accent colour, QR PNG + A4 poster, cadence presets | 21 | mixed |
 | 3 | **admin** — invite user, import to target group + field mapping, Entra sync-now/last-synced/permissions/log, API keys, webhooks, default survey, sensitive topics | 20 | **new data + new RPC** |
 | 4 | **dashboard** — rename, «Gjelder alle paneler», restart from preset, «Bruk oppsett», choose KPI, add-panel-into-the-clicked-slot, data source | 12 | pure UI (+1 drag) |
-| 5 | **builder tabs** — `content` and `lint` as tabs, contextual 2-pill grouping, v8's labels | — | **pure UI** |
-| 6 | **builder palette** — collapse the scale family to one entry with a post-insert style chooser | — | **pure UI** |
-| 7 | **build** — Lagre og lukk, Se metodikk, Skjul/Rediger, Live- and Quiz-innstillinger, Bestått-grense, Antall forsøk | 10 | pure UI |
+| 5 | **builder tabs** — `content` and `lint` as tabs, contextual 2-pill grouping, v8's labels | — | **pure UI** — **DONE** (T5, T5.1: level one moved to the shell rail per v8:9366-9371) |
+| 6 | **builder palette** — collapse the scale family to one entry with a post-insert style chooser | — | **pure UI** — **DONE** (T6, found already correct) |
+| 7 | **build** — Lagre og lukk, Se metodikk, Skjul/Rediger, Live- and Quiz-innstillinger, Bestått-grense, Antall forsøk | 10 | pure UI — **T7: 4 built, 3 refused on record, `541` raised to Tor (D266), 1 open** |
 | 8 | **help** — forum (new post, «Spør de andre…»), contact SLA line | 6 | **new data** |
 | 9 | **surveys** — lowest-response-rate sort, Lag kopi, Lukk undersøkelsen, empty-filter state | 6 | UI + 1 RPC |
 | 10 | **dash** — NPS i dag, Kritikere uten svar, Svar kunden | 5 | **new data** |
