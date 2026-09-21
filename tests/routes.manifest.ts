@@ -1,5 +1,12 @@
 import type { Page } from '@playwright/test'
 import { DEMO_ANSWERED_TOKEN, DEMO_BLOCKS_TOKEN, DEMO_SHARE_TOKEN } from './db/personas'
+import { readFileSync } from 'node:fs'
+import {
+  BUILD_GROUPS,
+  BUILD_TAB_KEY,
+  BUILD_TAB_PARAM,
+  type BuildTab,
+} from '../lib/surveys/build-tabs'
 
 /**
  * The routes the harness captures, and the states each must be seen in.
@@ -75,10 +82,41 @@ export type RouteSpec = {
  * three labels are plain buttons that open the sheet. One helper so a state's
  * setup does not have to know which viewport it is running at.
  */
-async function openBuilderPane(page: Page, tab: 'Generelt' | 'Legg til' | 'Innstillinger' | 'Vis') {
-  const opener = page.getByRole('button', { name: tab, exact: true })
-  if (await opener.count()) await opener.first().click()
-  else await page.getByRole('tab', { name: tab, exact: true }).click()
+/**
+ * T5.1 — OPEN A BUILDER TAB THROUGH THE TWO-LEVEL RAIL v8 DRAWS.
+ *
+ * This took a tab's LABEL — «Generelt», «Innstillinger», «Vis» — and clicked a
+ * button with that name. All four of those labels are gone: T5.1 moved level
+ * one into the shell rail as LINKS («Bygg · Metodikk · Innstillinger ·
+ * Forhåndsvis», v8:9366-9371) and renamed level two («Spørsmål», «Kjøremodus»,
+ * «Personvern og frekvens», «Slik ser den ut»). So the helper found neither a
+ * button nor a tab and four manifest states timed out — **and no browser gate
+ * has completed a run since T5.1, so nothing reported it.** «A gate that has
+ * not run is not a gate that passed», collecting its bill.
+ *
+ * It takes a `BuildTab` now, which is the registry's own type, so a renamed
+ * label cannot break it again: the labels are read from the shipped message
+ * files, in BOTH locales, and the group is derived from `BUILD_GROUPS`.
+ *
+ * Both levels are CLICKED rather than the URL being constructed, for the
+ * reason `openSurveyTab` already gives: a gate that types `?fane=` itself
+ * never finds out whether the control that produces it works.
+ */
+const MSG = {
+  no: JSON.parse(readFileSync('messages/no.json', 'utf8')).builder as Record<string, string>,
+  en: JSON.parse(readFileSync('messages/en.json', 'utf8')).builder as Record<string, string>,
+}
+const bothLocales = (key: string) =>
+  new RegExp(`^(${[MSG.no[key], MSG.en[key]].map((v) => (v ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`)
+
+async function openBuilderPane(page: Page, tab: BuildTab) {
+  const group = BUILD_GROUPS.find((g) => (g.tabs as ReadonlyArray<BuildTab>).includes(tab))!
+  await page.getByRole('link', { name: bothLocales(group.key) }).first().click()
+  await page.waitForURL((u) => u.searchParams.get(BUILD_TAB_PARAM) === group.target)
+  if (tab !== group.target) {
+    await page.getByRole('button', { name: bothLocales(BUILD_TAB_KEY[tab]) }).first().click()
+    await page.waitForURL((u) => u.searchParams.get(BUILD_TAB_PARAM) === tab)
+  }
 }
 
 /**
@@ -1142,7 +1180,7 @@ export const ROUTES: RouteSpec[] = [
           // of them. Below xl the sheet still has to be open before «Avansert»
           // exists — that half is unchanged — but the pane it lives in is not
           // «Legg til» any more.
-          await openBuilderPane(page, 'Generelt')
+          await openBuilderPane(page, 'general')
           await page.getByRole('button', { name: 'Avansert', exact: true }).first().click()
         },
       },
@@ -1151,7 +1189,7 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          await openBuilderPane(page, 'Vis')
+          await openBuilderPane(page, 'preview')
         },
       },
       {
@@ -1191,7 +1229,7 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          await openBuilderPane(page, 'Innstillinger')
+          await openBuilderPane(page, 'settings')
           // Scoped to the visible heading: below xl the right pane exists
           // twice in the DOM — the sticky column is `hidden` and the sheet is
           // the live copy — so an unscoped text match is a strict-mode
@@ -1207,7 +1245,7 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          await openBuilderPane(page, 'Innstillinger')
+          await openBuilderPane(page, 'settings')
           await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
           await page.locator('button:visible', { hasText: 'Fysiske personer' }).first().waitFor()
         },
@@ -1220,7 +1258,7 @@ export const ROUTES: RouteSpec[] = [
         setup: async (page) => {
           await openDraftBuilder(page)
           await page.waitForURL((u) => u.pathname.endsWith('/bygg'))
-          await openBuilderPane(page, 'Innstillinger')
+          await openBuilderPane(page, 'settings')
           await page.getByRole('button', { name: 'Endre', exact: true }).first().click()
           await page.locator('button:visible', { hasText: '3' }).first().click()
           await page.locator(':visible', { hasText: 'Med terskel 3 kan svar' }).first().waitFor()

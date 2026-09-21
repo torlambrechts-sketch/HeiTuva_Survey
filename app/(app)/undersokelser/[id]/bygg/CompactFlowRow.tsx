@@ -5,6 +5,7 @@ import type { FlowDragProps } from './drag-props'
 import { BLOCKS, type BlockDraft } from '@/lib/surveys/blocks'
 import { DOT_TINT, moveTargets, type FlowDot } from '@/lib/surveys/flow-row'
 import { TYPE_OPTION_KEY, type DraftQuestion } from './types'
+import { GrabHandle } from './GrabHandle'
 
 /**
  * V7-5 — the flow's COMPACT row (v7:759-782).
@@ -98,6 +99,8 @@ export function CompactFlowRow({
         borderTop: drag?.dropTop,
       }}
     >
+      {/* T8 · v8:784 — the row's first child, before the badge. */}
+      {drag?.draggable ? <GrabHandle label={t(isBlock ? 'grabBlock' : 'grabQuestion')} /> : null}
       {isBlock ? (
         <span
           aria-label={t('blkPaneTitle')}

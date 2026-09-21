@@ -155,4 +155,60 @@ describe('the add panel, as v2 redraws it', () => {
     const buttons = builder.match(/className="touch-44 flex min-w-0 cursor-pointer items-center/g)
     expect(buttons).not.toBeNull()
   })
+
+  /* ── T7 · v8:578-600 — THE META CARD COLLAPSES ─────────────────────────
+     v8's own `metaOpen` defaults to true and swaps the card between an
+     editing state and a one-line summary. The interesting half is not that
+     it collapses; it is WHAT it collapses, which had to be derived rather
+     than copied — see the boundary test below. */
+
+  it('T7 — the meta card has both of v8\u2019s toggles, each moving one way', () => {
+    // v8:581 «Skjul ▴» closes, v8:597 «Rediger ▾» opens. A single control
+    // spelled `setMetaOpen(!metaOpen)` would pass a looser test and lose the
+    // drawing's two distinct buttons.
+    expect(builder).toMatch(/onClick=\{\(\) => setMetaOpen\(false\)\}/)
+    expect(builder).toMatch(/onClick=\{\(\) => setMetaOpen\(true\)\}/)
+    expect(builder).toContain("t('metaHide')")
+    expect(builder).toContain("t('metaEdit')")
+    for (const k of ['metaHide', 'metaEdit']) {
+      expect(no.builder![k], `no.builder.${k}`).toBeTruthy()
+      expect(en.builder![k], `en.builder.${k}`).toBeTruthy()
+    }
+  })
+
+  it('T7 — the collapse takes the inputs and the length line, NOT the chips', () => {
+    // THE BOUNDARY, and it is a decision rather than a transcription. v8's
+    // collapsible region is the «Målgruppe» label, the audience field and the
+    // length line; its title input, its flow chips and its density switch
+    // live in a HEADER CARD we do not have, so ours hold those in the same
+    // card. Collapsing them would hide something v8's collapse does not hide.
+    const start = builder.indexOf('{metaOpen ? (')
+    expect(start).toBeGreaterThan(0)
+    // The fragment's own closer, which is the only one in the file — asserted,
+    // so a second fragment elsewhere widens this slice loudly rather than
+    // silently. A slice that runs to the end of the file would contain
+    // everything and this test would pass by being vacuous.
+    expect(builder.match(/<\/>/g)).toHaveLength(1)
+    const open = builder.slice(start, builder.indexOf('</>', start))
+    expect(open.length).toBeGreaterThan(200)
+    expect(open).toContain("t('audiencePlaceholder')")
+    expect(open).toContain('{lengthNote}')
+    expect(open).not.toContain('flowChipQuestions')
+    expect(open).not.toContain("t('viewLabel')")
+  })
+
+  it('T7 — the length line is ONE expression, read in both states', () => {
+    // The closed summary restates it (v8:595). Two call sites forming the
+    // same sentence is how a figure and its restatement drift apart — F3's
+    // four-implementations shape, at the size of one line.
+    expect(builder).toMatch(/const lengthNote = t\('lengthNote'/)
+    expect(builder.match(/t\('lengthNote'/g)).toHaveLength(1)
+    expect(builder.match(/\{lengthNote\}/g)).toHaveLength(2)
+  })
+
+  it('T7 — the card carries v8\u2019s two paddings and no third', () => {
+    // v8:10911 — 20px open, 14px 18px closed. `p-5` IS 20px, so the open
+    // state keeps the metric this card already shipped.
+    expect(builder).toMatch(/padding: metaOpen \? '20px' : '14px 18px'/)
+  })
 })

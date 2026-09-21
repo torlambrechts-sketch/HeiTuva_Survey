@@ -8762,3 +8762,222 @@ a fix pass's.
 **And the reporting rule this file already states applies here:** «green» said
 of a gate that did not run is the same false claim as «green» said of a
 cancelled one. N9's gates are **six green and one red**, named.
+
+## D266 — v8:538's PUBLISH-BLOCKED BANNER HAS A CONDITION THAT IS STRUCTURALLY FALSE FOR US
+
+**T7, 2026-09-21. Raised rather than settled** — the drawing and a decision disagree, and
+CLAUDE.md says which of us that belongs to.
+
+The instruction was: *«541 «Se metodikk»: bygg banneret på v8:538 som den står i — publisering
+blokkert av merknader, med lenken til lint-fanen. Les betingelsen som viser banneret i v8 og bruk
+den.»* Reading the condition is what produced this entry.
+
+**v8's condition, measured, not paraphrased:**
+
+```
+v8:538    <sc-if value="{{ goSendBlocked }}">
+v8:10730  goSendBlocked: !this.sd(…).lint.canPublish
+v8:7653   canPublish: blocked === 0
+v8:7648   const blocked = rows.filter(r => r.sev === "Blokkert" && !r.dismissed).length
+```
+
+So the banner appears when at least one undismissed rule of severity **«Blokkert»** is open.
+
+**Ours cannot have one.** `M:0120`:
+
+```
+supabase/migrations/20260914000120_method_rules.sql:51
+  severity text not null check (severity in ('advarsel', 'forslag'))
+```
+
+`blokkert` is not a value the column accepts — the CHECK makes it unrepresentable, which is what
+Q178 decided and what `MethodPanel.tsx:11-16` records in the component's own doc comment: *«v6
+draws five of its rules as «Blokkert» and gates publishing on them. We do not build that … Tor:
+“the person sending sees what is questionable and decides.”»*
+
+**Built as drawn, the banner is `options.tuva`.** A gate reading a key nothing writes: the
+`<sc-if>` would evaluate `blocked === 0` over a population that cannot contain a blocking row, so
+the banner would be unreachable from every state the product can enter, and the seed could not
+produce it either. A control that can never appear is not fidelity; it is a switch drawn in the
+OFF position with no way to move it.
+
+**The three repairs available, and why none of them is mine:**
+
+1. **Leave it out** (what ships). `builder.seeMethod` stays in `messages/*.json`, unwired, so
+   the string is there the moment the decision goes the other way. Cost: v8 draws a banner we
+   do not.
+2. **Key it on WARNINGS instead.** One line of code, and it makes the copy false: «N blokkeringer
+   må løses før utsending» when nothing blocks is D221's third face — copy asserting a
+   consequence the code does not enforce, on the screen where someone decides to send.
+3. **Give `method_rules` a blocking severity and gate `send_round` on it.** That is what the
+   banner is FOR, and it reverses Q178. It is a migration, a CHECK change, a publish gate on a
+   security-adjacent path, and a change to what the product is.
+
+(1) and (3) are both defensible; (2) is not. The difference between (1) and (3) is a product
+decision about whether HeiTuva's method advice advises or bars, and that is Tor's — this is the
+«a well-reasoned decision is indistinguishable from a settled one once it is in the code» case
+the file's own section describes.
+
+**What DID ship from v8:538's neighbourhood:** the meta card's collapse (v8:581/597) and the
+live settings card (v8:883), both built. See D267.
+
+## D267 — «LIVE-INNSTILLINGER» SHIPS WITH ZERO OF v8's TEN TOGGLES, AND THE MEASUREMENT IS THE FEATURE
+
+**T7, 2026-09-21.** Tor's rule for the phase: **«Ingen toggle uten en verdi den faktisk skriver.»**
+Applied to v8:881-897, it removes every one of them.
+
+**The storage, measured on the local stack:**
+
+```
+surveys           jsonb/boolean columns: engage, policy_locked, quiz_time_bonus, quiz_team_board
+live_sessions     11 columns; the only boolean is `revealed`
+tables like %live%  live_sessions, live_stopwords
+```
+
+`engage`'s fifteen keys are the engagement settings and name none of the ten. `revealed` is the
+CURRENT reveal state of a running session, written by
+`app/(app)/undersokelser/[id]/live/actions.ts:setRevealed` — not a setting on the survey. **There
+is no per-survey live storage anywhere**, so all ten would be D208's second face (a control that
+saves nothing) with D221's third face on top (each carries a sentence describing what it does).
+
+**What the ten labels ARE evidence of, which is what shipped** — `lib/surveys/live-features.ts`,
+each row carrying a `file:symbol` that `tests/unit/live-features.test.ts` OPENS:
+
+| v8 key | state | evidence |
+|---|---|---|
+| `qr` | always on | `LiveStage.tsx:qrSvg` |
+| `counter` | always on, k-gated | `LiveStage.tsx:counterHidden` |
+| `manualReveal` | always on — it is the ONLY behaviour | `live/actions.ts:setRevealed` |
+| `liveChart` | always on, k-gated | `LiveStage.tsx:barsGated` |
+| `cloud` | always on, moderated | `LiveStage.tsx:cloudTitle` |
+| `fullscreen` | not built | `LiveStage.tsx:fullscreenUnavailable` |
+| `questions` | not built — Q80 | `live/page.tsx:Deltakerspørsmål` |
+| `closing` | not built | `live/page.tsx:Kunngjøringsskjerm` |
+| `countdown` | not built | *nothing in the product names it* |
+| `temp` | not built | *nothing in the product names it* |
+
+**Five always-on and five absent, and they are not the same absence**, so they are drawn
+differently: the five that run carry v8's own description, the five that do not carry only a
+label under «Ikke bygget ennå» — v8's desc sentences state what a feature DOES, and printing one
+beside «not built» describes behaviour nobody can reach. That split is `QuizPanel`'s treatment
+(Q84) and `help_articles.requires_flag`'s rule: a reader must be able to tell *not built* from
+*not there*.
+
+**Why a registry rather than ten lines of JSX.** `live/page.tsx` already carries a prose table of
+the same measurement, written by V2-9 for the stage. Two tables over one set of facts is F3's
+four-implementations shape waiting to happen — they agree today and nothing makes them. Test 4
+opens every `file:symbol`; test 5 asserts that a `null`-evidence key is named nowhere under `app/`
+or `lib/`; test 6 is a RED PROOF that the panel contains no `role="switch"`, `onClick` or
+`aria-checked`, **proven to fire** before being trusted. The day a live option gets a column, test
+6 is what has to be changed deliberately rather than drifted past.
+
+The one claim in the card that IS about behaviour is `live.guard` — «Live respekterer
+anonymitetsterskelen …» — and it is TRUE of us (the counter is hidden below k, the bars are gated,
+the cloud has its own floor). It is read from the `live` namespace, the string the stage already
+ships, rather than copied into `builder`: one string, one truth, asserted by test 7.
+
+## D268 — THREE RUNS SAID THE DRAG WAS BROKEN. IT WAS NOT. I FIXED IT ANYWAY, AND THEN MEASURED THE FIX
+
+**T8.3, 2026-09-21.** This is written as what happened rather than as what I first concluded,
+because the conclusion was wrong twice and only the second measurement caught it.
+
+**What was observed.** Driving a real Chromium at 1440px: `cards.last().dragTo(cards.first())`
+over the builder's expanded flow. The order did not change. Three attempts, three no-ops.
+
+**The first reading was «the harness never dragged», and it was RIGHT — about attempt 2.**
+Manual `mouse.down` / `move` / `up` produced `{dragstart:0, dragenter:0, dragover:0, drop:0}`.
+Chromium's HTML5 drag is started by the browser's own drag controller, which Playwright drives
+through CDP's `Input.dispatchDragEvent`; a synthetic mouse sequence produces mouse events and
+nothing else. **Four lines of event counters are what separated «the browser never dragged» from
+«the browser dragged and we ignored it»** — without them, «the DOM is not wired to the model»
+was the natural reading of a run in which no drag existed.
+
+**The second reading was «the drop handler reads stale state», and it was WRONG.** With
+`dragTo`, the page saw the full sequence — `{dragstart:1, dragenter:1, dragover:1, drop:1,
+dragend:1}`, `defaultPrevented=true` on both — and the order still did not change. The story
+assembled itself: `dropOnto` reads `dragState.dragId` out of its closure, `dragover` is a
+CONTINUOUS event whose React update is low priority, so the handler that ran belonged to the
+render before the drag, `flowIds.indexOf('')` is −1, and `if (from >= 0 …)` skipped the move in
+silence. It had a mechanism, it named a line, it was consistent with every observation, and **it
+was a hypothesis with no call under it.** I built the fix: a `dragRef` written synchronously in
+the handler, `putDrag` writing ref and state together.
+
+**What the measurement actually said.** Logging the drop's nearest draggable ancestor:
+
+```
+dragstart: card=«T8.3 spørsmål 2»      <- the FIRST card
+drop:      card=«T8.3 spørsmål 2»      <- the same one
+```
+
+`cards.last()` never got grabbed. An expanded question card is ~300px tall, so in a 1200px
+viewport the first and the last are **never on screen together**: Playwright scrolls the source
+into view, the page moves, and the press lands on whatever is now under the point. Source and
+target were one row, `from === to`, and the guard correctly did nothing. **There was no defect.**
+
+Re-run in the COMPACT view, where a row is one line and all four fit:
+
+```
+BEFORE  [S2, Kontakt, Et spørsmål, S3]
+AFTER   [S3, S2, Kontakt, Et spørsmål]
+```
+
+A splice, not a swap — a swap gives `[S3, Kontakt, Et spørsmål, S2]`. The drag works, and v8's
+`moveTo` semantics are confirmed in a browser rather than only in a unit test.
+
+**Then the fix was measured against its own absence, which is the part worth keeping.** With
+`dropOnto` reading `dragState` again — the original code — the same compact drag gives
+`[S3, S2, Kontakt, Et] -> [Et, S3, S2, Kontakt]`. **Also correct.** So the ref fixed nothing, and
+it was reverted: the drag code is byte-identical to what T8 committed.
+
+Keeping it would have been the worse outcome and the invisible one. A second writer for one fact
+is what `putDrag` existed to prevent, the machinery would have read as evidence that the problem
+had been real, and **the next phase would have inherited a hypothesis as an established cause** —
+which is exactly what D241 records about the demo administrator's `display_name`, one turn later
+in the same file.
+
+**The rule this earns, and it is a sharpening of «a cause goes into a document with the call that
+established it».** A fix whose defect was never reproduced is not verified by the symptom going
+away — the symptom went away because the harness changed at the same time. **Measure the fix
+against its own absence before keeping it.** One run, and it is the only thing that tells a
+repair from a coincidence.
+
+
+## D269 — THE GRAB HANDLE, MEASURED: 16×14 PAINTED, 44×44 HIT AREA, AT BOTH WIDTHS
+
+**T8.3, 2026-09-21.** Tor asked for the handle's hit area measured directly rather than inferred
+from `verify:responsive` — that gate reports findings over a whole page, so «no finding» is a
+property of the page and not a number for this control.
+
+Measured in Chromium against the local build, `getComputedStyle(el, '::after')` composed with the
+span's own rect (the pseudo-element is the hit area and `getBoundingClientRect` does not include
+it — a script that measured the span alone would report 16px and call it a failure that is not
+there):
+
+| width | view | handles | painted | hit area | cursor | nearest interactive neighbour on the line |
+|---|---|---|---|---|---|---|
+| 320px | full | 3 | 16×14 | **44×44** | grab | none — the card header wraps at this width |
+| 320px | kompakt | 3 | 16×14 | **44×44** | grab | none |
+| 390px | full | 3 | 16×14 | **44×44** | grab | **54px** («Spørsmål N») |
+| 390px | kompakt | 3 | 16×14 | **44×44** | grab | **214px** («Flytt til plass») |
+
+RESPONSIVE.md rule 2 is met at both widths. The collision question is the other half and it is
+also clear: a 16px control with a 44px area overflows (44−16)/2 = **14px** each side, and the
+closest interactive neighbour sharing a line is 54px away.
+
+`touch-44` rather than `touch-44-field`, and that is not a coin toss: the field variant forces
+`border-color: transparent` and an inset ring, which on a bare glyph paints a box the drawing does
+not have. A `<span>` is not a REPLACED element, so the `::after` renders — which is exactly the
+distinction `globals.css` records and `FeedbackList`'s `<select>` got wrong.
+
+**TWO FINDINGS CAME OUT OF TAKING THE MEASUREMENT RATHER THAN THE GATE'S WORD:**
+
+1. **`BlockCard` drew a labelled handle on a survey that cannot be dragged.** Measured on «Med
+   innholdsblokker» (status `aktiv`, so `locked`): **4 handles, 0 draggable elements**. The
+   handle had always rendered unconditionally, which was harmless while it was `aria-hidden ⋮⋮`
+   and moved nothing — D235's own treatment. Labelled «Flytt blokken» with `cursor:grab` it is
+   D221's third face. All three rows gate it on `drag?.draggable` now, guarded and proven red.
+2. **The demo seed cannot reach the drag at all.** `locked = status !== 'utkast'`, there is
+   exactly ONE draft, and it holds ONE question — and a one-item flow has nothing to reorder and
+   no density switch (`flow.length > 1`). Two questions were inserted by SQL for the measurement
+   and removed after it. Logged rather than fixed: changing the demo seed is not T8's, and the
+   phase report names it.

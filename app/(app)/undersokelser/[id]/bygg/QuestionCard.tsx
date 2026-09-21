@@ -22,6 +22,7 @@ import {
   type FieldInputType,
   type QuestionConfig,
 } from './types'
+import { GrabHandle } from './GrabHandle'
 
 const field =
   'w-full rounded-lg border border-line bg-sf px-[9px] py-[6px] text-[12.5px] text-ink outline-none'
@@ -126,6 +127,8 @@ export function QuestionCard({
     >
       {/* Header row: number, text, type, reorder, duplicate, bank, delete. */}
       <div className="flex flex-wrap items-center gap-[14px] md:gap-[10px]">
+        {/* T8 · v8:609 — before the number, as the drawing has it. */}
+        {drag?.draggable ? <GrabHandle label={t('grabQuestion')} /> : null}
         <span
           className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-lg text-xs font-bold"
           style={{ background: 'var(--sf2)' }}

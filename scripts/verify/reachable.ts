@@ -49,6 +49,7 @@ import { join } from 'node:path'
 import { BASE_URL, ensureServer } from './server'
 import { signIn } from '../../tests/helpers/session'
 import { ROUTES, isPendingRoute } from '../../tests/routes.manifest'
+import { BUILD_GROUPS, BUILD_TAB_PARAM } from '../../lib/surveys/build-tabs'
 
 config({ path: '.env.local', quiet: true })
 
@@ -174,6 +175,24 @@ function normalise(raw: string | null): string | null {
   return path === '' ? '/' : path
 }
 
+/**
+ * T5.1 — EVERY OFFERED HREF, QUERY STRING AND ALL.
+ *
+ * `normalise` throws the query away, and it must: the route graph is about
+ * PAGES, and keeping `?filter=` would make every filter chip a separate node
+ * and the crawl would never terminate. But the builder's six tabs moved into
+ * the shell rail in T5.1, and the rail's pills are `?fane=` links on ONE
+ * route — so «is /undersokelser/[id]/bygg reachable» is now a question that
+ * four of the six tabs can be invisible behind while it answers yes.
+ *
+ * That is this file's own recorded shape, one level in: a derivation is only
+ * as wide as the set it iterates, and the set here had been PAGES. So the raw
+ * hrefs are kept beside the normalised ones and checked against the tab
+ * registry at the end — the population is `BUILD_GROUPS`, derived, not a list
+ * of four strings somebody typed here.
+ */
+const QUERIED = new Set<string>()
+
 /** Every destination this rendered page OFFERS — anchors and select options
  *  alike, because a control that navigates is an edge whatever its tag. */
 async function destinationsOf(page: Page): Promise<string[]> {
@@ -227,6 +246,7 @@ async function destinationsOf(page: Page): Promise<string[]> {
   })
   const seen = new Set<string>()
   for (const r of raw) {
+    if (r.startsWith('/') && !r.startsWith('//')) QUERIED.add(r.split('#')[0]!)
     const p = normalise(r)
     if (p) seen.add(p)
   }
@@ -330,6 +350,16 @@ async function main() {
   const appRoutes = appRouteShapes()
   const appOrphans = appRoutes.filter((r) => !covers(r))
 
+  /* T5.1 — THE BUILDER'S TABS, which live in a query parameter rather than in
+     a path. Derived from `BUILD_GROUPS` so a seventh tab is checked by
+     existing, and reported as its own line rather than folded into `orphans`:
+     an unreachable TAB is not an unreachable route, and calling it one would
+     misname the fix. */
+  const tabTargets = BUILD_GROUPS.map((g) => `${BUILD_TAB_PARAM}=${g.target}`)
+  const unreachableTabs = tabTargets.filter(
+    (q) => ![...QUERIED].some((h) => h.includes('/bygg?') && h.includes(q)),
+  )
+
   const orphans = [...new Set([...manifestOrphans, ...appOrphans])].sort()
 
   console.log(`\nfront page       ${FRONT}`)
@@ -344,6 +374,10 @@ async function main() {
   console.log(`  reachable      ${inScope.length - manifestOrphans.length}`)
   console.log(`app/(app)        ${appRoutes.length} route shapes swept off the filesystem`)
   console.log(`  reachable      ${appRoutes.length - appOrphans.length}`)
+  console.log(
+    `builder tabs     ${tabTargets.length - unreachableTabs.length} of ${tabTargets.length} offered as rail links`,
+  )
+  for (const q of unreachableTabs) console.log(`  no rail link  /bygg?${q}`)
   console.log(`\nORPHANED         ${orphans.length}`)
   for (const o of orphans) {
     const where = manifestOrphans.includes(o) && appOrphans.includes(o) ? 'both' :
@@ -364,6 +398,7 @@ async function main() {
         manifestRoutes: inScope,
         appRoutes,
         orphans,
+        unreachableTabs,
       },
       null,
       2,
@@ -372,7 +407,7 @@ async function main() {
   console.log(`\nwrote ${OUT}/graph.json`)
 
   await browser.close()
-  process.exit(orphans.length ? 1 : 0)
+  process.exit(orphans.length || unreachableTabs.length ? 1 : 0)
 }
 
 main()

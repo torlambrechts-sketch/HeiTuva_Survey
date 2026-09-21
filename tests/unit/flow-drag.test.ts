@@ -113,4 +113,54 @@ describe('T8 — the flow drag', () => {
        the drop handler uses, so the two paths cannot diverge. */
     expect(moveTo(['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b'])
   })
+
+  /* ── T8.3 · THE HANDLE ────────────────────────────────────────────────
+     v8 draws it at three sites (v8:609, 746, 784) and we had it at ONE, as
+     `⋮⋮` and `aria-hidden` — D235's treatment, correct while the handle moved
+     nothing. The drag exists, so the handle is true at all three. */
+  it('10. all three rows draw v8\u2019s handle, and it is the same one', () => {
+    for (const p of ROWS) {
+      expect(src(p), `${p} has no GrabHandle`).toContain('<GrabHandle')
+      /* AND EVERY ONE IS GATED ON THE DRAG. `BlockCard` rendered its handle
+         unconditionally — harmless while it was `aria-hidden` and moved
+         nothing, D221's third face once labelled «Flytt blokken» with
+         `cursor:grab`. T8.3's direct measurement found it on a SENT survey:
+         4 handles, 0 draggable elements. A handle on a row that cannot be
+         dragged is the exact claim D235 refused. */
+      expect(src(p), `${p} draws a handle that is not gated on the drag`).toMatch(
+        /drag\?\.draggable \? <GrabHandle/,
+      )
+    }
+    // ONE component, so the three cannot drift into three handles — the
+    // four-implementations shape F3 measured, refused up front.
+    const h = src('app/(app)/undersokelser/[id]/bygg/GrabHandle.tsx')
+    expect(h, 'the glyph is ⠿, not ⋮⋮').toContain('\u283F')
+    expect(h).not.toContain('\u22EE')
+  })
+
+  it('11. the handle is LABELLED rather than aria-hidden, in both locales', () => {
+    // v8:6920 `grabLabel` — «Flytt spørsmålet» / «Flytt blokken». Announcing
+    // it was a promise the code could not keep under D235; it can now.
+    const h = src('app/(app)/undersokelser/[id]/bygg/GrabHandle.tsx')
+    expect(h).toContain('aria-label={label}')
+    expect(h).toContain('title={label}')
+    expect(h).not.toContain('aria-hidden')
+    for (const f of ['messages/no.json', 'messages/en.json']) {
+      const b = JSON.parse(readFileSync(f, 'utf8')).builder
+      expect(typeof b.grabQuestion, `${f} grabQuestion`).toBe('string')
+      expect(typeof b.grabBlock, `${f} grabBlock`).toBe('string')
+    }
+  })
+
+  it('12. 16px painted takes `touch-44`, and NOT the field variant', () => {
+    // A <span> is not a REPLACED element, so the `::after` hit area renders —
+    // which is exactly why `touch-44-field` is the wrong one of the two here
+    // (it paints an inset ring on a glyph that has no border). globals.css
+    // carries both with the reason; taking the wrong one is the mistake C4
+    // made on FeedbackList's <select>.
+    const h = src('app/(app)/undersokelser/[id]/bygg/GrabHandle.tsx')
+    expect(h).toMatch(/className="touch-44 /)
+    expect(h).not.toContain('touch-44-field')
+    expect(h, 'v8:784 width:16px').toContain('w-4')
+  })
 })

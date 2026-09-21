@@ -16,6 +16,7 @@ import {
 import { qualityFlags, type QualityRule } from '@/lib/questions/quality'
 import { methodNotes, type MethodRule } from '@/lib/questions/method'
 import { MethodPanel } from './MethodPanel'
+import { LivePanel } from './LivePanel'
 import type { Engagement } from '@/lib/engagement'
 import { ModalLayer } from '@/components/ModalLayer'
 import { QuestionCard, tintFor } from './QuestionCard'
@@ -149,6 +150,9 @@ export function Builder({
 }) {
   const t = useTranslations('builder')
   const tm = useTranslations('method')
+  /* T7 — the live card reuses `live.guard`, the sentence the stage ships,
+     rather than a second copy of it under `builder`. */
+  const tLive = useTranslations('live')
   const [draft, setDraft] = useState<BuilderDraft>(initial)
   const [advanced, setAdvanced] = useState(false)
   /**
@@ -163,6 +167,21 @@ export function Builder({
    * survey for a minute» asks for.
    */
   const [compact, setCompact] = useState(false)
+  /* T7 · v8:578-600 — THE META CARD COLLAPSES. `metaOpen` defaults to true
+     (v8's own `st.metaOpen !== false`) and is component state, not a stored
+     setting, for the same reason `compact` is: it is a reading posture, and
+     persisting it would need a writer, a reader and a decision about whose
+     preference it is.
+
+     WHAT COLLAPSES IS NOT THE WHOLE CARD, and that boundary had to be derived
+     rather than copied. v8's collapsible region is the «Målgruppe» label, the
+     audience field and the length line; its title input, its flow chips and
+     its density switch live in a HEADER CARD we do not have (see the chips'
+     own comment below — both were placed here deliberately when v7 arrived).
+     So the collapse takes the two inputs and the length line, and the chips
+     and the density switch stay in both states — collapsing them would hide
+     something v8's collapse does not hide. */
+  const [metaOpen, setMetaOpen] = useState(true)
   /* T5.1 — THE TAB IS THE URL, not state. The shell rail selects the group
      (v8:9366-9371) and a server-rendered pill can only carry an href, so
      `?fane=` is the source of truth and there is no second copy to disagree
@@ -500,6 +519,13 @@ export function Builder({
 
   const count = draft.questions.length
   const tooLong = count > LONG_SURVEY_THRESHOLD
+  /* One expression, read in both meta-card states (v8:584 open, v8:595
+     closed). Two call sites forming the same sentence is how a figure and its
+     restatement drift apart. */
+  const lengthNote = t('lengthNote', {
+    count,
+    mins: estimatedMinutes({ questions: count, blocks: counts.blocks }),
+  })
 
   /**
    * The anonymity-breach warning is a property of the type and the survey's
@@ -772,6 +798,29 @@ export function Builder({
         />
       ) : null}
 
+      {/* T7 · v8:881-897 — «Live-innstillinger», directly under «Kjøremodus»
+          and only in live mode, on the same argument QuizPanel's comment makes
+          for quiz: it is settings FOR the mode, so showing it in standard mode
+          would offer a control that governs nothing.
+
+          It carries no switches. See `lib/surveys/live-features.ts` for the
+          measurement — none of v8's ten has a value the product writes — and
+          `LivePanel` for why the labels ship anyway. */}
+      {tab === 'general' && runMode === 'live' ? (
+        <LivePanel
+          strings={{
+            title: t('liveTitle'),
+            alwaysOn: t('liveAlwaysOn'),
+            notBuilt: t('liveNotBuilt'),
+            /* The guard sentence is `live.guard`, which the stage already
+               ships — one string, one truth. A second copy in this namespace
+               is two sentences that can drift. */
+            guard: tLive('guard'),
+            say: (k) => t(k as 'liveQr'),
+          }}
+        />
+      ) : null}
+
       {/* V2-10 — «Quizmodus» (V2:6148) sits directly under «Kjøremodus» and
           only in quiz mode: it is settings FOR the mode, so showing it in
           standard mode would offer a control that governs nothing. */}
@@ -953,13 +1002,52 @@ export function Builder({
         }`}
       >
         <div className="flex flex-col gap-[14px]">
-          <div className="rounded-2xl border border-line bg-sf p-5 shadow-card">
+          {/* v8:10911 — `metaPad` is 20px open, 14px 18px closed. `p-5` IS
+              20px, so the open state keeps the metric this card already had. */}
+          <div
+            className="rounded-2xl border border-line bg-sf shadow-card"
+            style={{ padding: metaOpen ? '20px' : '14px 18px' }}
+          >
+            {/* v8:591-599 — THE CLOSED SUMMARY. The title in display type with
+                the length line under it, and «Rediger ▾» to come back. v8
+                draws `{{ draftTitle }}` unconditionally, so an untitled survey
+                shows an empty line here rather than an invented placeholder —
+                and the card opens by default, so it is only ever reached by
+                someone who collapsed it deliberately. */}
+            {!metaOpen ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-display text-[18px] font-bold leading-[1.2]">
+                    {draft.title}
+                  </span>
+                  <span className="mt-[2px] block text-[12.5px] text-mut">{lengthNote}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMetaOpen(true)}
+                  className="touch-44 flex-none cursor-pointer whitespace-nowrap rounded-[9px] border border-line bg-transparent px-[14px] py-2 text-[12.5px] font-semibold text-ink"
+                >
+                  {t('metaEdit')}
+                </button>
+              </div>
+            ) : null}
+            {metaOpen ? (
+            <>
             {/* These two inputs are borderless and transparent by design, so
                 they cannot take the touch-44-field treatment — its inset ring
                 would paint a border the design does not have. Plain vertical
                 padding below md raises the touch box to 44px and is invisible
                 on a transparent control; md: restores the design's metrics. */}
-            <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('title')}</div>
+            <div className="flex items-center justify-between gap-[14px]">
+              <div className="text-[11px] uppercase tracking-[.1em] text-mut">{t('title')}</div>
+              <button
+                type="button"
+                onClick={() => setMetaOpen(false)}
+                className="touch-44 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-[12.5px] font-semibold text-mut"
+              >
+                {t('metaHide')}
+              </button>
+            </div>
             <input
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
@@ -993,6 +1081,20 @@ export function Builder({
               aria-label={t('audience')}
               className="mt-1 w-full border-none bg-transparent py-3 text-[13.5px] text-mut outline-none disabled:opacity-60 md:py-0"
             />
+            {/* v8:584-589 — the length line and its warning are INSIDE the
+                collapsible region; the closed summary restates the length on
+                its own second line, so rendering it here as well would say the
+                same thing twice. */}
+            <div className="mt-3 flex flex-wrap items-center gap-[10px]">
+              <span className="text-[13px] text-mut">{lengthNote}</span>
+              {tooLong ? (
+                <span className="rounded-full bg-ac3 px-3 py-[6px] text-[12.5px]">
+                  {t('lengthWarning')}
+                </span>
+              ) : null}
+            </div>
+            </>
+            ) : null}
             {/* V7-4 — WHAT THE FLOW IS MADE OF (v7:10217's `bFlowChips`).
 
                 The drawing puts three counted chips above the flow, which is it
@@ -1026,17 +1128,6 @@ export function Builder({
                   </span>
                 ))}
               </span>
-              <span className="text-[13px] text-mut">
-                {t('lengthNote', {
-                  count,
-                  mins: estimatedMinutes({ questions: count, blocks: counts.blocks }),
-                })}
-              </span>
-              {tooLong ? (
-                <span className="rounded-full bg-ac3 px-3 py-[6px] text-[12.5px]">
-                  {t('lengthWarning')}
-                </span>
-              ) : null}
             </div>
             {/* V7-5 — THE DENSITY SWITCH (`flowViewChips`, v7:10187).
 

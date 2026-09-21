@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import type { FlowDragProps } from './drag-props'
 import { BLOCKS, type BlockDraft } from '@/lib/surveys/blocks'
 import { editorMediaHref } from '@/lib/surveys/media'
+import { GrabHandle } from './GrabHandle'
 
 /**
  * V7-3 — one content block in the builder's flow (v7:720-757).
@@ -86,11 +87,18 @@ export function BlockCard({
       }}
     >
       <div className="flex flex-wrap items-center gap-[10px]">
-        {/* v7:723 — the handle. Present because the row is drawn with one; it
-            moves nothing on its own, and the arrows beside it do. */}
-        <span aria-hidden className="flex-none cursor-grab text-[14px] leading-none text-mut">
-          ⋮⋮
-        </span>
+        {/* T8 · v8:746 — the handle, which now moves something. It was
+            `aria-hidden` and `⋮⋮` under D235; see `GrabHandle`.
+
+            GATED ON THE DRAG, like the other two rows, and this is the fix for
+            a defect T8.3's direct measurement found: the handle used to render
+            unconditionally, which was harmless while it was `aria-hidden` and
+            moved nothing. Labelled «Flytt blokken» with `cursor:grab` on a
+            SENT survey — where `disabled` is true and `dragFor` returns
+            undefined — it is D221's third face: a control announcing an
+            ability the code does not have. Measured on «Med innholdsblokker»:
+            4 handles, 0 draggable elements. */}
+        {drag?.draggable ? <GrabHandle label={t('grabBlock')} /> : null}
         <span
           aria-hidden
           className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-lg bg-sf"
