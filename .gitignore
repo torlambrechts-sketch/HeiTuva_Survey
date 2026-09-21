@@ -38,3 +38,6 @@ artifacts/.cdn-cache/
 test-results/
 playwright-report/
 .mfa-secrets.json
+
+# playwright MCP screenshots and traces — regenerated per session.
+.playwright-mcp/
