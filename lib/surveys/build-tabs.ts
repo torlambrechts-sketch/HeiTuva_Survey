@@ -112,3 +112,19 @@ export const BUILD_GROUPS = [
 export function currentBuildGroup(tab: BuildTab): (typeof BUILD_GROUPS)[number]['id'] {
   return (BUILD_GROUPS.find((g) => (g.tabs as ReadonlyArray<BuildTab>).includes(tab)) ?? BUILD_GROUPS[0]).id
 }
+
+/** T5.1 — the search parameter the group rail writes. The tab had to leave
+ *  `useState` for the rail to reach it: a server-rendered pill can only carry
+ *  an href, and an href cannot set React state. */
+export const BUILD_TAB_PARAM = 'fane'
+
+/** Narrow an arbitrary `?fane=` to a tab. An unknown value is `add`, which is
+ *  also v8's default (`st.buildTab || "add"`). */
+export function resolveBuildTab(raw: string | null | undefined): BuildTab {
+  return (BUILD_TABS as ReadonlyArray<string>).includes(raw ?? '') ? (raw as BuildTab) : 'add'
+}
+
+/** `/undersokelser/<id>/bygg?fane=<tab>`. The group rail links its target. */
+export function buildTabHref(surveyId: string, tab: BuildTab): string {
+  return `/undersokelser/${surveyId}/bygg?${BUILD_TAB_PARAM}=${tab}`
+}

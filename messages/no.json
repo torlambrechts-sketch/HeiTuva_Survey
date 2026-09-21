@@ -83,7 +83,8 @@
     "wsShort_custom": "Tilpasset",
     "wsShort_cx": "Kunder",
     "wsShort_hr": "HR",
-    "wsShort_quiz": "Quiz"
+    "wsShort_quiz": "Quiz",
+    "subnavSurveyBack": "Undersøkelsen"
   },
   "dash": {
     "actionDraft": "«{title}» er fortsatt et utkast",

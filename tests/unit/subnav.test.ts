@@ -189,8 +189,11 @@ describe('V7-1 — the subnav registry', () => {
       // claims, and only the first is true here.
       expect(r!.currentId, seg).toBeNull()
     }
-    // And the builder lights «Spørsmål» through TAB_ALIAS rather than nothing.
-    expect(rails(`/undersokelser/${ID}/bygg`)!.currentId).toBe('sporsmal')
+    /* T5.1 — the builder no longer wears the SURVEY rail at all. v8:9366-9371
+       gives `build` its own: four group pills plus an exit. Before T5.1 this
+       asserted «Spørsmål» through TAB_ALIAS, which was true of a rail the
+       builder no longer carries. */
+    expect(rails(`/undersokelser/${ID}/bygg`)!.currentId).toBe('build')
   })
 
   it('8. the component knows no pathname — adding a screen is a row, not an edit', () => {
@@ -239,12 +242,25 @@ describe('V7-1 — the subnav registry', () => {
     expect(bygger!.href).toBe(`/undersokelser/${ID}/bygg`)
     expect(on('sporsmal').pills.filter((p) => p.kind === 'filter')).toHaveLength(8)
 
-    // An exit pointing at the page you are standing on is not an exit. v7 never
-    // meets this because `build` is a different screen there; we meet it
-    // because V6-2 kept the paths.
+    /* T5.1 — `/bygg` carries v8's OWN rail now, so «Bygger» cannot appear
+       there for a stronger reason than before: it is a different rail, not the
+       same rail with one pill suppressed. v7's problem («an exit pointing at
+       the page you are standing on») is gone rather than handled. */
     expect(on('bygg').pills.some((p) => p.id === 'bygger'), 'exit to the current page').toBe(false)
-    // …and the rail still lights «Spørsmål» there, through TAB_ALIAS.
-    expect(on('bygg').currentId).toBe('sporsmal')
+
+    // v8:9366-9371 — four group pills, then «Undersøkelsen» as the exit back.
+    const build = on('bygg')
+    expect(build.pills.filter((p) => p.kind === 'filter').map((p) => p.id)).toEqual([
+      'build',
+      'method',
+      'settings',
+      'preview',
+    ])
+    expect(build.currentId).toBe('build')
+    const back = build.pills.find((p) => p.id === 'survey')
+    expect(back, 'v8 concats «Undersøkelsen»').toBeDefined()
+    expect(back!.kind).toBe('exit')
+    expect(back!.href).toBe(`/undersokelser/${ID}/sporsmal`)
 
     // It can never be the current pill — asserted by the registry itself, over
     // every route, in test 3. Stated here too because this is the first pill

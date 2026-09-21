@@ -1,5 +1,12 @@
 import { LIBRARY_TABS, TAB_NAV_KEY, libraryTabHref, resolveLibraryTab } from '@/lib/library/tabs'
 import {
+  BUILD_GROUPS,
+  BUILD_TAB_PARAM,
+  buildTabHref,
+  currentBuildGroup,
+  resolveBuildTab,
+} from '@/lib/surveys/build-tabs'
+import {
   SURVEY_TABS,
   TAB_NAV_KEY as SURVEY_TAB_NAV_KEY,
   resolveSurveyPath,
@@ -79,12 +86,19 @@ import { FILTERS, FILTER_KEY } from '@/app/(app)/undersokelser/keys'
  *  whatever the person called it, so it must NOT go through next-intl: a
  *  lookup would miss and render the title as a raw key. The renderer prints
  *  `key` verbatim for this one. */
-export type Namespace = 'nav' | 'reports' | 'surveys' | 'raw'
+export type Namespace = 'nav' | 'reports' | 'surveys' | 'builder' | 'raw'
 
 /** A message, with the namespace it lives in. */
 export type MsgRef = { ns: Namespace; key: string }
 
+/** The builder route, named once: the `build` entry matches it and the
+ *  `survey` entry must NOT, or `/bygg` belongs to two rails. */
+const BUILD_RAIL = /^\/undersokelser\/[^/]+\/bygg$/
+
 const nav = (key: string): MsgRef => ({ ns: 'nav', key })
+/** T5.1 — the builder rail's group labels live in `builder`, beside the
+ *  in-pane tabs they select, rather than being copied into `nav`. */
+const builder = (key: string): MsgRef => ({ ns: 'builder', key })
 
 /**
  * `filter` narrows or moves WITHIN the set the rail names; `exit` leaves it.
@@ -409,9 +423,64 @@ export const SUBNAV: Entry[] = [
      ambiguity that check exists for. */
 
   {
+    /* T5.1 — THE BUILDER HAS ITS OWN RAIL, as v8:9366-9371 draws it.
+       Before the `survey` entry, whose match is a prefix that also covers
+       `/bygg`; first match wins, so this must precede it.
+
+       v8's `build` screen does not carry the survey's tabs. It carries four
+       GROUP pills plus a legend back to the survey:
+
+           ["Bygg",          ["add","content"],      "add"]
+           ["Metodikk",      ["lint"],               "lint"]
+           ["Innstillinger", ["general","settings"], "general"]
+           ["Forhåndsvis",   ["preview"],            "preview"]
+           .concat("Undersøkelsen" -> svdetail)
+
+       A pill is current when the CURRENT TAB IS IN ITS GROUP, which is why
+       `settings` lights «Innstillinger» rather than a fifth pill.
+
+       THE TAB IS A SEARCH PARAMETER, not React state, and that is what makes
+       this rail possible at all: the rail is server-rendered and a pill can
+       only carry an href. `?fane=` is the source of truth; the pane reads it. */
+    key: 'build',
+    match: (p) => BUILD_RAIL.test(p),
+    build: ({ pathname, params }) => {
+      const surveyId = pathname.split('/')[2] ?? ''
+      const current = currentBuildGroup(resolveBuildTab(params.get(BUILD_TAB_PARAM)))
+      return {
+        label: nav('subnavSurvey'),
+        pills: [
+          ...BUILD_GROUPS.map((g) => ({
+            id: g.id,
+            label: builder(g.key),
+            href: buildTabHref(surveyId, g.target),
+            kind: 'filter' as const,
+          })),
+          /* v8's `.concat([{ label:"Undersøkelsen", … }])` — an EXIT, like
+             V7-2's «Bygger» pill in the other direction. It leaves the builder
+             for the survey, so it can never be current. */
+          {
+            id: 'survey',
+            label: nav('subnavSurveyBack'),
+            href: `/undersokelser/${surveyId}/sporsmal`,
+            kind: 'exit' as const,
+            emphasis: 'dormant' as const,
+          },
+        ],
+        currentId: current,
+      }
+    },
+  },
+
+  {
     /* Last, because its match is a PREFIX and the entries above are exact. */
     key: 'survey',
-    match: (p) => resolveSurveyPath(p) !== null,
+    /* T5.1 — NOT `/bygg`. The builder carries its own rail (v8:9366-9371) and
+       an exclusive match is what `tests/unit/subnav.test.ts` case 2 checks:
+       first-match-wins would have hidden the overlap, and the test is there
+       because a pathname matching two entries is exactly the ambiguity that
+       goes unnoticed until one of them changes. */
+    match: (p) => resolveSurveyPath(p) !== null && !BUILD_RAIL.test(p),
     build: ({ pathname }) => {
       const survey = resolveSurveyPath(pathname)!
       return {

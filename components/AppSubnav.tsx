@@ -57,13 +57,15 @@ export function AppSubnav({ dashboards = [] }: { dashboards?: SubnavDashboard[] 
   const params = useSearchParams()
   const router = useRouter()
 
-  /* Three namespaces, resolved here and chosen per pill by the registry's own
+  /* Four namespaces, resolved here and chosen per pill by the registry's own
      `MsgRef`. A bare key resolved in the wrong namespace renders as a raw key
      on a shipped screen, which is the defect Tor found nine of behind seventeen
      green gates — so the namespace travels WITH the key. */
   const tNav = useTranslations('nav')
   const tReports = useTranslations('reports')
   const tSurveys = useTranslations('surveys')
+  /* T5.1 — the builder rail's group labels. */
+  const tBuilder = useTranslations('builder')
   /* `raw` is a title the person typed, not a message. Sending it through
      next-intl would miss and render it as a key — the defect Tor found nine of
      behind seventeen green gates, arriving from the other direction. */
@@ -74,7 +76,9 @@ export function AppSubnav({ dashboards = [] }: { dashboards?: SubnavDashboard[] 
       ? tReports(m.key as 'tabLov')
       : m.ns === 'surveys'
         ? tSurveys(m.key as 'filterAll')
-        : tNav(m.key as 'subnavInsight')
+        : m.ns === 'builder'
+          ? tBuilder(m.key as 'tabAdd')
+          : tNav(m.key as 'subnavInsight')
 
   const rail = resolveSubnav(pathname, new URLSearchParams(params.toString()), dashboards)
   if (!rail) return null

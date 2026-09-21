@@ -34,13 +34,14 @@ import {
 } from '@/lib/surveys/blocks'
 import { MAX_MEDIA_BYTES, isMediaType } from '@/lib/surveys/media'
 import {
-  BUILD_GROUPS,
   BUILD_TAB_KEY,
+  BUILD_TAB_PARAM,
   buildTabGroup,
-  currentBuildGroup,
   lintTabLabel,
+  resolveBuildTab,
   type BuildTab,
 } from '@/lib/surveys/build-tabs'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { PreviewPane } from './PreviewPane'
 import { EngagementPanel } from './EngagementPanel'
 import { RunModePanel } from './RunModePanel'
@@ -151,7 +152,22 @@ export function Builder({
    * survey for a minute» asks for.
    */
   const [compact, setCompact] = useState(false)
-  const [tab, setTab] = useState<Tab>('add')
+  /* T5.1 — THE TAB IS THE URL, not state. The shell rail selects the group
+     (v8:9366-9371) and a server-rendered pill can only carry an href, so
+     `?fane=` is the source of truth and there is no second copy to disagree
+     with it. Level two writes it back with `replace` rather than `push`: the
+     pills inside a group are not history, and a back button that walked
+     «Spørsmål → Innhold → Spørsmål» would be answering a question nobody
+     asked. Same reasoning as `TAB_SEGMENT`'s «the segment is the SOURCE OF
+     TRUTH … there is no parameter to disagree with it», one level down. */
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tab = resolveBuildTab(searchParams.get(BUILD_TAB_PARAM))
+  const setTab = (next: Tab) => {
+    const q = new URLSearchParams(searchParams.toString())
+    q.set(BUILD_TAB_PARAM, next)
+    router.replace(`?${q.toString()}`, { scroll: false })
+  }
   const [sheetOpen, setSheetOpen] = useState(false)
   const [saved, setSaved] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -453,35 +469,12 @@ export function Builder({
           «three buttons using the existing tab chip styling». It is four now.
           That sentence is a COUNT of the tabs that existed when it was written —
           D129's failure, third instance, same document. */}
-      {/* T5 LEVEL ONE — v8:9366-9371's four group pills. Without this row the
-          contextual grouping below makes `general`, `settings`, `lint` and
-          `preview` UNREACHABLE from `add`, which would be a worse product than
-          the flat four it replaces. v8 draws this in the shell rail; ours is a
-          survey route whose rail F5-2 and V7-2 both reasoned about, so it is
-          in the pane and the placement is Tor's to settle. */}
-      <div className="mb-2 flex flex-wrap gap-[3px]" role="tablist" aria-label={t('groupBuild')}>
-        {BUILD_GROUPS.map((g) => {
-          const on = currentBuildGroup(tab) === g.id
-          return (
-            <button
-              key={g.id}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => setTab(g.target)}
-              className="touch-44 flex-1 cursor-pointer rounded-[10px] border border-line px-3 py-[9px] text-[12.5px] text-ink"
-              style={{
-                background: on ? 'var(--sf)' : 'transparent',
-                fontWeight: on ? 700 : 500,
-                opacity: on ? 1 : 0.7,
-              }}
-            >
-              {t(g.key)}
-            </button>
-          )
-        })}
-      </div>
-
+      {/* T5.1 — LEVEL ONE IS THE SHELL RAIL NOW, as v8:9366-9371 draws it:
+          «Bygg · Metodikk · Innstillinger · Forhåndsvis» plus «Undersøkelsen».
+          It lived here for one commit because the pane was the only place a
+          client component could set the tab; `?fane=` moved the tab into the
+          URL, which is what let a server-rendered pill reach it. Level two —
+          the group's own ≤2 pills — stays here, which is v8's split. */}
       <div
         className="flex flex-wrap gap-x-[3px] gap-y-1.5 rounded-[13px] p-1 md:flex-nowrap md:gap-y-0"
         style={{ background: 'var(--sf2)' }}

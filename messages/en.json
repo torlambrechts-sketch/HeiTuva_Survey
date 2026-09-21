@@ -83,7 +83,8 @@
     "wsShort_custom": "Custom",
     "wsShort_cx": "Customers",
     "wsShort_hr": "HR",
-    "wsShort_quiz": "Quiz"
+    "wsShort_quiz": "Quiz",
+    "subnavSurveyBack": "The survey"
   },
   "dash": {
     "actionDraft": "“{title}” is still a draft",
