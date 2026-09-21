@@ -7450,7 +7450,12 @@ MOVES it rather than discovering it.
 > half in place rather than by inventing a gesture: every row keeps its arrows
 > and its absolute move at every width, so nothing is drag-only. The handle's
 > hit area is measured at 320px and 390px directly rather than inferred from
-> the gate.
+> the gate: **16×14 painted, 44×44 hit area, `cursor:grab`, at both widths and
+> in both views**, with the nearest interactive neighbour sharing its line 54px
+> away against the 14px a 16px control needs. `touch-44`, not the field
+> variant. The numbers and the method are in **D269**; taking the measurement
+> rather than the gate's word is also what found a handle drawn on a survey
+> that cannot be dragged.
 >
 > **And D221's third face is now satisfied rather than avoided.** The refusal's
 > sharpest argument was that a handle which cannot be grabbed is a control whose

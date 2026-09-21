@@ -113,10 +113,30 @@ async function openBuilderPane(page: Page, tab: BuildTab) {
   const group = BUILD_GROUPS.find((g) => (g.tabs as ReadonlyArray<BuildTab>).includes(tab))!
   await page.getByRole('link', { name: bothLocales(group.key) }).first().click()
   await page.waitForURL((u) => u.searchParams.get(BUILD_TAB_PARAM) === group.target)
-  if (tab !== group.target) {
+
+  /* LEVEL TWO IS REACHED DIFFERENTLY ON EACH SIDE OF `xl`, and the first
+     rewrite of this helper got both halves wrong — four browser captures and
+     two responsive states failed, all on the same two mistakes:
+
+     - At xl the pane is always mounted (`sticky top-0 hidden xl:block`) and
+       level two is `role="tab"`. `getByRole('button')` does NOT match an
+       element carrying `role="tab"` — ARIA role, not tag name — so the click
+       waited out its timeout on a control that was on screen the whole time.
+     - Below xl the pane is ONLY inside the sheet, and the rail cannot open it:
+       the `xl:hidden` row is the one control that does both (`setTab` and
+       `setSheetOpen`). Navigating by rail alone left every state looking at a
+       page whose right-hand pane did not exist.
+
+     Decided by the viewport rather than by probing visibility, because
+     `count()` counts `display:none` elements and a probe would have picked the
+     hidden one at whichever width it happened to run. 1280 is Tailwind's `xl`. */
+  const wide = (page.viewportSize()?.width ?? 1440) >= 1280
+  if (!wide) {
     await page.getByRole('button', { name: bothLocales(BUILD_TAB_KEY[tab]) }).first().click()
-    await page.waitForURL((u) => u.searchParams.get(BUILD_TAB_PARAM) === tab)
+  } else if (tab !== group.target) {
+    await page.getByRole('tab', { name: bothLocales(BUILD_TAB_KEY[tab]) }).first().click()
   }
+  await page.waitForURL((u) => u.searchParams.get(BUILD_TAB_PARAM) === tab)
 }
 
 /**
