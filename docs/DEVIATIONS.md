@@ -8986,3 +8986,37 @@ distinction `globals.css` records and `FeedbackList`'s `<select>` got wrong.
    no density switch (`flow.length > 1`). Two questions were inserted by SQL for the measurement
    and removed after it. Logged rather than fixed: changing the demo seed is not T8's, and the
    phase report names it.
+
+## D270 — THE UNAUTHENTICATED LOGIN PAGE SHIPS 2934 OF 3015 UI MESSAGES
+
+**Found 2026-09-21 while confirming T7-rest's deploy, not while looking for it.** `.env.local` does
+not exist in this container and the Vercel CLI is not logged in, so production could not be signed
+into — the fallback was to look for a string that could only exist in the new build. It was there,
+and so was everything else.
+
+```
+curl -s https://www.heituva.com/logg-inn | wc -c          181 528
+distinct message-shaped keys in that HTML                   2 934
+keys in messages/no.json                                    3 015
+  builder  362 of 363     admin  314 of 319
+  send     154 of 154     live    28 of  28
+```
+
+**The deploy marker worked and is the reason this is recorded rather than merely noticed.**
+`grabQuestion` → «Flytt spørsmålet», `liveTitle` → «Live-innstillinger» and `liveAlwaysOn` were
+written today; they cannot be in an older bundle, so their presence on the served page is proof
+the commit is live. A build-hash comparison would have needed a «before» nobody captured.
+
+**What this is and is not.** It is not a k-anonymity or RLS matter — these are UI strings, not
+data, and no message interpolates a tenant value. It is a **claim surface**: every sentence the
+product will ever say is readable by anyone, including the copy of screens a visitor has no
+account for. That is the population the security-copy sweep is about, and the sweep has always
+been run against the BUNDLES; it has never been run against «what an anonymous request can read
+from production», which turns out to be nearly all of it.
+
+**Not fixed here, and deliberately so.** The cause is next-intl's provider receiving the whole
+`messages` object rather than the namespaces a route uses, which is a shell-level change touching
+every page — far outside T7's scope, and the sort of thing that turns a copy question into a
+routing rewrite. Logged with the measurement beside it so the next phase starts from a number
+rather than from an impression. The cheap half, if it is wanted: pass per-route namespaces, and
+the 181 KB falls with it.
