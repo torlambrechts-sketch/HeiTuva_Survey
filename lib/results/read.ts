@@ -1,90 +1,80 @@
 import 'server-only'
-
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import {
-  isRefusal,
-  type Aggregate,
-  type Benchmarks,
-  type DashboardSummary,
-  type Heatmap,
-  type Quotes,
-  type ResultsSummary,
-  type Themes,
-  type Trends,
-} from './types'
+import type { Band } from '@/components/ui/Risk'
 
 /**
- * Typed reads of the Phase 4 result RPCs.
+ * Reading results.
  *
- * Every one of these is a `jsonb` function, so the generated client type is
- * `Json`; this module is where that widens back into the shapes in `types.ts`,
- * once, instead of at every call site. It also normalises the two ways a read
- * can come back empty — a Postgres error and an in-payload `{error}` refusal —
- * into `null`, so a page renders its empty state rather than a stack trace.
+ * Every field here comes back from a SECURITY DEFINER RPC that applies k-anonymity in
+ * the database. Nothing is recomputed on this side: the band, the index and the
+ * threshold are the server's, because a value re-derived in the client can disagree
+ * with the statutory report, and the report is the thing a labour inspector reads.
  *
- * `server-only`: these run as the signed-in member through the cookie-bound
- * anon client, which is what makes RLS and `auth.uid()` apply. Importing them
- * into a client component would send the whole result payload to the browser.
+ * The shapes are parsed rather than cast. An RPC returns jsonb, so TypeScript would
+ * otherwise be asserting a contract it cannot see — and a silently-wrong shape here
+ * becomes a wrong number on a compliance document.
  */
-async function call<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
+const BAND = z.enum(['lav', 'middels', 'hoy'])
+
+const FactorRow = z.object({
+  key: z.string(),
+  law_ref: z.string(),
+  sort_order: z.number(),
+  index: z.coerce.number(),
+  band: BAND,
+})
+
+const Summary = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    n: z.coerce.number(),
+    threshold: z.coerce.number(),
+    index: z.coerce.number(),
+    band: BAND,
+    factors: z.array(FactorRow),
+  }),
+  z.object({
+    status: z.literal('insufficient_data'),
+    n: z.coerce.number(),
+    threshold: z.coerce.number(),
+  }),
+])
+
+const NotAvailable = z.object({ error: z.literal('not_available') })
+
+export type ResultsSummary = z.infer<typeof Summary>
+export type FactorResult = z.infer<typeof FactorRow>
+export type { Band }
+
+/**
+ * Returns null when the round is not available to this caller — which covers both
+ * "does not exist" and "belongs to another organisation", because the RPC deliberately
+ * does not distinguish them. Callers must treat null as "nothing to show", never as
+ * "not found", or they reintroduce the enumeration oracle 0005 removed.
+ */
+export async function getResultsSummary(roundId: string): Promise<ResultsSummary | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc(fn as 'aggregate_results', args as never)
-  if (error) {
-    // The token is never in these args, but the survey id is — and an error
-    // string is the one place a stray value gets logged, so log the function
-    // and the code, never the payload.
-    console.error(`results: ${fn} failed (${error.code ?? 'unknown'})`)
+  const { data, error } = await supabase.rpc('results_summary', { p_round: roundId })
+  if (error) return null
+
+  if (NotAvailable.safeParse(data).success) return null
+
+  const parsed = Summary.safeParse(data)
+  if (!parsed.success) {
+    // a shape we do not recognise is not a number we are willing to render
     return null
   }
-  if (data === null || data === undefined) return null
-  if (isRefusal(data)) return null
-  return data as T
+  return parsed.data
 }
 
-export const readSummary = (survey: string, round?: string | null, group?: string | null) =>
-  call<ResultsSummary>('results_summary', { p_survey: survey, p_round: round ?? null, p_group: group ?? null })
-
-export const readAggregate = (survey: string, group?: string | null, round?: string | null) =>
-  call<Aggregate>('aggregate_results', { p_survey: survey, p_group: group ?? null, p_round: round ?? null })
-
-export const readQuotes = (
-  survey: string,
-  question: string,
-  opts: { group?: string | null; theme?: string | null; limit?: number } = {},
-) =>
-  call<Quotes>('get_quotes', {
-    p_survey: survey,
-    p_question: question,
-    p_group: opts.group ?? null,
-    p_theme: opts.theme ?? null,
-    p_limit: opts.limit ?? 4,
-  })
-
-export const readTrends = (survey: string, group?: string | null) =>
-  call<Trends>('get_trends', { p_survey: survey, p_group: group ?? null })
-
-export const readThemes = (survey: string, rounds?: string[] | null, group?: string | null) =>
-  call<Themes>('get_themes', { p_survey: survey, p_rounds: rounds ?? null, p_group: group ?? null })
-
-export const readBenchmarks = (survey: string, industry: string, round?: string | null, group?: string | null) =>
-  call<Benchmarks>('get_benchmarks', { p_survey: survey, p_industry: industry, p_round: round ?? null, p_group: group ?? null })
-
-export const readHeatmap = (
-  org: string,
-  surveys?: string[] | null,
-  group?: string | null,
-  rounds?: string[] | null,
-) =>
-  call<Heatmap>('get_heatmap', {
-    p_org: org, p_surveys: surveys ?? null, p_group: group ?? null, p_rounds: rounds ?? null,
-  })
-
-export const readDashboard = (
-  org: string,
-  surveys?: string[] | null,
-  group?: string | null,
-  rounds?: string[] | null,
-) =>
-  call<DashboardSummary>('dashboard_summary', {
-    p_org: org, p_surveys: surveys ?? null, p_group: group ?? null, p_rounds: rounds ?? null,
-  })
+/** The band distribution the Innsikt screen prints beneath the index. */
+export function bandCounts(factors: FactorResult[]): Record<Band, number> {
+  return factors.reduce(
+    (acc, f) => {
+      acc[f.band] += 1
+      return acc
+    },
+    { lav: 0, middels: 0, hoy: 0 } as Record<Band, number>,
+  )
+}
