@@ -5,22 +5,30 @@ import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
 
 /**
- * The bundle loads exactly these two families, at exactly these weights
- * (Orgpuls_Offline_Source.html, the Google Fonts link in <head>). Playfair Display is
- * the display face and is always 600 in the design; DM Sans carries everything else.
- * The weights are pinned rather than left to the default set because the pixel gate
- * diffs glyph rendering, and a missing weight silently falls back to a synthesised one.
+ * The bundle loads exactly these two families (Orgpuls_Offline_Source.html, the Google
+ * Fonts link in <head>). Playfair Display is the display face and is always 600 in the
+ * design; DM Sans carries everything else.
+ *
+ * `weight` is deliberately NOT specified, matching the bundle: both families are
+ * variable fonts and its stylesheet serves one woff2 per unicode range covering the
+ * whole axis, so naming weights here would only narrow what the design ships.
+ *
+ * Note on what this did NOT fix, recorded so it is not re-attempted: the header carries
+ * a residual 257-pixel difference from the baseline, concentrated in the glyph edges of
+ * three labels. Dropping the explicit weights was tried as the cause and measured
+ * afterwards — the differing-pixel count was identical to four decimal places and the
+ * glyph column runs were unchanged. The residual is rasterisation of a self-hosted
+ * subset against the bundle's own file, not a weight or a layout error: control edges,
+ * header height and text spans all match exactly.
  */
 const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
   variable: '--font-dmsans',
   display: 'swap',
 })
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
   variable: '--font-playfair',
   display: 'swap',
 })

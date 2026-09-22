@@ -12,10 +12,10 @@
  * against a complete baseline produces a number that means nothing. Name the region you
  * are claiming, and the claim is checkable.
  *
- *   node scripts/verify/pixel.mjs \\
- *     --base design-reference/orgpuls/baselines/01-innsikt-home.png \\
- *     --shot .playwright-mcp/innsikt.png \\
- *     --region 0,0,1440,60 \\
+ *   node scripts/verify/pixel.mjs \
+ *     --base design-reference/orgpuls/baselines/01-innsikt-home.png \
+ *     --shot .playwright-mcp/innsikt.png \
+ *     --region 0,0,1440,60 \
  *     --name header
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'

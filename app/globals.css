@@ -14,8 +14,19 @@
     padding: 0;
   }
 
-  * {
-    box-sizing: border-box;
+  /**
+   * Tailwind's preflight sets `html { line-height: 1.5 }`. The bundle sets no
+   * line-height at all, so every element there inherits the browser's `normal`
+   * (~1.2 for these faces). Leaving preflight's value in place made the header 59px
+   * against the design's 56px — a nav button became 14px x 1.5 + 16px padding = 37px,
+   * taller than the 34px controls beside it — and would have skewed text metrics on
+   * every screen, not just this one.
+   *
+   * Matching the bundle means taking its default and setting line-height explicitly
+   * only where the design does.
+   */
+  html {
+    line-height: normal;
   }
 
   body {
