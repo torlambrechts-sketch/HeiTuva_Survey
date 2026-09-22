@@ -1,95 +1,44 @@
 'use client'
 
 import { useActionState } from 'react'
-import { sendMagicLink, signInWithEntra, signInWithPassword, type AuthState } from './actions'
+import { Button } from '@/components/ui/Button'
+import { signIn, type SignInState } from './actions'
 
-type Labels = {
-  email: string
-  password: string
-  signIn: string
-  sendLink: string
-  linkSent: string
-  invalid: string
-  entra: string
-}
-
-const field =
-  'mt-1.5 box-border w-full rounded-[10px] border border-line bg-bg px-[13px] py-[11px] text-[14px] text-ink outline-none'
-const label = 'block text-[11px] uppercase tracking-[.09em] text-mut'
-
-export function SignInForm({ labels, entra }: { labels: Labels; entra: boolean }) {
-  const [pwState, pwAction, pwPending] = useActionState<AuthState, FormData>(
-    signInWithPassword,
-    {},
-  )
-  const [linkState, linkAction, linkPending] = useActionState<AuthState, FormData>(
-    sendMagicLink,
-    {},
-  )
-
-  const error = pwState.error ?? linkState.error
+export function SignInForm({ labels }: {
+  labels: { email: string; password: string; submit: string; error: string }
+}) {
+  const [state, action, pending] = useActionState<SignInState, FormData>(signIn, {})
 
   return (
-    <form className="mt-4 flex flex-col gap-3.5">
-      <label className="block">
-        <span className={label}>{labels.email}</span>
-        <input name="email" type="email" autoComplete="email" required className={field} />
+    <form action={action} className="mt-[22px] flex flex-col gap-[14px]">
+      <label className="flex flex-col gap-[6px]">
+        <span className="text-[11px] uppercase tracking-[0.11em] text-mut">{labels.email}</span>
+        <input
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          className="h-[42px] rounded-btn border border-line bg-bg px-[13px] text-[14px] text-ink"
+        />
       </label>
-
-      <label className="block">
-        <span className={label}>{labels.password}</span>
+      <label className="flex flex-col gap-[6px]">
+        <span className="text-[11px] uppercase tracking-[0.11em] text-mut">{labels.password}</span>
         <input
           name="password"
           type="password"
+          required
           autoComplete="current-password"
-          className={field}
+          className="h-[42px] rounded-btn border border-line bg-bg px-[13px] text-[14px] text-ink"
         />
       </label>
 
-      {error ? (
-        <p role="alert" className="text-[12.5px] font-semibold text-ink">
-          {labels.invalid}
-        </p>
+      {state.error ? (
+        <p role="alert" className="text-[12.5px] text-danger">{labels.error}</p>
       ) : null}
 
-      {linkState.sent ? (
-        <p role="status" className="text-[12.5px] text-mut">
-          {labels.linkSent}
-        </p>
-      ) : null}
-
-      <button
-        formAction={pwAction}
-        disabled={pwPending}
-        className="cursor-pointer rounded-[10px] border-none bg-ac px-[22px] py-3 text-[13.5px] font-bold text-ink disabled:opacity-60"
-      >
-        {labels.signIn}
-      </button>
-
-      {/* formNoValidate: this path needs only the email, so the shared form's
-          password constraints must not block it. The action re-validates with
-          Zod server-side, which is the boundary that actually matters. */}
-      <button
-        formAction={linkAction}
-        formNoValidate
-        disabled={linkPending}
-        className="cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-3 text-[13px] font-semibold text-ink disabled:opacity-60"
-      >
-        {labels.sendLink}
-      </button>
-
-      {/* Present only when Auth reports the provider as configured — the same
-          bordered secondary control the splash's panel draws for "Entra ID"
-          (HeiTuva Splash.dc.html:107). formNoValidate: no fields are needed. */}
-      {entra ? (
-        <button
-          formAction={signInWithEntra}
-          formNoValidate
-          className="cursor-pointer rounded-[10px] border border-line bg-transparent px-[22px] py-3 text-[13px] font-semibold text-ink"
-        >
-          {labels.entra}
-        </button>
-      ) : null}
+      <Button type="submit" size="md" tone="primary" disabled={pending} className="mt-[4px] w-full">
+        {labels.submit}
+      </Button>
     </form>
   )
 }
