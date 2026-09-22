@@ -31,10 +31,13 @@ next-env.d.ts
 *.tsbuildinfo
 
 # verification artifacts — captures are regenerated per run.
-# artifacts/reference/ IS committed: it is the design baseline.
 artifacts/*
-!artifacts/reference/
-artifacts/.cdn-cache/
 test-results/
 playwright-report/
-.mfa-secrets.json
+
+# playwright MCP screenshots and traces — regenerated per session.
+.playwright-mcp/
+
+# design-reference CDN cache — behaviour, not pixels; repopulated by scripts/verify/cdn-cache.ts.
+# fonts/ IS committed: font rasterisation affects the pixel diff, so it must be deterministic.
+design-reference/orgpuls/cdn/

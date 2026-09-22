@@ -85,6 +85,30 @@ how to provide it — do not work around it by weakening a control.
 must click. Do not silently fall back to a manual instruction and carry on — an
 unapplied migration that everyone believes is applied is worse than a stopped session.
 
+## Cloud sessions
+A cloud session (claude.ai/code, `claude --cloud`, mobile, routines) is a fresh VM holding
+only a clone of this repo. Nothing from the laptop reaches it: not `~/.claude`, not
+user-scoped MCP servers, not `.env.local`. `.mcp.json`, `.claude/settings.json` and
+`scripts/cloud-*.sh` are what configure it; `docs/CLOUD_SETUP.md` is the procedure.
+- Database work goes through the `supabase` MCP server (execute_sql, apply_migration,
+  get_advisors, generate_typescript_types). Do not look for a local Supabase CLI login —
+  its installer pulls GitHub release assets the cloud proxy restricts, so it may be absent.
+- To look at the app: start the dev server in the background, then use the `playwright` MCP
+  server against http://localhost:3000. Screenshots land in `.playwright-mcp/` (gitignored).
+  `localhost` is the tested path; `*.vercel.app` previews go through the VM's security proxy
+  and headless Chromium may not reach them.
+- The browser is whichever Chromium the image already ships, found via
+  `PLAYWRIGHT_BROWSERS_PATH` by `scripts/playwright-mcp.sh`, which passes its path explicitly
+  so the image's build number and the MCP server's pinned one may differ. Never run
+  `playwright install` in a cloud session.
+- Do not ask for confirmation on anything the permission rules allow. The deny list is the
+  stop list, and it is narrower than the one in Operating authority above — the rules a
+  classifier cannot pattern-match (bulk deletes, weakening an invariant, prod deploys) are
+  still yours to honour unprompted.
+- Writes to `.claude/`, `.mcp.json` and the hook scripts are never covered by allow rules;
+  in Auto they go to the classifier and may be refused as self-modification. When that
+  happens, say which file and hand over the content — do not route around it.
+
 ## Immutability triggers must permit referential maintenance
 An append-only or freeze trigger written as "reject any UPDATE or DELETE" will collide
 with PostgreSQL's own FK maintenance — `ON DELETE SET NULL` and cascades are UPDATEs and

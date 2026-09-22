@@ -1,44 +1,73 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * Theme tokens are the ones fixed in CLAUDE.md. They are declared once as CSS
- * variables in app/globals.css and referenced here, so a value can never drift
- * between the two. Do not add colours that are not in the design bundle.
+ * Tokens are transcribed from the Orgpuls design bundle, not chosen here.
+ * Every hex below appears verbatim in Orgpuls.dc.html. Do not add a colour that
+ * the bundle does not contain, and do not adjust one that it does — the pixel
+ * gate diffs against the bundle's own rendering, so an "improved" value fails.
  */
-export default {
+const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        bg: 'var(--bg)',
-        sf: 'var(--sf)',
-        sf2: 'var(--sf2)',
-        ink: 'var(--ink)',
-        mut: 'var(--mut)',
-        line: 'var(--line)',
-        ac: 'var(--ac)',
-        acf: 'var(--acf)',
-        ac2: 'var(--ac2)',
-        ac3: 'var(--ac3)',
-        sbg: 'var(--sbg)',
-        sbg2: 'var(--sbg2)',
+        // surfaces
+        bg: '#FCF6E9',        // app canvas, inset field background
+        sf: '#FFFDF6',        // card surface
+        // text
+        ink: '#191510',       // ink: text, hard border, active pill fill
+        body: '#3A342A',      // document body text
+        mut: '#5F5849',       // muted text, labels, leads
+        faint: '#8A8272',     // faintest text, placeholders
+        disabled: '#A39A88',  // disabled text
+        // lines
+        line: '#E8DFC9',      // hairline border
+        rule: '#C4BCA8',      // dashed border, inactive dot
+        // accent (yellow)
+        ac: '#F5C64A',        // primary CTA
+        sbg: '#FBEBBE',       // soft yellow: selected chip, accent panel
+        band: '#F5DC96',      // middle risk band
+        amberbar: '#E0A21F',
+        caution: '#8A6A00',
+        cautiondeep: '#5C4600',
+        // green
+        link: '#2F5D2A',
+        linkhover: '#1E3D1A',
+        greendeep: '#20431C',
+        greenbar: '#5C9A55',
+        mint: '#CFE7E4',      // positive fill
+        mint2: '#B5DAD4',     // top distribution segment
+        teal: '#A8D5D2',
+        // warm / risk
+        peach: '#FBD5C4',
+        peach2: '#F0B9A0',
+        orange: '#E38258',
+        orange2: '#EC9B77',
+        rustbar: '#D4633A',
+        danger: '#A33A16',
+        dangerdeep: '#6B240C',
       },
-      borderRadius: { DEFAULT: '16px', card: '16px' },
-      boxShadow: { card: '0 2px 10px rgba(25,21,16,.05)' },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
-        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
-        logo: ['var(--font-logo)', 'var(--font-body)', 'sans-serif'],
+        display: ['var(--font-playfair)', 'Playfair Display', 'serif'],
+        sans: ['var(--font-dmsans)', 'DM Sans', 'system-ui', 'sans-serif'],
       },
-      fontSize: { base: '14px' },
+      fontSize: {
+        // the bundle's base is 14px, not Tailwind's 16px
+        base: ['14px', '1.5'],
+      },
       keyframes: {
-        enter: {
+        // bundle line 24: @keyframes ht-in
+        'ht-in': {
           from: { opacity: '0', transform: 'translateY(6px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+          to: { opacity: '1', transform: 'none' },
         },
       },
-      animation: { enter: 'enter .25s ease' },
+      animation: {
+        'ht-in': 'ht-in .25s ease',
+      },
     },
   },
   plugins: [],
-} satisfies Config
+}
+
+export default config
