@@ -1,4 +1,62 @@
 {
+  "auth": {
+    "title": "Logg inn",
+    "lead": "Orgpuls er for ansatte og ledere i virksomheten din.",
+    "email": "E-post",
+    "password": "Passord",
+    "submit": "Logg inn",
+    "error": "Feil e-post eller passord."
+  },
+  "app": {
+    "name": "Orgpuls",
+    "tagline": "Psykososialt arbeidsmiljø for norske virksomheter. Svar lagres i Norge, og ingen enkeltsvar kan spores tilbake til en person."
+  },
+  "nav": {
+    "innsikt": "Innsikt",
+    "malinger": "Målinger",
+    "samtaler": "Samtaler",
+    "tiltak": "Tiltak",
+    "oppsett": "Oppsett"
+  },
+  "header": {
+    "help": "Hjelp",
+    "helpAria": "Hjelp for denne siden",
+    "grunnlag": "Grunnlag",
+    "roleAria": "Din rolle",
+    "assistantAria": "Assistenten — neste steg"
+  },
+  "role": {
+    "daglig_leder": "Daglig leder",
+    "avdelingsleder": "Avdelingsleder",
+    "verneombud": "Verneombud"
+  },
+  "band": {
+    "lav": "Lav",
+    "middels": "Middels",
+    "hoy": "Høy"
+  },
+  "footer": {
+    "dataNorge": "Data i Norge",
+    "gdpr": "GDPR",
+    "produkt": "Produkt",
+    "oppsett": "Oppsett",
+    "hjelp": "Hjelp",
+    "selskap": "Selskap",
+    "ansatte": "Ansatte",
+    "integrasjoner": "Integrasjoner",
+    "arshjulet": "Årshjulet",
+    "alleArtikler": "Alle artikler",
+    "komIGang": "Kom i gang",
+    "anonymitet": "Anonymitet",
+    "kontaktOss": "Kontakt oss",
+    "legal": "© 2026 Orgpuls AS · orgpuls.no · hjelp@orgpuls.no",
+    "databehandleravtale": "Databehandleravtale",
+    "personvern": "Personvern",
+    "driftsstatus": "Driftsstatus"
+  },
+  "results": {
+    "maskedAria": "Færre enn {threshold} svar — resultatet vises ikke"
+  },
   "factor": {
     "ytring": {
       "label": "Ytringsklima",
@@ -77,5 +135,15 @@
       "s2": "Innsatsen min blir lagt merke til",
       "s3": "Jeg er stolt av å jobbe her"
     }
+  },
+  "innsikt": {
+    "indexLabel": "Arbeidsmiljøindeks",
+    "delta": "{delta} siden i fjor",
+    "forsvarlig": "{count} forsvarlig",
+    "folgesOpp": "{count} følges opp",
+    "hoyRisiko": "{count} høy risiko",
+    "ansatte": "{count} ansatte",
+    "insufficient": "Færre enn {threshold} svar — resultatet vises ikke",
+    "svarte": "{n} av {total} har svart"
   }
 }
