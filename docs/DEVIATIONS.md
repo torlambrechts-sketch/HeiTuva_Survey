@@ -1,8 +1,9 @@
 # Deviations from the Orgpuls design bundle
 
-Every place the built application departs from `design-reference/orgpuls/Orgpuls.dc.html`,
-with the reason and the constraint that forced it. A deviation is a decision that was
-logged; it is not permission to depart again elsewhere.
+Every place the built application departs from
+`design-reference/orgpuls/Orgpuls_Offline_Source.html`, with the reason and the
+constraint that forced it. A deviation is a decision that was logged; it is not
+permission to depart again elsewhere.
 
 ---
 
@@ -39,19 +40,34 @@ unknown org. All six passed on 2026-09-22.
 
 ---
 
-## D-02 — Avatar images are placeholders
+## D-02 — Avatar images — RESOLVED 2026-09-22
 
-**Bundle:** `Orgpuls_Offline_Source.html` declares nine avatar images as
-`ext-resource-dependency`: `tuva/av1.png`, `av3`, `av4`, `av5`, `av7`, `av11`, `av12`,
-`av13`, `av15`.
+**Was:** `Orgpuls_Offline_Source.html` declares nine avatar images as
+`ext-resource-dependency` and they were not supplied, so they rendered as the bundle's
+empty image slot — a blank circle beside "Tuva" in the header and a blank square in the
+Tuva callout on Innsikt.
 
-**Built:** not yet supplied, so they render as the bundle's own empty image slot.
+**Resolved:** the user supplied `Orgpuls.com.zip` — 13 avatars in `tuva/` and 47 faces in
+`tuva/faces/`, 69 files. Both avatar slots now render (`av4.png`, as a CSS background
+rather than an `<img>`). No longer a deviation.
 
-**Consequence:** avatars are not pixel-exact. Visible as the blank circle beside "Tuva"
-in the header and the blank square in the Tuva callout on Innsikt. Every other pixel on
-those screens is unaffected.
+**What this changed about the reference, which matters more than the avatars:**
+`Orgpuls.dc.html` does not reference `tuva/*.png` at all — only
+`Orgpuls_Offline_Source.html` does. The first twelve baselines were captured from the
+former and therefore had empty avatar slots baked in. **All twelve baselines were
+regenerated from `Orgpuls_Offline_Source.html`**, which is now the canonical reference
+for the pixel gate.
 
-**Resolution:** awaiting the image files. Not worked around, not substituted.
+Two further fixes were needed to get a genuinely clean render, both verified rather than
+assumed:
+- `.image-slots.state.json` 404'd. An empty `{}` was added. Proven not to change
+  rendering: the page renders byte-identically with and without it (same md5).
+- `/favicon.ico` 404'd, because the page declares no icon and Chromium requests it
+  regardless. A 1×1 icon was added to the reference directory.
+
+The reference now renders with zero failed requests, zero non-2xx responses and zero
+console errors on all twelve screens — which is what the pixel gate's "no console
+errors" clause requires of the baseline before it can require it of the app.
 
 ---
 
