@@ -1,26 +1,23 @@
 import { getRequestConfig } from 'next-intl/server'
-import { isLocale } from './locales'
-import { getMergedMessages } from './messages'
-import { resolveLocale, resolveOrgId } from './resolve-locale'
+import { DEFAULT_LOCALE, isLocale } from './locales'
 
 /**
- * There is no locale routing in this project, so next-intl's `requestLocale`
- * is always undefined. Resolving it ourselves is what makes the language
- * picker actually change the UI — without this every request silently fell
- * back to `no` no matter what the profile said.
+ * There is no locale routing: no /no or /en prefix. The locale comes from the signed-in
+ * user's profile, their organisation's default, or the language cookie — resolved here
+ * rather than from the URL.
+ *
+ * getMessageFallback renders a missing key as `namespace.key` rather than blank, so a
+ * gap is visible in review and in a screenshot diff instead of silently collapsing the
+ * layout around an empty string.
  */
-export default getRequestConfig(async ({ locale: requested }) => {
-  // When next-intl asks for a specific locale — `getTranslations({ locale })`,
-  // which the splash uses — honour it; otherwise resolve it ourselves.
-  const locale = isLocale(requested) ? requested : await resolveLocale()
-  const orgId = await resolveOrgId()
+export default getRequestConfig(async ({ requestLocale }) => {
+  const requested = await requestLocale
+  const locale = isLocale(requested) ? requested : DEFAULT_LOCALE
+
   return {
     locale,
-    messages: await getMergedMessages(locale, orgId),
-    // A key missing from both the requested locale and `no` renders as
-    // `namespace.key` so the gap is visible in review instead of blank.
-    getMessageFallback({ namespace, key }) {
-      return namespace ? `${namespace}.${key}` : key
-    },
+    messages: (await import(`../../messages/${locale}.json`)).default,
+    getMessageFallback: ({ namespace, key }) =>
+      namespace ? `${namespace}.${key}` : key,
   }
 })

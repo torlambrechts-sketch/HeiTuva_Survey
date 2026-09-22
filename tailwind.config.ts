@@ -55,6 +55,31 @@ const config: Config = {
         // the bundle's base is 14px, not Tailwind's 16px
         base: ['14px', '1.5'],
       },
+      /**
+       * Orgpuls does NOT have a single corner radius. It has a scale, and which value
+       * a component uses is part of its identity — a nav button is 10, a card is 20,
+       * a chip is fully round. Transcribed from the bundle, every value observed:
+       *   9  stacked-bar, brand mark, small CTA
+       *   10 nav button, Hjelp button, role select, row CTA
+       *   11 checklist button, avatar 26-38px, secondary/primary button
+       *   12 primary CTA, two-line report button
+       *   15 task row
+       *   16 assistant note card
+       *   20 panel card
+       *   6  focus ring (bundle line 23)
+       *   999 pills, dots, avatar chip
+       */
+      borderRadius: {
+        focus: '6px',
+        bar: '9px',
+        ctl: '10px',
+        btn: '11px',
+        cta: '12px',
+        row: '15px',
+        note: '16px',
+        card: '20px',
+        pill: '999px',
+      },
       keyframes: {
         // bundle line 24: @keyframes ht-in
         'ht-in': {
