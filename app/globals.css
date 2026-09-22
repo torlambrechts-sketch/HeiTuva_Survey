@@ -29,6 +29,10 @@
     line-height: normal;
   }
 
+  * {
+    box-sizing: border-box;
+  }
+
   body {
     min-height: 100vh;
     background: #fcf6e9;
